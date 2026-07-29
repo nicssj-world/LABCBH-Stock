@@ -701,12 +701,23 @@ button {
 }
 
 .access-denied-card {
+  position: relative;
   width: min(100%, 600px);
   padding: clamp(28px, 6vw, 52px);
   background: var(--lab-surface);
   border: 1px solid var(--lab-border);
-  border-top: 5px solid var(--lab-amber);
   border-radius: var(--radius-panel);
+}
+
+/* The caution stripe rides inside the rounded corners instead of squaring
+   them off, which a thick border-top would do. */
+.access-denied-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: var(--lab-amber);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
 }
 
 .access-denied-card__code {
@@ -1342,8 +1353,128 @@ textarea[aria-invalid="true"] {
   font-size: 13px;
 }
 
+.page-heading__cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pr-table--desktop { overflow-x: auto; }
+
+.pr-task-cards {
+  display: none;
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+}
+
+.pr-task-cards li {
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--lab-border);
+}
+
+.pr-task-cards li:last-child { border-bottom: 0; }
+.pr-task-cards h3 { margin: 12px 0 4px; font-size: 16px; }
+.pr-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; }
+
+.method-fieldset {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 8px 22px 20px;
+  border: 0;
+}
+
+.method-fieldset legend {
+  padding: 0;
+  color: var(--lab-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.method-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border-strong);
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.method-option:has(input:checked) {
+  color: var(--lab-navy-strong);
+  background: #dfe9ec;
+  border-color: var(--lab-navy);
+  font-weight: 700;
+}
+
+.method-option input { width: 18px; height: 18px; accent-color: var(--lab-navy); }
+
+.method-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.item-picker {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 22px 20px;
+  list-style: none;
+}
+
+.item-picker li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px;
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+
+.item-picker__identity {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.item-picker__warning { display: block; margin-top: 4px; color: var(--lab-amber); font-size: 11px; font-weight: 700; }
+
+.item-picker__facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.item-picker__facts dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.item-picker__facts dd { margin: 3px 0 0; font-size: 13px; }
+
+.pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
+.pr-review__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.pr-review__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
 @media (max-width: 1180px) {
   .inventory-detail-grid { grid-template-columns: 1fr; }
+  .item-picker li { grid-template-columns: 1fr; gap: 12px; }
+  .item-picker__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter-bench { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .filter-bench__search { grid-column: span 2; }
   .item-edit-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1362,6 +1493,11 @@ textarea[aria-invalid="true"] {
   .contract-task-cards { display: block; }
   .inventory-table--desktop { display: none; }
   .inventory-task-cards { display: block; }
+  .pr-table--desktop { display: none; }
+  .pr-task-cards { display: block; }
+  .method-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .method-detail-grid { grid-template-columns: 1fr; }
+  .page-heading__cluster { flex-wrap: wrap; }
   .issue-history { grid-template-columns: 1fr; }
   .issue-history > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
   .issue-history > div:last-child { border-bottom: 0; }
@@ -1385,6 +1521,9 @@ textarea[aria-invalid="true"] {
 }
 
 @media (max-width: 540px) {
+  .method-options { grid-template-columns: 1fr; }
+  .item-picker__facts { grid-template-columns: 1fr; }
+  .item-picker li { padding: 12px; }
   .filter-bench { grid-template-columns: 1fr; }
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,
