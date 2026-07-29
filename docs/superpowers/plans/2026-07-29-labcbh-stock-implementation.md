@@ -325,21 +325,25 @@ git commit -m "feat: expand contracts and add LAB stock access"
 ### Task 3: Implement Full Contract CRUD, Items, and Stage History
 
 **Files:**
+- Create via CLI: `supabase/migrations/*_atomic_contract_creation.sql`
 - Create: `lib/contracts/queries.ts`, `lib/contracts/actions.ts`, `lib/contracts/presenter.ts`
+- Modify: `lib/contracts/schema.ts`, `lib/contracts/types.ts`
 - Create: `app/(protected)/contracts/page.tsx`, `app/(protected)/contracts/new/page.tsx`
 - Create: `app/(protected)/contracts/[id]/page.tsx`, `app/(protected)/contracts/[id]/edit/page.tsx`
 - Create: `components/contracts/ContractForm.tsx`, `components/contracts/ContractTable.tsx`, `components/contracts/StageTimeline.tsx`, `components/contracts/ContractItemsEditor.tsx`
-- Test: `scripts/contracts-actions.test.ts`, `scripts/contracts-ui.test.ts`
+- Test: `scripts/contracts-create-rpc.test.ts`, `scripts/contracts-actions.test.ts`, `scripts/contracts-ui.test.ts`
 
 **Interfaces:**
 - Consumes: `contractInputSchema`, `Actor`, contract tables from Task 2
-- Produces: `listContracts(filters)`, `getContract(id)`, `createContract(input)`, `updateContract(id,input)`, `advanceContractStage(id,input)`, `archiveContract(id,reason)`
+- Produces: `createContractInputSchema`, `CreateContractInput`, `listContracts(filters)`, `getContract(id)`, `createContract(input)`, `updateContract(id,input)`, `advanceContractStage(id,input)`, `archiveContract(id,reason)`
+- Produces service-only RPC: `create_contract(p_actor_id uuid, p_contract jsonb, p_items jsonb, p_effective_date date) returns public.contracts`
 
 - [ ] **Step 1: Write failing action tests**
 
 ```ts
 // scripts/contracts-actions.test.ts
 import assert from 'node:assert/strict'
+import { readFileSync, readdirSync } from 'node:fs'
 import { validateStageAdvance } from '../lib/contracts/actions'
 
 assert.throws(
@@ -349,19 +353,66 @@ assert.throws(
 assert.doesNotThrow(
   () => validateStageAdvance({ from: 'winner_announced', to: 'contract_started', contractNumber: '12\/2569' })
 )
+
+const actions = readFileSync('lib/contracts/actions.ts', 'utf8')
+assert.match(actions, /supabaseAdmin[\s\S]+\.rpc\(['"]create_contract['"]/)
+assert.doesNotMatch(actions, /\.from\(['"]contracts['"]\)\.insert/)
+
+// scripts/contracts-create-rpc.test.ts
+const migration = readdirSync('supabase/migrations')
+  .find((name) => name.endsWith('_atomic_contract_creation.sql'))
+assert.ok(migration)
+const sql = readFileSync(`supabase/migrations/${migration}`, 'utf8')
+assert.match(sql, /create or replace function public\.create_contract/)
+assert.match(sql, /insert into public\.contracts/)
+assert.match(sql, /sent_to_procurement_date/)
+assert.match(sql, /insert into public\.contract_items/)
+assert.match(sql, /insert into public\.contract_stage_history/)
+assert.match(sql, /null,\s*'sent_to_procurement'/)
+assert.match(sql, /'labcbh_stock'/)
+assert.match(sql, /grant execute[\s\S]+to service_role/)
+assert.doesNotMatch(sql, /grant execute[\s\S]+to authenticated/)
 ```
 
-UI tests assert fiscal-year grouping, seven Thai type labels, nullable-number copy “ยังไม่มีเลขที่สัญญา,” destructive confirmation, and a six-step timeline with dates.
+The action test mocks `supabaseAdmin.rpc` and asserts that `createContract` calls `create_contract` exactly once with the actor, parsed contract, all parsed items, and the submitted effective date. It then returns a simulated history-insert failure and asserts the action returns an error without attempting any compensating direct insert. UI tests assert fiscal-year grouping, seven Thai type labels, nullable-number copy “ยังไม่มีเลขที่สัญญา,” destructive confirmation, and a six-step timeline with dates.
 
 - [ ] **Step 2: Run tests to verify failure**
 
-Run: `npx tsx scripts/contracts-actions.test.ts; npx tsx scripts/contracts-ui.test.ts`
+Run: `npx tsx scripts/contracts-create-rpc.test.ts; npx tsx scripts/contracts-actions.test.ts; npx tsx scripts/contracts-ui.test.ts`
 
-Expected: FAIL because actions and screens are absent.
+Expected: FAIL because the atomic-create migration, actions, and screens are absent.
 
-- [ ] **Step 3: Implement queries and authorized Server Actions**
+- [ ] **Step 3: Implement the atomic create-contract migration**
+
+Create the migration with `npx supabase migration new atomic_contract_creation`. Implement `public.create_contract(p_actor_id uuid, p_contract jsonb, p_items jsonb, p_effective_date date)` as one PostgreSQL transaction-scoped function. It must:
+
+- validate that the actor is active, not deleted, and has admin/head authority;
+- insert exactly one `contracts` row at `procurement_stage = 'sent_to_procurement'`, `status = 'pending'`, `contract_number = null`, and `sent_to_procurement_date = p_effective_date`;
+- insert every validated `p_items` element into `contract_items` for the returned contract ID;
+- insert initial history `{ from_stage: null, to_stage: 'sent_to_procurement', effective_date: p_effective_date, actor: p_actor_id, source: 'labcbh_stock' }` before returning;
+- raise on an empty item array or any failed contract, item, or history insert so PostgreSQL rolls the entire call back; no controlled contract can commit without its initial history;
+- be revoked from `PUBLIC`, `anon`, and `authenticated`, and granted only to `service_role`.
+
+The function is the only controlled creation boundary. Server Actions and imports must not insert directly into `contracts`; they call this RPC so contract, items, sent date, and initial history either all commit or all roll back.
+
+- [ ] **Step 4: Implement queries and authorized Server Actions**
 
 ```ts
+// lib/contracts/schema.ts
+// Keep contractInputSchema unchanged for editing legacy and existing rows.
+export const createContractInputSchema = z.object({
+  fiscalYear: z.number().int().min(2500).max(3000),
+  contractType: z.enum(CONTRACT_TYPES),
+  displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
+  vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
+  endDate: isoDateSchema.nullable(),
+  sentToProcurementDate: isoDateSchema,
+  items: z.array(contractLineInputSchema).min(1, 'ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ'),
+})
+
+// lib/contracts/types.ts
+export type CreateContractInput = z.infer<typeof createContractInputSchema>
+
 // lib/contracts/actions.ts (public signature)
 export interface StageAdvanceInput {
   from: ProcurementStage
@@ -376,28 +427,42 @@ export async function advanceContractStage(contractId: number, input: StageAdvan
   const parsed = stageAdvanceSchema.parse(input)
   return performStageAdvance({ contractId, actorId: actor.id, ...parsed })
 }
+
+export async function createContract(input: CreateContractInput) {
+  const actor = await requirePermission('contracts:edit')
+  const parsed = createContractInputSchema.parse(input)
+  const { items, sentToProcurementDate, ...contract } = parsed
+  return supabaseAdmin.rpc('create_contract', {
+    p_actor_id: actor.id,
+    p_contract: contract,
+    p_items: items,
+    p_effective_date: sentToProcurementDate,
+  })
+}
 ```
 
-`performStageAdvance` calls the service-only `advance_contract_stage` RPC from `supabaseAdmin`; no browser or authenticated client receives direct execute permission. Physically delete only an untouched draft with no items/history/allocation; otherwise archive with actor, reason, and timestamp.
+`createContract` calls only the service-only `create_contract` RPC; it never performs separate table inserts. `performStageAdvance` calls the service-only `advance_contract_stage` RPC from `supabaseAdmin`; no browser or authenticated client receives direct execute permission. Physically delete only an untouched draft with no items/history/allocation; otherwise archive with actor, reason, and timestamp.
 
-- [ ] **Step 4: Implement the contract pages**
+- [ ] **Step 5: Implement the contract pages**
 
 Use Server Components for lists/details, URL-backed filters, a progressive multi-line editor, visible line totals, stage-change confirmation, and a mobile card fallback. Long forms auto-save a local draft and warn before navigation with unsaved changes.
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 6: Verify**
 
 ```powershell
+npx tsx scripts/contracts-create-rpc.test.ts
 npx tsx scripts/contracts-actions.test.ts
 npx tsx scripts/contracts-ui.test.ts
+npx supabase db reset
 npm run build
 ```
 
-Expected: PASS and the build includes contract list/new/detail/edit routes.
+Expected: PASS; a create call produces one contract, all items, the sent date, and exactly one initial history row. A forced item/history failure leaves zero new contract rows. The build includes contract list/new/detail/edit routes.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add app components/contracts lib/contracts scripts/contracts-*.test.ts
+git add supabase/migrations app components/contracts lib/contracts scripts/contracts-*.test.ts
 git commit -m "feat: move full contract management to LABCBH Stock"
 ```
 

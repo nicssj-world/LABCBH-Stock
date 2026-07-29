@@ -52,15 +52,16 @@ alter table public.contracts
   add column if not exists stage_updated_at timestamptz,
   add column if not exists archived_at timestamptz,
   add column if not exists archived_by uuid references public.profiles(id) on delete set null,
-  add column if not exists archive_reason text;
+  add column if not exists archive_reason text,
+  add column if not exists source_metadata jsonb;
 
 update public.contracts
 set
   fiscal_year = coalesce(
     fiscal_year,
-    extract(year from coalesce(start_date, created_at::date, current_date))::integer
+    extract(year from start_date)::integer
       + case
-          when extract(month from coalesce(start_date, created_at::date, current_date)) >= 10
+          when extract(month from start_date) >= 10
             then 544
           else 543
         end
@@ -69,8 +70,12 @@ set
   procurement_stage = coalesce(procurement_stage, 'contract_started'),
   display_name = coalesce(nullif(btrim(display_name), ''), product),
   updated_at = coalesce(updated_at, created_at, now()),
-  contract_started_date = coalesce(contract_started_date, start_date, created_at::date),
-  stage_updated_at = coalesce(stage_updated_at, created_at, now())
+  contract_started_date = coalesce(contract_started_date, start_date),
+  source_metadata = coalesce(source_metadata, '{}'::jsonb) || jsonb_build_object(
+    'migration', 'lab_stock_contract_expansion',
+    'classification_source', 'legacy_contract_register',
+    'inferred_fields', jsonb_build_array('contract_type', 'procurement_stage', 'display_name')
+  )
 where contract_type is null
   and procurement_stage is null
   and display_name is null;
@@ -507,6 +512,42 @@ create trigger contract_item_allocations_validate_insert
 before insert on public.contract_item_allocations
 for each row execute function public.validate_contract_item_allocation();
 
+create or replace function public.guard_contract_item_quantity()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+declare
+  committed_quantity numeric(15,3);
+begin
+  -- UPDATE holds this contract_items row lock before the sum is checked. The
+  -- allocation trigger takes the same parent-row FOR UPDATE lock, serializing
+  -- quantity reductions with every allocation or reversal for this item.
+  select coalesce(sum(allocation.quantity), 0)
+  into committed_quantity
+  from public.contract_item_allocations allocation
+  where allocation.contract_item_id = old.id;
+
+  if new.quantity < committed_quantity then
+    raise exception using
+      errcode = '23514',
+      message = 'contract item quantity cannot be below committed allocations';
+  end if;
+
+  return new;
+end
+$function$;
+
+revoke execute on function public.guard_contract_item_quantity() from public;
+revoke execute on function public.guard_contract_item_quantity() from anon;
+revoke execute on function public.guard_contract_item_quantity() from authenticated;
+
+drop trigger if exists contract_items_guard_quantity on public.contract_items;
+create trigger contract_items_guard_quantity
+before update of quantity on public.contract_items
+for each row execute function public.guard_contract_item_quantity();
+
 insert into public.lab_stock_memberships (profile_id, role, active)
 select p.id, seed.role, true
 from (
@@ -725,6 +766,10 @@ begin
 
   if not found then
     raise exception using errcode = 'P0002', message = 'active contract not found';
+  end if;
+
+  if current_contract.status = 'cancelled' then
+    raise exception using errcode = '55000', message = 'cancelled contract cannot advance';
   end if;
 
   select max(history.effective_date)

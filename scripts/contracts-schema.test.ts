@@ -10,6 +10,10 @@ assert.equal(migrationNames.length, 1, 'exactly one contracts/access migration m
 
 const sql = readFileSync(join(migrationsDir, migrationNames[0]), 'utf8')
 const compactSql = sql.replace(/\s+/g, ' ')
+const implementationPlan = readFileSync(
+  join(process.cwd(), 'docs', 'superpowers', 'plans', '2026-07-29-labcbh-stock-implementation.md'),
+  'utf8',
+)
 
 for (const table of [
   'contract_items',
@@ -107,6 +111,7 @@ for (const column of [
   'archived_at',
   'archived_by',
   'archive_reason',
+  'source_metadata',
 ]) {
   assert.match(sql, new RegExp(`add column if not exists ${column}`, 'i'))
   assert.doesNotMatch(sql, new RegExp(`add column if not exists ${column}[^,;]*not null`, 'i'))
@@ -123,7 +128,23 @@ const legacyContractBackfill = sql.match(
   /update\s+public\.contracts\s+set\s+fiscal_year[\s\S]*?;/i,
 )?.[0]
 assert.ok(legacyContractBackfill, 'legacy contract backfill must exist')
-assert.match(legacyContractBackfill, /contract_started_date\s*=\s*coalesce\(contract_started_date,\s*start_date,\s*created_at::date\)/i)
+const fiscalYearBackfill = legacyContractBackfill.match(
+  /fiscal_year\s*=[\s\S]*?,\s*contract_type\s*=/i,
+)?.[0]
+assert.ok(fiscalYearBackfill, 'legacy fiscal-year assignment must exist')
+assert.doesNotMatch(fiscalYearBackfill, /current_date|created_at/i)
+assert.match(fiscalYearBackfill, /start_date/i)
+assert.match(
+  legacyContractBackfill,
+  /contract_started_date\s*=\s*coalesce\(contract_started_date,\s*start_date\)/i,
+)
+assert.doesNotMatch(
+  legacyContractBackfill.match(/contract_started_date\s*=[^,;]+/i)?.[0] ?? '',
+  /current_date|created_at/i,
+)
+assert.doesNotMatch(legacyContractBackfill, /stage_updated_at\s*=/i)
+assert.match(legacyContractBackfill, /source_metadata\s*=/i)
+assert.match(legacyContractBackfill, /inferred_fields/i)
 for (const syntheticDate of [
   'sent_to_procurement_date',
   'plan_published_date',
@@ -200,5 +221,54 @@ for (const column of [
 ]) {
   assert.match(sql, new RegExp(`${column} = case`, 'i'))
 }
+
+assert.match(sql, /add column if not exists source_metadata jsonb/i)
+const advanceStageFunction = sql.match(
+  /create or replace function public\.advance_contract_stage[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(advanceStageFunction, 'advance_contract_stage function must exist')
+assert.match(advanceStageFunction, /current_contract\.status\s*=\s*'cancelled'/i)
+assert.match(advanceStageFunction, /cancelled contract cannot advance/i)
+assert.ok(
+  advanceStageFunction.indexOf("current_contract.status = 'cancelled'") <
+    advanceStageFunction.indexOf('expected_stage :='),
+  'cancelled contracts must be rejected before transition calculation',
+)
+
+assert.match(sql, /create or replace function public\.guard_contract_item_quantity/i)
+assert.match(sql, /sum\(allocation\.quantity\)/i)
+assert.match(sql, /new\.quantity\s*<\s*committed_quantity/i)
+assert.match(sql, /contract item quantity cannot be below committed allocations/i)
+assert.match(
+  sql,
+  /create trigger contract_items_guard_quantity\s+before update of quantity on public\.contract_items/i,
+)
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    sql,
+    new RegExp(
+      `revoke execute on function public\\.guard_contract_item_quantity\\(\\) from ${role}`,
+      'i',
+    ),
+  )
+}
+
+const task3Start = implementationPlan.indexOf('### Task 3:')
+const task4Start = implementationPlan.indexOf('### Task 4:', task3Start)
+assert.ok(task3Start >= 0 && task4Start > task3Start, 'Task 3 plan section must exist')
+const task3Plan = implementationPlan.slice(task3Start, task4Start)
+assert.match(task3Plan, /atomic_contract_creation\.sql/i)
+assert.match(task3Plan, /contracts-create-rpc\.test\.ts/i)
+assert.match(task3Plan, /service-only RPC: `create_contract/i)
+assert.match(task3Plan, /export const createContractInputSchema = z\.object/i)
+assert.match(task3Plan, /sentToProcurementDate:\s*isoDateSchema/i)
+assert.match(task3Plan, /export type CreateContractInput = z\.infer<typeof createContractInputSchema>/i)
+assert.match(task3Plan, /createContract\(input:\s*CreateContractInput\)/i)
+assert.match(task3Plan, /sent_to_procurement_date/i)
+assert.match(task3Plan, /from_stage:\s*null/i)
+assert.match(task3Plan, /to_stage:\s*'sent_to_procurement'/i)
+assert.match(task3Plan, /source:\s*'labcbh_stock'/i)
+assert.match(task3Plan, /no controlled contract can commit without its initial history/i)
+assert.match(task3Plan, /must not insert directly into `contracts`/i)
 
 console.log(`contracts schema: ok (${migrationNames[0]})`)
