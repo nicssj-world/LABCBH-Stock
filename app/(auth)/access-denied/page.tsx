@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 
 export default function AccessDeniedPage() {
@@ -12,7 +11,6 @@ export default function AccessDeniedPage() {
           กรุณาติดต่อผู้ดูแลระบบเพื่อกำหนดสิทธิ์ให้บัญชีนี้
         </p>
         <div className="access-denied-card__actions">
-          <Link className="lab-button lab-button--ghost" href="/login">กลับหน้าเข้าสู่ระบบ</Link>
           <LogoutButton />
         </div>
       </section>
