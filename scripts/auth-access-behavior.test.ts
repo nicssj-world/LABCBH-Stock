@@ -11,13 +11,13 @@ const baseActor: Actor = {
 }
 
 assert.deepEqual(
-  deriveAppRoles({ ephisId: '9495', profileRole: 'Staff', memberships: [] }),
+  deriveAppRoles({ ephisId: '9495', profileRole: 'Staff', profileStatus: 'active', deletedAt: null, memberships: [] }),
   ['admin'],
   'E-Phis 9495 must retain administrator access',
 )
 
 assert.deepEqual(
-  deriveAppRoles({ ephisId: '10000', profileRole: 'Manager', memberships: [] }),
+  deriveAppRoles({ ephisId: '10000', profileRole: 'Manager', profileStatus: 'active', deletedAt: null, memberships: [] }),
   ['head'],
   'the shared Manager profile role must derive LAB Stock head access',
 )
@@ -26,6 +26,8 @@ assert.deepEqual(
   deriveAppRoles({
     ephisId: '10000',
     profileRole: 'Staff',
+    profileStatus: 'active',
+    deletedAt: null,
     memberships: [
       { role: 'stock_officer', active: true },
       { role: 'viewer', active: false },
@@ -35,6 +37,18 @@ assert.deepEqual(
   ['stock_officer'],
   'only active LAB Stock memberships must grant access and roles must be unique',
 )
+
+for (const source of [
+  { ephisId: '9495', profileRole: 'Admin', profileStatus: 'inactive', deletedAt: null },
+  { ephisId: '9495', profileRole: 'Admin', profileStatus: 'active', deletedAt: '2026-07-29T00:00:00Z' },
+  { ephisId: '10000', profileRole: 'Manager', profileStatus: 'inactive', deletedAt: null },
+]) {
+  assert.deepEqual(
+    deriveAppRoles({ ...source, memberships: [{ role: 'admin', active: true }] }),
+    [],
+    'inactive or soft-deleted profiles must not derive intrinsic or membership access',
+  )
+}
 
 assert.equal(decideProtectedRoute(null), 'login')
 assert.equal(decideProtectedRoute(baseActor), 'access-denied')

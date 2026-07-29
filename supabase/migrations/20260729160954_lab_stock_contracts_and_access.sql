@@ -40,8 +40,19 @@ alter table public.contracts
   add column if not exists contract_type text,
   add column if not exists procurement_stage text,
   add column if not exists display_name text,
-  add column if not exists is_archived boolean not null default false,
-  add column if not exists updated_at timestamptz not null default now();
+  add column if not exists is_archived boolean default false,
+  add column if not exists updated_at timestamptz default now(),
+  add column if not exists portal_updated_at timestamptz,
+  add column if not exists sent_to_procurement_date date,
+  add column if not exists plan_published_date date,
+  add column if not exists tender_announced_date date,
+  add column if not exists result_consideration_date date,
+  add column if not exists winner_announced_date date,
+  add column if not exists contract_started_date date,
+  add column if not exists stage_updated_at timestamptz,
+  add column if not exists archived_at timestamptz,
+  add column if not exists archived_by uuid references public.profiles(id) on delete set null,
+  add column if not exists archive_reason text;
 
 update public.contracts
 set
@@ -57,13 +68,12 @@ set
   contract_type = coalesce(contract_type, 'equipment_lease'),
   procurement_stage = coalesce(procurement_stage, 'contract_started'),
   display_name = coalesce(nullif(btrim(display_name), ''), product),
-  updated_at = coalesce(updated_at, created_at, now())
-where
-  fiscal_year is null
-  or contract_type is null
-  or procurement_stage is null
-  or nullif(btrim(display_name), '') is null
-  or updated_at is null;
+  updated_at = coalesce(updated_at, created_at, now()),
+  contract_started_date = coalesce(contract_started_date, start_date, created_at::date),
+  stage_updated_at = coalesce(stage_updated_at, created_at, now())
+where contract_type is null
+  and procurement_stage is null
+  and display_name is null;
 
 do $constraints$
 begin
@@ -134,7 +144,8 @@ begin
     alter table public.contracts
       add constraint contracts_stage_number_check
       check (
-        (
+        procurement_stage is null
+        or (
           procurement_stage = 'contract_started'
           and nullif(btrim(contract_number), '') is not null
         )
@@ -144,14 +155,85 @@ begin
         )
       ) not valid;
   end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.contracts'::regclass
+      and conname = 'contracts_lifecycle_status_date_check'
+  ) then
+    alter table public.contracts
+      add constraint contracts_lifecycle_status_date_check
+      check (
+        procurement_stage is null
+        or (
+          procurement_stage = 'sent_to_procurement'
+          and status is not null
+          and status in ('pending', 'cancelled')
+          and sent_to_procurement_date is not null
+          and plan_published_date is null
+          and tender_announced_date is null
+          and result_consideration_date is null
+          and winner_announced_date is null
+          and contract_started_date is null
+        )
+        or (
+          procurement_stage = 'plan_published'
+          and status is not null
+          and status in ('pending', 'cancelled')
+          and sent_to_procurement_date is not null
+          and plan_published_date is not null
+          and tender_announced_date is null
+          and result_consideration_date is null
+          and winner_announced_date is null
+          and contract_started_date is null
+        )
+        or (
+          procurement_stage = 'tender_announced'
+          and status is not null
+          and status in ('pending', 'cancelled')
+          and sent_to_procurement_date is not null
+          and plan_published_date is not null
+          and tender_announced_date is not null
+          and result_consideration_date is null
+          and winner_announced_date is null
+          and contract_started_date is null
+        )
+        or (
+          procurement_stage = 'result_consideration'
+          and status is not null
+          and status in ('pending', 'cancelled')
+          and sent_to_procurement_date is not null
+          and plan_published_date is not null
+          and tender_announced_date is not null
+          and result_consideration_date is not null
+          and winner_announced_date is null
+          and contract_started_date is null
+        )
+        or (
+          procurement_stage = 'winner_announced'
+          and status is not null
+          and status in ('pending', 'cancelled')
+          and sent_to_procurement_date is not null
+          and plan_published_date is not null
+          and tender_announced_date is not null
+          and result_consideration_date is not null
+          and winner_announced_date is not null
+          and contract_started_date is null
+        )
+        or (
+          procurement_stage = 'contract_started'
+          and status is not null
+          and status in ('active', 'expired', 'cancelled')
+          and nullif(btrim(contract_number), '') is not null
+          and start_date is not null
+          and contract_started_date is not null
+        )
+      ) not valid;
+  end if;
 end
 $constraints$;
 
 alter table public.contracts
-  alter column fiscal_year set not null,
-  alter column contract_type set not null,
-  alter column procurement_stage set not null,
-  alter column display_name set not null,
   alter column vendor drop not null;
 
 create unique index if not exists contracts_contract_number_normalized_key
@@ -163,6 +245,8 @@ create index if not exists contracts_lab_stock_dashboard_idx
   on public.contracts (is_archived, fiscal_year desc, procurement_stage);
 create index if not exists contracts_contract_type_idx
   on public.contracts (contract_type);
+create index if not exists contracts_archived_by_idx
+  on public.contracts (archived_by) where archived_by is not null;
 
 create table if not exists public.contract_items (
   id uuid primary key default gen_random_uuid(),
@@ -178,6 +262,7 @@ create table if not exists public.contract_items (
   created_by uuid references public.profiles(id) on delete set null,
   updated_at timestamptz not null default now(),
   updated_by uuid references public.profiles(id) on delete set null,
+  source_metadata jsonb not null default '{}'::jsonb,
   unique (contract_id, line_number)
 );
 
@@ -205,6 +290,9 @@ create table if not exists public.contract_stage_history (
   effective_date date not null,
   contract_number_snapshot text,
   note text,
+  source text not null default 'labcbh_stock' check (
+    source in ('labcbh_stock', 'legacy_import', 'portal_migration')
+  ),
   actor_id uuid references public.profiles(id) on delete restrict,
   created_at timestamptz not null default now(),
   unique (contract_id, to_stage)
@@ -219,6 +307,7 @@ create table if not exists public.contract_item_allocations (
   ),
   quantity numeric(15,3) not null check (quantity <> 0),
   reference_allocation_id uuid references public.contract_item_allocations(id) on delete restrict,
+  source_identity text,
   source_metadata jsonb not null default '{}'::jsonb,
   note text,
   created_at timestamptz not null default now(),
@@ -229,18 +318,22 @@ create table if not exists public.contract_item_allocations (
       and quantity > 0
       and purchase_request_item_id is not null
       and reference_allocation_id is null
+      and source_identity is null
     )
     or (
       allocation_kind = 'legacy_import'
       and quantity > 0
       and purchase_request_item_id is null
       and reference_allocation_id is null
+      and nullif(btrim(source_identity), '') is not null
       and source_metadata <> '{}'::jsonb
     )
     or (
       allocation_kind = 'reversal'
       and quantity < 0
+      and purchase_request_item_id is null
       and reference_allocation_id is not null
+      and source_identity is null
     )
   )
 );
@@ -257,8 +350,6 @@ create table if not exists public.lab_stock_memberships (
   unique (profile_id, role)
 );
 
-create index if not exists contract_items_contract_id_idx
-  on public.contract_items (contract_id);
 create index if not exists contract_items_created_by_idx
   on public.contract_items (created_by) where created_by is not null;
 create index if not exists contract_items_updated_by_idx
@@ -267,18 +358,23 @@ create index if not exists contract_stage_history_contract_date_idx
   on public.contract_stage_history (contract_id, effective_date desc);
 create index if not exists contract_stage_history_actor_id_idx
   on public.contract_stage_history (actor_id) where actor_id is not null;
+create index if not exists contract_stage_history_source_idx
+  on public.contract_stage_history (source, effective_date desc);
+create index if not exists contract_items_source_metadata_idx
+  on public.contract_items using gin (source_metadata);
 create index if not exists contract_item_allocations_contract_item_id_idx
   on public.contract_item_allocations (contract_item_id);
-create index if not exists contract_item_allocations_pr_item_id_idx
+create unique index if not exists contract_item_allocations_pr_item_key
   on public.contract_item_allocations (purchase_request_item_id)
-  where purchase_request_item_id is not null;
-create index if not exists contract_item_allocations_reference_idx
+  where allocation_kind = 'purchase_request';
+create unique index if not exists contract_item_allocations_reversal_reference_key
   on public.contract_item_allocations (reference_allocation_id)
-  where reference_allocation_id is not null;
+  where allocation_kind = 'reversal';
+create unique index if not exists contract_item_allocations_legacy_source_identity_key
+  on public.contract_item_allocations (source_identity)
+  where allocation_kind = 'legacy_import';
 create index if not exists contract_item_allocations_created_by_idx
   on public.contract_item_allocations (created_by) where created_by is not null;
-create index if not exists lab_stock_memberships_profile_id_idx
-  on public.lab_stock_memberships (profile_id);
 create index if not exists lab_stock_memberships_active_role_idx
   on public.lab_stock_memberships (role, profile_id) where active;
 create index if not exists lab_stock_memberships_granted_by_idx
@@ -344,26 +440,72 @@ create trigger contract_item_allocations_append_only
 before update or delete on public.contract_item_allocations
 for each row execute function public.prevent_append_only_mutation();
 
-insert into public.contract_stage_history (
-  contract_id,
-  from_stage,
-  to_stage,
-  effective_date,
-  contract_number_snapshot,
-  note,
-  actor_id
-)
-select
-  c.id,
-  null,
-  'contract_started',
-  coalesce(c.start_date, c.created_at::date, current_date),
-  c.contract_number,
-  'Backfilled from the legacy contract register',
-  null
-from public.contracts c
-where c.procurement_stage = 'contract_started'
-on conflict (contract_id, to_stage) do nothing;
+create or replace function public.validate_contract_item_allocation()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+declare
+  contracted_quantity numeric(15,3);
+  committed_quantity numeric(15,3);
+  original_allocation public.contract_item_allocations%rowtype;
+begin
+  -- This parent-row lock serializes every allocation for one contract item.
+  select item.quantity
+  into contracted_quantity
+  from public.contract_items item
+  where item.id = new.contract_item_id
+  for update;
+
+  if not found then
+    raise exception using errcode = '23503', message = 'contract item not found';
+  end if;
+
+  select coalesce(sum(allocation.quantity), 0)
+  into committed_quantity
+  from public.contract_item_allocations allocation
+  where allocation.contract_item_id = new.contract_item_id;
+
+  if new.allocation_kind = 'reversal' then
+    select allocation.*
+    into original_allocation
+    from public.contract_item_allocations allocation
+    where allocation.id = new.reference_allocation_id
+    for share;
+
+    if not found
+      or original_allocation.allocation_kind = 'reversal'
+      or original_allocation.quantity <= 0
+      or original_allocation.contract_item_id <> new.contract_item_id
+      or new.quantity <> -original_allocation.quantity
+    then
+      raise exception using
+        errcode = '23514',
+        message = 'reversal must exactly negate its original allocation for the same contract item';
+    end if;
+  end if;
+
+  if committed_quantity + new.quantity > contracted_quantity then
+    raise exception using errcode = '23514', message = 'allocation exceeds contracted quantity';
+  end if;
+
+  if committed_quantity + new.quantity < 0 then
+    raise exception using errcode = '23514', message = 'allocation would make committed quantity negative';
+  end if;
+
+  return new;
+end
+$function$;
+
+revoke execute on function public.validate_contract_item_allocation() from public;
+revoke execute on function public.validate_contract_item_allocation() from anon;
+revoke execute on function public.validate_contract_item_allocation() from authenticated;
+
+drop trigger if exists contract_item_allocations_validate_insert on public.contract_item_allocations;
+create trigger contract_item_allocations_validate_insert
+before insert on public.contract_item_allocations
+for each row execute function public.validate_contract_item_allocation();
 
 insert into public.lab_stock_memberships (profile_id, role, active)
 select p.id, seed.role, true
@@ -388,11 +530,12 @@ revoke all on table public.contract_stage_history from anon, authenticated;
 revoke all on table public.contract_item_allocations from anon, authenticated;
 revoke all on table public.lab_stock_memberships from anon, authenticated;
 
-grant select, insert, update, delete on table public.contracts to authenticated;
-grant select, insert, update, delete on table public.contract_items to authenticated;
+-- Authenticated clients have SELECT-only access; initial history is created atomically in Task 3.
+grant select on table public.contracts to authenticated;
+grant select on table public.contract_items to authenticated;
 grant select on table public.contract_stage_history to authenticated;
 grant select on table public.contract_item_allocations to authenticated;
-grant select, insert, update, delete on table public.lab_stock_memberships to authenticated;
+grant select on table public.lab_stock_memberships to authenticated;
 
 grant select, insert, update, delete on table public.contracts to service_role;
 grant select, insert, update, delete on table public.contract_items to service_role;
@@ -412,8 +555,11 @@ using (
   exists (
     select 1
     from public.lab_stock_memberships membership
+    join public.profiles membership_profile on membership_profile.id = membership.profile_id
     where membership.profile_id = (select auth.uid())
       and membership.active
+      and membership_profile.status = 'active'
+      and membership_profile.deleted_at is null
   )
   or exists (
     select 1
@@ -426,87 +572,8 @@ using (
 );
 
 drop policy if exists contracts_lab_stock_head_write on public.contracts;
-create policy contracts_lab_stock_head_write
-on public.contracts for update
-to authenticated
-using (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
-
 drop policy if exists contracts_lab_stock_head_insert on public.contracts;
-create policy contracts_lab_stock_head_insert
-on public.contracts for insert
-to authenticated
-with check (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
-
 drop policy if exists contracts_lab_stock_head_delete on public.contracts;
-create policy contracts_lab_stock_head_delete
-on public.contracts for delete
-to authenticated
-using (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
 
 drop policy if exists contract_items_app_read on public.contract_items;
 create policy contract_items_app_read
@@ -516,8 +583,11 @@ using (
   exists (
     select 1
     from public.lab_stock_memberships membership
+    join public.profiles membership_profile on membership_profile.id = membership.profile_id
     where membership.profile_id = (select auth.uid())
       and membership.active
+      and membership_profile.status = 'active'
+      and membership_profile.deleted_at is null
   )
   or exists (
     select 1
@@ -530,87 +600,8 @@ using (
 );
 
 drop policy if exists contract_items_head_write on public.contract_items;
-create policy contract_items_head_write
-on public.contract_items for update
-to authenticated
-using (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
-
 drop policy if exists contract_items_head_insert on public.contract_items;
-create policy contract_items_head_insert
-on public.contract_items for insert
-to authenticated
-with check (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
-
 drop policy if exists contract_items_head_delete on public.contract_items;
-create policy contract_items_head_delete
-on public.contract_items for delete
-to authenticated
-using (
-  exists (
-    select 1
-    from public.lab_stock_memberships membership
-    where membership.profile_id = (select auth.uid())
-      and membership.active
-      and membership.role in ('admin', 'head')
-  )
-  or exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and (profile.ephis_id = '9495' or profile.role = 'Manager')
-  )
-);
 
 drop policy if exists contract_stage_history_app_read on public.contract_stage_history;
 create policy contract_stage_history_app_read
@@ -620,8 +611,11 @@ using (
   exists (
     select 1
     from public.lab_stock_memberships membership
+    join public.profiles membership_profile on membership_profile.id = membership.profile_id
     where membership.profile_id = (select auth.uid())
       and membership.active
+      and membership_profile.status = 'active'
+      and membership_profile.deleted_at is null
   )
   or exists (
     select 1
@@ -641,8 +635,11 @@ using (
   exists (
     select 1
     from public.lab_stock_memberships membership
+    join public.profiles membership_profile on membership_profile.id = membership.profile_id
     where membership.profile_id = (select auth.uid())
       and membership.active
+      and membership_profile.status = 'active'
+      and membership_profile.deleted_at is null
   )
   or exists (
     select 1
@@ -659,71 +656,21 @@ create policy lab_stock_memberships_self_or_admin_read
 on public.lab_stock_memberships for select
 to authenticated
 using (
-  profile_id = (select auth.uid())
-  or exists (
-    select 1
-    from public.profiles profile
+  exists (
+    select 1 from public.profiles profile
     where profile.id = (select auth.uid())
       and profile.status = 'active'
       and profile.deleted_at is null
-      and profile.ephis_id = '9495'
+      and (
+        profile_id = (select auth.uid())
+        or profile.ephis_id = '9495'
+      )
   )
 );
 
 drop policy if exists lab_stock_memberships_admin_write on public.lab_stock_memberships;
-create policy lab_stock_memberships_admin_write
-on public.lab_stock_memberships for update
-to authenticated
-using (
-  exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and profile.ephis_id = '9495'
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and profile.ephis_id = '9495'
-  )
-);
-
 drop policy if exists lab_stock_memberships_admin_insert on public.lab_stock_memberships;
-create policy lab_stock_memberships_admin_insert
-on public.lab_stock_memberships for insert
-to authenticated
-with check (
-  exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and profile.ephis_id = '9495'
-  )
-);
-
 drop policy if exists lab_stock_memberships_admin_delete on public.lab_stock_memberships;
-create policy lab_stock_memberships_admin_delete
-on public.lab_stock_memberships for delete
-to authenticated
-using (
-  exists (
-    select 1
-    from public.profiles profile
-    where profile.id = (select auth.uid())
-      and profile.status = 'active'
-      and profile.deleted_at is null
-      and profile.ephis_id = '9495'
-  )
-);
 
 create or replace function public.advance_contract_stage(
   p_contract_id bigint,
@@ -773,7 +720,7 @@ begin
   into current_contract
   from public.contracts contract
   where contract.id = p_contract_id
-    and not contract.is_archived
+    and not coalesce(contract.is_archived, false)
   for update;
 
   if not found then
@@ -841,6 +788,27 @@ begin
       when p_to_stage = 'contract_started' then p_effective_date
       else start_date
     end,
+    plan_published_date = case
+      when p_to_stage = 'plan_published' then p_effective_date
+      else plan_published_date
+    end,
+    tender_announced_date = case
+      when p_to_stage = 'tender_announced' then p_effective_date
+      else tender_announced_date
+    end,
+    result_consideration_date = case
+      when p_to_stage = 'result_consideration' then p_effective_date
+      else result_consideration_date
+    end,
+    winner_announced_date = case
+      when p_to_stage = 'winner_announced' then p_effective_date
+      else winner_announced_date
+    end,
+    contract_started_date = case
+      when p_to_stage = 'contract_started' then p_effective_date
+      else contract_started_date
+    end,
+    stage_updated_at = now(),
     status = case
       when p_to_stage = 'contract_started' then 'active'
       else status
@@ -855,6 +823,7 @@ begin
     effective_date,
     contract_number_snapshot,
     note,
+    source,
     actor_id
   ) values (
     p_contract_id,
@@ -869,6 +838,7 @@ begin
     p_effective_date,
     current_contract.contract_number,
     nullif(btrim(p_note), ''),
+    'labcbh_stock',
     p_actor_id
   );
 

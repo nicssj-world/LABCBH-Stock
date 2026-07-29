@@ -20,6 +20,8 @@ interface ProfileRow {
   ephis_id: string | null
   name: string | null
   role: string | null
+  status: string | null
+  deleted_at: string | null
 }
 
 interface MembershipRow {
@@ -38,7 +40,7 @@ export async function getActor(): Promise<Actor | null> {
     'profile',
     await supabase
       .from('profiles')
-      .select('id,ephis_id,name,role')
+      .select('id,ephis_id,name,role,status,deleted_at')
       .eq('id', user.id)
       .maybeSingle(),
   )
@@ -54,6 +56,16 @@ export async function getActor(): Promise<Actor | null> {
   }
 
   const profile = profileData as ProfileRow
+  if (profile.status !== 'active' || profile.deleted_at !== null) {
+    return {
+      id: profile.id,
+      ephisId: profile.ephis_id,
+      name: profile.name,
+      profileRole: profile.role,
+      appRoles: [],
+    }
+  }
+
   const membershipData = unwrapActorQuery(
     'membership',
     await supabase
@@ -70,6 +82,8 @@ export async function getActor(): Promise<Actor | null> {
     appRoles: deriveAppRoles({
       ephisId: profile.ephis_id,
       profileRole: profile.role,
+      profileStatus: profile.status,
+      deletedAt: profile.deleted_at,
       memberships: (membershipData ?? []) as MembershipRow[],
     }),
   }

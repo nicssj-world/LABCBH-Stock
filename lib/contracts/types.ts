@@ -11,6 +11,7 @@ export interface ContractRecord {
   fiscalYear: number
   contractType: ContractType
   procurementStage: ProcurementStage
+  status: 'active' | 'expired' | 'cancelled' | 'pending'
   displayName: string
   contractNumber: string | null
   vendor: string | null

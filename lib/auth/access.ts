@@ -8,12 +8,22 @@ interface RoleMembership {
 interface RoleSources {
   ephisId: string | null
   profileRole: string | null
+  profileStatus: string | null
+  deletedAt: string | null
   memberships: RoleMembership[]
 }
 
 export type ProtectedRouteDecision = 'allow' | 'login' | 'access-denied'
 
-export function deriveAppRoles({ ephisId, profileRole, memberships }: RoleSources): LabStockRole[] {
+export function deriveAppRoles({
+  ephisId,
+  profileRole,
+  profileStatus,
+  deletedAt,
+  memberships,
+}: RoleSources): LabStockRole[] {
+  if (profileStatus !== 'active' || deletedAt !== null) return []
+
   const roles = new Set<LabStockRole>()
 
   for (const membership of memberships) {

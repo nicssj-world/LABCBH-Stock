@@ -38,6 +38,7 @@ export const contractInputSchema = z
     fiscalYear: z.number().int().min(2500).max(3000),
     contractType: z.enum(CONTRACT_TYPES),
     procurementStage: z.enum(PROCUREMENT_STAGES),
+    status: z.enum(['active', 'expired', 'cancelled', 'pending']),
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     contractNumber: z.string().trim().min(1).nullable(),
@@ -62,11 +63,38 @@ export const contractInputSchema = z
       })
     }
 
+    if (value.procurementStage === 'contract_started' && !value.startDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['startDate'],
+        message: 'ต้องระบุวันที่เริ่มใช้เมื่อเริ่มสัญญา',
+      })
+    }
+
+    if (value.procurementStage === 'contract_started' && value.status === 'pending') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status'],
+        message: 'สัญญาที่เริ่มใช้แล้วต้องไม่อยู่ในสถานะ pending',
+      })
+    }
+
     if (value.procurementStage !== 'contract_started' && value.contractNumber) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['contractNumber'],
         message: 'เลขที่สัญญาจะกำหนดได้เมื่อเริ่มสัญญาเท่านั้น',
+      })
+    }
+
+    if (
+      value.procurementStage !== 'contract_started' &&
+      !['pending', 'cancelled'].includes(value.status)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status'],
+        message: 'สัญญาที่ยังไม่เริ่มใช้ต้องเป็น pending หรือ cancelled',
       })
     }
   })

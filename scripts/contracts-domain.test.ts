@@ -33,6 +33,7 @@ const validDraft = {
   fiscalYear: 2569,
   contractType: 'e_bidding' as const,
   procurementStage: 'sent_to_procurement' as const,
+  status: 'pending' as const,
   displayName: 'สัญญาซื้อน้ำยาตรวจวิเคราะห์',
   vendor: 'บริษัททดสอบ จำกัด',
   contractNumber: null,
@@ -88,8 +89,51 @@ assert.equal(
     ...validDraft,
     procurementStage: 'contract_started',
     contractNumber: '  12/2569  ',
+    status: 'active',
   }).success,
   true,
+)
+
+assert.equal(
+  contractInputSchema.safeParse({ ...validDraft, status: 'active' }).success,
+  false,
+  'an early-stage controlled contract must not be active',
+)
+
+for (const status of ['expired', 'cancelled'] as const) {
+  assert.equal(
+    contractInputSchema.safeParse({
+      ...validDraft,
+      procurementStage: 'contract_started',
+      contractNumber: '12/2569',
+      status,
+    }).success,
+    true,
+    `a started contract may later become ${status}`,
+  )
+}
+
+assert.equal(
+  contractInputSchema.safeParse({ ...validDraft, status: 'cancelled' }).success,
+  true,
+  'a procurement may be cancelled before contract start',
+)
+assert.equal(
+  contractInputSchema.safeParse({ ...validDraft, status: 'expired' }).success,
+  false,
+  'a contract cannot expire before it starts',
+)
+
+assert.equal(
+  contractInputSchema.safeParse({
+    ...validDraft,
+    procurementStage: 'contract_started',
+    contractNumber: '12/2569',
+    startDate: null,
+    status: 'active',
+  }).success,
+  false,
+  'a started contract requires its effective start date',
 )
 
 assert.equal(
