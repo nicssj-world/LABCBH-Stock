@@ -1,5 +1,10 @@
 .superpowers/
 .worktrees/
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
 .env*
 !.env.example
 .secure-import/

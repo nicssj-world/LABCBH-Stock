@@ -6,7 +6,7 @@
 
 **Architecture:** A Next.js 16 App Router application performs authenticated reads with Supabase SSR and authorized mutations through Server Actions. Existing `contracts` rows are expanded in place; normalized contract items, procurement documents, lots, and an immutable stock ledger supply all calculated balances. Cross-document confirmations run as service-role-only, security-invoker PostgreSQL transactions.
 
-**Tech Stack:** Next.js 16.2.6, React 19.2.4, TypeScript 5, Tailwind CSS 4, Supabase JS 2.106.0, Supabase SSR 0.10.3, Zod 3.25.76, Recharts 3.8.1, Node.js 24, Playwright, Vercel Fluid Compute.
+**Tech Stack:** Next.js 16.2.12 (July 2026 security patch), React 19.2.4, TypeScript 5, Tailwind CSS 4, Supabase JS 2.106.0, Supabase SSR 0.10.3, Zod 3.25.76, Recharts 3.8.1, Node.js 24, Playwright, Vercel Fluid Compute.
 
 ## Global Constraints
 
@@ -78,11 +78,11 @@ Get-ChildItem '..\lab-management-portal\node_modules\next\dist\docs' -Recurse -F
   Where-Object Name -Match 'proxy|server-action|app-router|authentication' |
   Select-Object -First 20 FullName
 npm init -y
-npm install next@16.2.6 react@19.2.4 react-dom@19.2.4 @supabase/supabase-js@2.106.0 @supabase/ssr@0.10.3 zod@3.25.76 recharts@3.8.1
-npm install -D typescript@^5 @types/node@^24 @types/react@^19 @types/react-dom@^19 tailwindcss@^4 @tailwindcss/postcss@^4 tsx@^4 eslint@^9 eslint-config-next@16.2.6 @playwright/test
+npm install next@16.2.12 react@19.2.4 react-dom@19.2.4 @supabase/supabase-js@2.106.0 @supabase/ssr@0.10.3 zod@3.25.76 recharts@3.8.1
+npm install -D typescript@^5 @types/node@^24 @types/react@^19 @types/react-dom@^19 tailwindcss@^4 @tailwindcss/postcss@^4 tsx@^4 eslint@^9 eslint-config-next@16.2.12 @playwright/test
 ```
 
-Expected: `package-lock.json` exists and `npm ls next react @supabase/supabase-js` reports the pinned versions without invalid dependencies.
+Expected: `package-lock.json` exists and `npm ls next react @supabase/supabase-js` reports the pinned versions without invalid dependencies. Next.js `16.2.12` is the July 2026 security patch within the approved `16.2` minor line.
 
 - [ ] **Step 2: Write failing shell and auth contract tests**
 

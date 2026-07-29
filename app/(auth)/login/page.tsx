@@ -1,0 +1,106 @@
+'use client'
+
+import { useState, type FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/Button'
+import { createClient } from '@/lib/supabase/client'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [ephisId, setEphisId] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    const identifier = ephisId.trim()
+    const email = identifier.includes('@') ? identifier : `${identifier}@cbh.go.th`
+    const { error: signInError } = await createClient().auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (signInError) {
+      setError('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบ E-Phis และรหัสผ่านแล้วลองอีกครั้ง')
+      setIsSubmitting(false)
+      return
+    }
+
+    router.replace('/dashboard')
+    router.refresh()
+  }
+
+  return (
+    <main className="login-stage">
+      <section className="login-form-panel" aria-labelledby="login-title">
+        <div className="login-form-panel__inner">
+          <div className="login-brand">
+            <span className="login-brand__mark" aria-hidden="true">LC</span>
+            <span>
+              <strong>LABCBH Stock</strong>
+              <small>Laboratory Control Bench</small>
+            </span>
+          </div>
+
+          <div className="login-heading">
+            <p>กลุ่มงานเทคนิคการแพทย์ · โรงพยาบาลชลบุรี</p>
+            <h1 id="login-title">เข้าสู่ระบบงานคลัง</h1>
+            <span>ใช้บัญชีเดียวกับระบบ Lab Management Portal</span>
+          </div>
+
+          <form className="login-form" onSubmit={handleSubmit}>
+            <label htmlFor="ephis-id">รหัส E-Phis</label>
+            <input
+              id="ephis-id"
+              name="ephis-id"
+              type="text"
+              inputMode="numeric"
+              autoComplete="username"
+              value={ephisId}
+              onChange={(event) => setEphisId(event.target.value)}
+              placeholder="เช่น 9495"
+              required
+              autoFocus
+            />
+
+            <label htmlFor="password">รหัสผ่าน</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
+
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'กำลังตรวจสอบ…' : 'เข้าสู่ระบบ'}
+            </Button>
+          </form>
+
+          <p className="login-help">หากไม่สามารถเข้าสู่ระบบได้ กรุณาติดต่อผู้ดูแลระบบกลุ่มงาน</p>
+        </div>
+      </section>
+
+      <aside className="login-bench-panel" aria-label="ขอบเขตระบบ">
+        <div>
+          <p className="section-kicker section-kicker--light">LAB OPERATIONS</p>
+          <h2>จากสัญญา<br />ถึงการจ่าย Lot</h2>
+          <p>พื้นที่ทำงานเดียวสำหรับติดตามสัญญา PR การรับเข้า และคงเหลือที่ต้องเฝ้าระวัง</p>
+        </div>
+        <dl>
+          <div><dt>01</dt><dd>สัญญาและขั้นตอนจัดซื้อ</dd></div>
+          <div><dt>02</dt><dd>PR และการรับเข้า</dd></div>
+          <div><dt>03</dt><dd>FIFO และ minimum stock</dd></div>
+        </dl>
+      </aside>
+    </main>
+  )
+}
