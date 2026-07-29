@@ -1,0 +1,35 @@
+{
+  "spreadsheetId": "items-sheet-sample",
+  "tab": "รายการน้ำยา",
+  "rows": [
+    {
+      "contractNumber": "กค 12/2569",
+      "lsCode": "",
+      "name": "รวมวงเงินสัญญา",
+      "unit": "บาท",
+      "quantity": 1250,
+      "source": { "spreadsheetId": "items-sheet-sample", "tab": "รายการน้ำยา", "row": 2, "cells": { "unit": "D2" } }
+    },
+    {
+      "contractNumber": "กค 12/2569",
+      "lsCode": " ls046022 ",
+      "name": "น้ำยาตรวจ Alpha",
+      "unit": "กล่อง",
+      "quantity": 100,
+      "unitPrice": 12.5,
+      "stockOnHand": "#REF!",
+      "purchaseSequences": { "ครั้งที่ 1": 30, "ครั้งที่ 2": 20, "ครั้งที่ 3": "" },
+      "source": { "spreadsheetId": "items-sheet-sample", "tab": "รายการน้ำยา", "row": 3, "cells": { "lsCode": "B3", "stockOnHand": "J3", "purchaseSequences.ครั้งที่ 1": "K3" } }
+    },
+    {
+      "contractNumber": "กค 13/2569",
+      "lsCode": "LS-046022",
+      "name": "น้ำยาตรวจ Alpha รุ่นใหม่",
+      "unit": "แพ็ค",
+      "quantity": 80,
+      "unitPrice": 13,
+      "purchaseSequences": { "ครั้งที่ 1": 10 },
+      "source": { "spreadsheetId": "items-sheet-sample", "tab": "รายการน้ำยา", "row": 4, "cells": { "lsCode": "B4", "name": "C4", "unit": "D4" } }
+    }
+  ]
+}
