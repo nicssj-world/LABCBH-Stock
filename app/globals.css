@@ -1467,6 +1467,53 @@ textarea[aria-invalid="true"] {
 .item-picker__facts dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
 .item-picker__facts dd { margin: 3px 0 0; font-size: 13px; }
 
+.receipt-lines { display: grid; gap: 16px; padding: 8px 22px 20px; }
+
+.receipt-line-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receipt-line-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr) auto;
+  align-items: start;
+  gap: 18px;
+  padding: 14px;
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+
+/* A duplicate lot is flagged by text above the list too, so the border is a
+   reinforcement rather than the only signal. */
+.receipt-line--duplicate { border-color: #e1bd78; background: var(--lab-amber-soft); }
+
+.receipt-line__identity {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.receipt-line__fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.po-uploader { display: grid; gap: 14px; padding: 8px 22px 20px; }
+.po-uploader__status { margin: 0; font-size: 13px; font-weight: 700; }
+.po-uploader__status small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; font-weight: 400; }
+.po-uploader__form { display: grid; gap: 12px; }
+.po-uploader__form input[type="file"] { font-size: 12px; }
+.po-uploader__preview { display: grid; gap: 8px; }
+
+.receipt-post { display: grid; gap: 14px; padding: 8px 22px 20px; justify-items: start; }
+.receipt-post__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
+
 .pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
 .pr-review__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
 .pr-review__actions { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -1475,6 +1522,8 @@ textarea[aria-invalid="true"] {
   .inventory-detail-grid { grid-template-columns: 1fr; }
   .item-picker li { grid-template-columns: 1fr; gap: 12px; }
   .item-picker__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .receipt-line-list li { grid-template-columns: 1fr; gap: 12px; }
+  .receipt-line__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter-bench { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .filter-bench__search { grid-column: span 2; }
   .item-edit-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1524,6 +1573,7 @@ textarea[aria-invalid="true"] {
   .method-options { grid-template-columns: 1fr; }
   .item-picker__facts { grid-template-columns: 1fr; }
   .item-picker li { padding: 12px; }
+  .receipt-line__fields { grid-template-columns: 1fr; }
   .filter-bench { grid-template-columns: 1fr; }
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,

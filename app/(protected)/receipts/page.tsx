@@ -1,0 +1,148 @@
+import Link from 'next/link'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { canOperateStock } from '@/lib/auth/access'
+import { requireActor } from '@/lib/auth/actor'
+import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { listGoodsReceipts } from '@/lib/receipts/queries'
+import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
+import type { GoodsReceiptRecord } from '@/lib/receipts/types'
+
+interface ReceiptsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+
+const STATUS_LABELS: Record<(typeof GOODS_RECEIPT_STATUSES)[number], string> = {
+  draft: 'ฉบับร่าง',
+  posted: 'บันทึกเข้าคลังแล้ว',
+  cancelled: 'ยกเลิก',
+}
+
+const STATUS_TONES: Record<(typeof GOODS_RECEIPT_STATUSES)[number], 'attention' | 'success' | 'danger'> = {
+  draft: 'attention',
+  posted: 'success',
+  cancelled: 'danger',
+}
+
+export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) {
+  const actor = await requireActor()
+  const params = await searchParams
+  const search = first(params.search)?.trim() ?? ''
+  const statusValue = first(params.status)
+  const status = GOODS_RECEIPT_STATUSES.find((value) => value === statusValue)
+
+  let receipts: GoodsReceiptRecord[] = []
+  let error: string | null = null
+
+  try {
+    receipts = await listGoodsReceipts({ status, search })
+  } catch (caught) {
+    error = caught instanceof Error ? caught.message : 'อ่านรายการรับเข้าไม่สำเร็จ'
+  }
+
+  const draftCount = receipts.filter((receipt) => receipt.status === 'draft').length
+
+  return (
+    <div className="route-stack">
+      <header className="page-heading page-heading--actions">
+        <div>
+          <p className="section-kicker">GOODS RECEIVING</p>
+          <h1>รับเข้าคลัง</h1>
+          <p>ล็อตและยอดคงเหลือจะเกิดขึ้นเมื่อบันทึกใบรับเข้าคลังเท่านั้น</p>
+        </div>
+        <div className="page-heading__cluster">
+          <StatusChip tone={draftCount ? 'attention' : 'success'}>
+            {draftCount ? `${draftCount} ฉบับร่างรอบันทึก` : 'ไม่มีฉบับร่างค้าง'}
+          </StatusChip>
+          {canOperateStock(actor) && (
+            <Link className="lab-link-button lab-link-button--primary" href="/receipts/new">
+              สร้างใบรับเข้า
+            </Link>
+          )}
+        </div>
+      </header>
+
+      <form className="filter-bench" method="get" aria-label="ตัวกรองใบรับเข้า">
+        <label className="filter-bench__search">
+          ค้นหา
+          <input
+            type="search"
+            name="search"
+            defaultValue={search}
+            placeholder="เลขที่ PO, เลขที่ PR, รหัส LS หรือชื่อน้ำยา"
+          />
+        </label>
+        <label>
+          สถานะ
+          <select name="status" defaultValue={status ?? ''}>
+            <option value="">ทุกสถานะ</option>
+            {GOODS_RECEIPT_STATUSES.map((value) => (
+              <option value={value} key={value}>{STATUS_LABELS[value]}</option>
+            ))}
+          </select>
+        </label>
+        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
+        <Link className="lab-link-button lab-link-button--secondary" href="/receipts">ล้างตัวกรอง</Link>
+      </form>
+
+      {error ? (
+        <section className="error-state" role="alert">
+          <h2>ไม่สามารถแสดงรายการรับเข้าได้</h2>
+          <p>{error}</p>
+          <Link className="text-link" href="/receipts">ลองโหลดข้อมูลอีกครั้ง</Link>
+        </section>
+      ) : (
+        <section className="bench-panel" aria-labelledby="receipt-list-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">RECEIVING QUEUE</p>
+              <h2 id="receipt-list-title">รายการใบรับเข้า</h2>
+            </div>
+            <p>{receipts.length} ใบ</p>
+          </div>
+
+          {receipts.length === 0 ? (
+            <p className="empty-state">ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก</p>
+          ) : (
+            <div className="detail-items-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>เลขที่ใบสั่งซื้อ</th>
+                    <th>วันที่รับ</th>
+                    <th>ผู้รับของ</th>
+                    <th className="numeric-cell">จำนวนล็อต</th>
+                    <th className="numeric-cell">รวมที่รับ</th>
+                    <th>สถานะ</th>
+                    <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receipts.map((receipt) => (
+                    <tr key={receipt.id}>
+                      <td>
+                        <strong className="identifier">{receipt.poNumber ?? 'ไม่ระบุ PO'}</strong>
+                        <small>{receipt.purchaseRequestNumber ?? 'ไม่อ้างอิงใบ PR'}</small>
+                      </td>
+                      <td>{formatThaiDate(receipt.receivedDate)}</td>
+                      <td>{receipt.receiverName}</td>
+                      <td className="numeric-cell identifier">{receipt.items.length}</td>
+                      <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
+                      <td>
+                        <StatusChip tone={STATUS_TONES[receipt.status]}>
+                          {STATUS_LABELS[receipt.status]}
+                        </StatusChip>
+                      </td>
+                      <td><Link className="text-link" href={`/receipts/${receipt.id}`}>ดูรายละเอียด</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  )
+}
