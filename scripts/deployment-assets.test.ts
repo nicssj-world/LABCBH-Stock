@@ -27,6 +27,8 @@ assert.match(playwrightConfig, /tests\/e2e/)
 assert.match(playwrightConfig, /trace:\s*'on-first-retry'/)
 assert.match(playwrightConfig, /E2E_BASE_URL/)
 assert.match(playwrightConfig, /E2E_RUN_LOCAL_SERVER/)
+assert.match(playwrightConfig, /VERCEL_AUTOMATION_BYPASS_SECRET/)
+assert.match(playwrightConfig, /x-vercel-protection-bypass/)
 
 const requiredSpecs: Record<string, RegExp[]> = {
   'tests/e2e/contracts.spec.ts': [/manager/, /contract_started/, /เลขที่สัญญา/],
