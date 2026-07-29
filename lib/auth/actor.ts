@@ -1,6 +1,8 @@
 import 'server-only'
 
 import { redirect } from 'next/navigation'
+import { decideProtectedRoute, deriveAppRoles } from '@/lib/auth/access'
+import { resolveAuthenticatedUser, unwrapActorQuery } from '@/lib/auth/resolution'
 import { createClient } from '@/lib/supabase/server'
 
 export type LabStockRole = 'admin' | 'head' | 'stock_officer' | 'viewer' | 'reporter'
@@ -27,46 +29,58 @@ interface MembershipRow {
 
 export async function getActor(): Promise<Actor | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const authResult = await supabase.auth.getUser()
+  const user = resolveAuthenticatedUser(authResult)
 
   if (!user) return null
 
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('id,ephis_id,name,role')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !profileData) return null
-
-  const profile = profileData as ProfileRow
-  const { data: membershipData } = await supabase
-    .from('lab_stock_memberships')
-    .select('role,active')
-    .eq('profile_id', user.id)
-
-  const roles = new Set(
-    ((membershipData ?? []) as MembershipRow[])
-      .filter((membership) => membership.active)
-      .map((membership) => membership.role),
+  const profileData = unwrapActorQuery(
+    'profile',
+    await supabase
+      .from('profiles')
+      .select('id,ephis_id,name,role')
+      .eq('id', user.id)
+      .maybeSingle(),
   )
 
-  if (profile.ephis_id === '9495') roles.add('admin')
-  if (profile.role === 'Manager') roles.add('head')
+  if (!profileData) {
+    return {
+      id: user.id,
+      ephisId: null,
+      name: null,
+      profileRole: null,
+      appRoles: [],
+    }
+  }
+
+  const profile = profileData as ProfileRow
+  const membershipData = unwrapActorQuery(
+    'membership',
+    await supabase
+      .from('lab_stock_memberships')
+      .select('role,active')
+      .eq('profile_id', user.id),
+  )
 
   return {
     id: profile.id,
     ephisId: profile.ephis_id,
     name: profile.name,
     profileRole: profile.role,
-    appRoles: [...roles],
+    appRoles: deriveAppRoles({
+      ephisId: profile.ephis_id,
+      profileRole: profile.role,
+      memberships: (membershipData ?? []) as MembershipRow[],
+    }),
   }
 }
 
 export async function requireActor(): Promise<Actor> {
   const actor = await getActor()
+  const decision = decideProtectedRoute(actor)
+
   if (!actor) redirect('/login')
+  if (decision === 'access-denied') redirect('/access-denied')
+
   return actor
 }

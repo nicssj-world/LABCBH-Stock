@@ -236,6 +236,12 @@ button {
   border-color: #466679;
 }
 
+.bench-nav__link[aria-current="page"] {
+  color: #ffffff;
+  background: #1a4b61;
+  border-color: #6f91a2;
+}
+
 .bench-nav__link:active {
   background: #0b2838;
 }
@@ -300,6 +306,12 @@ button {
   font-weight: 700;
 }
 
+.workbench-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .actor-badge {
   display: flex;
   align-items: center;
@@ -329,6 +341,30 @@ button {
 .actor-badge small {
   color: var(--lab-muted);
   font-size: 10px;
+}
+
+.logout-control {
+  position: relative;
+}
+
+.logout-control .lab-button {
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.logout-control__error {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  margin: 0;
+  padding: 8px 10px;
+  color: #8d1723;
+  background: var(--lab-red-soft);
+  border: 1px solid #e6abb2;
+  border-radius: var(--radius-control);
+  font-size: 12px;
 }
 
 .workbench-main {
@@ -654,6 +690,53 @@ button {
   font-weight: 600;
 }
 
+.access-denied-stage {
+  display: grid;
+  min-height: 100dvh;
+  padding: 24px;
+  place-items: center;
+  background: var(--lab-canvas);
+}
+
+.access-denied-card {
+  width: min(100%, 600px);
+  padding: clamp(28px, 6vw, 52px);
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-top: 5px solid var(--lab-amber);
+  border-radius: var(--radius-panel);
+}
+
+.access-denied-card__code {
+  color: var(--lab-amber);
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: .08em;
+}
+
+.access-denied-card h1 {
+  margin: 12px 0 8px;
+  color: var(--lab-navy-strong);
+  font-size: clamp(26px, 5vw, 38px);
+  line-height: 1.25;
+}
+
+.access-denied-card > p {
+  margin: 0;
+  color: var(--lab-muted);
+}
+
+.access-denied-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.access-denied-card__actions a {
+  text-decoration: none;
+}
+
 @media (max-width: 800px) {
   .app-shell {
     display: block;
@@ -690,6 +773,15 @@ button {
 
   .workbench-header {
     padding-inline: 16px;
+  }
+
+  .workbench-header__actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .actor-badge {
+    display: none;
   }
 
   .workbench-main {

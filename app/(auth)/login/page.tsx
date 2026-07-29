@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { runLoginAttempt } from '@/lib/auth/login'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -17,16 +18,15 @@ export default function LoginPage() {
     setError(null)
     setIsSubmitting(true)
 
-    const identifier = ephisId.trim()
-    const email = identifier.includes('@') ? identifier : `${identifier}@cbh.go.th`
-    const { error: signInError } = await createClient().auth.signInWithPassword({
-      email,
+    const result = await runLoginAttempt({
+      identifier: ephisId,
       password,
+      signIn: (credentials) => createClient().auth.signInWithPassword(credentials),
     })
+    setIsSubmitting(false)
 
-    if (signInError) {
+    if (!result.ok) {
       setError('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบ E-Phis และรหัสผ่านแล้วลองอีกครั้ง')
-      setIsSubmitting(false)
       return
     }
 

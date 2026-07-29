@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/auth-contract.test.ts"
+    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts"
   },
   "engines": {
     "node": ">=22"
