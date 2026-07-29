@@ -11,3 +11,4 @@ out/
 import-report*.json
 test-results/
 playwright-report/
+supabase/.temp/
