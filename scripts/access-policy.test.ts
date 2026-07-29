@@ -131,6 +131,34 @@ assert.match(adminAssert, /ephis_id = '9495'/)
 assert.match(adminAssert, /membership\.role = 'admin'/i)
 assert.doesNotMatch(adminAssert, /'head'|'stock_officer'/i, 'only admins pass this gate')
 
+const recursionFixName = readdirSync(migrationsDir).find((file) =>
+  file.endsWith('_lab_stock_membership_rls_recursion.sql'),
+)
+assert.ok(recursionFixName, 'membership RLS must include a forward-only recursion fix')
+const recursionFixSql = readFileSync(join(migrationsDir, recursionFixName), 'utf8')
+const adminHelper = recursionFixSql.match(
+  /create or replace function public\.is_current_lab_stock_admin\(\)[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(adminHelper, 'the recursion fix must expose a current-user admin helper')
+assert.match(adminHelper, /security definer/i)
+assert.match(adminHelper, /set search_path = ''/i)
+assert.match(adminHelper, /auth\.uid\(\)/i)
+assert.match(adminHelper, /\b(?:from|join) public\.lab_stock_memberships/i)
+assert.match(recursionFixSql, /revoke execute on function public\.is_current_lab_stock_admin\(\) from public/i)
+assert.match(recursionFixSql, /revoke execute on function public\.is_current_lab_stock_admin\(\) from anon/i)
+assert.match(recursionFixSql, /grant execute on function public\.is_current_lab_stock_admin\(\) to authenticated/i)
+
+const membershipReadPolicy = recursionFixSql.match(
+  /create policy lab_stock_memberships_self_or_admin_read[\s\S]*?;\s*(?:\r?\n|$)/i,
+)?.[0]
+assert.ok(membershipReadPolicy, 'the recursion fix must replace the membership read policy')
+assert.match(membershipReadPolicy, /is_current_lab_stock_admin\(\)/i)
+assert.doesNotMatch(
+  membershipReadPolicy,
+  /from public\.lab_stock_memberships/i,
+  'a membership policy must not query its own RLS-protected table directly',
+)
+
 for (const fn of ['assert_lab_stock_admin_actor', 'set_lab_stock_membership']) {
   for (const role of ['public', 'anon', 'authenticated']) {
     assert.match(
