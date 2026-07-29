@@ -14,7 +14,7 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
     await expect(manager.getByRole('heading', { name: 'สร้างใบเบิก' })).toBeVisible()
     await manager.getByLabel('เพิ่มน้ำยาเข้าใบเบิก').selectOption({ index: 1 })
     await manager.getByRole('button', { name: 'ส่งใบเบิก' }).click()
-    await expect(manager).toHaveURL(/\/requisitions\/[^/]+$/)
+    await expect(manager).toHaveURL(/\/requisitions\/[0-9a-f-]{36}$/)
     const url = new URL(manager.url()).pathname
     await managerContext.close()
 
@@ -33,6 +33,15 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
       stockB.getByRole('button', { name: 'ยืนยันการจ่ายของ' }).click(),
     ])
     expect(results).toHaveLength(2)
+
+    const waitForSettlement = async (page: typeof stockA) => {
+      await expect.poll(async () => {
+        const fulfilled = await page.getByText(/จ่ายของเมื่อ/).count()
+        const rejected = await page.getByRole('alert').count()
+        return fulfilled + rejected
+      }, { timeout: 30_000 }).toBeGreaterThan(0)
+    }
+    await Promise.all([waitForSettlement(stockA), waitForSettlement(stockB)])
     await Promise.all([stockA.reload(), stockB.reload()])
     await expect(stockA.getByText(/จ่ายของเมื่อ/)).toBeVisible()
     await expect(stockB.getByText(/จ่ายของเมื่อ/)).toBeVisible()

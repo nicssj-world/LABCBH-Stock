@@ -17,7 +17,7 @@ test.describe('manager contract workflow', () => {
     await page.getByLabel('รหัสน้ำยา (LS)').fill(`E2E-${token}`)
     await page.getByLabel('ชื่อน้ำยา').fill('E2E reagent')
     await page.getByLabel('จำนวนในสัญญา').fill('10')
-    await page.getByLabel('หน่วย').fill('กล่อง')
+    await page.getByLabel('หน่วย', { exact: true }).fill('กล่อง')
     await page.getByLabel('ราคาต่อหน่วย').fill('100')
     await page.getByRole('button', { name: 'บันทึกสัญญา' }).click()
     await expect(page).toHaveURL(/\/contracts\/\d+$/)
@@ -25,13 +25,16 @@ test.describe('manager contract workflow', () => {
     for (let stage = 0; stage < 5; stage += 1) {
       await page.getByRole('button', { name: /ไปขั้น/ }).click()
       const contractNumber = page.getByLabel('เลขที่สัญญา')
-      if (await contractNumber.isVisible().catch(() => false)) {
+      if (stage === 4) {
+        await expect(contractNumber).toBeVisible()
         await contractNumber.fill(`E2E-${token}`)
       } else {
         await expect(contractNumber).toHaveCount(0)
       }
       await page.getByRole('button', { name: 'ยืนยันขั้นตอนใหม่' }).click()
-      await expect(page.getByText(/ยืนยันเปลี่ยนขั้นตอน/)).toHaveCount(0)
+      if (stage < 4) {
+        await expect(page.getByRole('button', { name: /ไปขั้น/ })).toBeVisible()
+      }
     }
 
     await expect(page.getByText('สัญญาเริ่มใช้งานแล้ว ไม่มีขั้นตอนถัดไป')).toBeVisible()
