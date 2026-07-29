@@ -1514,6 +1514,89 @@ textarea[aria-invalid="true"] {
 .receipt-post { display: grid; gap: 14px; padding: 8px 22px 20px; justify-items: start; }
 .receipt-post__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
 
+.requisition-lines { display: grid; gap: 16px; padding: 8px 22px 20px; }
+
+.requisition-line-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.requisition-line-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto;
+  align-items: start;
+  gap: 18px;
+  padding: 14px;
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+
+.requisition-line__identity { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+.requisition-line__identity small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
+.requisition-line__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.requisition-line__warning { grid-column: 1 / -1; margin: 0; color: var(--lab-amber); font-size: 12px; font-weight: 700; }
+
+.lot-picker { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.lot-picker li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+
+/* Disabled rows keep full contrast on their text; the chip says why. */
+.lot-picker__row--disabled { background: var(--lab-surface-muted); }
+.lot-picker__choice { display: grid; grid-template-columns: 20px 28px minmax(0, 1fr); align-items: center; gap: 12px; font-size: 13px; }
+.lot-picker__choice input { width: 20px; height: 20px; accent-color: var(--lab-navy); }
+.lot-picker__choice small { display: block; margin-top: 3px; color: var(--lab-muted); font-size: 11px; }
+
+.lot-picker__rank {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--lab-navy-strong);
+  background: #dfe9ec;
+  border-radius: 50%;
+  font: 500 12px var(--font-mono);
+}
+
+.lot-picker__balance { font-size: 12px; white-space: nowrap; }
+.lot-picker__quantity { font-size: 11px; }
+
+.fulfillment-panel { display: grid; gap: 20px; padding: 8px 22px 20px; justify-items: stretch; }
+.fulfillment-panel > .lab-button { justify-self: start; }
+.fulfillment-item { display: grid; gap: 12px; }
+.fulfillment-item__header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fulfillment-item__header h3 { margin: 4px 0 0; font-size: 16px; }
+.fulfillment-item__header p { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.fulfillment-item__override { max-width: 520px; }
+
+.fulfillment-problems {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px 12px 32px;
+  color: #744300;
+  background: var(--lab-amber-soft);
+  border: 1px solid #e1bd78;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+}
+
+.allocation-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.allocation-list li { display: flex; flex-wrap: wrap; gap: 10px; }
+.allocation-list__override { width: 100%; color: var(--lab-amber); font-size: 11px; }
+
 .pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
 .pr-review__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
 .pr-review__actions { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -1524,6 +1607,9 @@ textarea[aria-invalid="true"] {
   .item-picker__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .receipt-line-list li { grid-template-columns: 1fr; gap: 12px; }
   .receipt-line__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .requisition-line-list li { grid-template-columns: 1fr; gap: 12px; }
+  .lot-picker li { grid-template-columns: minmax(0, 1fr) auto; }
+  .lot-picker__quantity { grid-column: 1 / -1; }
   .filter-bench { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .filter-bench__search { grid-column: span 2; }
   .item-edit-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1574,6 +1660,10 @@ textarea[aria-invalid="true"] {
   .item-picker__facts { grid-template-columns: 1fr; }
   .item-picker li { padding: 12px; }
   .receipt-line__fields { grid-template-columns: 1fr; }
+  .requisition-line__fields { grid-template-columns: 1fr; }
+  .lot-picker li { grid-template-columns: 1fr; }
+  .print-meta { grid-template-columns: 1fr; }
+  .print-signatures { grid-template-columns: 1fr; gap: 28px; }
   .filter-bench { grid-template-columns: 1fr; }
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,
@@ -1598,4 +1688,113 @@ textarea[aria-invalid="true"] {
   .watchlist__remaining { grid-column: auto; grid-row: auto; }
   .type-mix__rows > div { grid-template-columns: 1fr auto; }
   .type-mix__rows small { grid-column: 1 / -1; text-align: left; }
+}
+
+/* --- Print: the A4 requisition form --------------------------------------- */
+
+.print-route { display: grid; gap: 20px; }
+
+.print-route__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.print-route__toolbar p { margin: 0; color: var(--lab-muted); font-size: 12px; }
+
+.print-sheet {
+  max-width: 186mm;
+  margin: 0 auto;
+  padding: 12mm;
+  color: #000000;
+  background: #ffffff;
+  border: 1px solid var(--lab-border);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.print-header { margin-bottom: 16px; text-align: center; }
+.print-header__hospital { margin: 0; font-size: 16px; font-weight: 700; }
+.print-header__department { margin: 2px 0 0; font-size: 13px; }
+.print-header h1 { margin: 10px 0 0; font-size: 18px; }
+
+.print-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin: 0 0 14px;
+}
+
+.print-meta div { display: flex; gap: 8px; }
+.print-meta dt { font-weight: 700; }
+.print-meta dd { margin: 0; }
+
+.print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+
+.print-table th,
+.print-table td {
+  padding: 6px 8px;
+  border: 1px solid #000000;
+  text-align: left;
+  vertical-align: top;
+}
+
+.print-table thead { display: table-header-group; }
+.print-table tr { break-inside: avoid; }
+
+.print-note { margin: 12px 0 0; font-size: 11px; }
+
+.print-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  margin-top: 36px;
+  /* The block is meaningless if the line lands on one page and the name on the
+     next, so it is never allowed to split. */
+  break-inside: avoid;
+  text-align: center;
+}
+
+.print-signatures p { margin: 0; font-size: 11px; }
+.print-signature__line { margin-bottom: 6px !important; }
+.print-signature__role { font-weight: 700; }
+.print-signature__hint { color: #444444; }
+.print-signature__date { margin-top: 8px !important; }
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  /* Only the document survives; the bench chrome is screen furniture. */
+  .bench-rail,
+  .workbench-header,
+  .print-route__toolbar,
+  .skip-link {
+    display: none !important;
+  }
+
+  html, body { background: #ffffff; }
+
+  .app-shell,
+  .workbench,
+  .workbench-main {
+    display: block;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .print-sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .print-signatures { break-inside: avoid; }
 }

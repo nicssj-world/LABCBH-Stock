@@ -23,6 +23,8 @@ export interface InventoryLotRecord {
   id: string
   lotNumber: string
   expiryDate: string | null
+  /** Alias of receivedDate, so the record satisfies the FIFO ranking contract. */
+  receivedAt: string
   receivedDate: string
   originalQuantity: number
   storageLocation: string | null

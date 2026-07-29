@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { rankLotsForFifo } from '@/lib/requisitions/fifo'
 import { createClient } from '@/lib/supabase/server'
 import {
   MINIMUM_STOCK_WINDOW_MONTHS,
@@ -275,23 +276,21 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   const lotRows = lotRowSchema.array().parse(lotResult.data ?? [])
   const lotBalances = await readLotBalances(supabase, lotRows.map((lot) => lot.id))
 
-  const lots: InventoryLotRecord[] = lotRows
-    .map((lot) => ({
+  // Shown in the same order fulfilment will actually issue them, using the one
+  // ranking function so this preview cannot drift from the real thing.
+  const lots: InventoryLotRecord[] = rankLotsForFifo(
+    lotRows.map((lot) => ({
       id: lot.id,
       lotNumber: lot.lot_number,
       expiryDate: lot.expiry_date,
+      receivedAt: lot.received_date,
       receivedDate: lot.received_date,
       originalQuantity: lot.original_quantity,
       storageLocation: lot.storage_location,
       balance: lotBalances.get(lot.id) ?? 0,
       expiryStatus: classifyLotExpiry(lot.expiry_date, today),
-    }))
-    // FIFO order previews what Task 8 will issue: soonest expiry, then oldest receipt.
-    .sort((left, right) => {
-      const leftExpiry = left.expiryDate ?? '9999-12-31'
-      const rightExpiry = right.expiryDate ?? '9999-12-31'
-      return leftExpiry.localeCompare(rightExpiry) || left.receivedDate.localeCompare(right.receivedDate)
-    })
+    })),
+  )
 
   const { monthKeys, onHandByItem, issuesByItem } = balancesAndIssues
 
