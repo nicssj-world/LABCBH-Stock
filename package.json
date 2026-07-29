@@ -17,7 +17,10 @@
     "test:requisitions": "tsx scripts/fifo-domain.test.ts && tsx scripts/requisition-schema.test.ts && tsx scripts/requisition-transaction.test.ts && tsx scripts/requisition-print.test.ts",
     "test:access": "tsx scripts/access-policy.test.ts && tsx scripts/access-ui.test.ts",
     "test:import": "tsx scripts/import-normalization.test.ts && tsx scripts/import-idempotency.test.ts && tsx scripts/import-reconciliation.test.ts",
-    "verify": "npm run lint && npm run typecheck && npm run test:app-shell && npm run test:contracts && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:access && npm run test:import && npm run build"
+    "test:security": "tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/access-policy.test.ts",
+    "test:deployment": "tsx scripts/deployment-assets.test.ts",
+    "test:e2e": "playwright test",
+    "verify": "npm run lint && npm run typecheck && npm run test:app-shell && npm run test:contracts && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:e2e && npm run build"
   },
   "engines": {
     "node": ">=22"
@@ -43,10 +46,10 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "csv-parse": "^7.0.1",
+    "csv-parse": "7.0.1",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.12",
-    "read-excel-file": "^9.3.5",
+    "read-excel-file": "9.3.5",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.1",
     "typescript": "5.9.3"
