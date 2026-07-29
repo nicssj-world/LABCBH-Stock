@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts"
+    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts",
+    "test:contracts": "tsx scripts/contracts-domain.test.ts && tsx scripts/contracts-schema.test.ts && tsx scripts/contracts-backend.test.ts && tsx scripts/contracts-create-rpc.test.ts && tsx scripts/contracts-ui.test.ts"
   },
   "engines": {
     "node": ">=22"

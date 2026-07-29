@@ -154,7 +154,9 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
 
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
   if (search) {
-    query = query.or(`display_name.ilike.%${search}%,product.ilike.%${search}%`)
+    query = query.or(
+      `display_name.ilike.%${search}%,product.ilike.%${search}%,contract_number.ilike.%${search}%,vendor.ilike.%${search}%`,
+    )
   }
 
   const { data, error } = await query
