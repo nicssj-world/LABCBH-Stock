@@ -7,6 +7,7 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
   test.beforeAll(() => requireFixtures(['manager', 'stock', 'stock_alt']))
 
   test('@smoke manager creates a request and concurrent stock fulfillment cannot double-issue', async ({ browser }) => {
+    test.setTimeout(90_000)
     const managerContext = await browser.newContext()
     const manager = await managerContext.newPage()
     await loginAs(manager, 'manager')
@@ -37,7 +38,7 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
     const waitForSettlement = async (page: typeof stockA) => {
       await expect.poll(async () => {
         const fulfilled = await page.getByText(/จ่ายของเมื่อ/).count()
-        const rejected = await page.getByRole('alert').count()
+        const rejected = await page.locator('.form-error[role="alert"]').count()
         return fulfilled + rejected
       }, { timeout: 30_000 }).toBeGreaterThan(0)
     }

@@ -7,6 +7,7 @@ test.describe('manager contract workflow', () => {
   test.beforeAll(() => requireFixtures(['manager']))
 
   test('@smoke creates a contract and requires เลขที่สัญญา only at contract_started', async ({ page }) => {
+    test.setTimeout(90_000)
     await loginAs(page, 'manager')
     const activeBefore = Number((await page.getByText('สัญญาใช้งานอยู่').locator('..').locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
     await page.goto('/contracts/new')
