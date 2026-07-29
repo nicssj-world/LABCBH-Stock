@@ -15,7 +15,8 @@
     "test:pr": "tsx scripts/pr-domain.test.ts && tsx scripts/pr-schema.test.ts && tsx scripts/pr-transaction.test.ts && tsx scripts/pr-ui.test.ts",
     "test:receiving": "tsx scripts/receiving-schema.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/receiving-transaction.test.ts && tsx scripts/receiving-ui.test.ts",
     "test:requisitions": "tsx scripts/fifo-domain.test.ts && tsx scripts/requisition-schema.test.ts && tsx scripts/requisition-transaction.test.ts && tsx scripts/requisition-print.test.ts",
-    "verify": "npm run lint && npm run typecheck && npm run test:app-shell && npm run test:contracts && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run build"
+    "test:access": "tsx scripts/access-policy.test.ts && tsx scripts/access-ui.test.ts",
+    "verify": "npm run lint && npm run typecheck && npm run test:app-shell && npm run test:contracts && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:access && npm run build"
   },
   "engines": {
     "node": ">=22"

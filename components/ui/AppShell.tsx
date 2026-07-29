@@ -13,7 +13,7 @@ import type { ReactNode } from 'react'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import type { Actor } from '@/lib/auth/actor'
 
-type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory'
+type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
 
 const navigation: Array<{ href: string; label: string; icon: BenchIconName }> = [
   { href: '/dashboard', label: 'ภาพรวม', icon: 'overview' },
@@ -24,6 +24,12 @@ const navigation: Array<{ href: string; label: string; icon: BenchIconName }> = 
   { href: '/inventory', label: 'คงคลัง', icon: 'inventory' },
 ]
 
+// Kept out of the main list because the route redirects anyone else away; a
+// visible link that always bounced would be worse than no link.
+const adminNavigation: Array<{ href: string; label: string; icon: BenchIconName }> = [
+  { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings' },
+]
+
 function BenchIcon({ name }: { name: BenchIconName }) {
   const paths: Record<BenchIconName, ReactNode> = {
     overview: <><path d="M4 13h6V4H4v9Z" /><path d="M14 20h6V11h-6v9Z" /><path d="M4 20h6v-3H4v3Z" /><path d="M14 7h6V4h-6v3Z" /></>,
@@ -32,6 +38,7 @@ function BenchIcon({ name }: { name: BenchIconName }) {
     receipt: <><path d="M4 7h16v13H4V7Z" /><path d="M7 3h10v4H7V3Z" /><path d="M12 10v6m-3-3 3 3 3-3" /></>,
     issue: <><path d="M4 5h16v14H4V5Z" /><path d="M12 15V9m-3 3 3-3 3 3" /></>,
     inventory: <><path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z" /><path d="M12 11v10" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></>,
   }
 
   return (
@@ -62,7 +69,7 @@ export function AppShell({ actor, children }: AppShellProps) {
           </span>
         </div>
         <nav className="bench-nav">
-          {navigation.map((item) => (
+          {[...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])].map((item) => (
             <Link
               key={item.href}
               href={item.href}
