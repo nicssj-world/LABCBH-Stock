@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isoDateSchema } from '@/lib/validation/date'
 import { PROCUREMENT_STAGES, allowedNextStages } from './stages'
 
 export const CONTRACT_TYPES = [
@@ -10,20 +11,6 @@ export const CONTRACT_TYPES = [
   'awaiting_equipment_lease',
   'thai_red_cross',
 ] as const
-
-const isoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'กรุณาระบุวันที่ในรูปแบบ YYYY-MM-DD')
-  .refine((value) => {
-    const [year, month, day] = value.split('-').map(Number)
-    if (!year || !month || !day) return false
-    const parsed = new Date(Date.UTC(year, month - 1, day))
-    return (
-      parsed.getUTCFullYear() === year &&
-      parsed.getUTCMonth() === month - 1 &&
-      parsed.getUTCDate() === day
-    )
-  }, 'วันที่ไม่ถูกต้อง')
 
 export const contractLineInputSchema = z.object({
   lsCode: z.string().trim().min(1, 'กรุณาระบุรหัสน้ำยา (LS)'),
