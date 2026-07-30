@@ -12,3 +12,5 @@ import-report*.json
 test-results/
 playwright-report/
 supabase/.temp/
+# Pre-cutover production dumps. Real patient-adjacent operational data.
+.backups/
