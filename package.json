@@ -20,6 +20,8 @@
     "test:security": "tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/access-policy.test.ts",
     "test:deployment": "tsx scripts/deployment-assets.test.ts",
     "test:e2e": "playwright test",
+    "e2e:staging-passwords": "node scripts/staging-set-test-passwords.mjs",
+    "e2e:staging-seed-receipt": "node scripts/staging-seed-receipt-draft.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test:app-shell && npm run test:contracts && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:e2e && npm run build"
   },
   "engines": {
