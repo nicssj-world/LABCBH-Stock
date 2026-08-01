@@ -141,6 +141,10 @@ async function main() {
     endDate: null,
     updatedAt: null,
     isArchived: null,
+    // A legacy lease imported from the portal: it has a ceiling but no line
+    // items and nobody assigned to it yet.
+    total: 3531000,
+    responsibleUserIds: [],
     items: [],
     stageHistory: [],
   })

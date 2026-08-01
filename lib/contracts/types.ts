@@ -62,6 +62,10 @@ export interface ContractRecord {
   endDate: string | null
   updatedAt: string | null
   isArchived: boolean | null
+  // Budget mode reads these two: the ceiling to measure against, and who may
+  // spend against it without holding an editor role.
+  total: number | null
+  responsibleUserIds: string[]
   items: ContractItemRecord[]
   stageHistory: ContractStageHistoryRecord[]
 }

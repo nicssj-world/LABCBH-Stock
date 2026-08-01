@@ -9,6 +9,11 @@ import {
   normalizeUsageMonth,
 } from '../lib/contracts/budget'
 import { contractExpenseInputSchema, createContractInputSchema } from '../lib/contracts/schema'
+import {
+  assertContractExpenseRecorder,
+  canRecordContractExpense,
+} from '../lib/contracts/authorization'
+import type { Actor, LabStockRole } from '../lib/auth/actor'
 
 // Only equipment leases are tracked in baht. Everything else keeps line items.
 assert.equal(contractMode('equipment_lease'), 'budget')
@@ -90,5 +95,40 @@ assert.throws(
 assert.doesNotThrow(() =>
   contractExpenseInputSchema.parse({ contractId: 1, amount: 1500.5, usageMonth: '2026-07-01' }),
 )
+
+// ── who may record an expense ───────────────────────────────────────────────
+// Mirrors assert_contract_expense_actor. The responsible-user path is the one
+// the workflow actually depends on: every person currently named on a contract
+// is a Medical Technologist holding no editor role.
+const actor = (id: string, roles: LabStockRole[]): Actor => ({
+  id,
+  ephisId: null,
+  name: null,
+  profileRole: null,
+  appRoles: roles,
+})
+
+const head = actor('11111111-1111-1111-1111-111111111111', ['head'])
+const mt = actor('22222222-2222-2222-2222-222222222222', [])
+const stranger = actor('33333333-3333-3333-3333-333333333333', [])
+
+assert.equal(canRecordContractExpense(head, { responsibleUserIds: [] }), true, 'editors always may')
+assert.equal(
+  canRecordContractExpense(mt, { responsibleUserIds: [mt.id] }),
+  true,
+  'a named non-editor may record on that contract',
+)
+assert.equal(
+  canRecordContractExpense(mt, { responsibleUserIds: [stranger.id] }),
+  false,
+  'being named on another contract grants nothing here',
+)
+assert.equal(canRecordContractExpense(stranger, { responsibleUserIds: [] }), false)
+
+assert.throws(
+  () => assertContractExpenseRecorder(stranger, { responsibleUserIds: [] }),
+  /ไม่มีสิทธิ์บันทึกค่าใช้จ่ายของสัญญานี้/,
+)
+assert.doesNotThrow(() => assertContractExpenseRecorder(mt, { responsibleUserIds: [mt.id] }))
 
 console.log('contract budget domain tests passed')

@@ -48,6 +48,8 @@ export const contractReadRowSchema = z.object({
   end_date: z.string().nullable(),
   updated_at: z.string().nullable(),
   is_archived: z.boolean().nullable(),
+  total: numericSchema.nullable(),
+  responsible_user_ids: z.array(z.string().uuid()).nullable().default([]),
   contract_items: z.array(contractItemReadRowSchema).nullable().default([]),
   contract_stage_history: z.array(contractStageHistoryReadRowSchema).nullable().default([]),
 })
@@ -66,6 +68,8 @@ const CONTRACT_READ_SELECT = `
   end_date,
   updated_at,
   is_archived,
+  total,
+  responsible_user_ids,
   contract_items (
     id,
     line_number,
@@ -111,6 +115,8 @@ function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRec
     endDate: row.end_date,
     updatedAt: row.updated_at,
     isArchived: row.is_archived,
+    total: row.total,
+    responsibleUserIds: row.responsible_user_ids ?? [],
     items: (row.contract_items ?? [])
       .sort((left, right) => left.line_number - right.line_number)
       .map((item) => ({
