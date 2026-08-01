@@ -9,6 +9,7 @@ interface ContractFiltersProps {
   contractType: string
   procurementStage: string
   showEnded: boolean
+  showOlder: boolean
   fiscalYears: number[]
   contractTypes: Array<{ value: string; label: string }>
   procurementStages: Array<{ value: string; label: string }>
@@ -20,6 +21,7 @@ export function ContractFilters({
   contractType,
   procurementStage,
   showEnded,
+  showOlder,
   fiscalYears,
   contractTypes,
   procurementStages,
@@ -55,6 +57,7 @@ export function ContractFilters({
     setSearch('')
     const nextParams = new URLSearchParams()
     if (showEnded) nextParams.set('showEnded', '1')
+    if (showOlder) nextParams.set('showOlder', '1')
     replaceFilters(nextParams)
   }
 

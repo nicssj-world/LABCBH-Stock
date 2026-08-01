@@ -22,6 +22,10 @@ assert.match(listPage, /showEnded/, 'contract list must support an explicit ende
 assert.match(listPage, /effectiveStatus\s*!==\s*['"]expired['"]/, 'ended contracts must stay hidden from the default register')
 assert.match(listPage, /แสดงสัญญาที่สิ้นสุดแล้ว/, 'users need a clear control to reveal ended contracts on demand')
 assert.match(listPage, /ซ่อนสัญญาที่สิ้นสุดแล้ว/, 'the visibility control must clearly communicate its toggled state')
+assert.match(listPage, /showOlder/, 'the register must support an explicit older-fiscal-year visibility state')
+assert.match(listPage, /thisFiscalYear\s*-\s*4/, 'the default register must limit itself to the latest five fiscal years')
+assert.match(listPage, /แสดงปีเก่าทั้งหมด/, 'users need a clear control to reveal older fiscal years')
+assert.match(listPage, /ซ่อนปีเก่า/, 'the older-year control must clearly communicate its toggled state')
 assert.match(listPage, /ContractFilters/, 'the register must use an interactive filter control')
 assert.doesNotMatch(listPage, /แสดงผล/, 'the register filter must not require a separate apply button')
 
@@ -32,6 +36,7 @@ assert.match(contractFilters, /router\.replace/, 'filter changes must replace th
 assert.match(contractFilters, /onChange=\{handleSelectChange\}/, 'selecting a filter must apply it immediately')
 assert.match(contractFilters, /setTimeout/, 'free-text search must debounce URL updates rather than refresh on every keystroke')
 assert.match(contractFilters, /aria-live="polite"/, 'automatic filter feedback must be announced accessibly')
+assert.match(contractFilters, /showOlder/, 'clearing interactive filters must preserve the user\'s older-year visibility choice')
 
 const detailPage = read(contractRoutes[2])
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 detail params must be awaited')
