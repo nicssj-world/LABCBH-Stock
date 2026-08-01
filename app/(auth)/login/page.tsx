@@ -109,13 +109,13 @@ export default function LoginPage() {
       <aside className="login-bench-panel" aria-label="ขอบเขตระบบ">
         <div>
           <p className="section-kicker section-kicker--light">LAB OPERATIONS</p>
-          <h2>จากสัญญา<br />ถึงการจ่าย Lot</h2>
-          <p>พื้นที่ทำงานเดียวสำหรับติดตามสัญญา PR การรับเข้า และคงเหลือที่ต้องเฝ้าระวัง</p>
+          <h2>ระบบคลังน้ำยา<br />และวัสดุวิทยาศาสตร์</h2>
+          <p>พื้นที่ทำงานเดียวสำหรับรับเข้า ควบคุมคงคลัง และเบิกจ่ายวัสดุอย่างเป็นระบบ</p>
         </div>
         <dl>
-          <div><dt>01</dt><dd>สัญญาและขั้นตอนจัดซื้อ</dd></div>
-          <div><dt>02</dt><dd>PR และการรับเข้า</dd></div>
-          <div><dt>03</dt><dd>FIFO และ minimum stock</dd></div>
+          <div><dt>01</dt><dd>รับเข้าและตรวจรับวัสดุ</dd></div>
+          <div><dt>02</dt><dd>ควบคุมคงคลังและ PR</dd></div>
+          <div><dt>03</dt><dd>FIFO และระดับคงเหลือ</dd></div>
         </dl>
       </aside>
     </main>
