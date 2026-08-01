@@ -16,6 +16,16 @@ assert.doesNotMatch(accessDenied, /href="\/login"/)
 assert.doesNotMatch(actor, /user_metadata/)
 assert.doesNotMatch(admin, /NEXT_PUBLIC_.*SERVICE/)
 
+const stockConfirm = readFileSync('app/auth/confirm/route.ts', 'utf8')
+assert.match(stockConfirm, /type !== 'magiclink'/, 'only a portal magic-link handoff may create a stock session')
+assert.match(stockConfirm, /auth\.verifyOtp\(\{ type: 'magiclink', token_hash \}\)/, 'the one-time token hash must be consumed server-side')
+assert.match(stockConfirm, /NextResponse\.redirect\(new URL\('\/dashboard'/, 'a successful handoff must land on the stock dashboard')
+assert.match(stockConfirm, /Cache-Control.*no-store/, 'one-time credentials must not be cached')
+assert.match(stockConfirm, /Referrer-Policy.*no-referrer/, 'one-time credentials must not be forwarded as a referrer')
+
+const proxy = readFileSync('proxy.ts', 'utf8')
+assert.match(proxy, /\/auth\/confirm/, 'the one-time confirmation route must be reachable before a stock session exists')
+
 assert.match(login, /type=\{showPassword \? 'text' : 'password'\}/)
 assert.match(login, /type="button"/)
 assert.match(login, /aria-pressed=\{showPassword\}/)
