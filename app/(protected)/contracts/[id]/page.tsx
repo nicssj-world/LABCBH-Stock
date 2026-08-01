@@ -80,7 +80,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             {canEdit && (
               <ContractEditDialog contract={record} />
             )}
-            {canEdit && isContractStarted && contract.effectiveStatus === 'active' && (
+            {isAdmin && isContractStarted && contract.effectiveStatus === 'active' && (
               <ExpireContractDialog contractId={contract.id} />
             )}
             {mode === 'budget' && isAdmin && (

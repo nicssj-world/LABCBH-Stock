@@ -33,7 +33,7 @@ assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts mus
 assert.match(detailPage, /<StatusChip tone="neutral">\{contract\.contractTypeLabel\}<\/StatusChip>/, 'contract type must be a neutral category badge, distinct from workflow status')
 assert.match(detailPage, /<StatusChip tone="info">\{contract\.procurementStageLabel\}<\/StatusChip>/, 'detail must distinguish the procurement stage from contract status')
 assert.match(detailPage, /\{contract\.contractStatusLabel\}/, 'detail must name the effective contract status')
-assert.match(detailPage, /ExpireContractDialog/, 'editors must be able to record an exceptional contract expiry')
+assert.match(detailPage, /isAdmin\s*&&\s*isContractStarted[\s\S]*<ExpireContractDialog/, 'only admins may be offered a manual expiry action')
 assert.match(detailPage, /canEdit\s*&&\s*\([\s\S]*<ContractEditDialog/, 'editors must open the real edit form from a popup')
 assert.doesNotMatch(detailPage, /href=\{`\/contracts\/\$\{contract\.id\}\/edit`\}>แก้ไขข้อมูล/, 'detail must not navigate away when edit is clicked')
 assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')

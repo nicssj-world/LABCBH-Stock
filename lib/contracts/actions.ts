@@ -93,7 +93,8 @@ export async function archiveContract(contractId: number, input: ArchiveContract
 }
 
 export async function expireContract(contractId: number, input: ExpireContractInput) {
-  const actor = await requireContractEditor()
+  const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์เปลี่ยนสถานะสิ้นสุดสัญญา')
   const parsedContractId = z.number().int().positive().parse(contractId)
   const parsed = expireContractInputSchema.parse(input)
 

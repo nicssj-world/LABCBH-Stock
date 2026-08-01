@@ -184,6 +184,7 @@ async function main() {
   assert.match(actions, /requireActor/)
   assert.match(actions, /assertContractEditor/)
   assert.match(actions, /if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์เก็บรายการสัญญา/, 'archive writes must reject non-admin callers')
+  assert.match(actions, /expireContract[\s\S]*if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์เปลี่ยนสถานะสิ้นสุดสัญญา/, 'manual expiry writes must reject non-admin callers')
   for (const rpc of [
     'create_contract',
     'update_contract',
