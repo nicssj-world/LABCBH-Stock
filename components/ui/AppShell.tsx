@@ -176,7 +176,7 @@ export function AppShell({ actor, children }: AppShellProps) {
             </button>
             <a className="portal-return" href={PORTAL_DASHBOARD_URL} title="กลับไป Lab Management Portal">
               <UtilityIcon name="portal" />
-              <span>กลับพอร์ทัล</span>
+              <span>Lab Management</span>
             </a>
             <div className="actor-badge" aria-label={`ผู้ใช้งาน ${actorLabel}`}>
               {actor.avatarUrl ? (
