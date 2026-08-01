@@ -1908,28 +1908,45 @@ textarea[aria-invalid="true"] {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--lab-green);
+  background: var(--lab-primary);
   transition: width var(--motion-fast);
 }
-.budget-gauge__track--warn .budget-gauge__fill { background: var(--lab-amber); }
-.budget-gauge__track--danger .budget-gauge__fill { background: var(--lab-red); }
+.budget-gauge__progress-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--lab-muted); font-size: 11px; font-weight: 650; }
+.budget-gauge__progress-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.budget-gauge__progress-meta i { width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
+.budget-gauge__progress-meta strong { color: var(--lab-ink); font-size: 12px; }
+.budget-gauge__progress-used { color: var(--lab-primary); }
+.budget-gauge__progress-remaining--ok { color: var(--lab-green); }
+.budget-gauge__progress-remaining--warn { color: var(--lab-amber); }
+.budget-gauge__progress-remaining--danger { color: var(--lab-red); }
 .budget-gauge__figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; overflow: hidden; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
 .budget-gauge__figures div { display: grid; gap: 3px; min-width: 0; padding: 13px 16px; border-right: 1px solid var(--lab-border); }
 .budget-gauge__figures div:last-child { border-right: 0; }
 .budget-gauge__figures dt { color: var(--lab-muted); font-size: 11px; font-weight: 600; }
 .budget-gauge__figures dd { margin: 0; overflow-wrap: anywhere; color: var(--lab-navy-strong); font-size: 15px; font-weight: 700; }
-.budget-gauge__used { color: var(--lab-primary-strong); }
-.budget-gauge__remaining--warn { color: var(--lab-amber); }
-.budget-gauge__remaining--danger { color: var(--lab-red); }
-.budget-gauge__flag {
+.budget-gauge__figure--total { background: var(--lab-surface-muted); }
+.budget-gauge__figure--used { background: color-mix(in srgb, var(--lab-primary-soft) 64%, var(--lab-surface)); }
+.budget-gauge__figure--used dt,
+.budget-gauge__figure--used dd { color: var(--lab-primary); }
+.budget-gauge__figure--remaining-ok { background: color-mix(in srgb, var(--lab-green-soft) 70%, var(--lab-surface)); }
+.budget-gauge__figure--remaining-ok dt,
+.budget-gauge__figure--remaining-ok dd { color: var(--lab-green); }
+.budget-gauge__figure--remaining-warn { background: color-mix(in srgb, var(--lab-amber-soft) 70%, var(--lab-surface)); }
+.budget-gauge__figure--remaining-warn dt,
+.budget-gauge__figure--remaining-warn dd { color: var(--lab-amber); }
+.budget-gauge__figure--remaining-danger { background: color-mix(in srgb, var(--lab-red-soft) 70%, var(--lab-surface)); }
+.budget-gauge__figure--remaining-danger dt,
+.budget-gauge__figure--remaining-danger dd { color: var(--lab-red); }
+.budget-gauge__health {
   margin: 0;
   padding: 8px 12px;
   border-radius: var(--radius-control);
-  background: var(--lab-amber-soft);
-  color: var(--lab-ink);
   font-size: 12px;
   font-weight: 600;
 }
+.budget-gauge__health--ok { color: var(--lab-green); background: var(--lab-green-soft); }
+.budget-gauge__health--warn { color: var(--lab-amber); background: var(--lab-amber-soft); }
+.budget-gauge__health--danger { color: var(--lab-red); background: var(--lab-red-soft); }
 .budget-gauge__unknown { margin: 0; color: var(--lab-muted); font-size: 13px; }
 .budget-gauge--unknown .budget-gauge__figures { grid-template-columns: 1fr; }
 
@@ -2270,6 +2287,7 @@ textarea[aria-invalid="true"] {
   .filter-bench .lab-link-button { width: 100%; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .section-heading-row .lab-button { width: 100%; }
+  .budget-gauge__progress-meta { align-items: flex-start; flex-direction: column; gap: 6px; }
   .item-edit-row { grid-template-columns: 1fr; }
   .item-edit-row__name { grid-column: auto; }
   .items-editor__grand-total { justify-content: space-between; gap: 12px; }

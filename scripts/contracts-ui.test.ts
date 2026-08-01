@@ -101,6 +101,12 @@ assert.match(expenseForm, /open && \(/, 'the expense form contents must be condi
 
 const budgetGauge = read('components/contracts/BudgetGauge.tsx')
 assert.match(budgetGauge, /budget-gauge__figures/, 'budget summary must retain the grouped three-figure display next to expense entry')
+assert.match(budgetGauge, /budget-gauge__progress-meta/, 'budget summary must explicitly explain spent and remaining percentages beside the progress bar')
+assert.match(budgetGauge, /budget-gauge__figure--used/, 'spent value needs a distinct semantic treatment')
+assert.match(budgetGauge, /budget-gauge__figure--remaining-\$\{tone\}/, 'remaining value needs a semantic health treatment')
+assert.match(budgetGauge, /budget-gauge__health/, 'budget summary must pair its colors with a readable health label')
+assert.match(globalStyles, /\.budget-gauge__figure--used[\s\S]*var\(--lab-primary/, 'spent figure must use the primary information color')
+assert.match(globalStyles, /\.budget-gauge__figure--remaining-ok[\s\S]*var\(--lab-green/, 'healthy remaining budget must use the success color')
 assert.match(globalStyles, /\.expense-form__primary input,[\s\S]*border:\s*1px solid var\(--lab-border-strong\)/, 'expense entry fields must retain visible input boundaries')
 assert.match(globalStyles, /\.expense-form__primary label\s*\{[\s\S]*align-content:\s*start;/, 'month and amount inputs must align at the top when amount shows a helper line')
 

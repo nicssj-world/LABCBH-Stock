@@ -21,7 +21,7 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
       <div className="budget-gauge budget-gauge--unknown">
         <p className="budget-gauge__unknown">ยังไม่ระบุมูลค่าสัญญา จึงคำนวณงบคงเหลือไม่ได้</p>
         <dl className="budget-gauge__figures">
-          <div>
+          <div className="budget-gauge__figure--used">
             <dt>ใช้ไปแล้ว</dt>
             <dd className="identifier">{money.format(snapshot.used)}</dd>
           </div>
@@ -31,7 +31,13 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
   }
 
   const capped = Math.min(100, Math.max(0, snapshot.percentUsed))
+  const remainingPercent = Math.max(0, 100 - capped)
   const tone = snapshot.exhausted ? 'danger' : lowBudget ? 'warn' : 'ok'
+  const healthLabel = tone === 'danger'
+    ? 'งบสัญญาถูกใช้ครบแล้ว'
+    : tone === 'warn'
+      ? 'งบคงเหลือต่ำกว่า 30%'
+      : 'งบคงเหลือเพียงพอ'
 
   return (
     <div className="budget-gauge">
@@ -45,34 +51,29 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
       >
         <span className="budget-gauge__fill" style={{ width: `${capped}%` }} />
       </div>
+      <div className="budget-gauge__progress-meta" aria-hidden="true">
+        <span className="budget-gauge__progress-used"><i />ใช้ไปแล้ว <strong>{capped.toFixed(1)}%</strong></span>
+        <span className={`budget-gauge__progress-remaining--${tone}`}><i />คงเหลือ <strong>{remainingPercent.toFixed(1)}%</strong></span>
+      </div>
       <dl className="budget-gauge__figures">
-        <div>
+        <div className="budget-gauge__figure--total">
           <dt>มูลค่าสัญญา</dt>
           <dd className="identifier">{money.format(total)}</dd>
         </div>
-        <div>
+        <div className="budget-gauge__figure--used">
           <dt>ใช้ไปแล้ว</dt>
-          <dd className="identifier budget-gauge__used">
+          <dd className="identifier">
             {money.format(snapshot.used)} ({snapshot.percentUsed.toFixed(1)}%)
           </dd>
         </div>
-        <div>
+        <div className={`budget-gauge__figure--remaining-${tone}`}>
           <dt>คงเหลือ</dt>
-          <dd className={`identifier budget-gauge__remaining--${tone}`}>
+          <dd className="identifier">
             {money.format(snapshot.remaining)}
           </dd>
         </div>
       </dl>
-      {snapshot.exhausted && (
-        <p className="budget-gauge__flag" role="status">
-          ใช้งบครบตามมูลค่าสัญญาแล้ว
-        </p>
-      )}
-      {!snapshot.exhausted && lowBudget && (
-        <p className="budget-gauge__flag" role="status">
-          งบคงเหลือต่ำกว่า 30% ของมูลค่าสัญญา
-        </p>
-      )}
+      <p className={`budget-gauge__health budget-gauge__health--${tone}`} role="status">{healthLabel}</p>
     </div>
   )
 }
