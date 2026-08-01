@@ -1277,6 +1277,15 @@ textarea[aria-invalid="true"] {
 .data-table td strong,
 .data-table td small { display: block; }
 .data-table td small { margin-top: 3px; color: var(--lab-muted); font-size: 11px; }
+.contract-register-table { table-layout: fixed; }
+.contract-register-table__name { width: 33%; }
+.contract-register-table__type { width: 9%; }
+.contract-register-table__stage { width: 13%; }
+.contract-register-table__status { width: 12%; }
+.contract-register-table__number { width: 10%; }
+.contract-register-table__value { width: 13%; }
+.contract-register-table__action { width: 10%; }
+.contract-register-table td:last-child { white-space: nowrap; }
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
 .identifier { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 

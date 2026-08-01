@@ -27,7 +27,16 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
   return (
     <>
       <div className="contract-table--desktop">
-        <table className="data-table">
+        <table className="data-table contract-register-table">
+          <colgroup>
+            <col className="contract-register-table__name" />
+            <col className="contract-register-table__type" />
+            <col className="contract-register-table__stage" />
+            <col className="contract-register-table__status" />
+            <col className="contract-register-table__number" />
+            <col className="contract-register-table__value" />
+            <col className="contract-register-table__action" />
+          </colgroup>
           <thead>
             <tr>
               <th>ชื่อสัญญา</th>
