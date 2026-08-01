@@ -38,7 +38,11 @@ assert.match(detailPage, /canEdit\s*&&\s*\([\s\S]*<ContractEditDialog/, 'editors
 assert.doesNotMatch(detailPage, /href=\{`\/contracts\/\$\{contract\.id\}\/edit`\}>แก้ไขข้อมูล/, 'detail must not navigate away when edit is clicked')
 assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')
 assert.match(detailPage, /mode === ['"]budget['"] && isAdmin[\s\S]*<ResponsibleUserDialog/, 'lease admins must get the responsible-user dialog beside header actions')
-assert.match(detailPage, /ArchiveContractControl/, 'detail must expose reasoned archive')
+assert.match(detailPage, /isAdmin\s*&&\s*<ArchiveContractControl/, 'only administrators may access the duplicate-or-mistake archive control')
+
+const archiveControl = read('components/contracts/ArchiveContractControl.tsx')
+assert.match(archiveControl, /เก็บรายการที่สร้างผิดหรือซ้ำ/, 'archive wording must distinguish cleanup from contract expiry')
+assert.doesNotMatch(archiveControl, /ยกเลิกและเก็บสัญญาถาวร/, 'archive wording must not compete with the expiry action')
 
 const budgetPanel = read('components/contracts/BudgetPanel.tsx')
 assert.doesNotMatch(budgetPanel, /ResponsibleUserPicker|ผู้รับผิดชอบสัญญา/, 'responsible users must not occupy the contract detail flow')

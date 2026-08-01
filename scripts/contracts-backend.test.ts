@@ -183,6 +183,7 @@ async function main() {
   const actions = readFileSync(join(process.cwd(), 'lib/contracts/actions.ts'), 'utf8')
   assert.match(actions, /requireActor/)
   assert.match(actions, /assertContractEditor/)
+  assert.match(actions, /if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์เก็บรายการสัญญา/, 'archive writes must reject non-admin callers')
   for (const rpc of [
     'create_contract',
     'update_contract',

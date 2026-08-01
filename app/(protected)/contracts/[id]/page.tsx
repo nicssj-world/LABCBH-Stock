@@ -179,7 +179,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       </section>
       )}
 
-      {canEdit && <ArchiveContractControl contractId={contract.id} />}
+      {isAdmin && <ArchiveContractControl contractId={contract.id} />}
     </div>
   )
 }

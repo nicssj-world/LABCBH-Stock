@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { assertContractEditor } from '@/lib/contracts/authorization'
 import {
@@ -74,7 +75,8 @@ export async function updateContract(contractId: number, input: UpdateContractIn
 }
 
 export async function archiveContract(contractId: number, input: ArchiveContractInput) {
-  const actor = await requireContractEditor()
+  const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์เก็บรายการสัญญา')
   const parsedContractId = z.number().int().positive().parse(contractId)
   const parsed = archiveContractInputSchema.parse(input)
 
@@ -84,7 +86,7 @@ export async function archiveContract(contractId: number, input: ArchiveContract
     p_reason: parsed.reason,
   })
 
-  const archived = unwrapMutation('เก็บสัญญาถาวร', result)
+  const archived = unwrapMutation('เก็บรายการสัญญา', result)
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
   return archived

@@ -21,7 +21,7 @@ export function ArchiveContractControl({ contractId }: { contractId: number }) {
         router.push('/contracts')
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'ยกเลิกสัญญาไม่สำเร็จ กรุณาลองใหม่')
+        setError(caught instanceof Error ? caught.message : 'เก็บรายการสัญญาไม่สำเร็จ กรุณาลองใหม่')
       }
     })
   }
@@ -29,21 +29,21 @@ export function ArchiveContractControl({ contractId }: { contractId: number }) {
   return (
     <div className="archive-zone">
       {!open ? (
-        <Button variant="ghost" onClick={() => setOpen(true)}>ยกเลิกและเก็บสัญญาถาวร</Button>
+        <Button variant="ghost" onClick={() => setOpen(true)}>เก็บรายการที่สร้างผิดหรือซ้ำ</Button>
       ) : (
         <form className="decision-panel decision-panel--danger" onSubmit={submit}>
           <div>
-            <strong>ยืนยันการเก็บสัญญาถาวร</strong>
-            <p>รายการจะไม่แสดงในงานปัจจุบัน แต่ยังคงประวัติไว้เพื่อตรวจสอบย้อนหลัง</p>
+            <strong>เก็บรายการที่สร้างผิดหรือซ้ำ</strong>
+            <p>ใช้เฉพาะกรณีข้อมูลสร้างผิดหรือซ้ำ รายการจะไม่แสดงในงานปัจจุบัน แต่ยังคงประวัติไว้เพื่อตรวจสอบย้อนหลัง</p>
           </div>
           <label>
-            เหตุผลที่ยกเลิก / เก็บถาวร
+            เหตุผลที่เก็บรายการ
             <textarea required minLength={1} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
           </label>
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="decision-panel__actions">
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={isPending}>กลับไปตรวจสอบ</Button>
-            <Button variant="danger" type="submit" disabled={isPending || !reason.trim()}>{isPending ? 'กำลังดำเนินการ…' : 'ยืนยันเก็บถาวร'}</Button>
+            <Button variant="danger" type="submit" disabled={isPending || !reason.trim()}>{isPending ? 'กำลังดำเนินการ…' : 'ยืนยันเก็บรายการ'}</Button>
           </div>
         </form>
       )}
