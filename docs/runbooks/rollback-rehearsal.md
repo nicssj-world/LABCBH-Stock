@@ -1,4 +1,4 @@
-# Rollback rehearsal — 2026-07-30
+# Rollback rehearsal — 2026-07-30 (re-run 2026-08-01)
 
 Evidence for the cutover runbook's "restore rehearsal" gate. Rehearsed in a
 throwaway `postgres:17` container, so neither production nor Staging was touched.
@@ -47,6 +47,29 @@ only. Both are restored.
 | Rollback with `labcbh.confirm_data_loss = 'yes'` | completed |
 | Schema compared against pre-migration baseline | **identical** |
 | All 9 migrations re-applied | 9/9 OK, state identical to first run, membership seed re-created |
+
+## Re-run after the equipment lease budget work
+
+Four migrations were added, so the rehearsal was repeated against all thirteen
+with budget data present: an expense recorded through the RPC and a responsible
+user assigned.
+
+| Step | Result |
+|---|---|
+| 13 migrations applied | 13/13 OK |
+| Rollback with budget rows present, no acknowledgement | **refused**, naming `contract_responsible_audit` |
+| Rollback with acknowledgement | completed |
+| Schema compared against baseline | **identical** |
+| `contract_responsible_audit`, `recorded_by_id`, both mode-guard triggers, all six budget functions, all three storage policies | gone |
+| `public.contract_usage` rows | **preserved** |
+| All 13 migrations re-applied | 13/13 OK |
+
+The one deliberate difference from the baseline is the `contract_usage` row
+count. That table belongs to the portal and holds two years of financial
+history, so the rollback removes the column and triggers added on top of it and
+never the rows. An expense recorded during the rehearsal survives the rollback,
+which is the intended behaviour: undoing a schema change must not erase money
+that was spent.
 
 The comparison covers tables, views, functions, `contracts` columns and
 nullability, constraints, indexes, triggers, policies including their `qual`

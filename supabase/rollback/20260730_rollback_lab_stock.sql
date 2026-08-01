@@ -33,7 +33,8 @@ begin
   foreach tbl in array array[
     'contract_items', 'contract_stage_history', 'contract_item_allocations',
     'purchase_requests', 'goods_receipts', 'requisitions',
-    'inventory_items', 'inventory_lots', 'stock_movements'
+    'inventory_items', 'inventory_lots', 'stock_movements',
+    'contract_responsible_audit'
   ] loop
     if to_regclass('public.' || tbl) is null then continue; end if;
     execute format('select count(*) from public.%I', tbl) into n;
@@ -67,6 +68,7 @@ drop view if exists public.inventory_item_balances;
 -- cannot reach a portal-owned table. Asserted after the fact below.
 drop table if exists public.lab_stock_opening_count_batches cascade;
 drop table if exists public.lab_stock_import_runs cascade;
+drop table if exists public.contract_responsible_audit cascade;
 drop table if exists public.lab_stock_membership_audit cascade;
 drop table if exists public.requisition_lot_allocations cascade;
 drop table if exists public.requisition_items cascade;
@@ -84,6 +86,23 @@ drop table if exists public.contract_item_allocations cascade;
 drop table if exists public.contract_stage_history cascade;
 drop table if exists public.contract_items cascade;
 drop table if exists public.lab_stock_memberships cascade;
+
+-- ── Budget mode ─────────────────────────────────────────────────────────────
+-- contract_usage itself is never touched: it belongs to the portal and holds
+-- two years of financial history that predates this work. Only the column and
+-- the triggers added on top of it are removed.
+drop trigger if exists contract_usage_mode_guard on public.contract_usage;
+drop trigger if exists contract_items_mode_guard on public.contract_items;
+
+alter table public.contract_usage
+  drop column if exists recorded_by_id;
+
+drop index if exists public.contract_usage_contract_month_idx;
+drop index if exists public.contract_usage_recorded_by_id_idx;
+
+drop policy if exists lab_stock_contract_file_editor_insert on storage.objects;
+drop policy if exists lab_stock_contract_file_app_select on storage.objects;
+drop policy if exists lab_stock_contract_file_editor_update on storage.objects;
 
 -- ── Functions ───────────────────────────────────────────────────────────────
 -- Dropped by name so overloads are caught without hardcoding signatures.
@@ -109,7 +128,10 @@ begin
         'record_stock_adjustment', 'reverse_purchase_request',
         'set_goods_receipt_image', 'set_inventory_minimum_stock',
         'set_lab_stock_membership', 'set_purchase_order_number',
-        'update_contract', 'validate_contract_item_allocation'
+        'update_contract', 'validate_contract_item_allocation',
+        'assert_contract_expense_actor', 'record_contract_expense',
+        'delete_contract_expense', 'set_contract_responsible_users',
+        'set_contract_file', 'guard_contract_tracking_mode'
       ])
   loop
     execute format('drop function if exists %s cascade', fn.sig);
@@ -209,6 +231,14 @@ begin
       and policyname = 'contracts_staff_write'
   ) then
     raise exception 'portal write policy was not restored; transaction aborted';
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'contract_usage'
+      and column_name = 'recorded_by_id'
+  ) then
+    raise exception 'recorded_by_id survived the rollback; transaction aborted';
   end if;
 end
 $verify$;

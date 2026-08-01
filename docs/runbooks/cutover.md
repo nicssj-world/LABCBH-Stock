@@ -21,7 +21,11 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Run a staging dry-run import and archive the reconciliation report.
 - [ ] Have the stock lead compare contract totals, line counts, LS codes, duplicate warnings, and rejects against the source workbook.
 - [ ] Record the approved hash of the exact dry-run report and exact source files. Do not continue if a byte changes.
+- [ ] Confirm `[db.migrations] enabled` is `true` in `supabase/config.toml` before pushing. It ships as `false`, and with it off `supabase db push` reports success and applies nothing. Change only that line: a blanket replace of `enabled = false` also switches on `[auth.sms.twilio]` and the push then fails on its empty `account_sid`.
 - [ ] Apply reviewed migrations during the freeze using the standard forward migration command.
+- [ ] Confirm the equipment-lease mode preflight passed. Migration `20260730120000` aborts if any contract holds both a budget entry and a line item; production had none as of 2026-07-30, but the migration proves it at apply time rather than assuming.
+- [ ] Copy contract documents out of R2 with `node scripts/migrate-contract-files.mts --apply`, using the R2 credentials from the portal environment. Nothing is deleted from R2. Dry-run first and confirm it reports the expected count; as of 2026-08-01 that is 9.
+- [ ] Verify the copied documents open from the stock system before the portal is pointed away from them.
 - [ ] Run the approved production import once, then prove idempotency by dry-running the same immutable inputs again.
 - [ ] Import opening balances only from a separately reviewed physical count file; record its approved hash and approver.
 - [ ] Reconcile imported contracts, items, allocations, lots, and stock movements to the approved reports.
@@ -33,6 +37,8 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Run `E2E_BASE_URL=<preview> E2E_REQUIRE_FIXTURES=1 E2E_ALLOW_MUTATIONS=1 npm run test:e2e` against isolated fixtures.
 - [ ] Smoke login for admin, manager, and stock roles.
 - [ ] Smoke contract creation and every stage transition; verify contract number is required only at start.
+- [ ] Smoke an equipment lease: the budget panel replaces line items, a monthly expense records, an amount past the ceiling is refused, and the attached document opens.
+- [ ] Verify a responsible user who holds no editor role can record against their contract, and cannot once removed.
 - [ ] Smoke PR confirmation and its concurrency guard.
 - [ ] Smoke receipt posting, inventory balance, FIFO requisition fulfillment, and A4 print/signature layout.
 - [ ] Smoke dashboard watchlist, access settings, audit records, and denied actions for each role.
