@@ -1,0 +1,20 @@
+# Local-only data and credentials. These must never enter a deployment upload.
+.backups
+.secure-import
+.env*
+
+# Local workspaces, build output, dependencies, and test artifacts.
+.claude
+.codex
+.impeccable
+.superpowers
+.worktrees
+.next
+.vercel
+node_modules
+out
+playwright-report
+test-results
+supabase/.temp
+*.tsbuildinfo
+import-report*.json

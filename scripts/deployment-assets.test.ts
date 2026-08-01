@@ -48,6 +48,25 @@ const vercelConfig = read('vercel.ts')
 assert.match(vercelConfig, /framework:\s*'nextjs'/)
 assert.match(vercelConfig, /fluid:\s*true/)
 
+// Vercel CLI does not inherit every project-specific Git ignore. Keep database
+// dumps and local import inputs out of the upload manifest explicitly.
+const vercelIgnore = read('.vercelignore')
+const vercelIgnoreLines = vercelIgnore.split(/\r?\n/).map((line) => line.trim())
+for (const privatePath of [
+  '.backups',
+  '.secure-import',
+  '.env*',
+  '.claude',
+  '.codex',
+  '.impeccable',
+]) {
+  assert.equal(
+    vercelIgnoreLines.includes(privatePath),
+    true,
+    `.vercelignore must exclude ${privatePath}`,
+  )
+}
+
 const cutover = read('docs/runbooks/cutover.md')
 for (const checkpoint of [
   'change freeze',
