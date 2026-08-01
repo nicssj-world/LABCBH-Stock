@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
+import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
+import { contractMode } from '@/lib/contracts/budget'
+import { canRecordContractExpense } from '@/lib/contracts/authorization'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract } from '@/lib/contracts/queries'
 
@@ -28,7 +31,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   if (!record) notFound()
   const contract = presentContract(record)
   const canEdit = hasAppRole(actor, 'admin', 'head')
-  const total = contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
+  const mode = contractMode(contract.contractType ?? 'e_bidding')
+  const canRecord = canRecordContractExpense(actor, contract)
+  // A lease carries its value on the contract itself; a supply contract's value
+  // is the sum of its lines.
+  const total =
+    mode === 'budget'
+      ? contract.total
+      : contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
 
   return (
     <div className="route-stack">
@@ -50,7 +60,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           <div><dt>ปีงบประมาณ</dt><dd>{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
           <div><dt>ระยะเวลา</dt><dd>{displayDate(contract.startDate)} – {displayDate(contract.endDate)}</dd></div>
-          <div><dt>มูลค่ารวม</dt><dd className="identifier">{money.format(total)}</dd></div>
+          <div><dt>มูลค่ารวม</dt><dd className="identifier">{total === null ? 'ไม่ระบุ' : money.format(total)}</dd></div>
         </dl>
       </section>
 
@@ -79,13 +89,26 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         )}
       </div>
 
+      {mode === 'budget' ? (
+        <BudgetPanel
+          contractId={contract.id}
+          contractNumber={contract.contractNumber}
+          displayName={contract.resolvedDisplayName}
+          total={contract.total}
+          startDate={contract.startDate}
+          endDate={contract.endDate}
+          filePath={contract.fileUrl}
+          canRecord={canRecord}
+          canEdit={canEdit}
+        />
+      ) : (
       <section className="bench-panel" aria-labelledby="contract-lines-title">
         <div className="bench-panel__header">
           <div>
             <p className="section-kicker">CONTRACT LINES</p>
             <h2 id="contract-lines-title">รายการน้ำยาในสัญญา</h2>
           </div>
-          <p>{contract.items.length} รายการ · {money.format(total)}</p>
+          <p>{contract.items.length} รายการ · {total === null ? 'ไม่ระบุ' : money.format(total)}</p>
         </div>
         {contract.items.length === 0 ? <p className="empty-state">ยังไม่มีรายการน้ำยา</p> : (
           <div className="detail-items-table">
@@ -107,6 +130,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </div>
         )}
       </section>
+      )}
 
       {canEdit && <ArchiveContractControl contractId={contract.id} />}
     </div>

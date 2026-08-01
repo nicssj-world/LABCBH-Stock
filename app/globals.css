@@ -1511,6 +1511,50 @@ textarea[aria-invalid="true"] {
 .po-uploader__form input[type="file"] { font-size: 12px; }
 .po-uploader__preview { display: grid; gap: 8px; }
 
+/* Equipment lease budget: a monthly baht drawdown against the contract value. */
+.budget-gauge { display: grid; gap: 14px; padding: 8px 22px 20px; }
+.budget-gauge__track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  overflow: hidden;
+}
+.budget-gauge__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lab-green);
+  transition: width var(--motion-fast);
+}
+.budget-gauge__track--warn .budget-gauge__fill { background: var(--lab-amber); }
+.budget-gauge__track--danger .budget-gauge__fill { background: var(--lab-red); }
+.budget-gauge__figures { display: flex; flex-wrap: wrap; gap: 24px; margin: 0; }
+.budget-gauge__figures div { display: grid; gap: 2px; }
+.budget-gauge__figures dt { color: var(--lab-muted); font-size: 11px; font-weight: 600; }
+.budget-gauge__figures dd { margin: 0; font-size: 15px; font-weight: 700; }
+.budget-gauge__remaining--warn { color: var(--lab-amber); }
+.budget-gauge__remaining--danger { color: var(--lab-red); }
+.budget-gauge__flag {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--lab-amber-soft);
+  color: var(--lab-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.budget-gauge__unknown { margin: 0; color: var(--lab-muted); font-size: 13px; }
+
+.expense-form { display: grid; gap: 14px; padding: 0 22px 20px; }
+.expense-history { display: grid; gap: 14px; padding: 8px 22px 20px; }
+.expense-history__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-gauge__fill { transition: none; }
+}
+
 .receipt-post { display: grid; gap: 14px; padding: 8px 22px 20px; justify-items: start; }
 .receipt-post__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
 

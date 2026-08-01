@@ -50,6 +50,7 @@ export const contractReadRowSchema = z.object({
   is_archived: z.boolean().nullable(),
   total: numericSchema.nullable(),
   responsible_user_ids: z.array(z.string().uuid()).nullable().default([]),
+  file_url: z.string().nullable(),
   contract_items: z.array(contractItemReadRowSchema).nullable().default([]),
   contract_stage_history: z.array(contractStageHistoryReadRowSchema).nullable().default([]),
 })
@@ -70,6 +71,7 @@ const CONTRACT_READ_SELECT = `
   is_archived,
   total,
   responsible_user_ids,
+  file_url,
   contract_items (
     id,
     line_number,
@@ -117,6 +119,7 @@ function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRec
     isArchived: row.is_archived,
     total: row.total,
     responsibleUserIds: row.responsible_user_ids ?? [],
+    fileUrl: row.file_url,
     items: (row.contract_items ?? [])
       .sort((left, right) => left.line_number - right.line_number)
       .map((item) => ({

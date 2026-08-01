@@ -66,6 +66,7 @@ export interface ContractRecord {
   // spend against it without holding an editor role.
   total: number | null
   responsibleUserIds: string[]
+  fileUrl: string | null
   items: ContractItemRecord[]
   stageHistory: ContractStageHistoryRecord[]
 }

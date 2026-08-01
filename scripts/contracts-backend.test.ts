@@ -145,6 +145,7 @@ async function main() {
     // items and nobody assigned to it yet.
     total: 3531000,
     responsibleUserIds: [],
+    fileUrl: null,
     items: [],
     stageHistory: [],
   })
