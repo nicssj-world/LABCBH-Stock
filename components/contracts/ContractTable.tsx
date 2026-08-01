@@ -53,7 +53,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
               <tr key={contract.id}>
                 <td>
                   <strong>{contract.resolvedDisplayName}</strong>
-                  <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'}</small>
+                  <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'} · {contract.department || 'ไม่ระบุหน่วยงาน'}</small>
                   {contract.expiryNotice && (
                     <span className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
@@ -84,6 +84,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
             </div>
             <h3>{contract.resolvedDisplayName}</h3>
             <p>{contract.contractTypeLabel} · {contract.procurementStageLabel} · {contract.contractNumberLabel}</p>
+            <p>{contract.department || 'ไม่ระบุหน่วยงาน'}</p>
             {contract.expiryNotice && (
               <p className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">

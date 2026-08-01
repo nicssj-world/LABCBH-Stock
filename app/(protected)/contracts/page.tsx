@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, presentContract } from '@/lib/contracts/presenter'
-import { CONTRACT_TYPES } from '@/lib/contracts/schema'
+import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 
@@ -16,18 +16,20 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const params = await searchParams
   const fiscalYearValue = first(params.fiscalYear)
   const contractTypeValue = first(params.contractType)
+  const departmentValue = first(params.department)
   const stageValue = first(params.stage)
   const search = first(params.search)?.trim() ?? ''
   const showEnded = first(params.showEnded) === '1'
   const showOlder = first(params.showOlder) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
+  const department = CONTRACT_DEPARTMENTS.find((dept) => dept === departmentValue)
   const procurementStage = PROCUREMENT_STAGES.find((stage) => stage === stageValue)
 
   let contracts: Awaited<ReturnType<typeof listContracts>> = []
   let error: string | null = null
   try {
-    contracts = await listContracts({ fiscalYear, contractType, procurementStage, search })
+    contracts = await listContracts({ fiscalYear, contractType, department, procurementStage, search })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาไม่สำเร็จ'
   }
@@ -56,6 +58,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const activeParams = new URLSearchParams()
   if (fiscalYear) activeParams.set('fiscalYear', String(fiscalYear))
   if (contractType) activeParams.set('contractType', contractType)
+  if (department) activeParams.set('department', department)
   if (procurementStage) activeParams.set('stage', procurementStage)
   if (search) activeParams.set('search', search)
   if (showEnded) activeParams.set('showEnded', '1')
@@ -100,11 +103,13 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         search={search}
         fiscalYear={fiscalYear ? String(fiscalYear) : ''}
         contractType={contractType ?? ''}
+        department={department ?? ''}
         procurementStage={procurementStage ?? ''}
         showEnded={showEnded}
         showOlder={showOlder}
         fiscalYears={fiscalYears}
         contractTypes={CONTRACT_TYPES.map((type) => ({ value: type, label: CONTRACT_TYPE_LABELS[type] }))}
+        departments={[...CONTRACT_DEPARTMENTS]}
         procurementStages={PROCUREMENT_STAGES.map((stage) => ({ value: stage, label: PROCUREMENT_STAGE_LABELS[stage] }))}
       />
 

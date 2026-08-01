@@ -89,6 +89,7 @@ assert.deepEqual(
 const leaseBase = {
   fiscalYear: 2569,
   contractType: 'equipment_lease' as const,
+  department: 'งานเคมีคลินิก' as const,
   displayName: 'เช่าเครื่อง CBC',
   vendor: 'Firmer',
   endDate: '2027-06-30',

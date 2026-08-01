@@ -14,6 +14,23 @@ export const CONTRACT_TYPES = [
   'thai_red_cross',
 ] as const
 
+// The lab section that owns a contract. Carried over verbatim from the
+// legacy portal's own department list so a contract migrated from there
+// keeps matching against the same set of names.
+export const CONTRACT_DEPARTMENTS = [
+  'สำนักงานกลุ่มงานเทคนิคการแพทย์',
+  'งานเคมีคลินิก',
+  'งานโลหิตวิทยาคลินิก',
+  'งานภูมิคุ้มกันวิทยาคลินิก',
+  'งานจุลทรรศนศาสตร์คลินิก',
+  'งานอณูชีววิทยา',
+  'งานจุลชีววิทยา',
+  'งานคลังเลือด',
+  'งานตรวจพิเศษและห้องปฏิบัติการตรวจต่อ',
+  'งานบริการผู้ป่วยนอก',
+  'ห้องปฏิบัติการศูนย์สุขภาพชุมชนเมืองชลบุรี',
+] as const
+
 export const contractLineInputSchema = z.object({
   lsCode: z.string().trim().min(1, 'กรุณาระบุรหัสน้ำยา (LS)'),
   name: z.string().trim().min(1, 'กรุณาระบุชื่อน้ำยา'),
@@ -59,6 +76,7 @@ export const createContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
     contractType: z.enum(CONTRACT_TYPES),
+    department: z.enum(CONTRACT_DEPARTMENTS, { errorMap: () => ({ message: 'กรุณาเลือกหน่วยงาน' }) }),
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
@@ -72,6 +90,7 @@ export const updateContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
     contractType: z.enum(CONTRACT_TYPES),
+    department: z.enum(CONTRACT_DEPARTMENTS, { errorMap: () => ({ message: 'กรุณาเลือกหน่วยงาน' }) }),
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),

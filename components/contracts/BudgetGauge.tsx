@@ -49,7 +49,7 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
         aria-valuemax={100}
         aria-label="สัดส่วนงบที่ใช้ไป"
       >
-        <span className="budget-gauge__fill" style={{ width: `${capped}%` }} />
+        <span className="budget-gauge__fill" style={{ transform: `scaleX(${capped / 100})` }} />
       </div>
       <div className="budget-gauge__progress-meta" aria-hidden="true">
         <span className="budget-gauge__progress-used"><i />ใช้ไปแล้ว <strong>{capped.toFixed(1)}%</strong></span>

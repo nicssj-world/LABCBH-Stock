@@ -15,7 +15,7 @@ import { ContractItemsEditor } from '@/components/contracts/ContractItemsEditor'
 import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
-import { CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
+import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
 import type { ContractItemUpdateInput, ContractRecord } from '@/lib/contracts/types'
 
 interface ContractFormProps {
@@ -29,6 +29,7 @@ interface ContractFormProps {
 interface FormState {
   fiscalYear: number
   contractType: (typeof CONTRACT_TYPES)[number]
+  department: (typeof CONTRACT_DEPARTMENTS)[number]
   displayName: string
   vendor: string
   endDate: string
@@ -50,6 +51,7 @@ function initialState(contract?: ContractRecord): FormState {
   return {
     fiscalYear: contract?.fiscalYear ?? currentThaiFiscalYear(),
     contractType: contract?.contractType ?? 'equipment_lease',
+    department: contract?.department ?? CONTRACT_DEPARTMENTS[0],
     displayName: contract?.displayName ?? contract?.product ?? '',
     vendor: contract?.vendor ?? '',
     endDate: contract?.endDate ?? '',
@@ -130,6 +132,7 @@ export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange 
     const shared = {
       fiscalYear: state.fiscalYear,
       contractType: state.contractType,
+      department: state.department,
       displayName: state.displayName,
       vendor: state.vendor.trim() || null,
       endDate: state.endDate || null,
@@ -207,6 +210,12 @@ export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange 
             ประเภทสัญญา
             <select value={state.contractType} onChange={(event) => patchState('contractType', event.target.value as FormState['contractType'])}>
               {CONTRACT_TYPES.map((type) => <option value={type} key={type}>{CONTRACT_TYPE_LABELS[type]}</option>)}
+            </select>
+          </label>
+          <label>
+            หน่วยงาน
+            <select value={state.department} onChange={(event) => patchState('department', event.target.value as FormState['department'])}>
+              {CONTRACT_DEPARTMENTS.map((department) => <option value={department} key={department}>{department}</option>)}
             </select>
           </label>
           <label className="form-grid__wide">

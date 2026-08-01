@@ -180,8 +180,11 @@ assert.match(globalStyles, /\.contract-register-table\s*\{[\s\S]*table-layout:\s
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')
 assert.match(dashboardPage, /รายการที่ต้องเฝ้าระวัง/, 'Composition C must lead with a watchlist')
-assert.match(dashboardPage, /มูลค่าคงเหลือในสัญญา/, 'dashboard must show remaining contract value')
 assert.doesNotMatch(dashboardPage, /minimum stock/i, 'stock-ledger alert stays out until Milestone 4')
+
+const dashboardValueCards = read('components/dashboard/ContractValueCards.tsx')
+assert.match(dashboardValueCards, /มูลค่าคงเหลือในสัญญา/, 'dashboard must show remaining contract value')
+assert.match(dashboardValueCards, /remainingPercent\s*<\s*30/, 'the remaining-value card must flag risk below 30%, matching the watchlist threshold')
 
 const dashboardData = read('lib/dashboard/contracts.ts')
 assert.match(dashboardData, /quantity\s*-\s*allocatedQuantity/, 'remaining quantity must use the allocation ledger')

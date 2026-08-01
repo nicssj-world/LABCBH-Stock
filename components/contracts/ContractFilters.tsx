@@ -7,11 +7,13 @@ interface ContractFiltersProps {
   search: string
   fiscalYear: string
   contractType: string
+  department: string
   procurementStage: string
   showEnded: boolean
   showOlder: boolean
   fiscalYears: number[]
   contractTypes: Array<{ value: string; label: string }>
+  departments: string[]
   procurementStages: Array<{ value: string; label: string }>
 }
 
@@ -19,11 +21,13 @@ export function ContractFilters({
   search: initialSearch,
   fiscalYear,
   contractType,
+  department,
   procurementStage,
   showEnded,
   showOlder,
   fiscalYears,
   contractTypes,
+  departments,
   procurementStages,
 }: ContractFiltersProps) {
   const router = useRouter()
@@ -90,6 +94,13 @@ export function ContractFilters({
         <select name="contractType" value={contractType} onChange={handleSelectChange}>
           <option value="">ทุกประเภท</option>
           {contractTypes.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}
+        </select>
+      </label>
+      <label>
+        หน่วยงาน
+        <select name="department" value={department} onChange={handleSelectChange}>
+          <option value="">ทุกหน่วยงาน</option>
+          {departments.map((dept) => <option value={dept} key={dept}>{dept}</option>)}
         </select>
       </label>
       <label>

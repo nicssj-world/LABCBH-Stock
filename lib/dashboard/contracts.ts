@@ -12,6 +12,7 @@ import {
   isLowBudget,
   monthsLeft,
 } from '@/lib/contracts/budget'
+import { effectiveContractStatus } from '@/lib/contracts/presenter'
 import { createClient } from '@/lib/supabase/server'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).pipe(z.number().finite())
@@ -68,11 +69,20 @@ export interface DashboardLeaseWatchItem {
   lowBudget: boolean
 }
 
+export interface ContractValueScope {
+  total: number
+  remaining: number
+}
+
 export interface ExecutiveDashboard {
   activeContracts: number
   pendingContracts: number
   totalContractValue: number
   remainingContractValue: number
+  // Same totals split by contractMode(), so the dashboard can offer a
+  // "รวม / เช่า / อื่นๆ" scope without a second read.
+  leaseContractValue: ContractValueScope
+  supplyContractValue: ContractValueScope
   pipeline: Array<{ stage: ProcurementStage; count: number }>
   typeMix: Array<{ type: ContractType; count: number; value: number }>
   watchlist: DashboardWatchItem[]
@@ -113,6 +123,10 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
 
   let totalContractValue = 0
   let remainingContractValue = 0
+  let leaseTotal = 0
+  let leaseRemaining = 0
+  let supplyTotal = 0
+  let supplyRemaining = 0
   const watchlist: DashboardWatchItem[] = []
   const leaseWatchlist: DashboardLeaseWatchItem[] = []
   const pipeline = new Map(PROCUREMENT_STAGES.map((stage) => [stage, 0]))
@@ -136,11 +150,17 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
       contractValue = contract.total ?? 0
       totalContractValue += contractValue
       remainingContractValue += snapshot.remaining ?? 0
+      leaseTotal += contractValue
+      leaseRemaining += snapshot.remaining ?? 0
 
       const expiring = isExpiring(contract.total, contract.end_date)
       const lowBudget = isLowBudget(contract.total, snapshot.used)
+      // A lease past its end date is done, not "expiring" or "low budget" —
+      // the register already hides it as สิ้นสุดแล้ว and the dashboard
+      // watchlist should agree instead of nagging about a closed contract.
+      const hasEnded = effectiveContractStatus(contract.status, contract.end_date) === 'expired'
 
-      if (expiring || lowBudget) {
+      if ((expiring || lowBudget) && !hasEnded) {
         leaseWatchlist.push({
           contractId: contract.id,
           contractName: contract.display_name?.trim() || contract.product,
@@ -178,6 +198,8 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
       contractValue += lineValue
       totalContractValue += lineValue
       remainingContractValue += remainingValue
+      supplyTotal += lineValue
+      supplyRemaining += remainingValue
 
       if (remainingPercent < 30) {
         watchlist.push({
@@ -210,6 +232,8 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
     pendingContracts: rows.filter((contract) => contract.status === 'pending').length,
     totalContractValue,
     remainingContractValue,
+    leaseContractValue: { total: leaseTotal, remaining: leaseRemaining },
+    supplyContractValue: { total: supplyTotal, remaining: supplyRemaining },
     pipeline: PROCUREMENT_STAGES.map((stage) => ({ stage, count: pipeline.get(stage) ?? 0 })),
     typeMix: CONTRACT_TYPES
       .filter((type) => typeMix.has(type))

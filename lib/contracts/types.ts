@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import type {
+  CONTRACT_DEPARTMENTS,
   CONTRACT_TYPES,
   archiveContractInputSchema,
   contractExpenseInputSchema,
@@ -15,6 +16,7 @@ import type {
 import type { ProcurementStage } from './stages'
 
 export type ContractType = (typeof CONTRACT_TYPES)[number]
+export type ContractDepartment = (typeof CONTRACT_DEPARTMENTS)[number]
 export type ContractInput = z.infer<typeof contractInputSchema>
 export type ContractLineInput = z.infer<typeof contractLineInputSchema>
 export type ContractItemUpdateInput = z.infer<typeof contractItemUpdateInputSchema>
@@ -55,6 +57,7 @@ export interface ContractRecord {
   product: string
   fiscalYear: number | null
   contractType: ContractType | null
+  department: ContractDepartment | null
   procurementStage: ProcurementStage | null
   status: ContractStatus | null
   displayName: string | null

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { ContractValueCards } from '@/components/dashboard/ContractValueCards'
+import { ContractStackIcon, PendingClockIcon } from '@/components/dashboard/DashboardIcons'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { getExecutiveDashboard, type ExecutiveDashboard } from '@/lib/dashboard/contracts'
 
@@ -12,33 +14,64 @@ const money = new Intl.NumberFormat('th-TH', {
 const thaiDate = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
 const displayDate = (value: string) => thaiDate.format(new Date(`${value}T00:00:00+07:00`))
 
+interface MixRow {
+  key: string
+  label: string
+  count: number
+  value: number
+  color: string
+}
+
+// A validated four-hue cool categorical set (see the palette check run for
+// this feature) plus a neutral "other" bucket. Cycling hues past four is
+// what the palette check forbids, so a fifth type folds into "อื่นๆ" rather
+// than reusing a color already assigned to a real one.
+const MIX_COLORS = ['var(--cat-blue)', 'var(--cat-teal)', 'var(--cat-violet)', 'var(--cat-sky)']
+
+function buildMixRows(typeMix: ExecutiveDashboard['typeMix']): MixRow[] {
+  const sorted = [...typeMix].sort((a, b) => b.value - a.value)
+  const top = sorted.slice(0, MIX_COLORS.length).map((item, index) => ({
+    key: item.type,
+    label: CONTRACT_TYPE_LABELS[item.type],
+    count: item.count,
+    value: item.value,
+    color: MIX_COLORS[index],
+  }))
+  const rest = sorted.slice(MIX_COLORS.length)
+  if (rest.length === 0) return top
+  const other = rest.reduce((sum, item) => ({ count: sum.count + item.count, value: sum.value + item.value }), { count: 0, value: 0 })
+  return [...top, { key: 'other', label: 'อื่นๆ', ...other, color: 'var(--lab-muted)' }]
+}
+
 function DashboardContent({ data }: { data: ExecutiveDashboard }) {
   const maximumPipeline = Math.max(...data.pipeline.map((stage) => stage.count), 1)
-  const totalTypeContracts = data.typeMix.reduce((sum, type) => sum + type.count, 0) || 1
+  const mixRows = buildMixRows(data.typeMix)
+  const maxMixCount = Math.max(...mixRows.map((row) => row.count), 1)
 
   return (
     <>
       <section className="executive-strip" aria-label="ตัวชี้วัดสัญญา">
-        <div>
-          <span>สัญญาใช้งานอยู่</span>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>สัญญาใช้งานอยู่</span>
+            <span className="executive-strip__icon" aria-hidden="true"><ContractStackIcon /></span>
+          </div>
           <strong>{data.activeContracts.toLocaleString('th-TH')}</strong>
           <small>จาก {data.contractCount.toLocaleString('th-TH')} สัญญาในระบบ</small>
         </div>
-        <div>
-          <span>ระหว่างดำเนินการ</span>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>ระหว่างดำเนินการ</span>
+            <span className="executive-strip__icon" aria-hidden="true"><PendingClockIcon /></span>
+          </div>
           <strong>{data.pendingContracts.toLocaleString('th-TH')}</strong>
           <small>ยังไม่ถึงขั้นเริ่มสัญญา</small>
         </div>
-        <div>
-          <span>มูลค่าสัญญารวม</span>
-          <strong>{money.format(data.totalContractValue)}</strong>
-          <small>รายการน้ำยาในสัญญาซื้อ และมูลค่าสัญญาเช่า</small>
-        </div>
-        <div>
-          <span>มูลค่าคงเหลือในสัญญา</span>
-          <strong>{money.format(data.remainingContractValue)}</strong>
-          <small>หลังหักการยืนยันใน PR และการตัดงบรายเดือน</small>
-        </div>
+        <ContractValueCards
+          total={{ total: data.totalContractValue, remaining: data.remainingContractValue }}
+          lease={data.leaseContractValue}
+          supply={data.supplyContractValue}
+        />
       </section>
 
       <div className="dashboard-operations">
@@ -75,7 +108,7 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           )}
         </section>
 
-        <section className="bench-panel watchlist-panel" aria-labelledby="lease-watchlist-title">
+        <section className="bench-panel lease-watchlist-panel" aria-labelledby="lease-watchlist-title">
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">LEASE · EXPIRING OR LOW BUDGET</p>
@@ -152,14 +185,16 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           </div>
           <Link className="text-link" href="/contracts">ดูทะเบียนสัญญาทั้งหมด</Link>
         </div>
-        {data.typeMix.length === 0 ? <p className="empty-state">ยังไม่มีข้อมูลประเภทสัญญา</p> : (
+        {mixRows.length === 0 ? <p className="empty-state">ยังไม่มีข้อมูลประเภทสัญญา</p> : (
           <div className="type-mix__rows">
-            {data.typeMix.map((item) => (
-              <div key={item.type}>
-                <span>{CONTRACT_TYPE_LABELS[item.type]}</span>
-                <div className="type-mix__track" aria-hidden="true"><span style={{ width: `${(item.count / totalTypeContracts) * 100}%` }} /></div>
-                <strong>{item.count} สัญญา</strong>
-                <small>{money.format(item.value)}</small>
+            {mixRows.map((row) => (
+              <div key={row.key}>
+                <span>{row.label}</span>
+                <div className="type-mix__track" aria-hidden="true">
+                  <span style={{ width: `${(row.count / maxMixCount) * 100}%`, background: row.color }} />
+                </div>
+                <strong>{row.count} สัญญา</strong>
+                <small>{money.format(row.value)}</small>
               </div>
             ))}
           </div>

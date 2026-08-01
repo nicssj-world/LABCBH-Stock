@@ -49,6 +49,7 @@ async function main() {
   const createInput = {
     fiscalYear: 2570,
     contractType: 'e_bidding' as const,
+    department: 'งานเคมีคลินิก' as const,
     displayName: 'สัญญาซื้อน้ำยาตรวจวิเคราะห์',
     vendor: null,
     endDate: '2027-09-30',
@@ -81,6 +82,7 @@ async function main() {
   const updateInput = {
     fiscalYear: 2570,
     contractType: 'specific' as const,
+    department: 'งานเคมีคลินิก' as const,
     displayName: 'สัญญาปรับปรุงชื่อ',
     vendor: 'บริษัท ทดสอบ จำกัด',
     endDate: null,
@@ -151,6 +153,7 @@ async function main() {
     product: 'Legacy Analyzer Lease',
     fiscalYear: null,
     contractType: null,
+    department: null,
     procurementStage: null,
     status: null,
     displayName: null,

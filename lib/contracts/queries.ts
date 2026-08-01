@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { CONTRACT_TYPES } from '@/lib/contracts/schema'
+import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'
 import { createClient } from '@/lib/supabase/server'
@@ -39,6 +39,7 @@ export const contractReadRowSchema = z.object({
   product: z.string(),
   fiscal_year: z.number().int().nullable(),
   contract_type: z.enum(CONTRACT_TYPES).nullable(),
+  department: z.enum(CONTRACT_DEPARTMENTS).nullable(),
   procurement_stage: z.enum(PROCUREMENT_STAGES).nullable(),
   status: z.enum(['active', 'expired', 'cancelled', 'pending']).nullable(),
   display_name: z.string().nullable(),
@@ -60,6 +61,7 @@ const CONTRACT_READ_SELECT = `
   product,
   fiscal_year,
   contract_type,
+  department,
   procurement_stage,
   status,
   display_name,
@@ -98,6 +100,7 @@ const CONTRACT_READ_SELECT = `
 export interface ContractFilters {
   fiscalYear?: number
   contractType?: (typeof CONTRACT_TYPES)[number]
+  department?: (typeof CONTRACT_DEPARTMENTS)[number]
   procurementStage?: (typeof PROCUREMENT_STAGES)[number]
   search?: string
 }
@@ -108,6 +111,7 @@ function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRec
     product: row.product,
     fiscalYear: row.fiscal_year,
     contractType: row.contract_type,
+    department: row.department,
     procurementStage: row.procurement_stage,
     status: row.status,
     displayName: row.display_name,
@@ -159,6 +163,7 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
 
   if (filters.fiscalYear) query = query.eq('fiscal_year', filters.fiscalYear)
   if (filters.contractType) query = query.eq('contract_type', filters.contractType)
+  if (filters.department) query = query.eq('department', filters.department)
   if (filters.procurementStage) query = query.eq('procurement_stage', filters.procurementStage)
 
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
