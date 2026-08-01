@@ -8,8 +8,11 @@ purchase requests, goods receipt, FIFO issue, and equipment-lease budgets.
 ## Status
 
 Pre-cutover. The system runs against a Staging Supabase project; production
-still holds the legacy data and has not been migrated. See
-[docs/runbooks/cutover.md](docs/runbooks/cutover.md).
+still holds the legacy data and has not been migrated.
+
+**[docs/STATUS.md](docs/STATUS.md)** is the current picture: what is done, what
+is proven, and what is blocked. Read it before planning any cutover work.
+The procedure itself is [docs/runbooks/cutover.md](docs/runbooks/cutover.md).
 
 ## Stack
 
