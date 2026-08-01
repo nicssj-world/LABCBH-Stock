@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
+import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { hasAppRole } from '@/lib/auth/access'
@@ -33,12 +34,26 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const canEdit = hasAppRole(actor, 'admin', 'head')
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = canRecordContractExpense(actor, contract)
+  const isContractStarted = contract.procurementStage === 'contract_started'
+  const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
   // is the sum of its lines.
   const total =
     mode === 'budget'
       ? contract.total
       : contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
+  const stageHistory = (
+    <section className="bench-panel contract-history" aria-labelledby="stage-history-title">
+      <div className="bench-panel__header">
+        <div>
+          <p className="section-kicker">PROCUREMENT TRACK</p>
+          <h2 id="stage-history-title">ประวัติขั้นตอนสัญญา</h2>
+        </div>
+        <p>บันทึกตามวันที่มีผลของแต่ละขั้นตอน</p>
+      </div>
+      <StageTimeline contract={contract} />
+    </section>
+  )
 
   return (
     <div className="route-stack">
@@ -64,19 +79,16 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         </dl>
       </section>
 
-      <div className="contract-detail-grid">
-        <section className="bench-panel contract-history" aria-labelledby="stage-history-title">
-          <div className="bench-panel__header">
-            <div>
-              <p className="section-kicker">PROCUREMENT TRACK</p>
-              <h2 id="stage-history-title">ประวัติขั้นตอนสัญญา</h2>
-            </div>
-            <p>บันทึกตามวันที่มีผลของแต่ละขั้นตอน</p>
-          </div>
-          <StageTimeline contract={contract} />
-        </section>
+      <div className={hasNextAction ? 'contract-detail-grid' : 'contract-detail-grid contract-detail-grid--single'}>
+        {isContractStarted ? (
+          <StageHistoryDisclosure>
+            {stageHistory}
+          </StageHistoryDisclosure>
+        ) : (
+          stageHistory
+        )}
 
-        {canEdit && contract.procurementStage && (
+        {canEdit && contract.procurementStage && !isContractStarted && (
           <aside className="bench-panel next-action" aria-labelledby="next-action-title">
             <div className="bench-panel__header">
               <div>
