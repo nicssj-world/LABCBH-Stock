@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
     return copyResponseState(response, NextResponse.redirect(loginUrl))
   }
 
-  if (isAuthenticated && (path === '/' || path === '/login')) {
+  if (isAuthenticated && path === '/') {
     return copyResponseState(response, NextResponse.redirect(new URL('/dashboard', request.url)))
   }
 

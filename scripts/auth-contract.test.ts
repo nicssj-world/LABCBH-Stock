@@ -25,6 +25,7 @@ assert.match(stockConfirm, /Referrer-Policy.*no-referrer/, 'one-time credentials
 
 const proxy = readFileSync('proxy.ts', 'utf8')
 assert.match(proxy, /\/auth\/confirm/, 'the one-time confirmation route must be reachable before a stock session exists')
+assert.doesNotMatch(proxy, /path === '\/login'/, 'a stale session must not bounce the login page back to the dashboard')
 
 assert.match(login, /type=\{showPassword \? 'text' : 'password'\}/)
 assert.match(login, /type="button"/)
