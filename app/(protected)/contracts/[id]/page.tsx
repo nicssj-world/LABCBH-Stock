@@ -110,19 +110,21 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         <dl className="contract-facts" aria-label="ข้อมูลสรุปสัญญา">
           <div className="contract-facts__vendor"><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
           <div><dt>ปีงบประมาณ</dt><dd className="identifier">{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
-          <div><dt>ระยะเวลาสัญญา</dt><dd>{displayDate(contract.startDate)} – {displayDate(contract.endDate)}</dd></div>
+          <div className="contract-facts__period">
+            <dt>ระยะเวลาสัญญา</dt>
+            <dd>
+              <span>{displayDate(contract.startDate)} – {displayDate(contract.endDate)}</span>
+              {contract.expiryNotice && (
+                <span className={`contract-expiry-chip contract-expiry-chip--${contract.expiryNotice.tone}`} role="status" aria-label={`${contract.expiryNotice.label}: ${contract.expiryNotice.description}`}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                    <path d="M12 7v5l3 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {contract.expiryNotice.label}
+                </span>
+              )}
+            </dd>
+          </div>
         </dl>
-        {contract.expiryNotice && (
-          <aside className={`contract-expiry-notice contract-expiry-notice--${contract.expiryNotice.tone}`} role="status">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path d="M12 7v5l3 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <div>
-              <strong>{contract.expiryNotice.label}</strong>
-              <span>{contract.expiryNotice.description}</span>
-            </div>
-          </aside>
-        )}
       </header>
 
       <div className={hasNextAction ? 'contract-detail-grid' : 'contract-detail-grid contract-detail-grid--single'}>
