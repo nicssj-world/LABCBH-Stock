@@ -9,8 +9,8 @@ const money = new Intl.NumberFormat('th-TH', {
 })
 
 function tone(contract: PresentedContract) {
-  if (contract.status === 'active') return 'success' as const
-  if (contract.status === 'cancelled' || contract.status === 'expired') return 'danger' as const
+  if (contract.effectiveStatus === 'active') return 'success' as const
+  if (contract.effectiveStatus === 'cancelled' || contract.effectiveStatus === 'expired') return 'danger' as const
   return 'attention' as const
 }
 

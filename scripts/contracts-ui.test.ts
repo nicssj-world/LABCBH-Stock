@@ -31,6 +31,9 @@ assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
 assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts must stay grouped inside the contract overview')
 assert.match(detailPage, /<StatusChip tone="neutral">\{contract\.contractTypeLabel\}<\/StatusChip>/, 'contract type must be a neutral category badge, distinct from workflow status')
+assert.match(detailPage, /<StatusChip tone="info">\{contract\.procurementStageLabel\}<\/StatusChip>/, 'detail must distinguish the procurement stage from contract status')
+assert.match(detailPage, /\{contract\.contractStatusLabel\}/, 'detail must name the effective contract status')
+assert.match(detailPage, /ExpireContractDialog/, 'editors must be able to record an exceptional contract expiry')
 assert.match(detailPage, /canEdit\s*&&\s*\([\s\S]*<ContractEditDialog/, 'editors must open the real edit form from a popup')
 assert.doesNotMatch(detailPage, /href=\{`\/contracts\/\$\{contract\.id\}\/edit`\}>แก้ไขข้อมูล/, 'detail must not navigate away when edit is clicked')
 assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')
@@ -108,6 +111,11 @@ assert.match(historyDisclosure, /ดูประวัติขั้นตอ�
 assert.match(historyDisclosure, /ซ่อนประวัติขั้นตอนสัญญา/, 'expanded history must have a clear Thai action label')
 assert.match(historyDisclosure, /stage-history-toggle__glyph/, 'history disclosure must have a recognizable audit-trail glyph')
 assert.match(historyDisclosure, /ข้อมูลย้อนหลังและวันที่มีผล/, 'history disclosure must explain what it reveals')
+
+const expiryDialog = read('components/contracts/ExpireContractDialog.tsx')
+assert.match(expiryDialog, /expireContract/, 'expiry control must persist through the dedicated Server Action')
+assert.match(expiryDialog, /showModal\(\)/, 'manual expiry must require a deliberate popup confirmation')
+assert.match(expiryDialog, /เหตุผลที่สิ้นสุดสัญญา/, 'manual expiry must retain a reason for audit')
 
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')

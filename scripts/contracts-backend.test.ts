@@ -22,10 +22,11 @@ async function main() {
   const {
     archiveContractInputSchema,
     createContractInputSchema,
+    expireContractInputSchema,
     stageAdvanceSchema,
     updateContractInputSchema,
   } = await import('../lib/contracts/schema')
-  const { presentContract } = await import('../lib/contracts/presenter')
+  const { effectiveContractStatus, presentContract } = await import('../lib/contracts/presenter')
 
   const actor = (roles: Actor['appRoles']): Actor => ({
     id: '00000000-0000-4000-8000-000000000001',
@@ -108,6 +109,23 @@ async function main() {
 
   assert.equal(archiveContractInputSchema.safeParse({ reason: '  ยกเลิกรายการซ้ำ  ' }).success, true)
   assert.equal(archiveContractInputSchema.safeParse({ reason: '   ' }).success, false)
+  assert.equal(expireContractInputSchema.safeParse({ reason: 'ครบกำหนดตามสัญญา' }).success, true)
+  assert.equal(expireContractInputSchema.safeParse({ reason: '   ' }).success, false)
+  assert.equal(
+    effectiveContractStatus('active', '2026-08-01', new Date('2026-08-02T12:00:00Z')),
+    'expired',
+    'an active contract must be shown as expired from the day after its end date',
+  )
+  assert.equal(
+    effectiveContractStatus('active', '2026-08-02', new Date('2026-08-02T12:00:00Z')),
+    'active',
+    'the contract end date must remain inclusive',
+  )
+  assert.equal(
+    effectiveContractStatus('cancelled', '2026-08-01', new Date('2026-08-02T12:00:00Z')),
+    'cancelled',
+    'automatic expiry must not overwrite an explicit cancellation',
+  )
   assert.equal(
     stageAdvanceSchema.safeParse({
       from: 'winner_announced',
@@ -169,6 +187,7 @@ async function main() {
     'create_contract',
     'update_contract',
     'archive_contract',
+    'expire_contract',
     'advance_contract_stage',
   ]) {
     assert.match(actions, new RegExp(`\\.rpc\\(['"]${rpc}['"]`))
@@ -182,6 +201,13 @@ async function main() {
     /if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์กำหนดผู้รับผิดชอบสัญญา/,
     'non-admins must fail closed even if they call the Server Action directly',
   )
+
+  const expiryMigration = readFileSync(
+    join(process.cwd(), 'supabase/migrations/20260801173118_expire_contract_status.sql'),
+    'utf8',
+  )
+  assert.match(expiryMigration, /create or replace function public\.expire_contract/, 'manual expiry must be an atomic database transition')
+  assert.match(expiryMigration, /if target_contract\.status <> 'active'/, 'new expense writes must reject an expired contract under the row lock')
 
   console.log('contracts backend boundaries: ok')
 }

@@ -7,12 +7,14 @@ import { assertContractEditor } from '@/lib/contracts/authorization'
 import {
   archiveContractInputSchema,
   createContractInputSchema,
+  expireContractInputSchema,
   stageAdvanceSchema,
   updateContractInputSchema,
 } from '@/lib/contracts/schema'
 import type {
   ArchiveContractInput,
   CreateContractInput,
+  ExpireContractInput,
   StageAdvanceInput,
   UpdateContractInput,
 } from '@/lib/contracts/types'
@@ -86,6 +88,24 @@ export async function archiveContract(contractId: number, input: ArchiveContract
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
   return archived
+}
+
+export async function expireContract(contractId: number, input: ExpireContractInput) {
+  const actor = await requireContractEditor()
+  const parsedContractId = z.number().int().positive().parse(contractId)
+  const parsed = expireContractInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('expire_contract', {
+    p_actor_id: actor.id,
+    p_contract_id: parsedContractId,
+    p_reason: parsed.reason,
+  })
+
+  const expired = unwrapMutation('เปลี่ยนสถานะสัญญา', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${parsedContractId}`)
+  revalidatePath('/dashboard')
+  return expired
 }
 
 export async function advanceContractStage(contractId: number, input: StageAdvanceInput) {

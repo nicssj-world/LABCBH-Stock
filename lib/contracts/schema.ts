@@ -105,6 +105,12 @@ export const archiveContractInputSchema = z
   })
   .strict()
 
+export const expireContractInputSchema = z
+  .object({
+    reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลที่สิ้นสุดสัญญา').max(500),
+  })
+  .strict()
+
 export const stageAdvanceSchema = z
   .object({
     from: z.enum(PROCUREMENT_STAGES),

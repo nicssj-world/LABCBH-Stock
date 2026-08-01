@@ -38,7 +38,29 @@ export interface PresentedContract extends ContractRecord {
   contractTypeLabel: string
   procurementStageLabel: string
   contractStatusLabel: string
+  effectiveStatus: ContractStatus | null
   contractNumberLabel: string
+}
+
+function bangkokDate(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
+
+/** The contract end date is inclusive; expiry takes effect on the following Bangkok calendar day. */
+export function effectiveContractStatus(
+  status: ContractStatus | null,
+  endDate: string | null,
+  now: Date = new Date(),
+): ContractStatus | null {
+  if (status !== 'active' || !endDate || endDate >= bangkokDate(now)) return status
+  return 'expired'
 }
 
 /**
@@ -57,6 +79,7 @@ export function contractListValue(contract: {
 
 export function presentContract(contract: ContractRecord): PresentedContract {
   const resolvedDisplayName = contract.displayName?.trim() || contract.product
+  const effectiveStatus = effectiveContractStatus(contract.status, contract.endDate)
 
   return {
     ...contract,
@@ -69,8 +92,9 @@ export function presentContract(contract: ContractRecord): PresentedContract {
     procurementStageLabel: contract.procurementStage
       ? PROCUREMENT_STAGE_LABELS[contract.procurementStage]
       : 'ไม่ระบุขั้นตอน',
-    contractStatusLabel: contract.status
-      ? CONTRACT_STATUS_LABELS[contract.status]
+    effectiveStatus,
+    contractStatusLabel: effectiveStatus
+      ? CONTRACT_STATUS_LABELS[effectiveStatus]
       : 'ไม่ระบุสถานะ',
     contractNumberLabel: contract.contractNumber?.trim() || 'ยังไม่มีเลขที่สัญญา',
   }

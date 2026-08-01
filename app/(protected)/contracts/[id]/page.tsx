@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
+import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
@@ -37,7 +38,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const canEdit = hasAppRole(actor, 'admin', 'head')
   const isAdmin = hasAppRole(actor, 'admin')
   const mode = contractMode(contract.contractType ?? 'e_bidding')
-  const canRecord = canRecordContractExpense(actor, contract)
+  const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
   const responsibleCandidates = mode === 'budget' && isAdmin
     ? await fetchResponsibleCandidates()
     : []
@@ -73,10 +74,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             <span>รายการสัญญา</span>
           </Link>
           <div className="contract-detail-heading__status">
-            <StatusChip tone={contract.status === 'active' ? 'success' : 'attention'}>{contract.procurementStageLabel}</StatusChip>
+            <StatusChip tone="info">{contract.procurementStageLabel}</StatusChip>
+            <StatusChip tone={contract.effectiveStatus === 'active' ? 'success' : contract.effectiveStatus === 'expired' || contract.effectiveStatus === 'cancelled' ? 'danger' : 'attention'}>{contract.contractStatusLabel}</StatusChip>
             <StatusChip tone="neutral">{contract.contractTypeLabel}</StatusChip>
             {canEdit && (
               <ContractEditDialog contract={record} />
+            )}
+            {canEdit && isContractStarted && contract.effectiveStatus === 'active' && (
+              <ExpireContractDialog contractId={contract.id} />
             )}
             {mode === 'budget' && isAdmin && (
               <ResponsibleUserDialog

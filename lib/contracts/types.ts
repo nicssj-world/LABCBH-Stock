@@ -7,6 +7,7 @@ import type {
   contractItemUpdateInputSchema,
   contractLineInputSchema,
   createContractInputSchema,
+  expireContractInputSchema,
   responsibleUsersInputSchema,
   stageAdvanceSchema,
   updateContractInputSchema,
@@ -20,6 +21,7 @@ export type ContractItemUpdateInput = z.infer<typeof contractItemUpdateInputSche
 export type CreateContractInput = z.infer<typeof createContractInputSchema>
 export type UpdateContractInput = z.infer<typeof updateContractInputSchema>
 export type ArchiveContractInput = z.infer<typeof archiveContractInputSchema>
+export type ExpireContractInput = z.infer<typeof expireContractInputSchema>
 export type StageAdvanceInput = z.infer<typeof stageAdvanceSchema>
 export type ContractExpenseInput = z.infer<typeof contractExpenseInputSchema>
 export type ResponsibleUsersInput = z.infer<typeof responsibleUsersInputSchema>
