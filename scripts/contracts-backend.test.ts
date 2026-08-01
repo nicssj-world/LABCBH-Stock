@@ -8,6 +8,7 @@ const requiredFiles = [
   'lib/contracts/presenter.ts',
   'lib/contracts/queries.ts',
   'lib/contracts/actions.ts',
+  'lib/contracts/budget-actions.ts',
 ]
 
 for (const file of requiredFiles) {
@@ -173,6 +174,14 @@ async function main() {
     assert.match(actions, new RegExp(`\\.rpc\\(['"]${rpc}['"]`))
   }
   assert.doesNotMatch(actions, /\.from\(['"]contracts['"]\)\.(?:insert|update|delete)/)
+
+  const budgetActions = readFileSync(join(process.cwd(), 'lib/contracts/budget-actions.ts'), 'utf8')
+  assert.match(budgetActions, /isAdministrator/, 'responsible-user writes must verify the admin role server-side')
+  assert.match(
+    budgetActions,
+    /if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์กำหนดผู้รับผิดชอบสัญญา/,
+    'non-admins must fail closed even if they call the Server Action directly',
+  )
 
   console.log('contracts backend boundaries: ok')
 }

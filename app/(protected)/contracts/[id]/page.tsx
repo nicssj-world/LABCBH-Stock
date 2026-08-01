@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
+import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
@@ -10,6 +11,7 @@ import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { contractMode } from '@/lib/contracts/budget'
 import { canRecordContractExpense } from '@/lib/contracts/authorization'
+import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract } from '@/lib/contracts/queries'
 
@@ -32,8 +34,12 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   if (!record) notFound()
   const contract = presentContract(record)
   const canEdit = hasAppRole(actor, 'admin', 'head')
+  const isAdmin = hasAppRole(actor, 'admin')
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = canRecordContractExpense(actor, contract)
+  const responsibleCandidates = mode === 'budget' && isAdmin
+    ? await fetchResponsibleCandidates()
+    : []
   const isContractStarted = contract.procurementStage === 'contract_started'
   const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
@@ -69,6 +75,13 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             <StatusChip tone={contract.status === 'active' ? 'success' : 'attention'}>{contract.procurementStageLabel}</StatusChip>
             <span>{contract.contractTypeLabel}</span>
             {canEdit && <Link className="lab-link-button lab-link-button--secondary" href={`/contracts/${contract.id}/edit`}>แก้ไขข้อมูล</Link>}
+            {mode === 'budget' && isAdmin && (
+              <ResponsibleUserDialog
+                contractId={contract.id}
+                candidates={responsibleCandidates}
+                selected={contract.responsibleUserIds}
+              />
+            )}
           </div>
         </div>
 
@@ -124,7 +137,6 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           startDate={contract.startDate}
           endDate={contract.endDate}
           filePath={contract.fileUrl}
-          responsibleUserIds={contract.responsibleUserIds}
           canRecord={canRecord}
           canEdit={canEdit}
         />

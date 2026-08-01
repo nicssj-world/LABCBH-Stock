@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import {
   contractExpenseInputSchema,
@@ -55,6 +56,7 @@ export async function deleteContractExpense(contractId: number, usageId: number)
 
 export async function setResponsibleUsers(input: ResponsibleUsersInput) {
   const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์กำหนดผู้รับผิดชอบสัญญา')
   const parsed = responsibleUsersInputSchema.parse(input)
 
   const result = await supabaseAdmin.rpc('set_contract_responsible_users', {

@@ -1338,6 +1338,30 @@ textarea[aria-invalid="true"] {
 .contract-detail-back:hover svg { transform: translateX(-3px); }
 .contract-detail-heading__status { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; color: var(--lab-muted); font-size: 12px; }
 .contract-detail-heading__status > span:not(.status-chip) { padding-right: 4px; }
+.contract-responsible-trigger { gap: 8px; }
+.contract-responsible-trigger svg { flex: 0 0 auto; }
+.responsible-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(84dvh, 760px);
+  padding: 0;
+  overflow: hidden;
+  color: var(--lab-ink);
+  background: var(--lab-surface);
+  border: 0;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--lab-shadow-float);
+}
+.responsible-dialog::backdrop { background: rgb(15 23 42 / 52%); }
+.responsible-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 20px 18px 24px; border-bottom: 1px solid var(--lab-border); }
+.responsible-dialog__header h2 { margin: 0; font-size: 20px; line-height: 1.35; }
+.responsible-dialog__header p { max-width: 55ch; margin: 4px 0 0; color: var(--lab-muted); font-size: 12px; }
+.responsible-dialog__close { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--lab-muted); background: transparent; border: 1px solid transparent; border-radius: var(--radius-control); }
+.responsible-dialog__close:hover { color: var(--lab-ink); background: var(--lab-surface-muted); }
+.responsible-dialog__body { max-height: calc(min(84dvh, 760px) - 92px); padding: 20px 24px 24px; overflow-y: auto; }
+.responsible-dialog .responsible-picker { padding: 0; }
 .contract-detail-heading__body { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr); min-height: 168px; }
 .contract-detail-heading__identity { display: grid; align-content: center; padding: 28px 32px 30px; }
 .contract-detail-heading__number { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; color: var(--lab-muted); }
@@ -2071,6 +2095,9 @@ textarea[aria-invalid="true"] {
   .contract-detail-heading__top { align-items: flex-start; flex-direction: column; padding: 12px 16px 16px; }
   .contract-detail-heading__status { justify-content: flex-start; width: 100%; }
   .contract-detail-heading__status .lab-link-button { width: 100%; margin-top: 4px; }
+  .responsible-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .responsible-dialog__header { padding: 16px 12px 14px 18px; }
+  .responsible-dialog__body { max-height: calc(100dvh - 108px); padding: 18px; }
   .contract-detail-heading__identity,
   .contract-detail-heading__value { padding: 24px 20px; }
   .contract-detail-heading h1 { font-size: clamp(26px, 9vw, 34px); }

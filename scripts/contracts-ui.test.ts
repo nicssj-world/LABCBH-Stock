@@ -30,7 +30,27 @@ assert.match(detailPage, /className="route-stack contract-detail-page"/, 'contra
 assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must keep navigation, state, and edit action together')
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
 assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts must stay grouped inside the contract overview')
+assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')
+assert.match(detailPage, /mode === ['"]budget['"] && isAdmin[\s\S]*<ResponsibleUserDialog/, 'lease admins must get the responsible-user dialog beside header actions')
 assert.match(detailPage, /ArchiveContractControl/, 'detail must expose reasoned archive')
+
+const budgetPanel = read('components/contracts/BudgetPanel.tsx')
+assert.doesNotMatch(budgetPanel, /ResponsibleUserPicker|ผู้รับผิดชอบสัญญา/, 'responsible users must not occupy the contract detail flow')
+
+const responsibleDialog = read('components/contracts/ResponsibleUserDialog.tsx')
+assert.match(responsibleDialog, /^['"]use client['"]/m, 'responsible-user popup must be an interactive client boundary')
+assert.match(responsibleDialog, /showModal\(\)/, 'admin trigger must open a modal dialog')
+assert.match(responsibleDialog, /<dialog/, 'responsible-user manager must use the native accessible dialog')
+assert.match(responsibleDialog, /ResponsibleUserPicker/, 'popup must preserve the real responsible-user picker')
+assert.match(responsibleDialog, /key=\{pickerSession\}/, 'reopening the popup must discard unsaved local choices')
+assert.match(responsibleDialog, /onSaved=\{closeDialog\}/, 'successful saving must close the popup')
+assert.match(responsibleDialog, /aria-label="ปิดหน้าต่างกำหนดผู้รับผิดชอบ"/, 'popup must expose a clear close control')
+
+const responsiblePicker = read('components/contracts/ResponsibleUserPicker.tsx')
+assert.match(responsiblePicker, /onSaved\?\.\(\)/, 'responsible-user picker must notify the popup after a successful save')
+
+const globalStyles = read('app/globals.css')
+assert.match(globalStyles, /\.responsible-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'responsible-user popup must stay centered in the viewport')
 
 const historyDisclosure = read('components/contracts/StageHistoryDisclosure.tsx')
 assert.match(historyDisclosure, /^['"]use client['"]/m, 'history disclosure must be an interactive client boundary')

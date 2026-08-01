@@ -17,6 +17,7 @@ interface ResponsibleUserPickerProps {
   candidates: ResponsibleCandidate[]
   selected: string[]
   canEdit: boolean
+  onSaved?: () => void
 }
 
 /**
@@ -28,6 +29,7 @@ export function ResponsibleUserPicker({
   candidates,
   selected,
   canEdit,
+  onSaved,
 }: ResponsibleUserPickerProps) {
   const router = useRouter()
   const [chosen, setChosen] = useState<string[]>(selected)
@@ -76,6 +78,7 @@ export function ResponsibleUserPicker({
         setNote('')
         setSaved(true)
         router.refresh()
+        onSaved?.()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'บันทึกผู้รับผิดชอบไม่สำเร็จ')
       }
