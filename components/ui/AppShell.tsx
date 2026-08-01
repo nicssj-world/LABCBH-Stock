@@ -1,33 +1,41 @@
 /*
-THESIS: A calm laboratory control bench puts live work paths before decoration.
-OWN-WORLD: Deep navy rail, cool instrument surfaces, crisp borders, amber state cues.
-STORY: Staff identify their work area, enter a queue, and act with traceable context.
-FIRST VIEWPORT: Labeled navigation at left; actor context above a full working canvas.
-FORM: Established Laboratory Control Bench, dense Operate mode, user-approved direction.
+THESIS: A calm laboratory workspace should feel related to the Lab Management Portal.
+OWN-WORLD: Portal-blue navigation, stock-green signals, quiet surfaces, crisp data hierarchy.
+STORY: Staff always know where they are, who is signed in, and which action matters next.
+FIRST VIEWPORT: Compact navigation, persistent page context, and an uninterrupted work canvas.
+FORM: Enterprise healthcare dashboard, dense enough for operations and comfortable for touch.
 */
 'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import type { Actor } from '@/lib/auth/actor'
 
 type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
+type NavTone = 'blue' | 'violet' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
 
-const navigation: Array<{ href: string; label: string; icon: BenchIconName }> = [
-  { href: '/dashboard', label: 'ภาพรวม', icon: 'overview' },
-  { href: '/contracts', label: 'สัญญา', icon: 'contract' },
-  { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr' },
-  { href: '/receipts', label: 'รับเข้า', icon: 'receipt' },
-  { href: '/requisitions', label: 'เบิกจ่าย', icon: 'issue' },
-  { href: '/inventory', label: 'คงคลัง', icon: 'inventory' },
+interface NavigationItem {
+  href: string
+  label: string
+  icon: BenchIconName
+  tone: NavTone
+}
+
+const navigation: NavigationItem[] = [
+  { href: '/dashboard', label: 'ภาพรวม', icon: 'overview', tone: 'blue' },
+  { href: '/contracts', label: 'สัญญา', icon: 'contract', tone: 'violet' },
+  { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr', tone: 'cyan' },
+  { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },
+  { href: '/requisitions', label: 'เบิกจ่าย', icon: 'issue', tone: 'rose' },
+  { href: '/inventory', label: 'คงคลัง', icon: 'inventory', tone: 'green' },
 ]
 
-// Kept out of the main list because the route redirects anyone else away; a
-// visible link that always bounced would be worse than no link.
-const adminNavigation: Array<{ href: string; label: string; icon: BenchIconName }> = [
-  { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings' },
+// The route itself remains the final authorization boundary. Showing this
+// entry only to admins avoids navigation that immediately redirects other users.
+const adminNavigation: NavigationItem[] = [
+  { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings', tone: 'slate' },
 ]
 
 function BenchIcon({ name }: { name: BenchIconName }) {
@@ -48,6 +56,16 @@ function BenchIcon({ name }: { name: BenchIconName }) {
   )
 }
 
+function UtilityIcon({ name }: { name: 'menu' | 'moon' | 'sun' }) {
+  return (
+    <svg className="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {name === 'menu' && <><path d="M4 7h16M4 12h16M4 17h16" /></>}
+      {name === 'moon' && <path d="M20 15.4A8 8 0 0 1 8.6 4 8 8 0 1 0 20 15.4Z" />}
+      {name === 'sun' && <><circle cx="12" cy="12" r="3.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>}
+    </svg>
+  )
+}
+
 export interface AppShellProps {
   actor: Actor
   children: ReactNode
@@ -55,44 +73,104 @@ export interface AppShellProps {
 
 export function AppShell({ actor, children }: AppShellProps) {
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [dark, setDark] = useState(false)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
+  const visibleNavigation = [...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])]
+  const currentItem = visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const savedTheme = localStorage.getItem('labcbh-theme') === 'dark'
+      setDark(savedTheme)
+      document.documentElement.dataset.theme = savedTheme ? 'dark' : 'light'
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    if (!mobileOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [mobileOpen])
+
+  function toggleTheme() {
+    const nextDark = !dark
+    setDark(nextDark)
+    document.documentElement.dataset.theme = nextDark ? 'dark' : 'light'
+    localStorage.setItem('labcbh-theme', nextDark ? 'dark' : 'light')
+  }
 
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
-      <aside className="bench-rail" aria-label="เมนูหลัก">
+      <button
+        className={`bench-rail-overlay${mobileOpen ? ' is-open' : ''}`}
+        type="button"
+        aria-label="ปิดเมนูหลัก"
+        tabIndex={mobileOpen ? 0 : -1}
+        onClick={() => setMobileOpen(false)}
+      />
+      <aside className={`bench-rail${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
         <div className="bench-brand">
           <span className="bench-brand__mark" aria-hidden="true">LC</span>
           <span>
             <strong>LABCBH Stock</strong>
-            <small>Laboratory Control Bench</small>
+            <small>Laboratory Management</small>
           </span>
         </div>
+        <p className="bench-nav__section">งานคลังและสัญญา</p>
         <nav className="bench-nav">
-          {[...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])].map((item) => (
+          {visibleNavigation.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className="bench-nav__link"
               aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+              onClick={() => setMobileOpen(false)}
             >
-              <BenchIcon name={item.icon} />
+              <span className="bench-nav__icon" data-nav-tone={item.tone}>
+                <BenchIcon name={item.icon} />
+              </span>
               <span>{item.label}</span>
             </Link>
           ))}
         </nav>
         <div className="bench-rail__footer">
           <span className="bench-rail__signal" aria-hidden="true" />
-          <span>ระบบคลังกลาง</span>
+          <span><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
         </div>
       </aside>
       <div className="workbench">
         <header className="workbench-header">
-          <div>
-            <p className="workbench-header__eyebrow">กลุ่มงานเทคนิคการแพทย์</p>
-            <p className="workbench-header__hospital">โรงพยาบาลชลบุรี</p>
+          <div className="workbench-header__context">
+            <button
+              className="utility-button menu-button"
+              type="button"
+              aria-label="เปิดเมนูหลัก"
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen((open) => !open)}
+            >
+              <UtilityIcon name="menu" />
+            </button>
+            <div>
+              <p className="workbench-header__eyebrow">LABCBH STOCK</p>
+              <p className="workbench-header__hospital">{currentItem?.label ?? 'ระบบคลังกลาง'}</p>
+            </div>
           </div>
           <div className="workbench-header__actions">
+            <button
+              className="utility-button"
+              type="button"
+              aria-label="เปลี่ยนธีม"
+              title={dark ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
+              onClick={toggleTheme}
+            >
+              <UtilityIcon name={dark ? 'sun' : 'moon'} />
+            </button>
             <div className="actor-badge" aria-label={`ผู้ใช้งาน ${actorLabel}`}>
               <span className="actor-badge__initial" aria-hidden="true">
                 {actorLabel.slice(0, 1).toUpperCase()}
