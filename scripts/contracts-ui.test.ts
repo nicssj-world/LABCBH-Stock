@@ -79,6 +79,15 @@ assert.match(expenseHistory, /value=\{displayLimit\}/, 'the selected display cou
 assert.match(expenseHistory, /10 รายการ|20 รายการ|50 รายการ/, 'the display count selector must offer useful recent-record limits')
 assert.match(expenseHistory, /displayedEntries\.map/, 'the table must render only the selected number of records')
 
+const expenseForm = read('components/contracts/ExpenseForm.tsx')
+assert.match(expenseForm, /expense-form__primary/, 'expense entry must group month and amount as the primary two-column decision')
+assert.match(expenseForm, /expense-form__secondary/, 'record date and note must remain secondary details')
+assert.match(expenseForm, /aria-invalid=\{overRemaining\}/, 'the amount field must expose an over-budget warning accessibly')
+assert.match(expenseForm, /expense-form__budget-alert/, 'the remaining-budget warning needs a dedicated, findable treatment')
+
+const budgetGauge = read('components/contracts/BudgetGauge.tsx')
+assert.match(budgetGauge, /budget-gauge__figures/, 'budget summary must retain the grouped three-figure display next to expense entry')
+
 const fileCard = read('components/contracts/ContractFileCard.tsx')
 assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')
 assert.match(fileCard, /aria-label="เปิดดูไฟล์สัญญา"/, 'file view icon needs an accessible label')

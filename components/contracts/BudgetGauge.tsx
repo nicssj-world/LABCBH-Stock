@@ -52,7 +52,7 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
         </div>
         <div>
           <dt>ใช้ไปแล้ว</dt>
-          <dd className="identifier">
+          <dd className="identifier budget-gauge__used">
             {money.format(snapshot.used)} ({snapshot.percentUsed.toFixed(1)}%)
           </dd>
         </div>

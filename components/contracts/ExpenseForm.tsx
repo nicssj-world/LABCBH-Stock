@@ -77,7 +77,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
 
   return (
     <form className="expense-form" onSubmit={submit}>
-      <div className="form-grid">
+      <div className="expense-form__primary">
         <label>
           เดือนที่ใช้จ่าย
           <select value={usageMonth} onChange={(event) => setUsageMonth(event.target.value)} required>
@@ -99,30 +99,41 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             placeholder="เช่น 111463.20"
+            aria-invalid={overRemaining}
+            aria-describedby={overRemaining ? 'expense-budget-alert' : remaining !== null ? 'expense-remaining-hint' : undefined}
           />
+          {remaining !== null && !overRemaining && (
+            <small id="expense-remaining-hint" className="expense-form__remaining-hint">
+              บันทึกได้สูงสุด {money.format(remaining)} บาท
+            </small>
+          )}
         </label>
+      </div>
+
+      {overRemaining && (
+        <p id="expense-budget-alert" className="expense-form__budget-alert" role="alert">
+          จำนวนเงินเกินงบคงเหลือ {money.format(remaining!)} บาท กรุณาตรวจสอบยอดอีกครั้ง
+        </p>
+      )}
+
+      <div className="expense-form__secondary">
         <label>
           วันที่บันทึก
           <input type="date" value={usageDate} onChange={(event) => setUsageDate(event.target.value)} />
         </label>
-        <label className="form-grid__wide">
+        <label>
           หมายเหตุ (ถ้ามี)
           <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
         </label>
       </div>
 
-      {overRemaining && (
-        <p className="form-error" role="alert">
-          จำนวนเงินเกินงบคงเหลือ {money.format(remaining!)} บาท
-        </p>
-      )}
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
 
-      <div className="form-action-bar__buttons">
+      <div className="expense-form__footer">
         <Button type="submit" disabled={isPending || overRemaining}>
           {isPending ? 'กำลังบันทึก…' : 'บันทึกค่าใช้จ่าย'}
         </Button>

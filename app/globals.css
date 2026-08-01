@@ -1809,7 +1809,7 @@ textarea[aria-invalid="true"] {
 .po-uploader__preview { display: grid; gap: 8px; }
 
 /* Equipment lease budget: a monthly baht drawdown against the contract value. */
-.budget-gauge { display: grid; gap: 14px; padding: 8px 22px 20px; }
+.budget-gauge { display: grid; gap: 16px; padding: 8px 22px 20px; }
 .budget-gauge__track {
   position: relative;
   height: 12px;
@@ -1827,10 +1827,12 @@ textarea[aria-invalid="true"] {
 }
 .budget-gauge__track--warn .budget-gauge__fill { background: var(--lab-amber); }
 .budget-gauge__track--danger .budget-gauge__fill { background: var(--lab-red); }
-.budget-gauge__figures { display: flex; flex-wrap: wrap; gap: 24px; margin: 0; }
-.budget-gauge__figures div { display: grid; gap: 2px; }
+.budget-gauge__figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; overflow: hidden; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
+.budget-gauge__figures div { display: grid; gap: 3px; min-width: 0; padding: 13px 16px; border-right: 1px solid var(--lab-border); }
+.budget-gauge__figures div:last-child { border-right: 0; }
 .budget-gauge__figures dt { color: var(--lab-muted); font-size: 11px; font-weight: 600; }
-.budget-gauge__figures dd { margin: 0; font-size: 15px; font-weight: 700; }
+.budget-gauge__figures dd { margin: 0; overflow-wrap: anywhere; color: var(--lab-navy-strong); font-size: 15px; font-weight: 700; }
+.budget-gauge__used { color: var(--lab-primary-strong); }
 .budget-gauge__remaining--warn { color: var(--lab-amber); }
 .budget-gauge__remaining--danger { color: var(--lab-red); }
 .budget-gauge__flag {
@@ -1843,8 +1845,20 @@ textarea[aria-invalid="true"] {
   font-weight: 600;
 }
 .budget-gauge__unknown { margin: 0; color: var(--lab-muted); font-size: 13px; }
+.budget-gauge--unknown .budget-gauge__figures { grid-template-columns: 1fr; }
 
-.expense-form { display: grid; gap: 14px; padding: 0 22px 20px; }
+.expense-form { display: grid; gap: 14px; padding: 2px 22px 22px; }
+.expense-form__primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.expense-form__primary label { display: grid; gap: 7px; color: var(--lab-ink); font-size: 13px; font-weight: 700; }
+.expense-form__primary input,
+.expense-form__primary select { min-height: 56px; font-size: 15px; }
+.expense-form__remaining-hint { color: var(--lab-muted); font-size: 11px; font-weight: 500; }
+.expense-form__secondary { display: grid; grid-template-columns: minmax(220px, .6fr) minmax(0, 1.4fr); gap: 14px; padding-top: 2px; }
+.expense-form__secondary label { display: grid; gap: 7px; color: var(--lab-muted); font-size: 12px; font-weight: 700; }
+.expense-form__secondary input { min-height: 46px; }
+.expense-form__budget-alert { margin: 0; padding: 10px 12px; color: var(--lab-red); background: var(--lab-red-soft); border: 1px solid color-mix(in srgb, var(--lab-red) 28%, var(--lab-border)); border-radius: var(--radius-control); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.expense-form__footer { display: flex; justify-content: flex-end; padding-top: 4px; }
+.expense-form__footer .lab-button { min-height: 48px; padding-inline: 18px; }
 .contract-expense-panel { overflow: hidden; }
 .expense-monthly-chart { display: grid; gap: 18px; margin: 0; padding: 8px 22px 22px; border-bottom: 1px solid var(--lab-border); }
 .expense-monthly-chart__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -2118,6 +2132,7 @@ textarea[aria-invalid="true"] {
   .contract-facts > .contract-facts__vendor { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--lab-border); }
   .contract-facts > div:nth-child(2) { border-right: 1px solid var(--lab-border); }
   .contract-detail-grid { grid-template-columns: 1fr; }
+  .expense-form__secondary { grid-template-columns: 1fr 1fr; }
   .expense-history__toolbar { align-items: flex-start; flex-direction: column; }
   .expense-history__controls { justify-content: space-between; width: 100%; }
   .contract-file-card { grid-template-columns: 1fr; }
@@ -2181,6 +2196,12 @@ textarea[aria-invalid="true"] {
   .expense-monthly-chart__heading { align-items: flex-start; flex-direction: column; gap: 8px; }
   .expense-monthly-chart__bars { height: 148px; gap: 3px; }
   .expense-monthly-chart__value { font-size: 8px; }
+  .budget-gauge__figures { grid-template-columns: 1fr; }
+  .budget-gauge__figures div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .budget-gauge__figures div:last-child { border-bottom: 0; }
+  .expense-form__primary,
+  .expense-form__secondary { grid-template-columns: 1fr; }
+  .expense-form__footer .lab-button { width: 100%; }
   .expense-history { padding-inline: 18px; }
   .expense-history__controls { align-items: flex-start; flex-direction: column; gap: 10px; }
   .expense-history__exports { align-items: flex-start; flex-direction: column; gap: 6px; }
