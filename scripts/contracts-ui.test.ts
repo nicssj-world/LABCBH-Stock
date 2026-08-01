@@ -73,6 +73,10 @@ assert.match(globalStyles, /\.app-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*ins
 const expenseHistory = read('components/contracts/ExpenseHistory.tsx')
 assert.match(expenseHistory, /expense-history__exports/, 'CSV and Excel exports must be grouped as one coherent toolbar')
 assert.match(expenseHistory, /aria-label="ดาวน์โหลดประวัติการใช้จ่าย"/, 'export actions need an accessible group label')
+assert.match(expenseHistory, /const \[displayLimit, setDisplayLimit\]/, 'expense history must let users choose how many records to view')
+assert.match(expenseHistory, /value=\{displayLimit\}/, 'the selected display count must remain visible')
+assert.match(expenseHistory, /10 รายการ|20 รายการ|50 รายการ/, 'the display count selector must offer useful recent-record limits')
+assert.match(expenseHistory, /displayedEntries\.map/, 'the table must render only the selected number of records')
 
 const fileCard = read('components/contracts/ContractFileCard.tsx')
 assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')

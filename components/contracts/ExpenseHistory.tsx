@@ -11,6 +11,7 @@ import { expenseCsv, expenseFileBase, expenseSheetXml } from '@/lib/contracts/ex
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
 const monthLabel = new Intl.DateTimeFormat('th-TH', { year: 'numeric', month: 'short' })
 const dayLabel = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
+type DisplayLimit = 10 | 20 | 50 | 'all'
 
 function download(filename: string, contents: string, mime: string) {
   const url = URL.createObjectURL(new Blob([contents], { type: `${mime};charset=utf-8` }))
@@ -41,9 +42,11 @@ export function ExpenseHistory({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<number | null>(null)
+  const [displayLimit, setDisplayLimit] = useState<DisplayLimit>(10)
   const [isPending, startTransition] = useTransition()
 
   const base = expenseFileBase({ contractNumber, displayName })
+  const displayedEntries = displayLimit === 'all' ? entries : entries.slice(0, displayLimit)
 
   const remove = (usageId: number) => {
     setError(null)
@@ -63,38 +66,53 @@ export function ExpenseHistory({
   return (
     <div className="expense-history">
       <div className="expense-history__toolbar">
-        <p className="expense-history__summary">{entries.length} รายการบันทึก · ครอบคลุม {series.length} เดือน</p>
-        <div className="expense-history__exports" aria-label="ดาวน์โหลดประวัติการใช้จ่าย">
-          <span>ส่งออกข้อมูล</span>
-          <div>
-            <Button
-              variant="secondary"
-              className="expense-history__export-button"
-              disabled={entries.length === 0}
-              onClick={() => download(`${base}.csv`, expenseCsv(entries), 'text/csv')}
+        <p className="expense-history__summary">แสดง {displayedEntries.length} จาก {entries.length} รายการ · ครอบคลุม {series.length} เดือน</p>
+        <div className="expense-history__controls">
+          <label className="expense-history__display-limit">
+            <span>จำนวนที่แสดง</span>
+            <select
+              value={displayLimit}
+              onChange={(event) => setDisplayLimit(event.target.value === 'all' ? 'all' : Number(event.target.value) as DisplayLimit)}
+              aria-label="จำนวนประวัติการใช้จ่ายที่แสดง"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              ดาวน์โหลด CSV
-            </Button>
-            <Button
-              variant="secondary"
-              className="expense-history__export-button"
-              disabled={entries.length === 0}
-              onClick={() =>
-                download(
-                  `${base}.xls`,
-                  expenseSheetXml({ contractNumber, displayName }, entries),
-                  'application/vnd.ms-excel',
-                )
-              }
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path d="M5 3h10l4 4v14H5zM15 3v5h5M8 12h8M8 16h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              ดาวน์โหลด Excel
-            </Button>
+              <option value={10}>10 รายการ</option>
+              <option value={20}>20 รายการ</option>
+              <option value={50}>50 รายการ</option>
+              <option value="all">ทั้งหมด</option>
+            </select>
+          </label>
+          <div className="expense-history__exports" aria-label="ดาวน์โหลดประวัติการใช้จ่าย">
+            <span>ส่งออกข้อมูล</span>
+            <div>
+              <Button
+                variant="secondary"
+                className="expense-history__export-button"
+                disabled={entries.length === 0}
+                onClick={() => download(`${base}.csv`, expenseCsv(entries), 'text/csv')}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                ดาวน์โหลด CSV
+              </Button>
+              <Button
+                variant="secondary"
+                className="expense-history__export-button"
+                disabled={entries.length === 0}
+                onClick={() =>
+                  download(
+                    `${base}.xls`,
+                    expenseSheetXml({ contractNumber, displayName }, entries),
+                    'application/vnd.ms-excel',
+                  )
+                }
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M5 3h10l4 4v14H5zM15 3v5h5M8 12h8M8 16h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                ดาวน์โหลด Excel
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -119,7 +137,7 @@ export function ExpenseHistory({
             </tr>
           </thead>
           <tbody>
-            {entries.map((entry) => (
+            {displayedEntries.map((entry) => (
               <tr key={entry.id}>
                 <td>
                   {entry.usageMonth

@@ -1862,6 +1862,9 @@ textarea[aria-invalid="true"] {
 .expense-history { display: grid; gap: 16px; padding: 18px 22px 22px; }
 .expense-history__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .expense-history__summary { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.expense-history__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 16px; }
+.expense-history__display-limit { display: inline-flex; align-items: center; gap: 8px; color: var(--lab-muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.expense-history__display-limit select { min-height: 40px; min-width: 112px; padding: 8px 30px 8px 10px; color: var(--lab-ink); background-color: var(--lab-surface); border-color: var(--lab-border-strong); border-radius: var(--radius-control); font: inherit; font-size: 12px; }
 .expense-history__exports { display: flex; align-items: center; gap: 10px; }
 .expense-history__exports > span { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
 .expense-history__exports > div { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -2116,7 +2119,7 @@ textarea[aria-invalid="true"] {
   .contract-facts > div:nth-child(2) { border-right: 1px solid var(--lab-border); }
   .contract-detail-grid { grid-template-columns: 1fr; }
   .expense-history__toolbar { align-items: flex-start; flex-direction: column; }
-  .expense-history__exports { width: 100%; justify-content: space-between; }
+  .expense-history__controls { justify-content: space-between; width: 100%; }
   .contract-file-card { grid-template-columns: 1fr; }
   .contract-file-card__controls { justify-content: flex-start; }
   .contract-file-preview-dialog__body { max-height: calc(100dvh - 108px); padding: 0; }
@@ -2179,6 +2182,7 @@ textarea[aria-invalid="true"] {
   .expense-monthly-chart__bars { height: 148px; gap: 3px; }
   .expense-monthly-chart__value { font-size: 8px; }
   .expense-history { padding-inline: 18px; }
+  .expense-history__controls { align-items: flex-start; flex-direction: column; gap: 10px; }
   .expense-history__exports { align-items: flex-start; flex-direction: column; gap: 6px; }
   .expense-history__exports > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   .expense-history__export-button { justify-content: center; width: 100%; padding-inline: 8px; }
