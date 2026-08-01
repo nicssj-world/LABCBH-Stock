@@ -1434,6 +1434,22 @@ textarea[aria-invalid="true"] {
 .contract-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .contract-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; }
 .contract-facts__vendor dd { color: var(--lab-navy-strong); font-size: 16px; }
+.contract-expiry-notice {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 16px 24px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+.contract-expiry-notice div { display: grid; gap: 2px; }
+.contract-expiry-notice strong { font-size: 13px; }
+.contract-expiry-notice span { font-size: 12px; line-height: 1.5; }
+.contract-expiry-notice--attention { color: var(--lab-amber); background: var(--lab-amber-soft); border-color: color-mix(in srgb, var(--lab-amber) 32%, var(--lab-border)); }
+.contract-expiry-notice--danger { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 32%, var(--lab-border)); }
+.contract-table__status-stack { display: grid; justify-items: start; gap: 6px; }
 .contract-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, .75fr); gap: 20px; align-items: start; }
 .contract-detail-grid--single { grid-template-columns: minmax(0, 1fr); }
 .next-action { position: sticky; top: 20px; }
@@ -2304,6 +2320,7 @@ textarea[aria-invalid="true"] {
   .contract-edit-dialog__body { max-height: calc(100dvh - 108px); padding: 18px; }
   .contract-detail-heading__identity,
   .contract-detail-heading__value { padding: 24px 20px; }
+  .contract-expiry-notice { margin: 14px 16px 0; }
   .contract-detail-heading h1 { font-size: clamp(26px, 9vw, 34px); }
   .contract-facts { grid-template-columns: 1fr; }
   .contract-facts > div,

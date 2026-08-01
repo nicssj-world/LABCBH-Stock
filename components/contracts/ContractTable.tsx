@@ -48,7 +48,12 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                 </td>
                 <td>{contract.contractTypeLabel}</td>
                 <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
-                <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
+                <td>
+                  <div className="contract-table__status-stack">
+                    <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
+                    {contract.expiryNotice && <StatusChip tone={contract.expiryNotice.tone}>{contract.expiryNotice.label}</StatusChip>}
+                  </div>
+                </td>
                 <td className="identifier">{contract.contractNumberLabel}</td>
                 <td className="numeric-cell identifier">{formatContractValue(contract)}</td>
                 <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
@@ -62,7 +67,10 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
         {contracts.map((contract) => (
           <li key={contract.id}>
             <div className="task-card__topline">
-              <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
+              <div className="contract-table__status-stack">
+                <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
+                {contract.expiryNotice && <StatusChip tone={contract.expiryNotice.tone}>{contract.expiryNotice.label}</StatusChip>}
+              </div>
               <span className="identifier">{formatContractValue(contract)}</span>
             </div>
             <h3>{contract.resolvedDisplayName}</h3>

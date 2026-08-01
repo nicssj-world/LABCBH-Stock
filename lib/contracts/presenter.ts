@@ -39,7 +39,14 @@ export interface PresentedContract extends ContractRecord {
   procurementStageLabel: string
   contractStatusLabel: string
   effectiveStatus: ContractStatus | null
+  expiryNotice: ContractExpiryNotice | null
   contractNumberLabel: string
+}
+
+export interface ContractExpiryNotice {
+  tone: 'attention' | 'danger'
+  label: string
+  description: string
 }
 
 function bangkokDate(now: Date): string {
@@ -51,6 +58,68 @@ function bangkokDate(now: Date): string {
   }).formatToParts(now)
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value
   return `${value('year')}-${value('month')}-${value('day')}`
+}
+
+function calendarDayDifference(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`)
+  const end = new Date(`${endDate}T00:00:00Z`)
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000)
+}
+
+function addCalendarMonths(date: string, count: number): string {
+  const [year, month, day] = date.split('-').map(Number)
+  const targetMonth = month - 1 + count
+  const targetYear = year + Math.floor(targetMonth / 12)
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12
+  const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
+  return `${targetYear}-${String(normalizedMonth + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+}
+
+function remainingDurationLabel(today: string, endDate: string): string {
+  const [todayYear, todayMonth, todayDay] = today.split('-').map(Number)
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+  let months = (endYear - todayYear) * 12 + endMonth - todayMonth
+  if (endDay < todayDay) months -= 1
+
+  const afterMonths = addCalendarMonths(today, months)
+  const days = calendarDayDifference(afterMonths, endDate)
+  const parts = [months > 0 ? `${months} เดือน` : null, days > 0 ? `${days} วัน` : null].filter(Boolean)
+  return parts.join(' ') || 'วันนี้'
+}
+
+/**
+ * Returns a separate renewal deadline signal for active contracts. It stays
+ * distinct from the lifecycle status: a contract may be active yet need
+ * procurement preparation before it reaches its end date.
+ */
+export function contractExpiryNotice(
+  status: ContractStatus | null,
+  endDate: string | null,
+  now: Date = new Date(),
+): ContractExpiryNotice | null {
+  if (status !== 'active' || !endDate) return null
+
+  const today = bangkokDate(now)
+  const daysLeft = calendarDayDifference(today, endDate)
+  if (daysLeft < 0) return null
+
+  if (daysLeft <= 30) {
+    return {
+      tone: 'danger',
+      label: daysLeft === 0 ? 'สิ้นสุดวันนี้' : `สิ้นสุดใน ${daysLeft} วัน`,
+      description: 'ควรเร่งเตรียมต่อสัญญาหรือจัดหาใหม่',
+    }
+  }
+
+  if (endDate <= addCalendarMonths(today, 3)) {
+    return {
+      tone: 'attention',
+      label: `ใกล้สิ้นสุด · เหลือ ${remainingDurationLabel(today, endDate)}`,
+      description: 'ควรเตรียมต่อสัญญาหรือจัดหาใหม่',
+    }
+  }
+
+  return null
 }
 
 /** The contract end date is inclusive; expiry takes effect on the following Bangkok calendar day. */
@@ -93,6 +162,7 @@ export function presentContract(contract: ContractRecord): PresentedContract {
       ? PROCUREMENT_STAGE_LABELS[contract.procurementStage]
       : 'ไม่ระบุขั้นตอน',
     effectiveStatus,
+    expiryNotice: contractExpiryNotice(effectiveStatus, contract.endDate),
     contractStatusLabel: effectiveStatus
       ? CONTRACT_STATUS_LABELS[effectiveStatus]
       : 'ไม่ระบุสถานะ',

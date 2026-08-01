@@ -5,7 +5,7 @@ import {
   allowedNextStages,
   requiresContractNumber,
 } from '../lib/contracts/stages'
-import { contractListValue } from '../lib/contracts/presenter'
+import { contractExpiryNotice, contractListValue } from '../lib/contracts/presenter'
 
 assert.deepEqual(CONTRACT_TYPES, [
   'equipment_lease',
@@ -129,6 +129,36 @@ assert.equal(
   contractListValue({ total: null, items: validDraft.items.map((item) => ({ ...item, lineTotal: item.quantity * item.unitPrice })) }),
   12_500,
   'the contract register must fall back to the calculated item total when the recorded total is unavailable',
+)
+
+const expiryReference = new Date('2026-08-02T05:00:00.000Z')
+assert.deepEqual(
+  contractExpiryNotice('active', '2026-08-22', expiryReference),
+  {
+    tone: 'danger',
+    label: 'สิ้นสุดใน 20 วัน',
+    description: 'ควรเร่งเตรียมต่อสัญญาหรือจัดหาใหม่',
+  },
+  'an active contract ending within 30 days needs an urgent, readable deadline notice',
+)
+assert.deepEqual(
+  contractExpiryNotice('active', '2026-10-17', expiryReference),
+  {
+    tone: 'attention',
+    label: 'ใกล้สิ้นสุด · เหลือ 2 เดือน 15 วัน',
+    description: 'ควรเตรียมต่อสัญญาหรือจัดหาใหม่',
+  },
+  'an active contract ending within three calendar months needs a planned renewal notice',
+)
+assert.equal(
+  contractExpiryNotice('active', '2026-11-03', expiryReference),
+  null,
+  'a contract beyond three calendar months must not create an expiry warning',
+)
+assert.equal(
+  contractExpiryNotice('expired', '2026-08-22', expiryReference),
+  null,
+  'expired contracts already have a terminal lifecycle status and must not show an active renewal warning',
 )
 assert.equal(
   contractInputSchema.safeParse({ ...validDraft, status: 'expired' }).success,
