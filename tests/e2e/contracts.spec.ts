@@ -13,6 +13,10 @@ test.describe('manager contract workflow', () => {
     await page.goto('/contracts/new')
 
     const token = Date.now().toString()
+    // The form defaults to equipment_lease, which is billed monthly in baht and
+    // carries no line items. This case exercises the line-item path, so it picks
+    // a supply type first.
+    await page.getByLabel('ประเภทสัญญา').selectOption('e_bidding')
     await page.getByLabel('ชื่อสัญญา').fill(`E2E contract ${token}`)
     await page.getByLabel('คู่สัญญา / บริษัท').fill('E2E isolated fixture')
     await page.getByLabel('รหัสน้ำยา (LS)').fill(`E2E-${token}`)
