@@ -56,28 +56,42 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   )
 
   return (
-    <div className="route-stack">
+    <div className="route-stack contract-detail-page">
       <header className="contract-detail-heading">
-        <div>
-          <Link className="back-link" href="/contracts">← รายการสัญญา</Link>
+        <div className="contract-detail-heading__top">
+          <Link className="contract-detail-back" href="/contracts">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="m14 6-6 6 6 6M8 12h10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>รายการสัญญา</span>
+          </Link>
           <div className="contract-detail-heading__status">
             <StatusChip tone={contract.status === 'active' ? 'success' : 'attention'}>{contract.procurementStageLabel}</StatusChip>
             <span>{contract.contractTypeLabel}</span>
+            {canEdit && <Link className="lab-link-button lab-link-button--secondary" href={`/contracts/${contract.id}/edit`}>แก้ไขข้อมูล</Link>}
           </div>
-          <h1>{contract.resolvedDisplayName}</h1>
-          <p className="identifier">{contract.contractNumberLabel}</p>
         </div>
-        {canEdit && <Link className="lab-link-button lab-link-button--secondary" href={`/contracts/${contract.id}/edit`}>แก้ไขข้อมูล</Link>}
-      </header>
 
-      <section className="contract-facts" aria-label="ข้อมูลสรุปสัญญา">
-        <dl>
-          <div><dt>ปีงบประมาณ</dt><dd>{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
-          <div><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
-          <div><dt>ระยะเวลา</dt><dd>{displayDate(contract.startDate)} – {displayDate(contract.endDate)}</dd></div>
-          <div><dt>มูลค่ารวม</dt><dd className="identifier">{total === null ? 'ไม่ระบุ' : money.format(total)}</dd></div>
+        <div className="contract-detail-heading__body">
+          <div className="contract-detail-heading__identity">
+            <p className="contract-detail-heading__number">
+              <span>เลขที่สัญญา</span>
+              <strong>{contract.contractNumberLabel}</strong>
+            </p>
+            <h1>{contract.resolvedDisplayName}</h1>
+          </div>
+          <dl className="contract-detail-heading__value">
+            <dt>มูลค่าสัญญา</dt>
+            <dd>{total === null ? 'ไม่ระบุ' : money.format(total)}</dd>
+          </dl>
+        </div>
+
+        <dl className="contract-facts" aria-label="ข้อมูลสรุปสัญญา">
+          <div className="contract-facts__vendor"><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
+          <div><dt>ปีงบประมาณ</dt><dd className="identifier">{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
+          <div><dt>ระยะเวลาสัญญา</dt><dd>{displayDate(contract.startDate)} – {displayDate(contract.endDate)}</dd></div>
         </dl>
-      </section>
+      </header>
 
       <div className={hasNextAction ? 'contract-detail-grid' : 'contract-detail-grid contract-detail-grid--single'}>
         {isContractStarted ? (

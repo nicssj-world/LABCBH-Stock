@@ -26,6 +26,10 @@ assert.match(detailPage, /StageAdvanceControl/, 'detail must expose confirmed st
 assert.match(detailPage, /contract\.procurementStage\s*===\s*['"]contract_started['"]/, 'started contracts must use a dedicated completed state')
 assert.match(detailPage, /isContractStarted\s*\?\s*\(/, 'started contracts must branch to collapsed history')
 assert.match(detailPage, /!isContractStarted\s*&&[\s\S]*StageAdvanceControl/, 'started contracts must not render the next action')
+assert.match(detailPage, /className="route-stack contract-detail-page"/, 'contract detail must use its focused control-sheet surface')
+assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must keep navigation, state, and edit action together')
+assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
+assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts must stay grouped inside the contract overview')
 assert.match(detailPage, /ArchiveContractControl/, 'detail must expose reasoned archive')
 
 const historyDisclosure = read('components/contracts/StageHistoryDisclosure.tsx')
@@ -34,6 +38,8 @@ assert.match(historyDisclosure, /aria-expanded=\{open\}/, 'history disclosure mu
 assert.match(historyDisclosure, /aria-controls=\{historyId\}/, 'history disclosure must connect the button to its content')
 assert.match(historyDisclosure, /ดูประวัติขั้นตอนสัญญา/, 'collapsed history must have a clear Thai action label')
 assert.match(historyDisclosure, /ซ่อนประวัติขั้นตอนสัญญา/, 'expanded history must have a clear Thai action label')
+assert.match(historyDisclosure, /stage-history-toggle__glyph/, 'history disclosure must have a recognizable audit-trail glyph')
+assert.match(historyDisclosure, /ข้อมูลย้อนหลังและวันที่มีผล/, 'history disclosure must explain what it reveals')
 
 const form = read('components/contracts/ContractForm.tsx')
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
