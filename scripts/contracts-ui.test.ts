@@ -150,8 +150,10 @@ assert.doesNotMatch(table, /items\.reduce/, 'the register must not turn legacy t
 assert.match(table, /<th>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
 assert.match(table, /\{contract\.contractStatusLabel\}/, 'the red status chip must say expired or cancelled, not the procurement stage')
 assert.match(table, /\{contract\.procurementStageLabel\}/, 'the procurement stage must remain visible separately from status')
-assert.match(table, /contract\.expiryNotice/, 'the register must surface an imminent renewal deadline beside the lifecycle status')
+assert.match(table, /contract-renewal-hint/, 'the register must surface an imminent renewal deadline as supporting contract metadata')
+assert.doesNotMatch(table, /contract-table__status-stack/, 'the lifecycle state and renewal deadline must not be stacked in the same table cell')
 assert.match(globalStyles, /\.contract-expiry-chip--danger/, 'the final-30-day deadline needs a distinct compact urgent visual treatment')
+assert.match(globalStyles, /\.contract-renewal-hint--danger/, 'urgent renewal metadata needs a dedicated accessible visual treatment')
 
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')

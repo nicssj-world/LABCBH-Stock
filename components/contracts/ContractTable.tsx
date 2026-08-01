@@ -45,15 +45,18 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                 <td>
                   <strong>{contract.resolvedDisplayName}</strong>
                   <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'}</small>
+                  {contract.expiryNotice && (
+                    <span className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        <path d="M12 7v5l3 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {contract.expiryNotice.label}
+                    </span>
+                  )}
                 </td>
                 <td>{contract.contractTypeLabel}</td>
                 <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
-                <td>
-                  <div className="contract-table__status-stack">
-                    <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
-                    {contract.expiryNotice && <StatusChip tone={contract.expiryNotice.tone}>{contract.expiryNotice.label}</StatusChip>}
-                  </div>
-                </td>
+                <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td className="identifier">{contract.contractNumberLabel}</td>
                 <td className="numeric-cell identifier">{formatContractValue(contract)}</td>
                 <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
@@ -67,14 +70,19 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
         {contracts.map((contract) => (
           <li key={contract.id}>
             <div className="task-card__topline">
-              <div className="contract-table__status-stack">
-                <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
-                {contract.expiryNotice && <StatusChip tone={contract.expiryNotice.tone}>{contract.expiryNotice.label}</StatusChip>}
-              </div>
+              <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
               <span className="identifier">{formatContractValue(contract)}</span>
             </div>
             <h3>{contract.resolvedDisplayName}</h3>
             <p>{contract.contractTypeLabel} · {contract.procurementStageLabel} · {contract.contractNumberLabel}</p>
+            {contract.expiryNotice && (
+              <p className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M12 7v5l3 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {contract.expiryNotice.label}
+              </p>
+            )}
             <Link className="text-link task-card__action" href={`/contracts/${contract.id}`}>ดูรายละเอียดสัญญา</Link>
           </li>
         ))}

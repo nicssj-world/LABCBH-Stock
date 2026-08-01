@@ -1438,7 +1438,11 @@ textarea[aria-invalid="true"] {
 .contract-expiry-chip { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--lab-border); border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.2; }
 .contract-expiry-chip--attention { color: var(--lab-amber); background: var(--lab-amber-soft); border-color: color-mix(in srgb, var(--lab-amber) 36%, var(--lab-border)); }
 .contract-expiry-chip--danger { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 36%, var(--lab-border)); }
-.contract-table__status-stack { display: grid; justify-items: start; gap: 6px; }
+.contract-renewal-hint { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 11px; font-weight: 700; line-height: 1.35; }
+.contract-renewal-hint svg { flex: 0 0 auto; }
+.contract-renewal-hint--attention { color: var(--lab-amber); }
+.contract-renewal-hint--danger { color: var(--lab-red); }
+.contract-task-cards .contract-renewal-hint { display: flex; margin-top: 8px; }
 .contract-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, .75fr); gap: 20px; align-items: start; }
 .contract-detail-grid--single { grid-template-columns: minmax(0, 1fr); }
 .next-action { position: sticky; top: 20px; }
