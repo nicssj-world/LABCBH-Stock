@@ -422,6 +422,16 @@ button {
   font-weight: 700;
 }
 
+.actor-badge__avatar {
+  display: block;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--lab-primary) 34%, var(--lab-border));
+  border-radius: 8px;
+}
+
 .actor-badge strong {
   font-size: 12px;
 }
@@ -734,6 +744,38 @@ button {
   background: var(--lab-primary-soft);
   border-color: color-mix(in srgb, var(--lab-primary) 36%, var(--lab-border));
 }
+
+.utility-button--theme[aria-pressed="true"] {
+  color: var(--lab-amber);
+  background: var(--lab-amber-soft);
+  border-color: color-mix(in srgb, var(--lab-amber) 42%, var(--lab-border));
+}
+
+.portal-return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--lab-primary);
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out, border-color var(--motion-fast) ease-out;
+}
+
+.portal-return:hover {
+  color: var(--lab-primary-strong);
+  background: var(--lab-primary-soft);
+  border-color: color-mix(in srgb, var(--lab-primary) 36%, var(--lab-border));
+}
+
+.portal-return .utility-icon { width: 17px; height: 17px; }
 
 .utility-icon {
   width: 18px;
@@ -1068,6 +1110,11 @@ button {
 .contract-form {
   display: grid;
   gap: 22px;
+}
+
+@media (max-width: 1120px) {
+  .portal-return { width: 44px; padding: 0; }
+  .portal-return span { display: none; }
 }
 
 .page-heading--actions {

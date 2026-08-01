@@ -11,6 +11,7 @@ export interface Actor {
   id: string
   ephisId: string | null
   name: string | null
+  avatarUrl?: string | null
   profileRole: string | null
   appRoles: LabStockRole[]
 }
@@ -19,6 +20,7 @@ interface ProfileRow {
   id: string
   ephis_id: string | null
   name: string | null
+  avatar_url: string | null
   role: string | null
   status: string | null
   deleted_at: string | null
@@ -40,7 +42,7 @@ export async function getActor(): Promise<Actor | null> {
     'profile',
     await supabase
       .from('profiles')
-      .select('id,ephis_id,name,role,status,deleted_at')
+      .select('id,ephis_id,name,avatar_url,role,status,deleted_at')
       .eq('id', user.id)
       .maybeSingle(),
   )
@@ -50,6 +52,7 @@ export async function getActor(): Promise<Actor | null> {
       id: user.id,
       ephisId: null,
       name: null,
+      avatarUrl: null,
       profileRole: null,
       appRoles: [],
     }
@@ -61,6 +64,7 @@ export async function getActor(): Promise<Actor | null> {
       id: profile.id,
       ephisId: profile.ephis_id,
       name: profile.name,
+      avatarUrl: profile.avatar_url,
       profileRole: profile.role,
       appRoles: [],
     }
@@ -78,6 +82,7 @@ export async function getActor(): Promise<Actor | null> {
     id: profile.id,
     ephisId: profile.ephis_id,
     name: profile.name,
+    avatarUrl: profile.avatar_url,
     profileRole: profile.role,
     appRoles: deriveAppRoles({
       ephisId: profile.ephis_id,

@@ -15,6 +15,7 @@ import type { Actor } from '@/lib/auth/actor'
 
 type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
 type NavTone = 'blue' | 'violet' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
+const PORTAL_DASHBOARD_URL = 'https://lab-management-cbh.vercel.app/staff/dashboard'
 
 interface NavigationItem {
   href: string
@@ -56,12 +57,13 @@ function BenchIcon({ name }: { name: BenchIconName }) {
   )
 }
 
-function UtilityIcon({ name }: { name: 'menu' | 'moon' | 'sun' }) {
+function UtilityIcon({ name }: { name: 'menu' | 'moon' | 'sun' | 'portal' }) {
   return (
     <svg className="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
       {name === 'menu' && <><path d="M4 7h16M4 12h16M4 17h16" /></>}
       {name === 'moon' && <path d="M20 15.4A8 8 0 0 1 8.6 4 8 8 0 1 0 20 15.4Z" />}
       {name === 'sun' && <><circle cx="12" cy="12" r="3.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>}
+      {name === 'portal' && <><path d="M14 4h5v5M19 4l-8 8" /><path d="M19 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" /></>}
     </svg>
   )
 }
@@ -163,18 +165,28 @@ export function AppShell({ actor, children }: AppShellProps) {
           </div>
           <div className="workbench-header__actions">
             <button
-              className="utility-button"
+              className="utility-button utility-button--theme"
               type="button"
               aria-label="เปลี่ยนธีม"
+              aria-pressed={dark}
               title={dark ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
               onClick={toggleTheme}
             >
               <UtilityIcon name={dark ? 'sun' : 'moon'} />
             </button>
+            <a className="portal-return" href={PORTAL_DASHBOARD_URL} title="กลับไป Lab Management Portal">
+              <UtilityIcon name="portal" />
+              <span>กลับพอร์ทัล</span>
+            </a>
             <div className="actor-badge" aria-label={`ผู้ใช้งาน ${actorLabel}`}>
-              <span className="actor-badge__initial" aria-hidden="true">
-                {actorLabel.slice(0, 1).toUpperCase()}
-              </span>
+              {actor.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="actor-badge__avatar" src={actor.avatarUrl} alt={`รูปโปรไฟล์ของ ${actorLabel}`} />
+              ) : (
+                <span className="actor-badge__initial" aria-hidden="true">
+                  {actorLabel.slice(0, 1).toUpperCase()}
+                </span>
+              )}
               <span>
                 <strong>{actorLabel}</strong>
                 <small>{actor.profileRole ?? 'LABCBH Stock'}</small>
