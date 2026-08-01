@@ -41,8 +41,11 @@ assert.match(detailPage, /mode === ['"]budget['"] && isAdmin[\s\S]*<ResponsibleU
 assert.match(detailPage, /isAdmin\s*&&\s*<ArchiveContractControl/, 'only administrators may access the duplicate-or-mistake archive control')
 
 const archiveControl = read('components/contracts/ArchiveContractControl.tsx')
-assert.match(archiveControl, /เก็บรายการที่สร้างผิดหรือซ้ำ/, 'archive wording must distinguish cleanup from contract expiry')
-assert.doesNotMatch(archiveControl, /ยกเลิกและเก็บสัญญาถาวร/, 'archive wording must not compete with the expiry action')
+assert.match(archiveControl, /ลบสัญญาที่สร้างผิดหรือซ้ำ/, 'archive wording must distinguish deletion of bad data from contract expiry')
+assert.match(archiveControl, /showModal\(\)/, 'deleting a bad or duplicate contract must require a deliberate modal confirmation')
+assert.match(archiveControl, /aria-describedby="archive-contract-description"/, 'the destructive dialog must explain its irreversible effect')
+assert.match(archiveControl, /archive-control__trigger/, 'the secondary destructive action needs its own restrained visual treatment')
+assert.doesNotMatch(archiveControl, /เก็บรายการที่สร้างผิดหรือซ้ำ/, 'the old vague archive wording must not compete with the expiry action')
 
 const budgetPanel = read('components/contracts/BudgetPanel.tsx')
 assert.doesNotMatch(budgetPanel, /ResponsibleUserPicker|ผู้รับผิดชอบสัญญา/, 'responsible users must not occupy the contract detail flow')
