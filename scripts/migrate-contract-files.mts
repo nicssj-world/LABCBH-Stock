@@ -14,20 +14,24 @@
  * Defaults to a dry run. Pass --apply to write.
  *
  *   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
- *   R2_BUCKET_NAME=... node scripts/migrate-contract-files.mts [--apply]
+ *   CONTRACT_FILE_ENV=../lab-management-portal/.env.local \
+ *   npx tsx scripts/migrate-contract-files.mts [--apply]
  *
- * The R2 credentials live in the portal's environment. They are needed once,
- * for this copy, and never at runtime by the stock system.
+ * The R2 and destination Supabase credentials are loaded from that ignored
+ * portal environment file. They are needed once for this copy and never at
+ * runtime by the stock system.
  */
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
+import { parseEnvFile } from './env-file-lib'
 
 const APPLY = process.argv.includes('--apply')
 const ENV_FILE = process.env.CONTRACT_FILE_ENV ?? '.env.local'
+const FILE_ENV = parseEnvFile(readFileSync(ENV_FILE, 'utf8'))
 
 function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim()
+  const value = process.env[name]?.trim() || FILE_ENV[name]?.trim()
   if (!value) {
     console.error(`missing ${name}; R2 credentials live in the portal's environment`)
     process.exit(1)
@@ -36,9 +40,8 @@ function requiredEnv(name: string): string {
 }
 
 function readSupabase(): { url: string; key: string } {
-  const env = readFileSync(ENV_FILE, 'utf8')
-  const url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim()
-  const key = env.match(/SUPABASE_SERVICE_ROLE_KEY=(.*)/)?.[1]?.trim()
+  const url = FILE_ENV.NEXT_PUBLIC_SUPABASE_URL
+  const key = FILE_ENV.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
     console.error(`could not read Supabase credentials from ${ENV_FILE}`)
     process.exit(1)

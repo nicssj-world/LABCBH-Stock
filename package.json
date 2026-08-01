@@ -19,7 +19,7 @@
     "test:access": "tsx scripts/access-policy.test.ts && tsx scripts/access-ui.test.ts",
     "test:import": "tsx scripts/import-normalization.test.ts && tsx scripts/import-idempotency.test.ts && tsx scripts/import-reconciliation.test.ts",
     "test:security": "tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/access-policy.test.ts && tsx scripts/kpi-view-security.test.ts",
-    "test:deployment": "tsx scripts/deployment-assets.test.ts && tsx scripts/backup-storage.test.ts && tsx scripts/filter-pg-dump.test.ts",
+    "test:deployment": "tsx scripts/deployment-assets.test.ts && tsx scripts/backup-storage.test.ts && tsx scripts/filter-pg-dump.test.ts && tsx scripts/contract-file-env.test.ts",
     "test:e2e": "playwright test",
     "e2e:staging-passwords": "node scripts/staging-set-test-passwords.mjs",
     "e2e:staging-seed-receipt": "node scripts/staging-seed-receipt-draft.mjs",

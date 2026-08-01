@@ -24,7 +24,7 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Confirm `[db.migrations] enabled` is `true` in `supabase/config.toml` before pushing. It ships as `false`, and with it off `supabase db push` reports success and applies nothing. Change only that line: a blanket replace of `enabled = false` also switches on `[auth.sms.twilio]` and the push then fails on its empty `account_sid`.
 - [ ] Apply reviewed migrations during the freeze using the standard forward migration command.
 - [ ] Confirm the equipment-lease mode preflight passed. Migration `20260730120000` aborts if any contract holds both a budget entry and a line item; production had none as of 2026-07-30, but the migration proves it at apply time rather than assuming.
-- [ ] Copy contract documents out of R2 with `node scripts/migrate-contract-files.mts --apply`, using the R2 credentials from the portal environment. Nothing is deleted from R2. Dry-run first and confirm it reports the expected count; as of 2026-08-01 that is 9.
+- [ ] Copy contract documents out of R2 with `CONTRACT_FILE_ENV=../lab-management-portal/.env.local npx tsx scripts/migrate-contract-files.mts --apply`, using the ignored portal environment file. Nothing is deleted from R2. Dry-run first and confirm it reports the expected count; as of 2026-08-01 that is 9.
 - [ ] Verify the copied documents open from the stock system before the portal is pointed away from them.
 - [ ] Run the approved production import once, then prove idempotency by dry-running the same immutable inputs again.
 - [ ] Import opening balances only from a separately reviewed physical count file; record its approved hash and approver.

@@ -51,4 +51,16 @@ assert.match(sql, /membership\.role in \('admin', 'head'\)/i)
 assert.match(sql, /requires a contract_id/i)
 assert.match(sql, /does not exist/i)
 
+// The frozen portal contains an 18,219,021-byte legal document. The private
+// destination bucket must accept that known source without widening the PO
+// evidence bucket or removing the MIME allow-list.
+const sizeMigrations = readdirSync(migrationsDir).filter((n) =>
+  n.endsWith('_lab_stock_contract_file_size.sql'),
+)
+assert.equal(sizeMigrations.length, 1, 'exactly one contract file size correction must exist')
+const sizeSql = readFileSync(join(migrationsDir, sizeMigrations[0]), 'utf8')
+assert.match(sizeSql, /where id = 'lab-stock-contracts'/i)
+assert.match(sizeSql, /file_size_limit = 26214400/i)
+assert.doesNotMatch(sizeSql, /lab-stock-po/i)
+
 console.log('contract file tests passed')
