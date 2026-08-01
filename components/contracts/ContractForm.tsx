@@ -21,6 +21,9 @@ import type { ContractItemUpdateInput, ContractRecord } from '@/lib/contracts/ty
 interface ContractFormProps {
   mode: 'create' | 'edit'
   contract?: ContractRecord
+  onCancel?: () => void
+  onSaved?: () => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 interface FormState {
@@ -62,7 +65,7 @@ function initialState(contract?: ContractRecord): FormState {
   }
 }
 
-export function ContractForm({ mode, contract }: ContractFormProps) {
+export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange }: ContractFormProps) {
   const router = useRouter()
   const [state, setState] = useState(() => initialState(contract))
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -108,6 +111,10 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
 
   const patchState = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
     setState((current) => ({ ...current, [key]: value }))
@@ -167,6 +174,11 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
           : await updateContract(contract!.id, parsed.data as Parameters<typeof updateContract>[1])
         localStorage.removeItem(draftKey)
         setDirty(false)
+        if (mode === 'edit' && onSaved) {
+          onSaved?.()
+          router.refresh()
+          return
+        }
         router.push(`/contracts/${result.id}`)
         router.refresh()
       } catch (error) {
@@ -249,7 +261,7 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
           {message && <p className={Object.keys(errors).length ? 'form-error' : 'form-notice'}>{message}</p>}
         </div>
         <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => router.back()} disabled={isPending}>ยกเลิก</Button>
+          <Button variant="secondary" onClick={() => onCancel ? onCancel() : router.back()} disabled={isPending}>ยกเลิก</Button>
           <Button type="submit" disabled={isPending}>{isPending ? 'กำลังบันทึก…' : mode === 'create' ? 'บันทึกสัญญา' : 'บันทึกการแก้ไข'}</Button>
         </div>
       </div>

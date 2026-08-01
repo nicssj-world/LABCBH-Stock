@@ -30,6 +30,8 @@ assert.match(detailPage, /className="route-stack contract-detail-page"/, 'contra
 assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must keep navigation, state, and edit action together')
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
 assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts must stay grouped inside the contract overview')
+assert.match(detailPage, /canEdit\s*&&\s*\([\s\S]*<ContractEditDialog/, 'editors must open the real edit form from a popup')
+assert.doesNotMatch(detailPage, /href=\{`\/contracts\/\$\{contract\.id\}\/edit`\}>แก้ไขข้อมูล/, 'detail must not navigate away when edit is clicked')
 assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')
 assert.match(detailPage, /mode === ['"]budget['"] && isAdmin[\s\S]*<ResponsibleUserDialog/, 'lease admins must get the responsible-user dialog beside header actions')
 assert.match(detailPage, /ArchiveContractControl/, 'detail must expose reasoned archive')
@@ -49,8 +51,23 @@ assert.match(responsibleDialog, /aria-label="ปิดหน้าต่าง�
 const responsiblePicker = read('components/contracts/ResponsibleUserPicker.tsx')
 assert.match(responsiblePicker, /onSaved\?\.\(\)/, 'responsible-user picker must notify the popup after a successful save')
 
+const form = read('components/contracts/ContractForm.tsx')
+const editDialog = read('components/contracts/ContractEditDialog.tsx')
+assert.match(editDialog, /^['"]use client['"]/m, 'contract edit popup must be an interactive client boundary')
+assert.match(editDialog, /showModal\(\)/, 'edit trigger must open a modal dialog')
+assert.match(editDialog, /className="app-dialog app-dialog--wide"/, 'edit popup must use the centered wide-dialog surface')
+assert.match(editDialog, /<ContractForm/, 'edit popup must reuse the real contract form')
+assert.match(editDialog, /onCancel=\{requestClose\}/, 'form cancellation must use the popup close guard')
+assert.match(editDialog, /onSaved=\{handleSaved\}/, 'successful editing must close the popup')
+assert.match(editDialog, /window\.confirm/, 'closing a dirty edit popup must require confirmation')
+
+assert.match(form, /onCancel\?:\s*\(\)\s*=>\s*void/, 'contract form must support popup cancellation')
+assert.match(form, /onSaved\?:\s*\(\)\s*=>\s*void/, 'contract form must report successful modal editing')
+assert.match(form, /onDirtyChange\?:\s*\(dirty:\s*boolean\)\s*=>\s*void/, 'contract form must expose dirty state to the close guard')
+assert.match(form, /onSaved\?\.\(\)/, 'contract form must notify the popup after a successful edit')
+
 const globalStyles = read('app/globals.css')
-assert.match(globalStyles, /\.responsible-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'responsible-user popup must stay centered in the viewport')
+assert.match(globalStyles, /\.app-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'application popups must stay centered in the viewport')
 
 const historyDisclosure = read('components/contracts/StageHistoryDisclosure.tsx')
 assert.match(historyDisclosure, /^['"]use client['"]/m, 'history disclosure must be an interactive client boundary')
@@ -61,7 +78,6 @@ assert.match(historyDisclosure, /ซ่อนประวัติขั้น�
 assert.match(historyDisclosure, /stage-history-toggle__glyph/, 'history disclosure must have a recognizable audit-trail glyph')
 assert.match(historyDisclosure, /ข้อมูลย้อนหลังและวันที่มีผล/, 'history disclosure must explain what it reveals')
 
-const form = read('components/contracts/ContractForm.tsx')
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')
 assert.match(form, /localStorage/, 'form must autosave a local draft')

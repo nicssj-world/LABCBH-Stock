@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
+import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
@@ -74,7 +75,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           <div className="contract-detail-heading__status">
             <StatusChip tone={contract.status === 'active' ? 'success' : 'attention'}>{contract.procurementStageLabel}</StatusChip>
             <span>{contract.contractTypeLabel}</span>
-            {canEdit && <Link className="lab-link-button lab-link-button--secondary" href={`/contracts/${contract.id}/edit`}>แก้ไขข้อมูล</Link>}
+            {canEdit && (
+              <ContractEditDialog contract={record} />
+            )}
             {mode === 'budget' && isAdmin && (
               <ResponsibleUserDialog
                 contractId={contract.id}

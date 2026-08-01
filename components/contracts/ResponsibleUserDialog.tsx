@@ -41,21 +41,21 @@ export function ResponsibleUserDialog({
 
       <dialog
         ref={dialogRef}
-        className="responsible-dialog"
+        className="app-dialog responsible-dialog"
         aria-labelledby="responsible-dialog-title"
         aria-describedby="responsible-dialog-description"
         onClick={(event) => {
           if (event.target === event.currentTarget) closeDialog()
         }}
       >
-        <header className="responsible-dialog__header">
+        <header className="app-dialog__header">
           <div>
             <h2 id="responsible-dialog-title">กำหนดผู้รับผิดชอบสัญญา</h2>
             <p id="responsible-dialog-description">ผู้ที่ได้รับมอบหมายสามารถบันทึกค่าใช้จ่ายของสัญญานี้ได้</p>
           </div>
           <button
             type="button"
-            className="responsible-dialog__close"
+            className="app-dialog__close"
             aria-label="ปิดหน้าต่างกำหนดผู้รับผิดชอบ"
             onClick={closeDialog}
           >
@@ -64,7 +64,7 @@ export function ResponsibleUserDialog({
             </svg>
           </button>
         </header>
-        <div className="responsible-dialog__body">
+        <div className="app-dialog__body responsible-dialog__body">
           <ResponsibleUserPicker
             key={pickerSession}
             contractId={contractId}
