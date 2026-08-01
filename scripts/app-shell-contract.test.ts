@@ -16,6 +16,8 @@ assert.match(shell, /<span>Lab Management<\/span>/, 'the portal return action mu
 assert.match(shell, /actor\.avatarUrl/, 'the shell must use the shared portal display photo when available')
 assert.match(shell, /actor-badge__avatar/, 'the display photo needs a dedicated avatar treatment')
 assert.match(shell, /aria-pressed=\{dark\}/, 'the theme control must expose its active state')
+assert.match(shell, /<UtilityIcon name="contrast" \/>/, 'the theme control must use a neutral appearance icon instead of a moon')
+assert.doesNotMatch(shell, /name === 'moon'/, 'the theme control must not render a moon icon')
 assert.match(css, /--lab-navy:/)
 assert.match(css, /Noto Sans Thai/)
 assert.doesNotMatch(css, /linear-gradient/)
