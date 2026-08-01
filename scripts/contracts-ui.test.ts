@@ -92,6 +92,7 @@ assert.match(expenseForm, /open && \(/, 'the expense form contents must be condi
 const budgetGauge = read('components/contracts/BudgetGauge.tsx')
 assert.match(budgetGauge, /budget-gauge__figures/, 'budget summary must retain the grouped three-figure display next to expense entry')
 assert.match(globalStyles, /\.expense-form__primary input,[\s\S]*border:\s*1px solid var\(--lab-border-strong\)/, 'expense entry fields must retain visible input boundaries')
+assert.match(globalStyles, /\.expense-form__primary label\s*\{[\s\S]*align-content:\s*start;/, 'month and amount inputs must align at the top when amount shows a helper line')
 
 const fileCard = read('components/contracts/ContractFileCard.tsx')
 assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')

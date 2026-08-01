@@ -1860,7 +1860,7 @@ textarea[aria-invalid="true"] {
 .expense-entry .expense-form { border-top: 1px solid var(--lab-border); }
 .expense-form { display: grid; gap: 14px; padding: 18px 22px 22px; background: var(--lab-surface-muted); }
 .expense-form__primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.expense-form__primary label { display: grid; gap: 7px; color: var(--lab-ink); font-size: 13px; font-weight: 700; }
+.expense-form__primary label { display: grid; align-content: start; align-self: start; gap: 7px; color: var(--lab-ink); font-size: 13px; font-weight: 700; }
 .expense-form__primary input,
 .expense-form__primary select,
 .expense-form__secondary input { width: 100%; min-height: 46px; padding: 10px 12px; color: var(--lab-ink); background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: var(--radius-control); font-family: inherit; font-size: 14px; }
