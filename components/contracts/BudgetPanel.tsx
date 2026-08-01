@@ -2,8 +2,12 @@ import { BudgetGauge } from '@/components/contracts/BudgetGauge'
 import { ContractFileCard } from '@/components/contracts/ContractFileCard'
 import { ExpenseForm } from '@/components/contracts/ExpenseForm'
 import { ExpenseHistory } from '@/components/contracts/ExpenseHistory'
+import { ResponsibleUserPicker } from '@/components/contracts/ResponsibleUserPicker'
 import { isLowBudget } from '@/lib/contracts/budget'
-import { fetchContractBudget } from '@/lib/contracts/budget-queries'
+import {
+  fetchContractBudget,
+  fetchResponsibleCandidates,
+} from '@/lib/contracts/budget-queries'
 
 interface BudgetPanelProps {
   contractId: number
@@ -13,6 +17,7 @@ interface BudgetPanelProps {
   startDate: string | null
   endDate: string | null
   filePath: string | null
+  responsibleUserIds: string[]
   canRecord: boolean
   canEdit: boolean
 }
@@ -29,11 +34,13 @@ export async function BudgetPanel({
   startDate,
   endDate,
   filePath,
+  responsibleUserIds,
   canRecord,
   canEdit,
 }: BudgetPanelProps) {
   const { entries, snapshot } = await fetchContractBudget(contractId, total)
   const lowBudget = isLowBudget(total, snapshot.used)
+  const candidates = canEdit ? await fetchResponsibleCandidates() : []
 
   return (
     <>
@@ -73,6 +80,22 @@ export async function BudgetPanel({
           displayName={displayName}
           entries={entries}
           canRecord={canRecord}
+        />
+      </section>
+
+      <section className="bench-panel" aria-labelledby="contract-responsible-title">
+        <div className="bench-panel__header">
+          <div>
+            <p className="section-kicker">ACCOUNTABILITY</p>
+            <h2 id="contract-responsible-title">ผู้รับผิดชอบสัญญา</h2>
+          </div>
+          <p>บันทึกค่าใช้จ่ายของสัญญานี้ได้ แม้ไม่มีสิทธิ์แก้ไขสัญญา</p>
+        </div>
+        <ResponsibleUserPicker
+          contractId={contractId}
+          candidates={candidates}
+          selected={responsibleUserIds}
+          canEdit={canEdit}
         />
       </section>
 

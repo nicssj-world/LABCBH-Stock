@@ -98,6 +98,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           startDate={contract.startDate}
           endDate={contract.endDate}
           filePath={contract.fileUrl}
+          responsibleUserIds={contract.responsibleUserIds}
           canRecord={canRecord}
           canEdit={canEdit}
         />

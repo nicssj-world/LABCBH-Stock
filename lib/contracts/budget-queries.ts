@@ -34,6 +34,35 @@ export interface ContractBudget {
   snapshot: BudgetSnapshot
 }
 
+export interface ResponsibleCandidateRecord {
+  id: string
+  name: string
+  ephisId: string | null
+  role: string | null
+}
+
+/**
+ * Anyone active can be made responsible for a contract. The RPC re-checks this
+ * on write, so this list is a convenience for the picker, not the gate.
+ */
+export async function fetchResponsibleCandidates(): Promise<ResponsibleCandidateRecord[]> {
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('id,name,ephis_id,role')
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .order('name')
+
+  if (error) throw new Error(`โหลดรายชื่อผู้ใช้งานไม่สำเร็จ: ${error.message}`)
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name ?? ''),
+    ephisId: row.ephis_id ?? null,
+    role: row.role ?? null,
+  }))
+}
+
 export async function fetchContractBudget(
   contractId: number,
   total: number | null,

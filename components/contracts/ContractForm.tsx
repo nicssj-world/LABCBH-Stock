@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ContractItemsEditor } from '@/components/contracts/ContractItemsEditor'
 import { createContract, updateContract } from '@/lib/contracts/actions'
+import { contractMode } from '@/lib/contracts/budget'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import { CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
 import type { ContractItemUpdateInput, ContractRecord } from '@/lib/contracts/types'
@@ -71,6 +72,10 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
   const [isPending, startTransition] = useTransition()
   const draftKey = useMemo(() => `labcbh-contract-draft-${mode}-${contract?.id ?? 'new'}`, [mode, contract?.id])
 
+  // An equipment lease is billed in baht and holds no line items. Offering the
+  // items editor would collect input the schema and the database both reject.
+  const tracking = contractMode(state.contractType)
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       try {
@@ -122,22 +127,26 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
       vendor: state.vendor.trim() || null,
       endDate: state.endDate || null,
     }
+    // A lease submits no items even if the editor was populated before the
+    // type was switched, so a stale draft cannot fail validation invisibly.
     const parsed = mode === 'create'
       ? createContractInputSchema.safeParse({
           ...shared,
           sentToProcurementDate: state.sentToProcurementDate,
-          items: state.items.map((item) => ({
-            lsCode: item.lsCode,
-            name: item.name,
-            quantity: item.quantity,
-            unit: item.unit,
-            unitPrice: item.unitPrice,
-          })),
+          items: tracking === 'budget'
+            ? []
+            : state.items.map((item) => ({
+                lsCode: item.lsCode,
+                name: item.name,
+                quantity: item.quantity,
+                unit: item.unit,
+                unitPrice: item.unitPrice,
+              })),
         })
       : updateContractInputSchema.safeParse({
           ...shared,
           expectedUpdatedAt: contract?.updatedAt ?? null,
-          items: state.items,
+          items: tracking === 'budget' ? [] : state.items,
         })
 
     if (!parsed.success) {
@@ -213,12 +222,27 @@ export function ContractForm({ mode, contract }: ContractFormProps) {
         </div>
       </section>
 
-      <ContractItemsEditor
-        items={state.items}
-        onChange={(items) => patchState('items', items)}
-        errors={errors}
-        disabled={isPending}
-      />
+      {tracking === 'budget' ? (
+        <section className="items-editor" aria-labelledby="contract-lease-mode-title">
+          <div className="section-heading-row">
+            <div>
+              <p className="section-kicker">LEASE BUDGET</p>
+              <h2 id="contract-lease-mode-title">สัญญาเช่าเครื่องตัดงบเป็นรายเดือน</h2>
+            </div>
+          </div>
+          <p className="items-editor__note">
+            สัญญาประเภทนี้ไม่มีรายการน้ำยา บันทึกค่าใช้จ่ายรายเดือนได้ที่หน้ารายละเอียดสัญญา
+            หลังบันทึกสัญญาแล้ว
+          </p>
+        </section>
+      ) : (
+        <ContractItemsEditor
+          items={state.items}
+          onChange={(items) => patchState('items', items)}
+          errors={errors}
+          disabled={isPending}
+        />
+      )}
 
       <div className="form-action-bar">
         <div aria-live="polite">

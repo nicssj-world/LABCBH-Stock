@@ -1551,6 +1551,36 @@ textarea[aria-invalid="true"] {
 .expense-history { display: grid; gap: 14px; padding: 8px 22px 20px; }
 .expense-history__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+.items-editor__note { margin: 12px 0 0; color: var(--lab-muted); font-size: 13px; line-height: 1.6; }
+
+.responsible-picker { display: grid; gap: 14px; padding: 8px 22px 20px; }
+.responsible-picker__chosen,
+.responsible-picker__options { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.responsible-picker__chosen li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+  background: var(--lab-surface-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.responsible-picker__chosen small,
+.responsible-picker__options small { color: var(--lab-muted); font-weight: 400; }
+.responsible-picker__options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.responsible-picker__options span { display: grid; gap: 2px; }
+.responsible-picker__options small { font-size: 11px; }
+
 @media (prefers-reduced-motion: reduce) {
   .budget-gauge__fill { transition: none; }
 }
