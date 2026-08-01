@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, presentContract } from '@/lib/contracts/presenter'
 import { CONTRACT_TYPES } from '@/lib/contracts/schema'
@@ -69,36 +70,16 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         </div>
       </header>
 
-      <form className="filter-bench" method="get" aria-label="ตัวกรองรายการสัญญา">
-        {showEnded && <input type="hidden" name="showEnded" value="1" />}
-        <label className="filter-bench__search">
-          ค้นหา
-          <input type="search" name="search" defaultValue={search} placeholder="ชื่อสัญญา คู่สัญญา หรือเลขที่" />
-        </label>
-        <label>
-          ปีงบประมาณ
-          <select name="fiscalYear" defaultValue={fiscalYearValue ?? ''}>
-            <option value="">ทุกปีงบประมาณ</option>
-            {fiscalYears.map((year) => <option value={year} key={year}>{year}</option>)}
-          </select>
-        </label>
-        <label>
-          ประเภท
-          <select name="contractType" defaultValue={contractType ?? ''}>
-            <option value="">ทุกประเภท</option>
-            {CONTRACT_TYPES.map((type) => <option value={type} key={type}>{CONTRACT_TYPE_LABELS[type]}</option>)}
-          </select>
-        </label>
-        <label>
-          ขั้นตอน
-          <select name="stage" defaultValue={procurementStage ?? ''}>
-            <option value="">ทุกขั้นตอน</option>
-            {PROCUREMENT_STAGES.map((stage) => <option value={stage} key={stage}>{PROCUREMENT_STAGE_LABELS[stage]}</option>)}
-          </select>
-        </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
-        <Link className="lab-link-button lab-link-button--secondary" href="/contracts">ล้างตัวกรอง</Link>
-      </form>
+      <ContractFilters
+        search={search}
+        fiscalYear={fiscalYear ? String(fiscalYear) : ''}
+        contractType={contractType ?? ''}
+        procurementStage={procurementStage ?? ''}
+        showEnded={showEnded}
+        fiscalYears={fiscalYears}
+        contractTypes={CONTRACT_TYPES.map((type) => ({ value: type, label: CONTRACT_TYPE_LABELS[type] }))}
+        procurementStages={PROCUREMENT_STAGES.map((stage) => ({ value: stage, label: PROCUREMENT_STAGE_LABELS[stage] }))}
+      />
 
       {error ? (
         <section className="error-state" role="alert">

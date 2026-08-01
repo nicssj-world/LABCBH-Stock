@@ -1173,6 +1173,12 @@ button {
   border-radius: var(--radius-panel);
   box-shadow: var(--lab-shadow-panel);
 }
+.contract-filters { grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(130px, 1fr)) auto; gap: 14px; padding: 18px; }
+.contract-filters label { color: var(--lab-navy-strong); }
+.contract-filters input,
+.contract-filters select { min-height: 48px; background: var(--lab-surface-muted); }
+.contract-filters__clear { min-height: 48px; white-space: nowrap; }
+.contract-filters__status { grid-column: 1 / -1; margin: -2px 0 0; color: var(--lab-muted); font-size: 11px; line-height: 1.4; }
 
 .filter-bench label,
 .form-grid label,
@@ -2252,6 +2258,8 @@ textarea[aria-invalid="true"] {
   .page-heading--actions { align-items: flex-start; flex-direction: column; }
   .filter-bench { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter-bench__search { grid-column: 1 / -1; }
+  .contract-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contract-filters__clear { grid-column: 1 / -1; }
   .contract-table--desktop { display: none; }
   .contract-task-cards { display: block; }
   .inventory-table--desktop { display: none; }
@@ -2307,6 +2315,9 @@ textarea[aria-invalid="true"] {
   .filter-bench .lab-link-button { width: 100%; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .section-heading-row .lab-button { width: 100%; }
+  .contract-filters { grid-template-columns: 1fr; }
+  .contract-filters__search,
+  .contract-filters__clear { grid-column: auto; }
   .page-heading__actions { display: grid; grid-template-columns: 1fr; width: 100%; }
   .page-heading__actions .lab-link-button { width: 100%; }
   .budget-gauge__progress-meta { align-items: flex-start; flex-direction: column; gap: 6px; }

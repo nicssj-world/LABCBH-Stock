@@ -22,6 +22,16 @@ assert.match(listPage, /showEnded/, 'contract list must support an explicit ende
 assert.match(listPage, /effectiveStatus\s*!==\s*['"]expired['"]/, 'ended contracts must stay hidden from the default register')
 assert.match(listPage, /แสดงสัญญาที่สิ้นสุดแล้ว/, 'users need a clear control to reveal ended contracts on demand')
 assert.match(listPage, /ซ่อนสัญญาที่สิ้นสุดแล้ว/, 'the visibility control must clearly communicate its toggled state')
+assert.match(listPage, /ContractFilters/, 'the register must use an interactive filter control')
+assert.doesNotMatch(listPage, /แสดงผล/, 'the register filter must not require a separate apply button')
+
+const contractFilters = read('components/contracts/ContractFilters.tsx')
+assert.match(contractFilters, /^['"]use client['"]/m, 'automatic contract filtering needs a client interaction boundary')
+assert.match(contractFilters, /useRouter/, 'automatic contract filtering must update the URL without a full form-submit control')
+assert.match(contractFilters, /router\.replace/, 'filter changes must replace the current register URL immediately')
+assert.match(contractFilters, /onChange=\{handleSelectChange\}/, 'selecting a filter must apply it immediately')
+assert.match(contractFilters, /setTimeout/, 'free-text search must debounce URL updates rather than refresh on every keystroke')
+assert.match(contractFilters, /aria-live="polite"/, 'automatic filter feedback must be announced accessibly')
 
 const detailPage = read(contractRoutes[2])
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 detail params must be awaited')
