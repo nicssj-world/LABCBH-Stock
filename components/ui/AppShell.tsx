@@ -25,7 +25,7 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
-  { href: '/dashboard', label: 'ภาพรวม', icon: 'overview', tone: 'blue' },
+  { href: '/dashboard', label: 'Dashboard', icon: 'overview', tone: 'blue' },
   { href: '/contracts', label: 'สัญญา', icon: 'contract', tone: 'violet' },
   { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr', tone: 'cyan' },
   { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },

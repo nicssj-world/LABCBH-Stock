@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs'
 
 const shell = readFileSync('components/ui/AppShell.tsx', 'utf8')
 const css = readFileSync('app/globals.css', 'utf8')
-assert.match(shell, /ภาพรวม/)
+const dashboard = readFileSync('app/(protected)/dashboard/page.tsx', 'utf8')
+assert.match(shell, /href: '\/dashboard', label: 'Dashboard'/)
+assert.match(dashboard, /<h1>Dashboard บริหารสัญญา<\/h1>/)
 assert.match(shell, /สัญญา/)
 assert.match(shell, /ใบ PR/)
 assert.match(shell, /รับเข้า/)

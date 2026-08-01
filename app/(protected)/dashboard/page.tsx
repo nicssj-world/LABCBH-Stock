@@ -183,7 +183,7 @@ export default async function DashboardPage() {
       <header className="page-heading page-heading--actions">
         <div>
           <p className="section-kicker">EXECUTIVE CONTROL BENCH</p>
-          <h1>ภาพรวมบริหารสัญญา</h1>
+          <h1>Dashboard บริหารสัญญา</h1>
           <p>สถานะงานจัดซื้อ มูลค่าคงเหลือ และรายการน้ำยาที่ต้องติดตามจากข้อมูลธุรกรรมจริง</p>
         </div>
         <StatusChip tone={error ? 'danger' : 'info'}>{error ? 'ข้อมูลขัดข้อง' : 'ข้อมูลปัจจุบัน'}</StatusChip>
