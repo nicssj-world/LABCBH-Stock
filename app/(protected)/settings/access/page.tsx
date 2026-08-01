@@ -25,7 +25,7 @@ export default async function AccessSettingsPage({ searchParams }: AccessSetting
   let error: string | null = null
 
   try {
-    profiles = await listMemberships({ search, role })
+    profiles = await listMemberships(actor, { search, role })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายชื่อผู้ใช้งานไม่สำเร็จ'
   }
