@@ -75,6 +75,7 @@ export interface AppShellProps {
 export function AppShell({ actor, children }: AppShellProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [dark, setDark] = useState(false)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
   const visibleNavigation = [...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])]
@@ -115,10 +116,10 @@ export function AppShell({ actor, children }: AppShellProps) {
         tabIndex={mobileOpen ? 0 : -1}
         onClick={() => setMobileOpen(false)}
       />
-      <aside className={`bench-rail${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
+      <aside className={`bench-rail${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
         <div className="bench-brand">
           <span className="bench-brand__mark" aria-hidden="true">LC</span>
-          <span>
+          <span className="bench-brand__copy">
             <strong>LABCBH Stock</strong>
             <small>Laboratory Management</small>
           </span>
@@ -131,23 +132,35 @@ export function AppShell({ actor, children }: AppShellProps) {
               href={item.href}
               className="bench-nav__link"
               aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              title={collapsed ? item.label : undefined}
               onClick={() => setMobileOpen(false)}
             >
               <span className="bench-nav__icon" data-nav-tone={item.tone}>
                 <BenchIcon name={item.icon} />
               </span>
-              <span>{item.label}</span>
+              <span className="bench-nav__label">{item.label}</span>
             </Link>
           ))}
         </nav>
         <div className="bench-rail__footer">
           <span className="bench-rail__signal" aria-hidden="true" />
-          <span><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
+          <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
         </div>
       </aside>
       <div className="workbench">
         <header className="workbench-header">
           <div className="workbench-header__context">
+            <button
+              className="utility-button sidebar-toggle"
+              type="button"
+              aria-label={collapsed ? 'ขยายเมนูหลัก' : 'ย่อเมนูหลัก'}
+              aria-expanded={!collapsed}
+              title={collapsed ? 'ขยาย side menu' : 'ย่อ side menu'}
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              <UtilityIcon name="menu" />
+            </button>
             <button
               className="utility-button menu-button"
               type="button"

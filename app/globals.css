@@ -188,6 +188,45 @@ button {
   min-height: 100dvh;
 }
 
+@media (min-width: 801px) {
+  .app-shell:has(.bench-rail.is-collapsed) {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .bench-rail.is-collapsed {
+    align-items: center;
+    padding-inline: 10px;
+  }
+
+  .bench-rail.is-collapsed .bench-brand {
+    justify-content: center;
+    width: 100%;
+    padding-inline: 0;
+  }
+
+  .bench-rail.is-collapsed .bench-brand__copy,
+  .bench-rail.is-collapsed .bench-nav__section,
+  .bench-rail.is-collapsed .bench-nav__label,
+  .bench-rail.is-collapsed .bench-rail__footer-copy {
+    display: none;
+  }
+
+  .bench-rail.is-collapsed .bench-nav,
+  .bench-rail.is-collapsed .bench-rail__footer {
+    width: 100%;
+  }
+
+  .bench-rail.is-collapsed .bench-nav__link {
+    justify-content: center;
+    padding-inline: 7px;
+  }
+
+  .bench-rail.is-collapsed .bench-rail__footer {
+    justify-content: center;
+    padding-inline: 0;
+  }
+}
+
 .bench-rail {
   position: sticky;
   top: 0;
@@ -787,6 +826,7 @@ button {
   stroke-linejoin: round;
 }
 
+.sidebar-toggle { display: grid; }
 .menu-button { display: none; }
 
 .bench-nav__section {
@@ -1017,6 +1057,7 @@ button {
     visibility: visible;
   }
 
+  .sidebar-toggle { display: none; }
   .menu-button { display: grid; }
 
   .workbench-header {
