@@ -878,7 +878,7 @@ button {
 }
 
 .login-bench-panel h2 {
-  max-width: 12ch;
+  max-width: 18ch;
   margin: 14px 0;
   font-size: clamp(34px, 5vw, 62px);
   line-height: 1.08;
@@ -1111,6 +1111,8 @@ button {
   display: grid;
   gap: 22px;
 }
+
+.login-bench-panel__title-line { display: inline-block; white-space: nowrap; }
 
 @media (max-width: 1120px) {
   .portal-return { width: 44px; padding: 0; }

@@ -109,8 +109,8 @@ export default function LoginPage() {
       <aside className="login-bench-panel" aria-label="ขอบเขตระบบ">
         <div>
           <p className="section-kicker section-kicker--light">LAB OPERATIONS</p>
-          <h2>ระบบคลังน้ำยา<br />และวัสดุวิทยาศาสตร์</h2>
-          <p>พื้นที่ทำงานเดียวสำหรับรับเข้า ควบคุมคงคลัง และเบิกจ่ายวัสดุอย่างเป็นระบบ</p>
+          <h2>ระบบคลังน้ำยาและ<br /><span className="login-bench-panel__title-line">วัสดุวิทยาศาสตร์</span></h2>
+          <p>รับเข้า · ควบคุม · เบิกจ่าย</p>
         </div>
         <dl>
           <div><dt>01</dt><dd>รับเข้าและตรวจรับวัสดุ</dd></div>
