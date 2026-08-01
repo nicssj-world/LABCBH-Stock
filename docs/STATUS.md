@@ -75,6 +75,32 @@ reached production:
   unexpected errors or secret-like values. The two logged errors were the
   deliberate losing requests in the PR and requisition concurrency tests.
 - **Runbooks** updated: cutover, rollback, rollback rehearsal, E2E on Staging.
+- **Free-plan recovery package** refreshed at
+  `.backups/20260801-204123/` (gitignored): roles, schema, public and managed
+  data, 212 Storage objects / 104,751,548 bytes, inventories, and SHA-256
+  hashes. The public application data restored into isolated PostgreSQL 17.6;
+  rollback refused an operational probe row, then succeeded after its removal,
+  preserving all 180 legacy usage rows; the migrations reapplied cleanly.
+- **Production database cutover completed** during the confirmed freeze. The 13
+  stock migrations, KPI `security_invoker` correction, and the contract-file
+  bucket size correction are recorded as 15 forward migrations. Production has
+  78 profiles, 16 contracts, 180 `contract_usage` rows, 20 expected stock
+  tables, 3 active seed memberships, and zero mixed budget/item contracts.
+- **Security blocker resolved.** Advisor output changed from 1 ERROR / 41 WARN
+  to 0 ERROR / 42 WARN. The one new warning is the intentional authenticated
+  `SECURITY DEFINER` RLS helper `is_current_lab_stock_admin()`; authenticated
+  execution is required by the non-recursive membership policy.
+- **Contract documents copied** from R2 without deleting the originals. All 9
+  are present and readable from private Supabase Storage (55,071,823 bytes).
+  The first pass exposed one 18,219,021-byte PDF above the old 10 MiB limit;
+  forward migration `20260801142323` raises only the contract bucket to 25 MiB.
+- **Production-targeted candidate is READY**, built from commit
+  `860a9afaaf8fda8283fc0a449af87e4c002618c2` as deployment
+  `dpl_39JnrxGzybiLsyREMsyZziXD7EeA` at
+  `https://labcbh-stock-b5wd5kmf3-nics-sj-s-projects.vercel.app`. `/login`
+  returns 200, `/dashboard` redirects to `/login`, and its error log scan is
+  clean. `--skip-domain` kept canonical `https://labcbh-stock.vercel.app` on
+  the prior deployment.
 
 ---
 
@@ -82,48 +108,19 @@ reached production:
 
 Ordered. Each depends on the one above it.
 
-### 1. Enable PITR — **needs you, in the Supabase dashboard**
+### 1. Approve and promote the Production candidate
 
-`supabase backups list` reports PITR off, earliest and latest both `0`. The CLI
-has only `list` and `restore`; enabling it is a dashboard action and a paid
-add-on. Until then the only rollback paths are the rehearsed script and an
-unrehearsed 126 MB logical dump.
+This is the deliberate final approval gate. Promote exactly deployment
+`dpl_39JnrxGzybiLsyREMsyZziXD7EeA`; do not rebuild it. The database and files
+are ready, but canonical user traffic has not moved.
 
-### 2. Apply the 13 migrations to production
-
-**Do not run this before step 1 or outside the approved freeze.** The first
-migration drops the portal's `contracts_auth_read` and
-`contracts_staff_write` policies. There is now a validated Preview artifact,
-but no PITR and no promoted replacement for the 76 active users.
-
-Note that `supabase db push` applies nothing while `[db.migrations] enabled` is
-`false` in `supabase/config.toml`, which is how it ships.
-
-### 3. Copy the nine contract documents
-
-`node scripts/migrate-contract-files.mts --apply`, with the R2 credentials from
-the portal environment. **Cannot run before step 2**: the destination bucket is
-created by the migration. Dry run currently reports 9 to copy, 0 skipped,
-0 failed, and is idempotent. Nothing is deleted from R2.
-
-### 4. Deploy, smoke, and promote the Production-targeted artifact
-
-The canonical `https://labcbh-stock.vercel.app` still points at the stale
-2026-07-30 deployment and returns 500. Its missing environment variables are
-now configured, but environment changes do not alter an existing deployment.
-
-Do **not** promote the validated Preview above: it intentionally targets
-Staging. After the migrations and document copy, create a Production-targeted
-candidate without assigning the production domain, smoke it against Production,
-then promote that exact artifact after release-lead and business-owner approval.
-
-### 5. Point the portal at the stock system
+### 2. Point the portal at the stock system
 
 Set `LABCBH_STOCK_URL` and deploy. This is what activates the redirect and the
 410s. Verify legacy contract pages redirect, writes are refused, and
 reconciliation reads still work.
 
-### 6. Import contract line items
+### 3. Import contract line items
 
 The 16 production contracts arrive with none. They come from the approved
 workbook import, not from the portal database. Until then those contracts are
@@ -134,13 +131,15 @@ contracts, and every current contract is a lease.
 
 ## Known gaps
 
-- **The logical dump's restore has never been rehearsed.** `pg_dump` warned of
-  circular foreign keys on `profiles`, `org_chart_nodes`, and
-  `outlab_certificates`; a data-only restore needs `--disable-triggers`. The
-  rollback script is the tested path, not this.
-- **The rehearsal ran against a reconstructed base**, not a clone of production.
-  It exercises every object the migrations touch, but a full-fidelity rehearsal
-  would restore the actual dump into a scratch project.
+- **Free plan still has no PITR.** Recovery returns to the frozen manual
+  snapshot, not an arbitrary second after it. The application-owned schema and
+  actual public data were restored and migrated in an isolated PG17.6 harness;
+  managed Auth data cannot be loaded directly into the bare image because its
+  Auth schema revision differs from the live managed service. Separate managed
+  dumps and the complete Storage mirror remain in the recovery package.
+- **Authenticated business smoke on the Production candidate is still an
+  approval activity.** The artifact has passed build, HTTP login/redirect, data,
+  Storage, and log checks, but no production user workflow has been submitted.
 - **Three portal capabilities have no equivalent and are not planned**: nothing
   reads the 180 historical `contract_usage` rows into a report, the portal's own
   contract list view is not reproduced, and `contract_usage` rows written before
