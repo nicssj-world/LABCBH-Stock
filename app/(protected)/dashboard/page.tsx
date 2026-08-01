@@ -9,6 +9,9 @@ const money = new Intl.NumberFormat('th-TH', {
   maximumFractionDigits: 0,
 })
 
+const thaiDate = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
+const displayDate = (value: string) => thaiDate.format(new Date(`${value}T00:00:00+07:00`))
+
 function DashboardContent({ data }: { data: ExecutiveDashboard }) {
   const maximumPipeline = Math.max(...data.pipeline.map((stage) => stage.count), 1)
   const totalTypeContracts = data.typeMix.reduce((sum, type) => sum + type.count, 0) || 1
@@ -29,12 +32,12 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
         <div>
           <span>มูลค่าสัญญารวม</span>
           <strong>{money.format(data.totalContractValue)}</strong>
-          <small>คำนวณจากทุกรายการน้ำยา</small>
+          <small>รายการน้ำยาในสัญญาซื้อ และมูลค่าสัญญาเช่า</small>
         </div>
         <div>
           <span>มูลค่าคงเหลือในสัญญา</span>
           <strong>{money.format(data.remainingContractValue)}</strong>
-          <small>หลังหักรายการที่ยืนยันใน PR</small>
+          <small>หลังหักการยืนยันใน PR และการตัดงบรายเดือน</small>
         </div>
       </section>
 
@@ -66,6 +69,54 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
                     <div className="remaining-track" aria-hidden="true"><span style={{ width: `${Math.max(item.remainingPercent, 2)}%` }} /></div>
                   </div>
                   <Link className="text-link" href={`/contracts/${item.contractId}`}>เปิดสัญญา</Link>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        <section className="bench-panel watchlist-panel" aria-labelledby="lease-watchlist-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">LEASE · EXPIRING OR LOW BUDGET</p>
+              <h2 id="lease-watchlist-title">สัญญาเช่าที่ต้องเฝ้าระวัง</h2>
+            </div>
+            <StatusChip tone={data.leaseWatchlist.length ? 'danger' : 'success'}>
+              {data.leaseWatchlist.length} สัญญา
+            </StatusChip>
+          </div>
+          {data.leaseWatchlist.length === 0 ? (
+            <div className="empty-state">
+              <strong>ยังไม่มีสัญญาเช่าที่ต้องเฝ้าระวัง</strong>
+              <p>ทุกสัญญาเช่ายังมีงบคงเหลือเพียงพอและยังไม่ใกล้สิ้นสุด</p>
+            </div>
+          ) : (
+            <ol className="lease-watchlist">
+              {data.leaseWatchlist.map((lease) => (
+                <li key={lease.contractId}>
+                  <Link className="lease-watchlist__name" href={`/contracts/${lease.contractId}`}>
+                    {lease.contractName}
+                  </Link>
+                  <p className="lease-watchlist__meta">
+                    ปีงบประมาณ {lease.fiscalYear ?? 'ไม่ระบุ'}
+                    {lease.endDate && ` · สิ้นสุด ${displayDate(lease.endDate)}`}
+                  </p>
+                  <p className="lease-watchlist__figure">
+                    {lease.remaining === null
+                      ? 'ไม่ระบุมูลค่าสัญญา'
+                      : `${money.format(lease.remaining)} คงเหลือ`}
+                  </p>
+                  {lease.remainingPercent !== null && (
+                    <div className="remaining-track" aria-hidden="true">
+                      <span style={{ width: `${Math.max(Math.min(lease.remainingPercent, 100), 2)}%` }} />
+                    </div>
+                  )}
+                  <p className="lease-watchlist__flags">
+                    {lease.expiring && (
+                      <span>เหลืออีก {Math.max(lease.monthsLeft, 0)} เดือน</span>
+                    )}
+                    {lease.lowBudget && <span>งบคงเหลือต่ำ</span>}
+                  </p>
                 </li>
               ))}
             </ol>

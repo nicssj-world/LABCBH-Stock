@@ -1553,6 +1553,30 @@ textarea[aria-invalid="true"] {
 
 .items-editor__note { margin: 12px 0 0; color: var(--lab-muted); font-size: 13px; line-height: 1.6; }
 
+/* Stacked rather than the three-column .watchlist row: this panel sits in the
+   narrow dashboard column, where that layout collapses onto itself. */
+.lease-watchlist { margin: 0; padding: 0; list-style: none; }
+.lease-watchlist li {
+  display: grid;
+  gap: 6px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--lab-border);
+}
+.lease-watchlist li:last-child { border-bottom: 0; }
+.lease-watchlist__name { font-size: 13px; font-weight: 700; color: var(--lab-navy); text-decoration: none; }
+.lease-watchlist__name:hover { text-decoration: underline; }
+.lease-watchlist__meta { margin: 0; color: var(--lab-muted); font-size: 10px; }
+.lease-watchlist__figure { margin: 0; color: var(--lab-red); font-size: 12px; font-weight: 700; }
+.lease-watchlist__flags { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
+.lease-watchlist__flags span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--lab-amber-soft);
+  color: var(--lab-ink);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .responsible-picker { display: grid; gap: 14px; padding: 8px 22px 20px; }
 .responsible-picker__chosen,
 .responsible-picker__options { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
