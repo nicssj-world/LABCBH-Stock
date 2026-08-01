@@ -124,6 +124,9 @@ assert.match(table, /contract-table--desktop/, 'desktop table variant must exist
 assert.match(table, /contract-task-cards/, 'mobile task-card variant must exist')
 assert.match(table, /contractListValue\(contract\)/, 'the register must use the recorded contract total, including legacy contracts without item rows')
 assert.doesNotMatch(table, /items\.reduce/, 'the register must not turn legacy totals into zero by summing absent item rows')
+assert.match(table, /<th>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
+assert.match(table, /\{contract\.contractStatusLabel\}/, 'the red status chip must say expired or cancelled, not the procurement stage')
+assert.match(table, /\{contract\.procurementStageLabel\}/, 'the procurement stage must remain visible separately from status')
 
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')

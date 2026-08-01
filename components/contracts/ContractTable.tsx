@@ -32,7 +32,8 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
             <tr>
               <th>ชื่อสัญญา</th>
               <th>ประเภท</th>
-              <th>ขั้นตอนปัจจุบัน</th>
+              <th>ขั้นตอนจัดซื้อ</th>
+              <th>สถานะสัญญา</th>
               <th>เลขที่สัญญา</th>
               <th className="numeric-cell">มูลค่า</th>
               <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
@@ -46,7 +47,8 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                   <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'}</small>
                 </td>
                 <td>{contract.contractTypeLabel}</td>
-                <td><StatusChip tone={tone(contract)}>{contract.procurementStageLabel}</StatusChip></td>
+                <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
+                <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td className="identifier">{contract.contractNumberLabel}</td>
                 <td className="numeric-cell identifier">{formatContractValue(contract)}</td>
                 <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
@@ -60,11 +62,11 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
         {contracts.map((contract) => (
           <li key={contract.id}>
             <div className="task-card__topline">
-              <StatusChip tone={tone(contract)}>{contract.procurementStageLabel}</StatusChip>
+              <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
               <span className="identifier">{formatContractValue(contract)}</span>
             </div>
             <h3>{contract.resolvedDisplayName}</h3>
-            <p>{contract.contractTypeLabel} · {contract.contractNumberLabel}</p>
+            <p>{contract.contractTypeLabel} · {contract.procurementStageLabel} · {contract.contractNumberLabel}</p>
             <Link className="text-link task-card__action" href={`/contracts/${contract.id}`}>ดูรายละเอียดสัญญา</Link>
           </li>
         ))}
