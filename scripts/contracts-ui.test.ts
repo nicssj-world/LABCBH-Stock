@@ -84,9 +84,14 @@ assert.match(expenseForm, /expense-form__primary/, 'expense entry must group mon
 assert.match(expenseForm, /expense-form__secondary/, 'record date and note must remain secondary details')
 assert.match(expenseForm, /aria-invalid=\{overRemaining\}/, 'the amount field must expose an over-budget warning accessibly')
 assert.match(expenseForm, /expense-form__budget-alert/, 'the remaining-budget warning needs a dedicated, findable treatment')
+assert.match(expenseForm, /const \[open, setOpen\]/, 'expense entry must support an intentional show/hide state')
+assert.match(expenseForm, /aria-expanded=\{open\}/, 'the show/hide control must expose its expanded state')
+assert.match(expenseForm, /expense-entry__toggle/, 'expense entry needs a clear toggle control')
+assert.match(expenseForm, /open && \(/, 'the expense form contents must be conditionally revealed')
 
 const budgetGauge = read('components/contracts/BudgetGauge.tsx')
 assert.match(budgetGauge, /budget-gauge__figures/, 'budget summary must retain the grouped three-figure display next to expense entry')
+assert.match(globalStyles, /\.expense-form__primary input,[\s\S]*border:\s*1px solid var\(--lab-border-strong\)/, 'expense entry fields must retain visible input boundaries')
 
 const fileCard = read('components/contracts/ContractFileCard.tsx')
 assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useId, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { recordContractExpense } from '@/lib/contracts/budget-actions'
@@ -23,6 +23,7 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ contractId, startDate, endDate, remaining }: ExpenseFormProps) {
   const router = useRouter()
+  const formId = useId()
   const months = useMemo(() => expenseMonthOptions(startDate, endDate), [startDate, endDate])
 
   // Default to the current month when the contract covers it, otherwise the
@@ -38,6 +39,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
   const [usageDate, setUsageDate] = useState(todayIso())
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   if (months.length === 0) {
@@ -66,6 +68,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
         })
         setAmount('')
         setNote('')
+        setOpen(false)
         router.refresh()
       } catch (caught) {
         // The RPC message is shown verbatim: it carries the remaining balance
@@ -76,7 +79,33 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
   }
 
   return (
-    <form className="expense-form" onSubmit={submit}>
+    <section className="expense-entry" aria-labelledby={`${formId}-title`}>
+      <button
+        type="button"
+        className="expense-entry__toggle"
+        aria-expanded={open}
+        aria-controls={formId}
+        onClick={() => {
+          if (open) setError(null)
+          setOpen(!open)
+        }}
+      >
+        <span className="expense-entry__glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M12 5v14m-7-7h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </span>
+        <span className="expense-entry__copy">
+          <strong id={`${formId}-title`}>บันทึกค่าใช้จ่าย</strong>
+          <small>{open ? 'กรอกข้อมูลและบันทึกรายการใหม่' : 'กดเพื่อเพิ่มยอดใช้จ่ายประจำเดือน'}</small>
+        </span>
+        <svg className={open ? 'expense-entry__chevron expense-entry__chevron--open' : 'expense-entry__chevron'} viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+      <form id={formId} className="expense-form" onSubmit={submit}>
       <div className="expense-form__primary">
         <label>
           เดือนที่ใช้จ่าย
@@ -138,6 +167,8 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
           {isPending ? 'กำลังบันทึก…' : 'บันทึกค่าใช้จ่าย'}
         </Button>
       </div>
-    </form>
+      </form>
+      )}
+    </section>
   )
 }
