@@ -30,6 +30,7 @@ assert.match(detailPage, /className="route-stack contract-detail-page"/, 'contra
 assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must keep navigation, state, and edit action together')
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
 assert.match(detailPage, /<dl className="contract-facts"/, 'supporting facts must stay grouped inside the contract overview')
+assert.match(detailPage, /<StatusChip tone="neutral">\{contract\.contractTypeLabel\}<\/StatusChip>/, 'contract type must be a neutral category badge, distinct from workflow status')
 assert.match(detailPage, /canEdit\s*&&\s*\([\s\S]*<ContractEditDialog/, 'editors must open the real edit form from a popup')
 assert.doesNotMatch(detailPage, /href=\{`\/contracts\/\$\{contract\.id\}\/edit`\}>แก้ไขข้อมูล/, 'detail must not navigate away when edit is clicked')
 assert.match(detailPage, /const isAdmin = hasAppRole\(actor, ['"]admin['"]\)/, 'responsible-user management must be gated to admins')

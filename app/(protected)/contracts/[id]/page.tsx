@@ -74,7 +74,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </Link>
           <div className="contract-detail-heading__status">
             <StatusChip tone={contract.status === 'active' ? 'success' : 'attention'}>{contract.procurementStageLabel}</StatusChip>
-            <span>{contract.contractTypeLabel}</span>
+            <StatusChip tone="neutral">{contract.contractTypeLabel}</StatusChip>
             {canEdit && (
               <ContractEditDialog contract={record} />
             )}
