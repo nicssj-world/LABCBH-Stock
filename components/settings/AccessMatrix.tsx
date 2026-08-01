@@ -8,10 +8,9 @@ import type { LabStockRoleName, MembershipProfile } from '@/lib/access/queries'
 
 export const ROLE_LABELS: Record<LabStockRoleName, string> = {
   admin: 'ผู้ดูแลระบบ',
-  head: 'หัวหน้ากลุ่มงาน',
+  head: 'หัวหน้างาน',
   stock_officer: 'เจ้าหน้าที่คลัง',
   viewer: 'ผู้ดูข้อมูล',
-  reporter: 'ผู้ออกรายงาน',
 }
 
 export interface AccessMatrixProps {

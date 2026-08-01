@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const LAB_STOCK_ROLES = ['admin', 'head', 'stock_officer', 'viewer', 'reporter'] as const
+export const LAB_STOCK_ROLES = ['admin', 'head', 'stock_officer', 'viewer'] as const
 
 export const membershipInputSchema = z
   .object({

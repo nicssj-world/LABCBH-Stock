@@ -53,7 +53,7 @@ for (const source of [
 assert.equal(decideProtectedRoute(null), 'login')
 assert.equal(decideProtectedRoute(baseActor), 'access-denied')
 
-for (const role of ['admin', 'head', 'stock_officer', 'viewer', 'reporter'] as const) {
+for (const role of ['admin', 'head', 'stock_officer', 'viewer'] as const) {
   assert.equal(
     decideProtectedRoute({ ...baseActor, appRoles: [role] }),
     'allow',

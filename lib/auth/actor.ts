@@ -5,7 +5,7 @@ import { decideProtectedRoute, deriveAppRoles } from '@/lib/auth/access'
 import { resolveAuthenticatedUser, unwrapActorQuery } from '@/lib/auth/resolution'
 import { createClient } from '@/lib/supabase/server'
 
-export type LabStockRole = 'admin' | 'head' | 'stock_officer' | 'viewer' | 'reporter'
+export type LabStockRole = 'admin' | 'head' | 'stock_officer' | 'viewer'
 
 export interface Actor {
   id: string

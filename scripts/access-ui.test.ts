@@ -12,6 +12,8 @@ assert.doesNotMatch(page, /^['"]use client['"]/m)
 
 const matrix = read('components/settings/AccessMatrix.tsx')
 assert.match(matrix, /^['"]use client['"]/m)
+assert.match(matrix, /head:\s*'หัวหน้างาน'/, 'the head role must use its current label')
+assert.doesNotMatch(matrix, /ผู้ออกรายงาน/, 'the retired reporter role must not be offered in the access matrix')
 assert.match(matrix, /setMembership/)
 assert.match(matrix, /ค้นหา/, 'the admin must be able to find a profile')
 assert.match(matrix, /สิทธิ์ในระบบพอร์ทัล/, 'the portal role is shown for context')
@@ -38,6 +40,12 @@ assert.match(queries, /server-only/)
 assert.match(queries, /assertMembershipAdministrator\(actor\)/, 'the privileged directory query must defend itself')
 assert.match(queries, /supabaseAdmin/, 'the admin-only directory query must bypass the portal self-profile RLS policy')
 assert.match(queries, /lab_stock_memberships!lab_stock_memberships_profile_id_fkey\s*\(role, active\)/, 'profile membership embeds must select the profile_id relationship explicitly')
+
+const schema = read('lib/access/schema.ts')
+assert.doesNotMatch(schema, /reporter/, 'new memberships must not accept the retired reporter role')
+
+const actor = read('lib/auth/actor.ts')
+assert.doesNotMatch(actor, /'reporter'/, 'the application role type must not include the retired reporter role')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/settings\/access/, 'admins need a way in from the shell')
