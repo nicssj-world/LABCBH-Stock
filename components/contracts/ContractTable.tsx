@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
-import type { PresentedContract } from '@/lib/contracts/presenter'
+import { contractListValue, type PresentedContract } from '@/lib/contracts/presenter'
 
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -8,14 +8,15 @@ const money = new Intl.NumberFormat('th-TH', {
   maximumFractionDigits: 0,
 })
 
-function totalValue(contract: PresentedContract) {
-  return contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
-}
-
 function tone(contract: PresentedContract) {
   if (contract.status === 'active') return 'success' as const
   if (contract.status === 'cancelled' || contract.status === 'expired') return 'danger' as const
   return 'attention' as const
+}
+
+function formatContractValue(contract: PresentedContract) {
+  const value = contractListValue(contract)
+  return value === null ? 'ไม่ระบุ' : money.format(value)
 }
 
 export function ContractTable({ contracts }: { contracts: PresentedContract[] }) {
@@ -42,12 +43,12 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
               <tr key={contract.id}>
                 <td>
                   <strong>{contract.resolvedDisplayName}</strong>
-                  <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'} · {contract.items.length} รายการ</small>
+                  <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'}</small>
                 </td>
                 <td>{contract.contractTypeLabel}</td>
                 <td><StatusChip tone={tone(contract)}>{contract.procurementStageLabel}</StatusChip></td>
                 <td className="identifier">{contract.contractNumberLabel}</td>
-                <td className="numeric-cell identifier">{money.format(totalValue(contract))}</td>
+                <td className="numeric-cell identifier">{formatContractValue(contract)}</td>
                 <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
               </tr>
             ))}
@@ -60,7 +61,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
           <li key={contract.id}>
             <div className="task-card__topline">
               <StatusChip tone={tone(contract)}>{contract.procurementStageLabel}</StatusChip>
-              <span className="identifier">{money.format(totalValue(contract))}</span>
+              <span className="identifier">{formatContractValue(contract)}</span>
             </div>
             <h3>{contract.resolvedDisplayName}</h3>
             <p>{contract.contractTypeLabel} · {contract.contractNumberLabel}</p>

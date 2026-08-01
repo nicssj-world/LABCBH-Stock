@@ -5,6 +5,7 @@ import {
   allowedNextStages,
   requiresContractNumber,
 } from '../lib/contracts/stages'
+import { contractListValue } from '../lib/contracts/presenter'
 
 assert.deepEqual(CONTRACT_TYPES, [
   'equipment_lease',
@@ -117,6 +118,17 @@ assert.equal(
   contractInputSchema.safeParse({ ...validDraft, status: 'cancelled' }).success,
   true,
   'a procurement may be cancelled before contract start',
+)
+
+assert.equal(
+  contractListValue({ total: 37_492_305.3, items: [] }),
+  37_492_305.3,
+  'the contract register must retain the recorded contract value when legacy contracts have no item rows',
+)
+assert.equal(
+  contractListValue({ total: null, items: validDraft.items.map((item) => ({ ...item, lineTotal: item.quantity * item.unitPrice })) }),
+  12_500,
+  'the contract register must fall back to the calculated item total when the recorded total is unavailable',
 )
 assert.equal(
   contractInputSchema.safeParse({ ...validDraft, status: 'expired' }).success,

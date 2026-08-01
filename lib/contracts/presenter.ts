@@ -1,4 +1,5 @@
 import type {
+  ContractItemRecord,
   ContractRecord,
   ContractStatus,
   ContractType,
@@ -38,6 +39,20 @@ export interface PresentedContract extends ContractRecord {
   procurementStageLabel: string
   contractStatusLabel: string
   contractNumberLabel: string
+}
+
+/**
+ * `contracts.total` is the recorded value and is therefore the source of
+ * truth for the register. Newer contracts also have item rows, but the
+ * legacy register intentionally has none; summing those rows would turn a
+ * real contract value into zero.
+ */
+export function contractListValue(contract: {
+  total: number | null
+  items: Array<Pick<ContractItemRecord, 'lineTotal'>>
+}): number | null {
+  if (contract.total !== null) return contract.total
+  return contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
 }
 
 export function presentContract(contract: ContractRecord): PresentedContract {

@@ -122,6 +122,8 @@ assert.match(itemsEditor, /item\.id/, 'edit rows must preserve stable item IDs')
 const table = read('components/contracts/ContractTable.tsx')
 assert.match(table, /contract-table--desktop/, 'desktop table variant must exist')
 assert.match(table, /contract-task-cards/, 'mobile task-card variant must exist')
+assert.match(table, /contractListValue\(contract\)/, 'the register must use the recorded contract total, including legacy contracts without item rows')
+assert.doesNotMatch(table, /items\.reduce/, 'the register must not turn legacy totals into zero by summing absent item rows')
 
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')
