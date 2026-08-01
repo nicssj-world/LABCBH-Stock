@@ -37,7 +37,7 @@ export async function loginAs(page: Page, role: FixtureRole) {
 
   await page.goto('/login')
   await page.getByLabel('รหัส E-Phis').fill(credentials.identifier)
-  await page.getByLabel('รหัสผ่าน').fill(credentials.password)
+  await page.getByLabel('รหัสผ่าน', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
 }

@@ -621,6 +621,52 @@ button {
   box-shadow: 0 0 0 3px #dcecf4;
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 50px;
+}
+
+.login-form .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--lab-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.login-form .password-toggle:hover {
+  color: var(--lab-navy);
+  background: var(--lab-surface-muted);
+}
+
+.login-form .password-toggle:focus-visible {
+  color: var(--lab-navy);
+  outline: 2px solid var(--lab-blue);
+  outline-offset: 1px;
+}
+
+.password-toggle svg {
+  width: 21px;
+  height: 21px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .login-form .lab-button {
   width: 100%;
   margin-top: 18px;
