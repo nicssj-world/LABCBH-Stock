@@ -36,6 +36,7 @@ assert.match(actions, /assertMembershipAdministrator/)
 const queries = read('lib/access/queries.ts')
 assert.match(queries, /server-only/)
 assert.match(queries, /createClient/)
+assert.match(queries, /lab_stock_memberships!lab_stock_memberships_profile_id_fkey\s*\(role, active\)/, 'profile membership embeds must select the profile_id relationship explicitly')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'membership reads stay under RLS')
 
 const shell = read('components/ui/AppShell.tsx')

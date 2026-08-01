@@ -41,7 +41,7 @@ export async function listMemberships(
   const supabase = await createClient()
   let query = supabase
     .from('profiles')
-    .select('id, ephis_id, name, role, status, lab_stock_memberships (role, active)')
+    .select('id, ephis_id, name, role, status, lab_stock_memberships!lab_stock_memberships_profile_id_fkey (role, active)')
     .is('deleted_at', null)
     .order('name')
 
