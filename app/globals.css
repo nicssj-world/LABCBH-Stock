@@ -1126,6 +1126,8 @@ button {
 .page-heading--actions h1 {
   margin-top: 4px;
 }
+.page-heading__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.contracts-visibility-toggle { min-height: 44px; }
 
 .lab-link-button {
   display: inline-flex;
@@ -2296,6 +2298,8 @@ textarea[aria-invalid="true"] {
   .filter-bench .lab-link-button { width: 100%; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .section-heading-row .lab-button { width: 100%; }
+  .page-heading__actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .page-heading__actions .lab-link-button { width: 100%; }
   .budget-gauge__progress-meta { align-items: flex-start; flex-direction: column; gap: 6px; }
   .item-edit-row { grid-template-columns: 1fr; }
   .item-edit-row__name { grid-column: auto; }

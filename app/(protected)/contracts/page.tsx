@@ -17,6 +17,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const contractTypeValue = first(params.contractType)
   const stageValue = first(params.stage)
   const search = first(params.search)?.trim() ?? ''
+  const showEnded = first(params.showEnded) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
   const procurementStage = PROCUREMENT_STAGES.find((stage) => stage === stageValue)
@@ -29,13 +30,26 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
     error = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาไม่สำเร็จ'
   }
 
+  const presentedContracts = contracts.map(presentContract)
+  const endedContracts = presentedContracts.filter((contract) => contract.effectiveStatus === 'expired')
+  const visibleContracts = showEnded
+    ? presentedContracts
+    : presentedContracts.filter((contract) => contract.effectiveStatus !== 'expired')
   const grouped = new Map<string, ReturnType<typeof presentContract>[]>()
-  for (const contract of contracts.map(presentContract)) {
+  for (const contract of visibleContracts) {
     const key = contract.fiscalYear ? String(contract.fiscalYear) : 'unknown'
     grouped.set(key, [...(grouped.get(key) ?? []), contract])
   }
   const thisFiscalYear = new Date().getFullYear() + (new Date().getMonth() >= 9 ? 544 : 543)
   const fiscalYears = Array.from({ length: 7 }, (_, index) => thisFiscalYear + 1 - index)
+  const preservedFilters = new URLSearchParams()
+  if (fiscalYear) preservedFilters.set('fiscalYear', String(fiscalYear))
+  if (contractType) preservedFilters.set('contractType', contractType)
+  if (procurementStage) preservedFilters.set('stage', procurementStage)
+  if (search) preservedFilters.set('search', search)
+  if (!showEnded) preservedFilters.set('showEnded', '1')
+  const toggleQuery = preservedFilters.toString()
+  const endedContractsHref = toggleQuery ? `/contracts?${toggleQuery}` : '/contracts'
 
   return (
     <div className="route-stack">
@@ -45,10 +59,18 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
           <h1>รายการสัญญาทั้งหมด</h1>
           <p>ติดตามสัญญาตามปีงบประมาณ ประเภท และขั้นตอนจัดซื้อ</p>
         </div>
-        <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>
+        <div className="page-heading__actions">
+          {(showEnded || endedContracts.length > 0) && (
+            <Link className="lab-link-button lab-link-button--secondary contracts-visibility-toggle" href={endedContractsHref}>
+              {showEnded ? 'ซ่อนสัญญาที่สิ้นสุดแล้ว' : `แสดงสัญญาที่สิ้นสุดแล้ว (${endedContracts.length})`}
+            </Link>
+          )}
+          <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>
+        </div>
       </header>
 
       <form className="filter-bench" method="get" aria-label="ตัวกรองรายการสัญญา">
+        {showEnded && <input type="hidden" name="showEnded" value="1" />}
         <label className="filter-bench__search">
           ค้นหา
           <input type="search" name="search" defaultValue={search} placeholder="ชื่อสัญญา คู่สัญญา หรือเลขที่" />
@@ -86,8 +108,8 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         </section>
       ) : grouped.size === 0 ? (
         <section className="empty-state empty-state--panel">
-          <h2>ไม่พบสัญญาตามตัวกรอง</h2>
-          <p>ลองล้างตัวกรอง หรือเพิ่มสัญญาใหม่เพื่อเริ่มต้นทะเบียน</p>
+          <h2>{showEnded ? 'ไม่พบสัญญาตามตัวกรอง' : 'ไม่พบสัญญาที่ยังไม่สิ้นสุด'}</h2>
+          <p>{showEnded ? 'ลองล้างตัวกรอง หรือเพิ่มสัญญาใหม่เพื่อเริ่มต้นทะเบียน' : 'เลือกแสดงสัญญาที่สิ้นสุดแล้ว หากต้องการตรวจสอบข้อมูลย้อนหลัง'}</p>
         </section>
       ) : (
         Array.from(grouped.entries()).map(([year, yearContracts]) => (
