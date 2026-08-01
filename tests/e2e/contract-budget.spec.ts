@@ -11,6 +11,7 @@ import {
 
 const requiredUrls = ['E2E_LEASE_CONTRACT_URL']
 const missing = missingFixtureReason(['admin', 'stock'], requiredUrls)
+const remoteMutationTimeout = 15_000
 
 test.describe('equipment lease budget', () => {
   test.skip(
@@ -46,7 +47,12 @@ test.describe('equipment lease budget', () => {
     await admin.getByLabel('ค้นหาผู้รับผิดชอบ').fill(stockIdentifier)
     await admin.getByRole('checkbox').first().check()
     await admin.getByRole('button', { name: 'บันทึกผู้รับผิดชอบ' }).click()
-    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible()
+    // A cold Preview function can commit the RPC before its refreshed RSC
+    // payload returns. Wait for the user-visible completion state, not a fixed
+    // network delay.
+    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible({
+      timeout: remoteMutationTimeout,
+    })
 
     // Now the same non-editor can record.
     await stock.reload()
@@ -65,7 +71,9 @@ test.describe('equipment lease budget', () => {
     await admin.reload()
     await admin.getByRole('button', { name: 'นำออก' }).first().click()
     await admin.getByRole('button', { name: 'บันทึกผู้รับผิดชอบ' }).click()
-    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible()
+    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible({
+      timeout: remoteMutationTimeout,
+    })
 
     await stock.reload()
     await expect(stock.getByRole('button', { name: 'บันทึกค่าใช้จ่าย' })).toHaveCount(0)
