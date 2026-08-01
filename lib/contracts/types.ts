@@ -2,10 +2,12 @@ import type { z } from 'zod'
 import type {
   CONTRACT_TYPES,
   archiveContractInputSchema,
+  contractExpenseInputSchema,
   contractInputSchema,
   contractItemUpdateInputSchema,
   contractLineInputSchema,
   createContractInputSchema,
+  responsibleUsersInputSchema,
   stageAdvanceSchema,
   updateContractInputSchema,
 } from './schema'
@@ -19,6 +21,8 @@ export type CreateContractInput = z.infer<typeof createContractInputSchema>
 export type UpdateContractInput = z.infer<typeof updateContractInputSchema>
 export type ArchiveContractInput = z.infer<typeof archiveContractInputSchema>
 export type StageAdvanceInput = z.infer<typeof stageAdvanceSchema>
+export type ContractExpenseInput = z.infer<typeof contractExpenseInputSchema>
+export type ResponsibleUsersInput = z.infer<typeof responsibleUsersInputSchema>
 export type ContractStatus = 'active' | 'expired' | 'cancelled' | 'pending'
 
 export interface ContractItemRecord {

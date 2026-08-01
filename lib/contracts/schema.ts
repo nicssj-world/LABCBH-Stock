@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { isoDateSchema } from '@/lib/validation/date'
 import { PROCUREMENT_STAGES, allowedNextStages } from './stages'
 
+type ContractTypeValue = (typeof CONTRACT_TYPES)[number]
+
 export const CONTRACT_TYPES = [
   'equipment_lease',
   'e_bidding',
@@ -24,6 +26,35 @@ export const contractItemUpdateInputSchema = contractLineInputSchema.extend({
   id: z.string().uuid().nullable(),
 })
 
+/**
+ * An equipment lease is billed in baht against a ceiling and holds no line
+ * items; the database rejects them outright. Every other contract type still
+ * needs at least one. Applied to create and update alike, or a lease could be
+ * created and then not edited.
+ */
+function refineItemsForContractType(
+  value: { contractType: ContractTypeValue; items: unknown[] },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.contractType === 'equipment_lease') {
+    if (value.items.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'สัญญาเช่าเครื่องไม่มีรายการน้ำยา',
+      })
+    }
+    return
+  }
+  if (value.items.length < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['items'],
+      message: 'ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ',
+    })
+  }
+}
+
 export const createContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
@@ -32,9 +63,10 @@ export const createContractInputSchema = z
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
     sentToProcurementDate: isoDateSchema,
-    items: z.array(contractLineInputSchema).min(1, 'ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ'),
+    items: z.array(contractLineInputSchema),
   })
   .strict()
+  .superRefine(refineItemsForContractType)
 
 export const updateContractInputSchema = z
   .object({
@@ -44,7 +76,26 @@ export const updateContractInputSchema = z
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
     expectedUpdatedAt: z.string().datetime({ offset: true }).nullable(),
-    items: z.array(contractItemUpdateInputSchema).min(1, 'ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ'),
+    items: z.array(contractItemUpdateInputSchema),
+  })
+  .strict()
+  .superRefine(refineItemsForContractType)
+
+export const contractExpenseInputSchema = z
+  .object({
+    contractId: z.number().int().positive(),
+    amount: z.number().finite().positive('จำนวนเงินต้องมากกว่า 0'),
+    usageMonth: isoDateSchema,
+    usageDate: isoDateSchema.nullable().optional(),
+    note: z.string().trim().max(500).nullable().optional(),
+  })
+  .strict()
+
+export const responsibleUsersInputSchema = z
+  .object({
+    contractId: z.number().int().positive(),
+    profileIds: z.array(z.string().uuid()),
+    note: z.string().trim().max(500).nullable().optional(),
   })
   .strict()
 

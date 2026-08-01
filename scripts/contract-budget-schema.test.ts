@@ -39,4 +39,31 @@ assert.match(sql, /revoke all on table public\.contract_responsible_audit from a
 assert.match(sql, /insert into storage\.buckets[\s\S]*lab-stock-contracts/i)
 assert.match(sql, /'lab-stock-contracts',\s*'lab-stock-contracts',\s*false/i)
 
+// create_contract and update_contract both refused an empty item array, so a
+// lease could not be created or edited at all. Fixing only the zod schema would
+// have moved the failure from the form to the database.
+const leaseNames = readdirSync(migrationsDir).filter((n) =>
+  n.endsWith('_lab_stock_lease_without_items.sql'),
+)
+assert.equal(leaseNames.length, 1, 'exactly one lease-without-items migration must exist')
+const leaseSql = readFileSync(join(migrationsDir, leaseNames[0]), 'utf8')
+
+assert.match(leaseSql, /create or replace function public\.create_contract/i)
+assert.match(leaseSql, /create or replace function public\.update_contract/i)
+
+// Both directions: a lease needs no items, and must not be handed any.
+const conditional =
+  /jsonb_array_length\(p_items\) = 0\s+and \(p_contract ->> 'contractType'\) is distinct from 'equipment_lease'/gi
+assert.equal(
+  (leaseSql.match(conditional) ?? []).length,
+  2,
+  'both create and update must make the item requirement conditional',
+)
+const inverse = /an equipment lease contract cannot hold line items/gi
+assert.equal(
+  (leaseSql.match(inverse) ?? []).length,
+  2,
+  'both create and update must reject items on a lease',
+)
+
 console.log('contract budget schema tests passed')

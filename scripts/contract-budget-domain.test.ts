@@ -8,6 +8,7 @@ import {
   monthsLeft,
   normalizeUsageMonth,
 } from '../lib/contracts/budget'
+import { contractExpenseInputSchema, createContractInputSchema } from '../lib/contracts/schema'
 
 // Only equipment leases are tracked in baht. Everything else keeps line items.
 assert.equal(contractMode('equipment_lease'), 'budget')
@@ -54,5 +55,40 @@ assert.deepEqual(
   ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01'],
 )
 assert.deepEqual(expenseMonthOptions(null, '2026-08-20'), [])
+
+// ── contract input schema ───────────────────────────────────────────────────
+const leaseBase = {
+  fiscalYear: 2569,
+  contractType: 'equipment_lease' as const,
+  displayName: 'เช่าเครื่อง CBC',
+  vendor: 'Firmer',
+  endDate: '2027-06-30',
+  sentToProcurementDate: '2026-07-01',
+}
+
+// A lease has no line items, and demanding one made it impossible to create.
+assert.doesNotThrow(() => createContractInputSchema.parse({ ...leaseBase, items: [] }))
+assert.throws(
+  () => createContractInputSchema.parse({ ...leaseBase, contractType: 'e_bidding', items: [] }),
+  /ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ/,
+  'a supply contract still requires items',
+)
+assert.throws(
+  () =>
+    createContractInputSchema.parse({
+      ...leaseBase,
+      items: [{ lsCode: 'LS1', name: 'x', quantity: 1, unit: 'ea', unitPrice: 10 }],
+    }),
+  /สัญญาเช่าเครื่องไม่มีรายการน้ำยา/,
+  'a lease must not smuggle in line items',
+)
+
+assert.throws(
+  () => contractExpenseInputSchema.parse({ contractId: 1, amount: 0, usageMonth: '2026-07-01' }),
+  /จำนวนเงินต้องมากกว่า 0/,
+)
+assert.doesNotThrow(() =>
+  contractExpenseInputSchema.parse({ contractId: 1, amount: 1500.5, usageMonth: '2026-07-01' }),
+)
 
 console.log('contract budget domain tests passed')
