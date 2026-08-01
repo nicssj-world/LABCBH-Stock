@@ -18,6 +18,23 @@ things that have already cost time.
   originals stay so a rollback leaves the portal working.
 - Thai user-facing copy, matching `lib/contracts/presenter.ts`.
 
+## Current operating state
+
+LABCBH Stock is the live contract-management surface. The Lab Management Portal
+links **บริหารสัญญา** to `/dashboard` here; preserve that handoff and do not
+replace live reads with mock data. The portal remains the shared identity and
+profile-image source.
+
+Current application roles are `admin`, `head`, `stock_officer`, and `viewer`.
+The UI calls `head` **หัวหน้างาน** and `viewer` **ผู้ดูข้อมูล**. `reporter` was
+retired by a forward migration: do not add it back to schemas, access controls,
+or UI. The portal's `Manager` role remains an intrinsic `head` role, and E-Phis
+`9495` remains intrinsic `admin`.
+
+The existing portal-user seed grants missing active profiles the `viewer` role;
+an explicit membership selected by an admin always wins. Do not confuse this
+one-time/default import with permission to overwrite an administrator's choice.
+
 ## Domain: two contract modes
 
 Read the table in the README. When touching anything contract-shaped, ask which
@@ -27,6 +44,22 @@ the single place that decides; use it rather than comparing strings.
 A lease has **no line items**, and four separate layers enforce that — the two
 zod schemas, and the `create_contract` and `update_contract` RPCs. Changing one
 without the others moves the failure rather than fixing it.
+
+### Contract register behaviour
+
+- The default register shows the latest five fiscal years and excludes ended
+  contracts. `showOlder=1` and `showEnded=1` are intentional, independent URL
+  visibility controls; preserve them when adding or clearing interactive
+  filters.
+- Selecting a fiscal year must always show that year, including older years.
+- `expired` is the effective terminal state. Only admins can manually end a
+  started contract; archiving is only for a mistaken or duplicate record, not a
+  normal contract ending.
+- Started contracts collapse the six-stage history behind `StageHistoryDisclosure`
+  and do not show the next-stage action.
+- Lease spending is entered per month through the budget flow. It has to retain
+  its database over-budget guard, its responsible-user exception, exports,
+  selected history limit, and in-page private-file preview.
 
 ## Module conventions
 
@@ -116,6 +149,11 @@ Follow the existing design system — `bench-panel`, `data-table`, `section-kick
 `identifier`, `empty-state`, `form-error`, `StatusChip`, `Button`. Styles live in
 `app/globals.css` against the `--lab-*` custom properties. Do not introduce
 inline styles or a second styling approach.
+
+`AppShell` has two navigation modes: at desktop width its header control toggles
+the compact icon-only side menu; at `800px` and below the separate menu control
+opens the slide-in rail. Retain labels through `aria-label` and `title` whenever
+the text is visually hidden, and keep the mobile overlay/Escape close behaviour.
 
 Client components that mutate follow `StageAdvanceControl.tsx`: `useTransition`,
 try/catch around the action, surface the server error verbatim — it carries the
