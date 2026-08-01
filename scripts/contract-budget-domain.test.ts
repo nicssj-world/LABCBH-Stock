@@ -14,6 +14,7 @@ import {
   canRecordContractExpense,
 } from '../lib/contracts/authorization'
 import type { Actor, LabStockRole } from '../lib/auth/actor'
+import { expenseCsv, expenseSheetXml } from '../lib/contracts/export'
 
 // Only equipment leases are tracked in baht. Everything else keeps line items.
 assert.equal(contractMode('equipment_lease'), 'budget')
@@ -130,5 +131,37 @@ assert.throws(
   /ไม่มีสิทธิ์บันทึกค่าใช้จ่ายของสัญญานี้/,
 )
 assert.doesNotThrow(() => assertContractExpenseRecorder(mt, { responsibleUserIds: [mt.id] }))
+
+// ── export ──────────────────────────────────────────────────────────────────
+const exportRows = [
+  {
+    id: 1,
+    amount: 1500.5,
+    note: 'ค่าเช่า, กรกฎาคม',
+    recordedBy: 'พลอย นารี',
+    usageDate: '2026-07-05',
+    usageMonth: '2026-07-01',
+    createdAt: '2026-07-05T00:00:00Z',
+  },
+]
+
+const csv = expenseCsv(exportRows)
+// A note containing a comma must not shift the columns.
+assert.match(csv, /"ค่าเช่า, กรกฎาคม"/)
+assert.equal(csv.split('\n')[0], '﻿เดือน,วันที่,จำนวนเงิน,ผู้บันทึก,หมายเหตุ')
+// Excel reads UTF-8 CSV as mojibake without a BOM.
+assert.ok(csv.startsWith('﻿'), 'CSV needs a BOM for Excel')
+// A quote inside a field must be doubled, not left to terminate the field.
+assert.match(
+  expenseCsv([{ ...exportRows[0], note: 'he said "hi"' }]),
+  /"he said ""hi"""/,
+)
+
+const sheet = expenseSheetXml({ contractNumber: '150/69', displayName: null }, [
+  { ...exportRows[0], note: 'a & b' },
+])
+assert.match(sheet, /ss:Name="150\/69"/)
+assert.match(sheet, /a &amp; b/, 'ampersands must be escaped or Excel rejects the file')
+assert.match(sheet, /<Data ss:Type="Number">1500\.50<\/Data>/)
 
 console.log('contract budget domain tests passed')
