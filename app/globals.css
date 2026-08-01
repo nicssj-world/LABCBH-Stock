@@ -1845,8 +1845,49 @@ textarea[aria-invalid="true"] {
 .budget-gauge__unknown { margin: 0; color: var(--lab-muted); font-size: 13px; }
 
 .expense-form { display: grid; gap: 14px; padding: 0 22px 20px; }
-.expense-history { display: grid; gap: 14px; padding: 8px 22px 20px; }
-.expense-history__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.contract-expense-panel { overflow: hidden; }
+.expense-monthly-chart { display: grid; gap: 18px; margin: 0; padding: 8px 22px 22px; border-bottom: 1px solid var(--lab-border); }
+.expense-monthly-chart__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.expense-monthly-chart__heading h3 { margin: 0; color: var(--lab-navy-strong); font-size: 15px; line-height: 1.4; }
+.expense-monthly-chart__heading p { margin: 3px 0 0; color: var(--lab-muted); font-size: 12px; }
+.expense-monthly-chart__legend { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-height: 28px; padding: 0 10px; color: var(--lab-primary-strong); background: var(--lab-primary-soft); border-radius: 999px; font-size: 11px; font-weight: 700; }
+.expense-monthly-chart__legend i { width: 8px; height: 8px; background: var(--lab-primary); border-radius: 2px; }
+.expense-monthly-chart__bars { display: grid; grid-template-columns: repeat(var(--expense-bar-count), minmax(8px, 1fr)); align-items: end; gap: clamp(3px, .7vw, 10px); height: 172px; margin: 0; padding: 0; list-style: none; }
+.expense-monthly-chart__bars li { position: relative; display: grid; grid-template-rows: 18px minmax(3px, 1fr) 20px; min-width: 0; height: 100%; align-items: end; text-align: center; }
+.expense-monthly-chart__value { overflow: hidden; color: var(--lab-muted); font: 500 9px/1.25 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.expense-monthly-chart__bar { display: block; align-self: end; width: min(100%, 40px); height: var(--expense-bar-height); justify-self: center; background: var(--lab-primary); border-radius: 4px 4px 1px 1px; box-shadow: inset 0 -2px 0 rgb(9 35 50 / 12%); transition: opacity var(--motion-fast) ease-out, transform var(--motion-fast) ease-out; }
+.expense-monthly-chart__bars li:hover .expense-monthly-chart__bar { opacity: .82; transform: translateY(-2px); }
+.expense-monthly-chart__month { display: block; align-self: end; overflow: hidden; color: var(--lab-muted); font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.expense-monthly-chart__empty { margin: 8px 22px 20px; color: var(--lab-muted); font-size: 13px; }
+.expense-history { display: grid; gap: 16px; padding: 18px 22px 22px; }
+.expense-history__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.expense-history__summary { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.expense-history__exports { display: flex; align-items: center; gap: 10px; }
+.expense-history__exports > span { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.expense-history__exports > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.expense-history__export-button { gap: 7px; min-height: 40px; padding-inline: 11px; font-size: 12px; }
+.expense-history__export-button svg { flex: 0 0 auto; }
+
+.contract-file-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 8px 22px 22px; }
+.contract-file-card__document { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.contract-file-card__document-icon { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; color: var(--lab-muted); background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
+.contract-file-card[data-has-file="true"] .contract-file-card__document-icon { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border)); }
+.contract-file-card__document p { display: grid; gap: 2px; min-width: 0; margin: 0; }
+.contract-file-card__document strong { color: var(--lab-navy-strong); font-size: 13px; }
+.contract-file-card__document small { color: var(--lab-muted); font-size: 11px; }
+.contract-file-card__controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.contract-file-card__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.contract-file-control { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; color: var(--lab-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
+.contract-file-control:hover:not(:disabled) { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 35%, var(--lab-border)); }
+.contract-file-control--view { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border)); }
+.contract-file-control--remove:hover:not(:disabled) { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 32%, var(--lab-border)); }
+.contract-file-control__spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: control-spin .72s linear infinite; }
+.contract-file-card__error { grid-column: 1 / -1; margin: 0; }
+.contract-file-preview-dialog { width: min(1100px, calc(100vw - 32px)); max-height: min(90dvh, 920px); }
+.contract-file-preview-dialog__body { max-height: calc(min(90dvh, 920px) - 92px); padding: 0; overflow: hidden; background: var(--lab-canvas); }
+.contract-file-preview-dialog iframe { display: block; width: 100%; height: min(76dvh, 760px); border: 0; background: #fff; }
+
+@keyframes control-spin { to { transform: rotate(360deg); } }
 
 .items-editor__note { margin: 12px 0 0; color: var(--lab-muted); font-size: 13px; line-height: 1.6; }
 
@@ -1903,7 +1944,10 @@ textarea[aria-invalid="true"] {
 .responsible-picker__options small { font-size: 11px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .budget-gauge__fill { transition: none; }
+  .budget-gauge__fill,
+  .expense-monthly-chart__bar { transition: none; }
+  .expense-monthly-chart__bars li:hover .expense-monthly-chart__bar { transform: none; }
+  .contract-file-control__spinner { animation: none; }
 }
 
 .receipt-post { display: grid; gap: 14px; padding: 8px 22px 20px; justify-items: start; }
@@ -2071,6 +2115,12 @@ textarea[aria-invalid="true"] {
   .contract-facts > .contract-facts__vendor { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--lab-border); }
   .contract-facts > div:nth-child(2) { border-right: 1px solid var(--lab-border); }
   .contract-detail-grid { grid-template-columns: 1fr; }
+  .expense-history__toolbar { align-items: flex-start; flex-direction: column; }
+  .expense-history__exports { width: 100%; justify-content: space-between; }
+  .contract-file-card { grid-template-columns: 1fr; }
+  .contract-file-card__controls { justify-content: flex-start; }
+  .contract-file-preview-dialog__body { max-height: calc(100dvh - 108px); padding: 0; }
+  .contract-file-preview-dialog iframe { height: calc(100dvh - 108px); }
   .executive-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .watchlist li { grid-template-columns: 1fr auto; }
   .watchlist__remaining { grid-column: 1; grid-row: 2; }
@@ -2124,6 +2174,15 @@ textarea[aria-invalid="true"] {
   .watchlist__remaining { grid-column: auto; grid-row: auto; }
   .type-mix__rows > div { grid-template-columns: 1fr auto; }
   .type-mix__rows small { grid-column: 1 / -1; text-align: left; }
+  .expense-monthly-chart { gap: 14px; padding-inline: 18px; }
+  .expense-monthly-chart__heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .expense-monthly-chart__bars { height: 148px; gap: 3px; }
+  .expense-monthly-chart__value { font-size: 8px; }
+  .expense-history { padding-inline: 18px; }
+  .expense-history__exports { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .expense-history__exports > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .expense-history__export-button { justify-content: center; width: 100%; padding-inline: 8px; }
+  .contract-file-card { gap: 14px; padding-inline: 18px; }
 }
 
 /* --- Print: the A4 requisition form --------------------------------------- */

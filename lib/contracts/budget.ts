@@ -89,3 +89,53 @@ export function expenseMonthOptions(
   }
   return months
 }
+
+export interface ExpenseMonthlySeriesEntry {
+  month: string
+  amount: number
+}
+
+/**
+ * Creates a continuous monthly series for the lease detail view. A month with
+ * no expense remains visible at zero, so the chart reports the contract's
+ * actual elapsed period rather than only the months someone made an entry.
+ */
+export function expenseMonthlySeries(
+  startDate: string | null,
+  endDate: string | null,
+  entries: Array<{ usageMonth: string | null; amount: number }>,
+  now: Date = new Date(),
+): ExpenseMonthlySeriesEntry[] {
+  const totals = new Map<string, number>()
+  for (const entry of entries) {
+    if (!entry.usageMonth) continue
+    const month = normalizeUsageMonth(entry.usageMonth)
+    if (!month) continue
+    totals.set(month, (totals.get(month) ?? 0) + satang(entry.amount))
+  }
+
+  const firstMonth = startDate ? normalizeUsageMonth(startDate) : null
+  if (!firstMonth) {
+    return [...totals.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([month, amount]) => ({ month, amount: amount / 100 }))
+  }
+
+  const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
+  const contractEndMonth = endDate ? normalizeUsageMonth(endDate) : null
+  const lastMonth = contractEndMonth && contractEndMonth < currentMonth
+    ? contractEndMonth
+    : currentMonth
+  const boundedLastMonth = lastMonth < firstMonth ? firstMonth : lastMonth
+  const cursor = new Date(`${firstMonth}T00:00:00Z`)
+  const end = new Date(`${boundedLastMonth}T00:00:00Z`)
+  const months: ExpenseMonthlySeriesEntry[] = []
+
+  while (cursor <= end) {
+    const month = cursor.toISOString().slice(0, 10)
+    months.push({ month, amount: (totals.get(month) ?? 0) / 100 })
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+  }
+
+  return months
+}

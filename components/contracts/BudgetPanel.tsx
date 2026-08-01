@@ -2,7 +2,8 @@ import { BudgetGauge } from '@/components/contracts/BudgetGauge'
 import { ContractFileCard } from '@/components/contracts/ContractFileCard'
 import { ExpenseForm } from '@/components/contracts/ExpenseForm'
 import { ExpenseHistory } from '@/components/contracts/ExpenseHistory'
-import { isLowBudget } from '@/lib/contracts/budget'
+import { ExpenseMonthlyChart } from '@/components/contracts/ExpenseMonthlyChart'
+import { expenseMonthlySeries, isLowBudget } from '@/lib/contracts/budget'
 import { fetchContractBudget } from '@/lib/contracts/budget-queries'
 
 interface BudgetPanelProps {
@@ -34,10 +35,11 @@ export async function BudgetPanel({
 }: BudgetPanelProps) {
   const { entries, snapshot } = await fetchContractBudget(contractId, total)
   const lowBudget = isLowBudget(total, snapshot.used)
+  const monthlySeries = expenseMonthlySeries(startDate, endDate, entries)
 
   return (
     <>
-      <section className="bench-panel" aria-labelledby="contract-budget-title">
+      <section className="bench-panel contract-budget-panel" aria-labelledby="contract-budget-title">
         <div className="bench-panel__header">
           <div>
             <p className="section-kicker">LEASE BUDGET</p>
@@ -60,23 +62,25 @@ export async function BudgetPanel({
         )}
       </section>
 
-      <section className="bench-panel" aria-labelledby="contract-expense-title">
+      <section className="bench-panel contract-expense-panel" aria-labelledby="contract-expense-title">
         <div className="bench-panel__header">
           <div>
             <p className="section-kicker">MONTHLY DRAWDOWN</p>
             <h2 id="contract-expense-title">ประวัติการใช้จ่ายรายเดือน</h2>
           </div>
         </div>
+        <ExpenseMonthlyChart series={monthlySeries} />
         <ExpenseHistory
           contractId={contractId}
           contractNumber={contractNumber}
           displayName={displayName}
           entries={entries}
+          series={monthlySeries}
           canRecord={canRecord}
         />
       </section>
 
-      <section className="bench-panel" aria-labelledby="contract-file-title">
+      <section className="bench-panel contract-file-panel" aria-labelledby="contract-file-title">
         <div className="bench-panel__header">
           <div>
             <p className="section-kicker">CONTRACT DOCUMENT</p>

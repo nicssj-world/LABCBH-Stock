@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   budgetSnapshot,
   contractMode,
+  expenseMonthlySeries,
   expenseMonthOptions,
   isExpiring,
   isLowBudget,
@@ -61,6 +62,28 @@ assert.deepEqual(
   ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01'],
 )
 assert.deepEqual(expenseMonthOptions(null, '2026-08-20'), [])
+
+// The monthly chart must show every month since the contract started, not only
+// the months someone happened to record an expense. Multiple records for one
+// month are intentionally aggregated into one bar.
+assert.deepEqual(
+  expenseMonthlySeries(
+    '2026-05-10',
+    '2026-12-31',
+    [
+      { usageMonth: '2026-05-01', amount: 100 },
+      { usageMonth: '2026-07-01', amount: 300 },
+      { usageMonth: '2026-07-01', amount: 25 },
+    ],
+    new Date('2026-08-15T00:00:00Z'),
+  ),
+  [
+    { month: '2026-05-01', amount: 100 },
+    { month: '2026-06-01', amount: 0 },
+    { month: '2026-07-01', amount: 325 },
+    { month: '2026-08-01', amount: 0 },
+  ],
+)
 
 // ── contract input schema ───────────────────────────────────────────────────
 const leaseBase = {

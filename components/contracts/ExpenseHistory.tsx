@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { deleteContractExpense } from '@/lib/contracts/budget-actions'
+import type { ExpenseMonthlySeriesEntry } from '@/lib/contracts/budget'
 import type { ContractExpenseRecord } from '@/lib/contracts/budget-queries'
 import { expenseCsv, expenseFileBase, expenseSheetXml } from '@/lib/contracts/export'
 
@@ -25,6 +26,7 @@ interface ExpenseHistoryProps {
   contractNumber: string | null
   displayName: string | null
   entries: ContractExpenseRecord[]
+  series: ExpenseMonthlySeriesEntry[]
   canRecord: boolean
 }
 
@@ -33,6 +35,7 @@ export function ExpenseHistory({
   contractNumber,
   displayName,
   entries,
+  series,
   canRecord,
 }: ExpenseHistoryProps) {
   const router = useRouter()
@@ -57,31 +60,43 @@ export function ExpenseHistory({
     })
   }
 
-  if (entries.length === 0) {
-    return <p className="empty-state">ยังไม่มีการบันทึกค่าใช้จ่าย</p>
-  }
-
   return (
     <div className="expense-history">
-      <div className="expense-history__actions">
-        <Button
-          variant="secondary"
-          onClick={() => download(`${base}.csv`, expenseCsv(entries), 'text/csv')}
-        >
-          ดาวน์โหลด CSV
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            download(
-              `${base}.xls`,
-              expenseSheetXml({ contractNumber, displayName }, entries),
-              'application/vnd.ms-excel',
-            )
-          }
-        >
-          ดาวน์โหลด Excel
-        </Button>
+      <div className="expense-history__toolbar">
+        <p className="expense-history__summary">{entries.length} รายการบันทึก · ครอบคลุม {series.length} เดือน</p>
+        <div className="expense-history__exports" aria-label="ดาวน์โหลดประวัติการใช้จ่าย">
+          <span>ส่งออกข้อมูล</span>
+          <div>
+            <Button
+              variant="secondary"
+              className="expense-history__export-button"
+              disabled={entries.length === 0}
+              onClick={() => download(`${base}.csv`, expenseCsv(entries), 'text/csv')}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              ดาวน์โหลด CSV
+            </Button>
+            <Button
+              variant="secondary"
+              className="expense-history__export-button"
+              disabled={entries.length === 0}
+              onClick={() =>
+                download(
+                  `${base}.xls`,
+                  expenseSheetXml({ contractNumber, displayName }, entries),
+                  'application/vnd.ms-excel',
+                )
+              }
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M5 3h10l4 4v14H5zM15 3v5h5M8 12h8M8 16h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              ดาวน์โหลด Excel
+            </Button>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -90,8 +105,9 @@ export function ExpenseHistory({
         </p>
       )}
 
-      <div className="detail-items-table">
-        <table className="data-table">
+      {entries.length === 0 ? <p className="empty-state">ยังไม่มีการบันทึกค่าใช้จ่ายในช่วงเวลาสัญญา</p> : (
+        <div className="detail-items-table">
+          <table className="data-table">
           <thead>
             <tr>
               <th>เดือน</th>
@@ -134,8 +150,9 @@ export function ExpenseHistory({
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

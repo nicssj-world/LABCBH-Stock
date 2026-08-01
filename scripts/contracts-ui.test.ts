@@ -38,6 +38,7 @@ assert.match(detailPage, /ArchiveContractControl/, 'detail must expose reasoned 
 
 const budgetPanel = read('components/contracts/BudgetPanel.tsx')
 assert.doesNotMatch(budgetPanel, /ResponsibleUserPicker|ผู้รับผิดชอบสัญญา/, 'responsible users must not occupy the contract detail flow')
+assert.match(budgetPanel, /ExpenseMonthlyChart/, 'lease detail must show an accessible month-by-month expense bar chart')
 
 const responsibleDialog = read('components/contracts/ResponsibleUserDialog.tsx')
 assert.match(responsibleDialog, /^['"]use client['"]/m, 'responsible-user popup must be an interactive client boundary')
@@ -68,6 +69,16 @@ assert.match(form, /onSaved\?\.\(\)/, 'contract form must notify the popup after
 
 const globalStyles = read('app/globals.css')
 assert.match(globalStyles, /\.app-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'application popups must stay centered in the viewport')
+
+const expenseHistory = read('components/contracts/ExpenseHistory.tsx')
+assert.match(expenseHistory, /expense-history__exports/, 'CSV and Excel exports must be grouped as one coherent toolbar')
+assert.match(expenseHistory, /aria-label="ดาวน์โหลดประวัติการใช้จ่าย"/, 'export actions need an accessible group label')
+
+const fileCard = read('components/contracts/ContractFileCard.tsx')
+assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')
+assert.match(fileCard, /aria-label="เปิดดูไฟล์สัญญา"/, 'file view icon needs an accessible label')
+assert.match(fileCard, /<dialog/, 'contract preview must open in an in-page dialog')
+assert.match(fileCard, /<iframe/, 'contract preview must render inside the current page')
 
 const historyDisclosure = read('components/contracts/StageHistoryDisclosure.tsx')
 assert.match(historyDisclosure, /^['"]use client['"]/m, 'history disclosure must be an interactive client boundary')
