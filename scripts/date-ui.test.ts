@@ -13,6 +13,11 @@ assert.equal(parseThaiDateInput(''), '')
 const dateInput = readFileSync('components/ui/ThaiDateInput.tsx', 'utf8')
 assert.match(dateInput, /พ\.ศ\./, 'date fields explain the Buddhist Era input format')
 assert.match(dateInput, /parseThaiDateInput/, 'date fields emit parsed ISO values')
+assert.match(dateInput, /CalendarPicker/, 'date fields must also offer a clickable calendar, not typing alone')
+assert.match(dateInput, /showModal\(\)/, 'the calendar opens through a dialog, matching the app-dialog convention')
+
+const calendarPicker = readFileSync('components/ui/CalendarPicker.tsx', 'utf8')
+assert.match(calendarPicker, /aria-pressed/, 'calendar days must expose their selected state accessibly')
 
 for (const path of [
   'components/requisitions/RequisitionForm.tsx',

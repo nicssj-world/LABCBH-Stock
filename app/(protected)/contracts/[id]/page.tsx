@@ -108,7 +108,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </dl>
         </div>
 
-        <dl className="contract-facts" aria-label="ข้อมูลสรุปสัญญา">
+        <dl className="contract-facts contract-facts--vendor-split-with-value" aria-label="ข้อมูลสรุปสัญญา">
           <div className="contract-facts__vendor"><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
           <div><dt>ปีงบประมาณ</dt><dd className="identifier">{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{contract.department || 'ไม่ระบุ'}</dd></div>

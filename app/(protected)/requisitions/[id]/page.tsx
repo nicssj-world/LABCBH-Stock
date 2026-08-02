@@ -5,7 +5,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { bangkokToday } from '@/lib/inventory/queries'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getRequisition, listSelectableLots } from '@/lib/requisitions/queries'
 import type { SelectableLot } from '@/lib/requisitions/types'
 
@@ -139,7 +139,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
 
       {requisition.status === 'fulfilled' && (
         <p className="inline-alert" role="status">
-          จ่ายของเมื่อ {formatThaiDate(requisition.fulfilledAt?.slice(0, 10) ?? null)} โดย{' '}
+          จ่ายของเมื่อ {formatThaiDateTime(requisition.fulfilledAt ?? null)} โดย{' '}
           {requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'} · บัญชีเคลื่อนไหวบันทึกแล้วและแก้ย้อนหลังไม่ได้
         </p>
       )}

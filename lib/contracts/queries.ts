@@ -2,6 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { contractRemainingPercent } from '@/lib/contracts/budget'
+import { roundQuantity } from '@/lib/inventory/balance'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'

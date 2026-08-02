@@ -1,5 +1,12 @@
 export const BUDDHIST_ERA_OFFSET = 543
 
+export const THAI_MONTHS = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+] as const
+
+export const THAI_WEEKDAYS_SHORT = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'] as const
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/
 const THAI_DIGITS = '๐๑๒๓๔๕๖๗๘๙'
 

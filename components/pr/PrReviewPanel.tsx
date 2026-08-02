@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import type { ContractType } from '@/lib/contracts/types'
-import { formatQuantity } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDateTime } from '@/lib/inventory/presenter'
 import {
   confirmPurchaseRequest,
   reversePurchaseRequest,
@@ -172,24 +172,34 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
             <input type="text" value={poNumber} onChange={(event) => setPoNumber(event.target.value)} />
           </label>
           <div className="pr-review__actions">
-            <Button
-              variant="secondary"
-              type="button"
-              disabled={isPending || !poNumber.trim()}
-              onClick={() =>
-                run(
-                  () => setPurchaseOrderNumber(request.id, { poNumber }),
-                  'บันทึกเลขที่ใบสั่งซื้อไม่สำเร็จ',
-                )
-              }
-            >
-              บันทึกเลขที่ใบสั่งซื้อ
-            </Button>
-            {!reversing && (
-              <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
-                กลับรายการใบ PR
+            <div className="pr-review__actions-buttons">
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={isPending || !poNumber.trim()}
+                onClick={() =>
+                  run(
+                    () => setPurchaseOrderNumber(request.id, { poNumber }),
+                    'บันทึกเลขที่ใบสั่งซื้อไม่สำเร็จ',
+                  )
+                }
+              >
+                บันทึกเลขที่ใบสั่งซื้อ
               </Button>
-            )}
+              {!reversing && (
+                <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
+                  กลับรายการใบ PR
+                </Button>
+              )}
+            </div>
+            <div className="pr-review__meta">
+              <p className="pr-review__intro">
+                ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
+              </p>
+              {request.poNumber && request.updatedByName && (
+                <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อโดย {request.updatedByName}</p>
+              )}
+            </div>
           </div>
 
           {reversing && (
@@ -225,7 +235,21 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
         </>
       )}
 
-      {(request.status === 'cancelled' || request.status === 'reversed') && (
+      {request.status === 'reversed' && (
+        <div className="pr-review__closed">
+          <p className="pr-review__intro">
+            ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
+          </p>
+          <p className="pr-review__intro">
+            กลับรายการโดย {request.reversedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.reversedAt)}
+          </p>
+          {request.reversalReason && (
+            <p className="pr-review__intro">เหตุผลที่กลับรายการ: {request.reversalReason}</p>
+          )}
+        </div>
+      )}
+
+      {request.status === 'cancelled' && (
         <p className="empty-state">ใบ PR นี้ปิดแล้ว ไม่มีการดำเนินการเพิ่มเติม</p>
       )}
 

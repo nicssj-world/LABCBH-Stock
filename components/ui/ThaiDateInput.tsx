@@ -1,15 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState, type InputHTMLAttributes, type FocusEvent, type ChangeEvent } from 'react'
+import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type FocusEvent, type ChangeEvent } from 'react'
 import { formatThaiDateInput, parseThaiDateInput } from '@/lib/date/thai'
+import { CalendarPicker } from '@/components/ui/CalendarPicker'
 
 export interface ThaiDateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'defaultValue' | 'onChange'> {
   value: string
   onChange: (isoDate: string) => void
 }
 
-/** A text date field that displays Buddhist Era dates while emitting ISO dates. */
+/** A text date field that displays Buddhist Era dates while emitting ISO dates, with a calendar popup as an alternative to typing. */
 export function ThaiDateInput({ value, onChange, onBlur, placeholder, ...props }: ThaiDateInputProps) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const [displayValue, setDisplayValue] = useState(() => formatThaiDateInput(value))
   const [hasFormatError, setHasFormatError] = useState(false)
   const invalidValueRef = useRef(false)
@@ -59,8 +62,16 @@ export function ThaiDateInput({ value, onChange, onBlur, placeholder, ...props }
     onBlur?.(event)
   }
 
+  const pick = (isoDate: string) => {
+    invalidValueRef.current = false
+    setHasFormatError(false)
+    setDisplayValue(formatThaiDateInput(isoDate))
+    onChange(isoDate)
+    dialogRef.current?.close()
+  }
+
   return (
-    <>
+    <div className="thai-date-input">
       <input
         {...props}
         type="text"
@@ -72,7 +83,34 @@ export function ThaiDateInput({ value, onChange, onBlur, placeholder, ...props }
         onBlur={blur}
         aria-invalid={hasFormatError || props['aria-invalid'] || undefined}
       />
+      <button
+        type="button"
+        className="thai-date-input__trigger"
+        aria-label="เลือกวันที่จากปฏิทิน"
+        disabled={props.disabled}
+        onClick={() => dialogRef.current?.showModal()}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15" rx="2" />
+          <path d="M8 3v4M16 3v4M3.5 9.5h17" />
+        </svg>
+      </button>
+      <dialog
+        ref={dialogRef}
+        className="app-dialog thai-date-input__dialog"
+        aria-labelledby={titleId}
+        onCancel={(event) => { event.preventDefault(); dialogRef.current?.close() }}
+        onClick={(event) => { if (event.target === event.currentTarget) dialogRef.current?.close() }}
+      >
+        <header className="app-dialog__header">
+          <div><h2 id={titleId}>เลือกวันที่</h2></div>
+          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างเลือกวันที่" onClick={() => dialogRef.current?.close()}>×</button>
+        </header>
+        <div className="app-dialog__body">
+          <CalendarPicker value={value} onSelect={pick} />
+        </div>
+      </dialog>
       {hasFormatError && <small className="field-error">กรุณากรอกวันที่เป็น วว/ดด/พ.ศ. เช่น 02/08/2569</small>}
-    </>
+    </div>
   )
 }

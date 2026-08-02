@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'rea
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
-import { ContractItemsEditor } from '@/components/contracts/ContractItemsEditor'
+import { ContractItemsEditor, type ContractCatalogChoice } from '@/components/contracts/ContractItemsEditor'
 import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
@@ -22,6 +22,7 @@ import type { ContractItemUpdateInput, ContractRecord } from '@/lib/contracts/ty
 interface ContractFormProps {
   mode: 'create' | 'edit'
   contract?: ContractRecord
+  catalog?: ContractCatalogChoice[]
   onCancel?: () => void
   onSaved?: () => void
   onDirtyChange?: (dirty: boolean) => void
@@ -68,7 +69,7 @@ function initialState(contract?: ContractRecord): FormState {
   }
 }
 
-export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange }: ContractFormProps) {
+export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDirtyChange }: ContractFormProps) {
   const router = useRouter()
   const [state, setState] = useState(() => initialState(contract))
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -263,6 +264,7 @@ export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange 
           onChange={(items) => patchState('items', items)}
           errors={errors}
           disabled={isPending}
+          catalog={catalog}
         />
       )}
 

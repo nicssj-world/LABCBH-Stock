@@ -42,6 +42,9 @@ export interface ContractItemRecord {
   unit: string
   unitPrice: number
   lineTotal: number
+  /** Confirmed against purchase requests so far. */
+  allocatedQuantity: number
+  remainingQuantity: number
 }
 
 export interface ContractStageHistoryRecord {

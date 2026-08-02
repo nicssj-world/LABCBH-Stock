@@ -1,13 +1,22 @@
 'use client'
 
 import { Button } from '@/components/ui/Button'
+import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
 import type { ContractItemUpdateInput } from '@/lib/contracts/types'
+
+export interface ContractCatalogChoice {
+  id: string
+  lsCode: string
+  name: string
+  unit: string
+}
 
 interface ContractItemsEditorProps {
   items: ContractItemUpdateInput[]
   onChange: (items: ContractItemUpdateInput[]) => void
   errors?: Record<string, string>
   disabled?: boolean
+  catalog?: ContractCatalogChoice[]
 }
 
 const money = new Intl.NumberFormat('th-TH', {
@@ -25,11 +34,25 @@ const emptyItem = (): ContractItemUpdateInput => ({
   unitPrice: 1,
 })
 
-export function ContractItemsEditor({ items, onChange, errors = {}, disabled }: ContractItemsEditorProps) {
+// The form always starts with one blank row so the editor is never empty. If a
+// catalog pick lands while that row is still untouched, fill it in place
+// rather than leaving a dangling blank row the officer has to remember to delete.
+const isUntouchedRow = (item: ContractItemUpdateInput) => {
+  const blank = emptyItem()
+  return !item.id && item.lsCode === blank.lsCode && item.name === blank.name
+    && item.unit === blank.unit && item.quantity === blank.quantity && item.unitPrice === blank.unitPrice
+}
+
+export function ContractItemsEditor({ items, onChange, errors = {}, disabled, catalog = [] }: ContractItemsEditorProps) {
   const update = (index: number, field: keyof ContractItemUpdateInput, value: string | number) => {
     onChange(items.map((item, itemIndex) => (
       itemIndex === index ? { ...item, [field]: value } : item
     )))
+  }
+
+  const addFromCatalog = (choice: ContractCatalogChoice) => {
+    const filled: ContractItemUpdateInput = { id: null, lsCode: choice.lsCode, name: choice.name, quantity: 1, unit: choice.unit, unitPrice: 1 }
+    onChange(items.length === 1 && isUntouchedRow(items[0]) ? [filled] : [...items, filled])
   }
 
   const grandTotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
@@ -45,6 +68,23 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled }: 
           เพิ่มรายการน้ำยา
         </Button>
       </div>
+
+      {catalog.length > 0 && (
+        <CatalogItemCombobox
+          label="ค้นหาน้ำยาจากคลัง"
+          placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
+          options={catalog.map((item) => ({
+            id: item.id,
+            label: `${item.lsCode} · ${item.name}`,
+            hint: `หน่วย ${item.unit} · เลือกเพื่อเติมบรรทัดรายการน้ำยา`,
+            searchText: `${item.lsCode} ${item.name}`,
+          }))}
+          onSelect={(id) => {
+            const choice = catalog.find((item) => item.id === id)
+            if (choice) addFromCatalog(choice)
+          }}
+        />
+      )}
 
       <div className="items-editor__rows">
         {items.map((item, index) => (

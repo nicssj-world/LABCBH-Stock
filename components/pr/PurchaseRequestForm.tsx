@@ -13,7 +13,7 @@ import {
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest } from '@/lib/pr/actions'
-import { formatBaht } from '@/lib/pr/presenter'
+import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
 import { PURCHASE_METHODS_BY_PURPOSE, calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
 
 export interface CatalogOption {
@@ -31,6 +31,7 @@ export interface ContractLineOption extends CatalogOption {
   contractItemId: string
   contractId: number
   contractRemaining: number
+  contractedQuantity: number
 }
 
 export interface PurchaseRequestFormProps {
@@ -52,6 +53,24 @@ interface DraftLine {
   unit: string
   unitPrice: number
   requestedQuantity: number
+  /** Null when the purchase does not draw down a contract. */
+  contractRemaining: number | null
+  contractedQuantity: number | null
+}
+
+/** Requesting more than the contract has left — the RPC would refuse it too, but the requester should see this before submitting, not after. */
+function isOverContractLimit(line: DraftLine): boolean {
+  return line.contractRemaining !== null && line.requestedQuantity > line.contractRemaining
+}
+
+/** Mirrors the dashboard watchlist's own remaining/contracted < 30% check. */
+function isLowContractBalance(line: DraftLine): boolean {
+  return (
+    line.contractRemaining !== null &&
+    line.contractedQuantity !== null &&
+    line.contractedQuantity > 0 &&
+    (line.contractRemaining / line.contractedQuantity) * 100 < LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT
+  )
 }
 
 /** Whether switching to `next` invalidates lines already picked under `current`. */
@@ -102,10 +121,10 @@ export function PurchaseRequestForm({
   // every other method — including opening a new contract — picks straight
   // from the full catalogue, since specific_contract/e_bidding items become a
   // brand-new contract's lines rather than drawing down an existing one.
-  const options: PickerOption[] = useMemo(() => {
-    if (method.kind === 'contract') {
+  const optionsFor = (candidate: PurchaseMethod): PickerOption[] => {
+    if (candidate.kind === 'contract') {
       return contractLines
-        .filter((line) => line.contractId === method.contractId && line.contractRemaining > 0)
+        .filter((line) => line.contractId === candidate.contractId && line.contractRemaining > 0)
         .map((line) => ({
           inventoryItemId: line.inventoryItemId,
           contractItemId: line.contractItemId,
@@ -114,6 +133,7 @@ export function PurchaseRequestForm({
           unit: line.unit,
           unitPrice: line.defaultUnitPrice,
           contractRemaining: line.contractRemaining,
+          contractedQuantity: line.contractedQuantity,
           onHand: line.onHand,
           averageMonthlyUsage: line.averageMonthlyUsage,
           belowMinimum: line.belowMinimum,
@@ -128,26 +148,30 @@ export function PurchaseRequestForm({
       unit: item.unit,
       unitPrice: item.defaultUnitPrice,
       contractRemaining: null,
+      contractedQuantity: null,
       onHand: item.onHand,
       averageMonthlyUsage: item.averageMonthlyUsage,
       belowMinimum: item.belowMinimum,
     }))
-  }, [method, contractLines, catalog])
+  }
+
+  const options: PickerOption[] = optionsFor(method)
+
+  const draftLineFor = (option: PickerOption): DraftLine => ({
+    key: option.contractItemId ?? option.inventoryItemId,
+    inventoryItemId: option.inventoryItemId,
+    contractItemId: option.contractItemId,
+    lsCode: option.lsCode,
+    name: option.name,
+    unit: option.unit,
+    unitPrice: option.unitPrice,
+    requestedQuantity: 1,
+    contractRemaining: option.contractRemaining,
+    contractedQuantity: option.contractedQuantity,
+  })
 
   const addLine = (option: PickerOption) => {
-    setLines((current) => [
-      ...current,
-      {
-        key: option.contractItemId ?? option.inventoryItemId,
-        inventoryItemId: option.inventoryItemId,
-        contractItemId: option.contractItemId,
-        lsCode: option.lsCode,
-        name: option.name,
-        unit: option.unit,
-        unitPrice: option.unitPrice,
-        requestedQuantity: 1,
-      },
-    ])
+    setLines((current) => [...current, draftLineFor(option)])
   }
 
   const updateLine = (key: string, patch: Partial<DraftLine>) => {
@@ -161,10 +185,22 @@ export function PurchaseRequestForm({
   const changeMethod = (next: PurchaseMethod, reason = 'เปลี่ยนวิธีจัดซื้อ') => {
     const shouldClear = invalidatesLines(method, next)
     setMethod(next)
-    if (shouldClear) {
-      setClearAnnouncement(lines.length > 0 ? `ล้างรายการที่เลือกไว้ ${lines.length} รายการ เพราะ${reason}` : null)
-      setLines([])
+    if (!shouldClear) return
+
+    // "ซื้อในสัญญา" draws down one specific contract, so its full remaining
+    // balance is exactly what the requester is choosing among — fill every
+    // line in automatically rather than making them re-search it item by item.
+    if (next.kind === 'contract') {
+      const nextOptions = optionsFor(next)
+      setLines(nextOptions.map(draftLineFor))
+      setClearAnnouncement(
+        nextOptions.length > 0 ? `เติมรายการทั้งหมดในสัญญาให้อัตโนมัติ (${nextOptions.length} รายการ)` : null,
+      )
+      return
     }
+
+    setClearAnnouncement(lines.length > 0 ? `ล้างรายการที่เลือกไว้ ${lines.length} รายการ เพราะ${reason}` : null)
+    setLines([])
   }
 
   const changePurpose = (nextPurpose: PurchasePurpose) => {
@@ -193,8 +229,10 @@ export function PurchaseRequestForm({
   }
 
   const methodSelectionMissing =
-    (method.kind === 'contract' && departmentContracts.length === 0) ||
+    (method.kind === 'contract' && (departmentContracts.length === 0 || method.contractId === 0)) ||
     (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0)
+
+  const hasOverLimitLine = lines.some(isOverContractLimit)
 
   const total = lines.reduce(
     (sum, line) => sum + calculateLineTotal(line.requestedQuantity, line.unitPrice),
@@ -280,20 +318,22 @@ export function PurchaseRequestForm({
         />
       </section>
 
-      <section className="bench-panel" aria-labelledby="pr-picker-title">
-        <div className="bench-panel__header">
-          <div>
-            <p className="section-kicker">SELECT ITEMS</p>
-            <h2 id="pr-picker-title">เลือกรายการที่ต้องการขอซื้อ</h2>
+      {method.kind !== 'contract' && (
+        <section className="bench-panel" aria-labelledby="pr-picker-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">SELECT ITEMS</p>
+              <h2 id="pr-picker-title">เลือกรายการที่ต้องการขอซื้อ</h2>
+            </div>
+            <p>{options.length} รายการที่เลือกได้</p>
           </div>
-          <p>{options.length} รายการที่เลือกได้</p>
-        </div>
-        <ContractItemPicker
-          options={options}
-          selectedIds={lines.map((line) => line.key)}
-          onAdd={addLine}
-        />
-      </section>
+          <ContractItemPicker
+            options={options}
+            selectedIds={lines.map((line) => line.key)}
+            onAdd={addLine}
+          />
+        </section>
+      )}
 
       <section className="bench-panel" aria-labelledby="pr-lines-title">
         <div className="bench-panel__header">
@@ -305,7 +345,11 @@ export function PurchaseRequestForm({
         </div>
 
         {lines.length === 0 ? (
-          <p className="empty-state">ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน</p>
+          <p className="empty-state">
+            {method.kind === 'contract'
+              ? 'กรุณาเลือกสัญญาก่อน ระบบจะเติมรายการในสัญญาให้อัตโนมัติ'
+              : 'ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน'}
+          </p>
         ) : (
           <div className="detail-items-table">
             <table className="data-table">
@@ -313,33 +357,54 @@ export function PurchaseRequestForm({
                 <tr>
                   <th>รหัสพัสดุ</th>
                   <th>ชื่อน้ำยา</th>
-                  <th className="numeric-cell">จำนวนที่ขอ</th>
-                  <th>หน่วย</th>
-                  <th className="numeric-cell">ราคาต่อหน่วย</th>
-                  <th className="numeric-cell">รวม</th>
+                  <th className="pr-line-cell--center">คงเหลือในสัญญา</th>
+                  <th className="pr-line-cell--center">จำนวนที่ขอ</th>
+                  <th className="pr-line-cell--center">หน่วย</th>
+                  <th className="pr-line-cell--center">ราคาต่อหน่วย</th>
+                  <th className="pr-line-cell--center">รวม</th>
                   <th><span className="visually-hidden">นำออก</span></th>
                 </tr>
               </thead>
               <tbody>
-                {lines.map((line) => (
+                {lines.map((line) => {
+                  const overLimit = isOverContractLimit(line)
+                  return (
                   <tr key={line.key}>
                     <td className="identifier">{line.lsCode}</td>
                     <td>{line.name}</td>
-                    <td className="numeric-cell">
+                    <td className="pr-line-cell--center identifier">
+                      {line.contractRemaining === null ? (
+                        'ไม่ตัดยอดสัญญา'
+                      ) : (
+                        <>
+                          {formatQuantity(line.contractRemaining, line.unit)}
+                          {isLowContractBalance(line) && (
+                            <small className="item-picker__warning">{LOW_CONTRACT_BALANCE_WARNING}</small>
+                          )}
+                        </>
+                      )}
+                    </td>
+                    <td className="pr-line-cell--center">
                       <input
                         type="number"
                         min="0.001"
                         step="0.001"
                         required
+                        aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
                         onChange={(event) =>
                           updateLine(line.key, { requestedQuantity: Number(event.target.value) })
                         }
                       />
+                      {overLimit && (
+                        <small className="field-error">
+                          เกินยอดคงเหลือในสัญญา ({formatQuantity(line.contractRemaining!, line.unit)})
+                        </small>
+                      )}
                     </td>
-                    <td>{line.unit}</td>
-                    <td className="numeric-cell">
+                    <td className="pr-line-cell--center">{line.unit}</td>
+                    <td className="pr-line-cell--center">
                       <input
                         type="number"
                         min="0"
@@ -350,14 +415,15 @@ export function PurchaseRequestForm({
                         onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })}
                       />
                     </td>
-                    <td className="numeric-cell identifier">
+                    <td className="pr-line-cell--center identifier">
                       <strong>{formatBaht(calculateLineTotal(line.requestedQuantity, line.unitPrice))}</strong>
                     </td>
                     <td>
                       <Button variant="ghost" onClick={() => removeLine(line.key)}>นำออก</Button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -376,14 +442,15 @@ export function PurchaseRequestForm({
           {purpose === 'new_contract'
             ? 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที'
             : 'ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น'}
-          {lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ`}
+          {lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
           {methodSelectionMissing && ' · ยังส่งไม่ได้จนกว่าจะมีสัญญาให้เลือกตามเงื่อนไขด้านบน'}
+          {hasOverLimitLine && ' · มีรายการที่ขอเกินยอดคงเหลือในสัญญา กรุณาแก้ไขก่อนส่ง'}
         </p>
         <div className="form-action-bar__buttons">
           <Button variant="secondary" onClick={() => router.push('/purchase-requests')} disabled={isPending}>
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || lines.length === 0 || methodSelectionMissing}>
+          <Button type="submit" disabled={isPending || lines.length === 0 || methodSelectionMissing || hasOverLimitLine}>
             {isPending ? 'กำลังส่ง…' : 'ส่งใบ PR'}
           </Button>
         </div>

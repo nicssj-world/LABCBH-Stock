@@ -59,29 +59,41 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   return (
     <div className="route-stack">
       <header className="contract-detail-heading">
-        <div>
-          <Link className="back-link" href="/purchase-requests">← ใบขอซื้อ</Link>
+        <div className="contract-detail-heading__top">
+          <Link className="contract-detail-back" href="/purchase-requests">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="m14 6-6 6 6 6M8 12h10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>ใบขอซื้อ</span>
+          </Link>
           <div className="contract-detail-heading__status">
             <StatusChip tone={PURCHASE_REQUEST_STATUS_TONES[request.status]}>
               {PURCHASE_REQUEST_STATUS_LABELS[request.status]}
             </StatusChip>
-            <span>{PURCHASE_METHOD_LABELS[request.purchaseMethod]}</span>
+            <StatusChip tone="neutral">{PURCHASE_METHOD_LABELS[request.purchaseMethod]}</StatusChip>
           </div>
-          <h1 className="identifier">{request.documentNumber}</h1>
-          <p>{request.poNumber ? `ใบสั่งซื้อเลขที่ ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</p>
         </div>
-      </header>
 
-      <section className="contract-facts" aria-label="ข้อมูลสรุปใบ PR">
-        <dl>
+        <div className="contract-detail-heading__body">
+          <div className="contract-detail-heading__identity">
+            <h1 className="identifier">{request.documentNumber}</h1>
+            <p>{request.poNumber ? `ใบสั่งซื้อเลขที่ ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</p>
+          </div>
+          <dl className="contract-detail-heading__value">
+            <dt>มูลค่ารวม</dt>
+            <dd>{formatBaht(request.total)}</dd>
+          </dl>
+        </div>
+
+        <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบ PR">
           <div><dt>ผู้ขอ</dt><dd>{request.requesterName ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{request.department}</dd></div>
           <div><dt>วันที่ขอ</dt><dd>{formatThaiDate(request.requestedDate)}</dd></div>
-          <div><dt>มูลค่ารวม</dt><dd className="identifier">{formatBaht(request.total)}</dd></div>
+          <div><dt>ใบสั่งซื้อ</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
         </dl>
-      </section>
+      </header>
 
-      {(methodDetails.length > 0 || contractDraftEntries.length > 0 || request.acknowledgedAt) && (
+      {(methodDetails.length > 0 || contractDraftEntries.length > 0) && (
         <section className="bench-panel" aria-labelledby="pr-method-detail-title">
           <div className="bench-panel__header">
             <div>
@@ -112,12 +124,6 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     เปิดสัญญา →
                   </Link>
                 </dd>
-              </div>
-            )}
-            {request.acknowledgedAt && (
-              <div>
-                <dt>ยืนยันโดย</dt>
-                <dd>{request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'}</dd>
               </div>
             )}
           </dl>
@@ -166,7 +172,10 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
       </section>
 
       {canReview && (
-        <section className="bench-panel" aria-labelledby="pr-review-title">
+        <section
+          className={request.status === 'pending' ? 'bench-panel bench-panel--decision' : 'bench-panel'}
+          aria-labelledby="pr-review-title"
+        >
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">STOCK OFFICER</p>

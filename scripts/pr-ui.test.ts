@@ -28,6 +28,12 @@ const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</)
 assert.match(detailPage, /PrReviewPanel/)
 assert.match(detailPage, /canOperateStock/, 'only stock officers and admins confirm')
+assert.match(detailPage, /contract-detail-heading__top/, 'the PR header reuses the same identity/status layout as the contract detail page')
+assert.match(detailPage, /contract-detail-heading__value/, 'มูลค่ารวม must be the primary summary metric, not just another fact in the list')
+assert.match(detailPage, /<dl className="contract-facts/, 'supporting facts must use the bordered fact grid, not an unstyled list')
+assert.match(detailPage, /contract-facts--split-with-value/, 'the last fact column must align under the value panel above it, not just sit near it')
+assert.match(detailPage, /bench-panel--decision/, 'the stock officer panel must read as an outstanding decision while a PR is pending')
+assert.match(detailPage, /request\.status === 'pending' \? 'bench-panel bench-panel--decision' : 'bench-panel'/, 'the decision tone must clear once the PR is no longer pending, not stay on a closed record')
 
 const form = read('components/pr/PurchaseRequestForm.tsx')
 assert.match(form, /^['"]use client['"]/m)
@@ -45,10 +51,25 @@ assert.doesNotMatch(form, /ยอดรวมทั้งใบ PR/)
 assert.doesNotMatch(form, /createBrowserClient|supabase\.from/)
 assert.match(
   form,
-  /if \(method\.kind === 'contract'\) \{/,
+  /if \(candidate\.kind === 'contract'\) \{/,
   'opening a new contract (specific_contract/e_bidding) must pick from the full catalogue, not a contract\'s remaining lines',
 )
+assert.match(form, /optionsFor\(next\)/, 'selecting a contract must auto-fill its remaining lines, not just clear the picker')
+assert.match(
+  form,
+  /method\.kind !== 'contract' && \([\s\S]*?SELECT ITEMS/,
+  'the item picker must hide once a contract auto-fills the request lines — nothing outside that contract is eligible anyway',
+)
+assert.match(
+  form,
+  /method\.kind === 'contract'\s*\?\s*'กรุณาเลือกสัญญาก่อน/,
+  'the empty request-lines state must point at picking a contract, since the item picker is no longer visible to explain itself',
+)
 assert.match(form, /จุดประสงค์และวิธีจัดซื้อ/)
+assert.match(form, /isOverContractLimit/, 'requesting more than a contract line has left must be caught before submit')
+assert.match(form, /isLowContractBalance/, 'a line under 30% remaining must be flagged, matching the dashboard watchlist threshold')
+assert.match(form, /disabled=\{isPending \|\| lines\.length === 0 \|\| methodSelectionMissing \|\| hasOverLimitLine\}/, 'submit must stay blocked while any line exceeds its contract remaining')
+assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
 assert.match(form, /changeDepartment/, 'changing the requesting department must re-filter its contract lists')
 assert.match(form, /changePurpose/)
 assert.match(form, /aria-live="polite"/, 'clearing picked lines on a method/department change must be announced')
@@ -70,6 +91,11 @@ assert.match(
   /\.bench-panel > \.items-editor__grand-total\s*\{[\s\S]*?margin:\s*18px 20px 20px;[\s\S]*?\}/,
   'the PR total needs inset space from the panel edge',
 )
+assert.match(
+  styles,
+  /\.data-table input\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
+  'quantity/price inputs inside a data-table must render a visible border, not rely on the bare browser default',
+)
 
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
@@ -78,6 +104,8 @@ assert.match(methodFields, /PURCHASE_METHODS_BY_PURPOSE\[purpose\]/, 'only the c
 assert.match(methodFields, /planSequence/)
 assert.match(methodFields, /purchaseSequence/)
 assert.match(methodFields, /readOnly/)
+assert.match(methodFields, /contractId: 0,[\s\S]*?purchaseSequence: 1/, 'a contract method must start unselected — auto-picking contracts[0] would silently auto-fill the wrong contract')
+assert.match(methodFields, /<option value=\{0\} disabled>เลือกสัญญา<\/option>/, 'the contract dropdown must show an explicit placeholder, not silently pre-pick one')
 assert.match(methodFields, /awaitingContracts/)
 assert.match(methodFields, /method\.kind === 'e_bidding'/)
 assert.match(methodFields, /contractDraft/, 'specific_contract/e_bidding draft a new contract inline')
@@ -92,6 +120,8 @@ const picker = read('components/pr/ContractItemPicker.tsx')
 assert.match(picker, /คงเหลือในสัญญา/, 'the picker must show remaining contracted quantity')
 assert.match(picker, /ยอดคงเหลือในคลัง/, 'and current on-hand, so nothing is retyped')
 assert.match(picker, /เบิกเฉลี่ย/, 'and rolling usage')
+assert.match(picker, /type="search"/, 'eligible items must be gated behind a search box, not dumped in full — some purchase methods make the whole catalogue eligible')
+assert.match(picker, /normalizedQuery/, 'the list stays empty until the requester types a query')
 
 const review = read('components/pr/PrReviewPanel.tsx')
 assert.match(review, /^['"]use client['"]/m)
@@ -101,6 +131,11 @@ assert.match(review, /contractTypeForMethod/, 'confirming a specific_contract\/e
 assert.match(review, /ยืนยันและสร้างสัญญา/, 'the button must name its irreversible consequence, not just say "confirm"')
 assert.match(review, /วันที่ส่งพัสดุ/, 'the stock officer supplies the real ส่งพัสดุ date at confirm time')
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
+assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
+assert.match(review, /ยืนยันโดย.*acknowledgedByName/, 'a completed or reversed PR must name who confirmed it')
+assert.match(review, /กลับรายการโดย.*reversedByName/, 'a reversed PR must name who reversed it, distinct from who confirmed it')
+assert.match(review, /บันทึกเลขที่ใบสั่งซื้อโดย.*updatedByName/, 'recording a PO number must be attributed too')
+assert.match(review, /pr-review__meta/, 'audit lines live inside the officer action panel, not the requester-facing method detail')
 
 const presenter = read('lib/pr/presenter.ts')
 assert.match(presenter, /ซื้อในแผนทั้งปี/)

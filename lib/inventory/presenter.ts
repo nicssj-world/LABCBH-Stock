@@ -46,3 +46,13 @@ export function formatThaiDate(isoDate: string | null): string {
     new Date(Date.UTC(year, month - 1, day)),
   )
 }
+
+/** For a full `timestamptz` value (who/when an action happened), not a plain date. */
+export function formatThaiDateTime(isoTimestamp: string | null): string {
+  if (!isoTimestamp) return 'ไม่ระบุ'
+  return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Bangkok',
+  }).format(new Date(isoTimestamp))
+}

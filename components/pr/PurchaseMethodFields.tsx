@@ -62,11 +62,11 @@ export function emptyMethod(
     case 'annual_plan':
       return { kind, fiscalYear: currentThaiFiscalYear(), planSequence: '' }
     case 'contract':
-      return {
-        kind,
-        contractId: contracts[0]?.id ?? 0,
-        purchaseSequence: contracts[0]?.nextPurchaseSequence ?? 1,
-      }
+      // contractId 0 is the unselected placeholder — the requester must pick
+      // a contract deliberately, since picking one now auto-fills every line
+      // of the PR from it. Auto-selecting contracts[0] would silently fill
+      // from whichever contract happens to sort first.
+      return { kind, contractId: 0, purchaseSequence: 1 }
     case 'awaiting_contract':
       return { kind, contractId: awaitingContracts[0]?.id ?? 0 }
     case 'off_plan':
@@ -180,6 +180,7 @@ export function PurchaseMethodFields({
                     onChange({ ...method, contractId, purchaseSequence: contract?.nextPurchaseSequence ?? 1 })
                   }}
                 >
+                  <option value={0} disabled>เลือกสัญญา</option>
                   {contracts.map((contract) => (
                     <option key={contract.id} value={contract.id}>{contract.label}</option>
                   ))}
@@ -187,7 +188,8 @@ export function PurchaseMethodFields({
               </label>
               <label className="field-row">
                 ครั้งที่ซื้อ
-                <input type="number" min="1" step="1" required readOnly value={method.purchaseSequence} />
+                <input type="text" inputMode="numeric" required readOnly value={method.purchaseSequence} />
+                <small>กำหนดอัตโนมัติจากสัญญาที่เลือก</small>
               </label>
             </div>
           )
@@ -248,6 +250,7 @@ export function PurchaseMethodFields({
               <label className="field-row">
                 ประเภทสัญญา
                 <input type="text" readOnly value={CONTRACT_TYPE_LABELS[contractTypeForMethod(method.kind)!]} />
+                <small>กำหนดจากวิธีจัดซื้อที่เลือกไว้</small>
               </label>
               <label className="field-row">
                 คู่สัญญา

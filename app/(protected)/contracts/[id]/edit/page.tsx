@@ -4,6 +4,7 @@ import { ContractForm } from '@/components/contracts/ContractForm'
 import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { getContract } from '@/lib/contracts/queries'
+import { listInventoryItems } from '@/lib/inventory/queries'
 
 interface EditContractPageProps {
   params: Promise<{ id: string }>
@@ -15,7 +16,10 @@ export default async function EditContractPage({ params }: EditContractPageProps
   const { id } = await params
   const contractId = Number(id)
   if (!Number.isInteger(contractId) || contractId <= 0) notFound()
-  const contract = await getContract(contractId)
+  const [contract, inventoryItems] = await Promise.all([
+    getContract(contractId),
+    listInventoryItems({}),
+  ])
   if (!contract) notFound()
 
   return (
@@ -28,7 +32,16 @@ export default async function EditContractPage({ params }: EditContractPageProps
         </div>
         <Link className="lab-link-button lab-link-button--secondary" href={`/contracts/${contract.id}`}>กลับรายละเอียด</Link>
       </header>
-      <ContractForm mode="edit" contract={contract} />
+      <ContractForm
+        mode="edit"
+        contract={contract}
+        catalog={inventoryItems.map((item) => ({
+          id: item.id,
+          lsCode: item.lsCode,
+          name: item.name,
+          unit: item.baseUnit,
+        }))}
+      />
     </div>
   )
 }

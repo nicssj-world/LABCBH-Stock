@@ -52,6 +52,12 @@ export interface PurchaseRequestRecord {
   acknowledgedBy: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null
+  reversedBy: string | null
+  reversedByName: string | null
+  reversedAt: string | null
+  reversalReason: string | null
+  /** Last mutation actor — only meaningfully distinct from acknowledgedBy/reversedBy while the PR sits completed and its PO number gets edited. */
+  updatedByName: string | null
   note: string | null
   createdAt: string
   updatedAt: string | null

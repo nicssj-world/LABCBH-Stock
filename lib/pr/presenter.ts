@@ -39,6 +39,10 @@ export const PURCHASE_REQUEST_STATUS_TONES: Record<
  */
 export const MINIMUM_STOCK_WARNING = 'ยอดคงเหลือต่ำกว่าขั้นต่ำ ควรทำ PR เพิ่มเติม'
 
+/** Matches the dashboard watchlist's own remaining/contracted < 30% threshold, so both surfaces flag the same lines. */
+export const LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT = 30
+export const LOW_CONTRACT_BALANCE_WARNING = 'คงเหลือในสัญญาต่ำกว่า 30%'
+
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',
   currency: 'THB',

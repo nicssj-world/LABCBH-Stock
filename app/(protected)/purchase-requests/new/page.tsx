@@ -75,6 +75,7 @@ export default async function NewPurchaseRequestPage() {
       contractItemId: option.id,
       contractId: option.contractId,
       contractRemaining: option.remainingQuantity,
+      contractedQuantity: option.contractedQuantity,
       lsCode: option.lsCode,
       name: option.name,
       unit: option.unit,
