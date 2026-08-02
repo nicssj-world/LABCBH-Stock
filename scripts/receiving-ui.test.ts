@@ -99,6 +99,11 @@ assert.match(queries, /filters\.department/, 'receipt queries apply the departme
 assert.match(queries, /purchase_request_items/, 'receivable PRs include their line items')
 assert.match(queries, /from\('goods_receipts'\)[\s\S]*?purchase_request_id/, 'receivable PRs check existing receipt references')
 assert.match(queries, /referencedRequestIds/, 'PRs already referenced by a receipt are removed from the dropdown')
+assert.match(
+  queries,
+  /PURCHASE_METHODS_BY_PURPOSE\.purchase_order/,
+  'a PR that opened a new contract (specific_contract/e_bidding) has no goods to receive and must not appear here',
+)
 assert.doesNotMatch(queries, /supabaseAdmin/, 'receipt reads stay under RLS')
 
 const shell = read('components/ui/AppShell.tsx')

@@ -2,6 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { roundQuantity } from '@/lib/inventory/balance'
+import { PURCHASE_METHODS_BY_PURPOSE } from '@/lib/pr/schema'
 import { createClient } from '@/lib/supabase/server'
 import { GOODS_RECEIPT_STATUSES } from './schema'
 import type {
@@ -241,6 +242,10 @@ export async function listReceivablePurchaseRequests(): Promise<
         )
       `)
       .eq('status', 'completed')
+      // A PR that opened a brand-new contract (specific_contract/e_bidding) has
+      // no goods to receive against a PO — it already produced a contract, not
+      // an order. Only the ordinary drawdown methods belong here.
+      .in('purchase_method', PURCHASE_METHODS_BY_PURPOSE.purchase_order)
       .order('sequence_number', { ascending: false }),
     // A PR is receivable only once. Include drafts as well as posted receipts
     // so a second officer cannot start another receipt while the first is open.

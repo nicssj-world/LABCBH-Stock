@@ -1928,6 +1928,9 @@ textarea[aria-invalid="true"] {
 .pr-task-cards h3 { margin: 12px 0 4px; font-size: 16px; }
 .pr-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; }
 
+.method-stack { display: grid; gap: 4px; }
+
+.purpose-fieldset,
 .method-fieldset {
   display: grid;
   gap: 16px;
@@ -1936,6 +1939,7 @@ textarea[aria-invalid="true"] {
   border: 0;
 }
 
+.purpose-fieldset legend,
 .method-fieldset legend {
   padding: 0;
   color: var(--lab-muted);
@@ -1945,9 +1949,57 @@ textarea[aria-invalid="true"] {
   text-transform: uppercase;
 }
 
+/*
+ * Purpose sits a level above method: it is the fork that decides what the
+ * whole PR means (order stock vs. open a contract), so it reads a step
+ * heavier than the six method radios below it — taller, with its own
+ * consequence line — while still sharing the same flat, bordered treatment
+ * so both read as one family of choice, not two different UI languages.
+ */
+.purpose-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.purpose-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.purpose-option:has(input:checked) {
+  background: var(--lab-primary-soft);
+  border-color: var(--lab-navy);
+}
+
+.purpose-option__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lab-ink);
+}
+
+.purpose-option:has(input:checked) .purpose-option__title { color: var(--lab-navy-strong); }
+
+.purpose-option__title input { width: 18px; height: 18px; flex: none; accent-color: var(--lab-navy); }
+
+.purpose-option__consequence { margin: 0; padding-left: 28px; color: var(--lab-muted); font-size: 12px; line-height: 1.4; }
+
+/* auto-fit rather than a fixed 3-up: once purpose filters the six methods
+   down to four or two, a fixed column count leaves a visibly empty cell that
+   reads as a missing option rather than a narrower list. */
 .method-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
@@ -2453,6 +2505,7 @@ textarea[aria-invalid="true"] {
   .inventory-task-cards { display: block; }
   .pr-table--desktop { display: none; }
   .pr-task-cards { display: block; }
+  .purpose-options { grid-template-columns: 1fr; }
   .method-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .method-detail-grid { grid-template-columns: 1fr; }
   .page-heading__cluster { flex-wrap: wrap; }

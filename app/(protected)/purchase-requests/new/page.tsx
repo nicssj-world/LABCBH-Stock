@@ -6,6 +6,7 @@ import {
   type ContractLineOption,
 } from '@/components/pr/PurchaseRequestForm'
 import { requireActor } from '@/lib/auth/actor'
+import { effectiveContractStatus } from '@/lib/contracts/presenter'
 import { listContracts } from '@/lib/contracts/queries'
 import { listInventoryItems } from '@/lib/inventory/queries'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
@@ -17,11 +18,35 @@ export default async function NewPurchaseRequestPage() {
   const actor = await requireActor()
   if (!canRequestPurchase(actor)) redirect('/purchase-requests')
 
-  const [inventoryItems, contractItems, contracts] = await Promise.all([
+  const [inventoryItems, contractItems, allContracts] = await Promise.all([
     listInventoryItems({}),
     listContractItemOptions(),
-    listContracts({ procurementStage: 'contract_started' }),
+    listContracts({}),
   ])
+
+  // "ซื้อในสัญญา" only orders against a contract that has already started,
+  // is not an equipment lease (which has no line items to draw down), and has
+  // not already ended.
+  const startedContracts = allContracts.filter(
+    (contract) =>
+      contract.procurementStage === 'contract_started' &&
+      contract.contractType !== 'equipment_lease' &&
+      effectiveContractStatus(contract.status, contract.endDate) !== 'expired',
+  )
+  // "ซื้อเจาะจงระหว่างรอสัญญา" references a contract still working through the
+  // procurement stages — it exists to identify which arrangement is being
+  // waited on, and never draws down a balance.
+  const awaitingContracts = allContracts.filter(
+    (contract) => contract.procurementStage !== 'contract_started',
+  )
+
+  const contracts = startedContracts.map((contract) => ({
+    id: contract.id,
+    department: contract.department ?? '',
+    label: `${contract.displayName?.trim() || contract.product}${
+      contract.contractNumber ? ` · ${contract.contractNumber}` : ''
+    }`,
+  }))
   const nextPurchaseSequenceByContract = await listNextContractPurchaseSequences(contracts.map((contract) => contract.id))
 
   const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
@@ -78,21 +103,16 @@ export default async function NewPurchaseRequestPage() {
         departments={DEPARTMENTS}
         headName={actor.name ?? ''}
         contracts={contracts.map((contract) => ({
-          id: contract.id,
+          ...contract,
           nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
+        }))}
+        awaitingContracts={awaitingContracts.map((contract) => ({
+          id: contract.id,
+          department: contract.department ?? '',
           label: `${contract.displayName?.trim() || contract.product}${
             contract.contractNumber ? ` · ${contract.contractNumber}` : ''
           }`,
         }))}
-        eBiddingContracts={contracts
-          .filter((contract) => contract.contractType === 'e_bidding')
-          .map((contract) => ({
-            id: contract.id,
-            nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
-            label: `${contract.displayName?.trim() || contract.product}${
-              contract.contractNumber ? ` · ${contract.contractNumber}` : ''
-            }`,
-          }))}
         contractLines={contractLines}
         catalog={catalog}
       />

@@ -10,6 +10,7 @@ import {
   purchaseRequestInputSchema,
   purchaseRequestReversalSchema,
 } from '@/lib/pr/schema'
+import { isoDateSchema } from '@/lib/validation/date'
 import type {
   PurchaseOrderNumberInput,
   PurchaseRequestInput,
@@ -59,14 +60,23 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
   return created
 }
 
-export async function confirmPurchaseRequest(purchaseRequestId: string) {
+/**
+ * `sentToProcurementDate` is required only when confirming a PR whose method
+ * opens a new contract (specific_contract/e_bidding) — it becomes that
+ * contract's stage-1 (ส่งพัสดุ) date. An ordinary drawdown PR must not send one;
+ * the database rejects it either way, but validating here keeps the caller
+ * from mistaking a required field for an optional one.
+ */
+export async function confirmPurchaseRequest(purchaseRequestId: string, sentToProcurementDate?: string | null) {
   const actor = await requireActor()
   assertStockOperator(actor)
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const parsedDate = sentToProcurementDate ? isoDateSchema.parse(sentToProcurementDate) : null
 
   const result = await supabaseAdmin.rpc('confirm_purchase_request', {
     p_pr_id: parsedId,
     p_actor_id: actor.id,
+    p_sent_to_procurement_date: parsedDate,
   })
 
   const confirmed = unwrapMutation('ยืนยันใบ PR', result)

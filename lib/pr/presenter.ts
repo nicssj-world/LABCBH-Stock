@@ -1,11 +1,16 @@
-import type { PurchaseMethodKind, PurchaseRequestStatus } from './schema'
+import type { PurchaseMethodKind, PurchasePurpose, PurchaseRequestStatus } from './schema'
+
+export const PURCHASE_PURPOSE_LABELS: Record<PurchasePurpose, string> = {
+  purchase_order: 'ทำใบ PR เพื่อสั่งซื้อ (ออก PO)',
+  new_contract: 'ทำใบ PR เพื่อเริ่มสัญญาใหม่',
+}
 
 export const PURCHASE_METHOD_LABELS: Record<PurchaseMethodKind, string> = {
-  annual_plan: 'แผนจัดซื้อประจำปี',
-  contract: 'ตามสัญญา',
-  awaiting_contract: 'รอทำสัญญา',
-  off_plan: 'นอกแผน',
-  specific_contract: 'เฉพาะเจาะจง',
+  annual_plan: 'ซื้อในแผนทั้งปี',
+  contract: 'ซื้อในสัญญา',
+  awaiting_contract: 'ซื้อเจาะจงระหว่างรอสัญญา',
+  off_plan: 'ซื้อนอกแผน',
+  specific_contract: 'ทำสัญญาเจาะจง',
   e_bidding: 'E-Bidding',
 }
 

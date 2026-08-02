@@ -127,7 +127,7 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
           </label>
 
           <label>
-            ราคาต่อหน่วยเริ่มต้น (บาท)
+            ราคาต่อหน่วย (บาท)
             <input
               type="number"
               min="0"
@@ -137,21 +137,6 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
               onChange={(event) => update('defaultUnitPrice', event.target.value)}
               placeholder="ไม่บังคับ"
             />
-          </label>
-
-          <label>
-            จำนวนเดือนสำรอง
-            <input
-              required
-              type="number"
-              min="0.5"
-              max="60"
-              step="0.5"
-              inputMode="decimal"
-              value={state.minimumStockMonths}
-              onChange={(event) => update('minimumStockMonths', event.target.value)}
-            />
-            <small className="form-field-note">ใช้คำนวณค่าขั้นต่ำจากค่าเฉลี่ยการเบิก</small>
           </label>
 
           <label className="form-grid__wide">

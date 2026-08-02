@@ -168,4 +168,59 @@ for (const index of [
   assert.match(sql, new RegExp(`create index if not exists ${index}`, 'i'))
 }
 
-console.log(`purchase request schema: ok (${migrationNames[0]})`)
+// A specific_contract/e_bidding PR opens a brand-new contract the moment the
+// stock officer confirms it — same row lock, same transaction as everything
+// else confirm_purchase_request does, redefined in a later migration.
+const originationNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_contract_origination.sql'),
+)
+assert.equal(originationNames.length, 1, 'exactly one PR contract-origination migration must exist')
+
+const originationSql = readFileSync(join(migrationsDir, originationNames[0]), 'utf8')
+
+assert.match(originationSql, /alter table public\.contracts\s+add column if not exists sent_to_stock_officer_date date/i)
+assert.match(
+  originationSql,
+  /alter table public\.purchase_requests\s+add column if not exists created_contract_id bigint references public\.contracts\(id\)/i,
+)
+
+const originationConfirm = originationSql.match(
+  /create or replace function public\.confirm_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(originationConfirm, 'confirm_purchase_request must be redefined to accept a sent-to-procurement date')
+assert.match(originationConfirm, /security invoker/i)
+assert.match(originationConfirm, /set search_path = ''/i)
+assert.match(originationConfirm, /p_sent_to_procurement_date date default null/i)
+
+// The row must be locked and re-checked before create_contract is ever
+// called, or two officers racing the same PR could both open a contract.
+assert.ok(
+  originationConfirm.indexOf('for update') < originationConfirm.indexOf('public.create_contract('),
+  'the PR row must be locked before a contract is opened from it',
+)
+assert.ok(
+  originationConfirm.indexOf("status <> 'pending'") < originationConfirm.indexOf('public.create_contract('),
+  'status must be re-read under the lock before a contract is opened',
+)
+
+// The requester (already vetted by assert_contract_editor_actor when they
+// submitted the PR) becomes the contract's actor — not the confirming stock
+// officer, who create_contract's own assert_contract_editor_actor would reject.
+assert.match(originationConfirm, /public\.create_contract\(\s*locked_request\.requester_id/i)
+assert.match(originationConfirm, /'specific_contract'/i)
+assert.match(originationConfirm, /'e_bidding'/i)
+assert.match(originationConfirm, /sent_to_stock_officer_date = \(contract_draft ->> 'sentToStockOfficerDate'\)::date/i)
+
+assert.match(originationSql, /drop function if exists public\.confirm_purchase_request\(uuid, uuid\)/i)
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    originationSql,
+    new RegExp(`revoke execute on function public\\.confirm_purchase_request\\(uuid, uuid, date\\) from ${role}`, 'i'),
+  )
+}
+assert.match(
+  originationSql,
+  /grant execute on function public\.confirm_purchase_request\(uuid, uuid, date\) to service_role/i,
+)
+
+console.log(`purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]})`)

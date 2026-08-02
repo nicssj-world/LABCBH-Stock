@@ -47,6 +47,8 @@ export interface PurchaseRequestRecord {
   methodDetails: Record<string, unknown>
   status: PurchaseRequestStatus
   poNumber: string | null
+  /** Set once confirmation opens a contract from this PR (specific_contract/e_bidding). */
+  createdContractId: number | null
   acknowledgedBy: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null

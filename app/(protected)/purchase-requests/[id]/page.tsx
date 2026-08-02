@@ -24,7 +24,16 @@ const METHOD_DETAIL_LABELS: Record<string, string> = {
   planSequence: 'ลำดับในแผนจัดซื้อ',
   contractId: 'สัญญาเลขที่ระบบ',
   purchaseSequence: 'ครั้งที่ซื้อ',
+  // Superseded by contractId on awaiting_contract — kept so a PR submitted
+  // before that change still renders its stored reference text correctly.
   reference: 'เอกสารอ้างอิง',
+}
+
+const CONTRACT_DRAFT_LABELS: Record<string, string> = {
+  fiscalYear: 'ปีงบประมาณ',
+  displayName: 'ชื่อสัญญา',
+  vendor: 'คู่สัญญา',
+  sentToStockOfficerDate: 'วันที่ส่งเจ้าหน้าที่คลัง',
 }
 
 export default async function PurchaseRequestDetailPage({ params }: PurchaseRequestDetailPageProps) {
@@ -36,7 +45,16 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   if (!request) notFound()
 
   const canReview = canOperateStock(actor)
-  const methodDetails = Object.entries(request.methodDetails).filter(([, value]) => value !== null)
+  // contractDraft is a nested object with its own rendering below; the flat
+  // key/value list here would otherwise print it as "[object Object]".
+  const methodDetails = Object.entries(request.methodDetails).filter(
+    ([key, value]) => value !== null && key !== 'contractDraft',
+  )
+  const contractDraft = request.methodDetails.contractDraft
+  const contractDraftEntries =
+    contractDraft && typeof contractDraft === 'object'
+      ? Object.entries(contractDraft as Record<string, unknown>).filter(([, value]) => value !== null)
+      : []
 
   return (
     <div className="route-stack">
@@ -63,7 +81,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
         </dl>
       </section>
 
-      {(methodDetails.length > 0 || request.acknowledgedAt) && (
+      {(methodDetails.length > 0 || contractDraftEntries.length > 0 || request.acknowledgedAt) && (
         <section className="bench-panel" aria-labelledby="pr-method-detail-title">
           <div className="bench-panel__header">
             <div>
@@ -78,6 +96,24 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 <dd className="identifier">{String(value)}</dd>
               </div>
             ))}
+            {contractDraftEntries.map(([key, value]) => (
+              <div key={key}>
+                <dt>{CONTRACT_DRAFT_LABELS[key] ?? key}</dt>
+                <dd className="identifier">
+                  {key === 'sentToStockOfficerDate' ? formatThaiDate(String(value)) : String(value)}
+                </dd>
+              </div>
+            ))}
+            {request.createdContractId && (
+              <div>
+                <dt>สัญญาที่สร้าง</dt>
+                <dd>
+                  <Link className="identifier" href={`/contracts/${request.createdContractId}`}>
+                    เปิดสัญญา →
+                  </Link>
+                </dd>
+              </div>
+            )}
             {request.acknowledgedAt && (
               <div>
                 <dt>ยืนยันโดย</dt>

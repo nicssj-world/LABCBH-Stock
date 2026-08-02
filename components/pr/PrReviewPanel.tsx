@@ -3,13 +3,34 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
+import type { ContractType } from '@/lib/contracts/types'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import {
   confirmPurchaseRequest,
   reversePurchaseRequest,
   setPurchaseOrderNumber,
 } from '@/lib/pr/actions'
+import { formatBaht } from '@/lib/pr/presenter'
+import { contractTypeForMethod } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
+
+interface ContractDraftDetails {
+  fiscalYear: number
+  displayName: string
+  vendor: string | null
+}
+
+/** `methodDetails` is read as unknown JSON; this reads back only the shape a
+ *  contract-originating PR is guaranteed to carry, per contractDraftSchema. */
+function readContractDraft(methodDetails: Record<string, unknown>): ContractDraftDetails | null {
+  const draft = methodDetails.contractDraft
+  if (!draft || typeof draft !== 'object') return null
+  const { fiscalYear, displayName, vendor } = draft as Record<string, unknown>
+  if (typeof fiscalYear !== 'number' || typeof displayName !== 'string') return null
+  return { fiscalYear, displayName, vendor: typeof vendor === 'string' ? vendor : null }
+}
 
 export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
   const router = useRouter()
@@ -17,7 +38,11 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
   const [reversing, setReversing] = useState(false)
   const [reason, setReason] = useState('')
   const [poNumber, setPoNumber] = useState(request.poNumber ?? '')
+  const [sentToProcurementDate, setSentToProcurementDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [isPending, startTransition] = useTransition()
+
+  const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
+  const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
 
   const run = (operation: () => Promise<unknown>, fallback: string) => {
     setError(null)
@@ -33,7 +58,59 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
   return (
     <div className="pr-review">
-      {request.status === 'pending' && (
+      {request.status === 'pending' && contractType && contractDraft && (
+        <>
+          <p className="pr-review__intro">
+            ยืนยันแล้วระบบจะสร้างสัญญาใหม่ทันทีที่ขั้นตอน &quot;ส่งพัสดุ&quot; — ย้อนกลับไม่ได้ด้วยการกลับรายการ
+          </p>
+          <dl className="item-picker__facts">
+            <div>
+              <dt>ประเภทสัญญา</dt>
+              <dd>{CONTRACT_TYPE_LABELS[contractType]}</dd>
+            </div>
+            <div>
+              <dt>ชื่อสัญญา</dt>
+              <dd>{contractDraft.displayName}</dd>
+            </div>
+            <div>
+              <dt>คู่สัญญา</dt>
+              <dd>{contractDraft.vendor ?? 'ไม่ระบุ'}</dd>
+            </div>
+            <div>
+              <dt>ปีงบประมาณ</dt>
+              <dd>{contractDraft.fiscalYear}</dd>
+            </div>
+            <div>
+              <dt>จำนวนรายการ</dt>
+              <dd>{formatQuantity(request.items.length)} รายการ</dd>
+            </div>
+            <div>
+              <dt>มูลค่ารวม</dt>
+              <dd>{formatBaht(request.total)}</dd>
+            </div>
+          </dl>
+
+          <label className="field-row">
+            วันที่ส่งพัสดุ
+            <ThaiDateInput required value={sentToProcurementDate} onChange={setSentToProcurementDate} />
+          </label>
+
+          <Button
+            type="button"
+            disabled={isPending || !sentToProcurementDate}
+            onClick={() =>
+              run(
+                () => confirmPurchaseRequest(request.id, sentToProcurementDate),
+                'ยืนยันใบ PR ไม่สำเร็จ',
+              )
+            }
+          >
+            {isPending ? 'กำลังยืนยัน…' : 'ยืนยันและสร้างสัญญา'}
+          </Button>
+        </>
+      )}
+
+      {request.status === 'pending' && !(contractType && contractDraft) && (
         <>
           <p className="pr-review__intro">
             ยืนยันแล้วยอดในสัญญาจะถูกตัดทันทีและย้อนกลับได้ด้วยการกลับรายการเท่านั้น
