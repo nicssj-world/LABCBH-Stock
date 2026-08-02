@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
+import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { canOperateStock } from '@/lib/auth/access'
+import { requireActor } from '@/lib/auth/actor'
 import { listInventoryDepartments, listInventoryItems } from '@/lib/inventory/queries'
 import type { InventoryItemRecord } from '@/lib/inventory/types'
 
@@ -11,6 +14,7 @@ interface InventoryPageProps {
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
+  const actor = await requireActor()
   const params = await searchParams
   const search = first(params.search)?.trim() ?? ''
   const department = first(params.department)?.trim() ?? ''
@@ -41,34 +45,36 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           <h1>คลังน้ำยาและวัสดุวิทยาศาสตร์</h1>
           <p>ยอดคงเหลือคำนวณจากบัญชีเคลื่อนไหวจริง ไม่ใช่ค่าที่บันทึกทับได้</p>
         </div>
-        <StatusChip tone={alertCount ? 'danger' : 'success'}>
-          {alertCount ? `${alertCount} รายการต้องทำ PR` : 'ยอดคงเหลือเพียงพอทุกรายการ'}
-        </StatusChip>
+        <div className="page-heading__cluster">
+          <StatusChip tone={alertCount ? 'danger' : 'success'}>
+            {alertCount ? `${alertCount} รายการต้องทำ PR` : 'ยอดคงเหลือเพียงพอทุกรายการ'}
+          </StatusChip>
+          {canOperateStock(actor) && (
+            <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
+              เพิ่มรายการน้ำยา
+            </Link>
+          )}
+        </div>
       </header>
 
-      <form className="filter-bench" method="get" aria-label="ตัวกรองรายการคลัง">
-        <label className="filter-bench__search">
-          ค้นหา
-          <input type="search" name="search" defaultValue={search} placeholder="รหัส LS หรือชื่อน้ำยา" />
-        </label>
-        <label>
-          หน่วยงานที่รับผิดชอบ
-          <select name="department" defaultValue={department}>
-            <option value="">ทุกหน่วยงาน</option>
-            {departments.map((name) => <option value={name} key={name}>{name}</option>)}
-          </select>
-        </label>
-        <label className="field-toggle">
-          <input type="checkbox" name="onlyAlerts" value="1" defaultChecked={onlyAlerts} />
-          เฉพาะรายการที่ต้องทำ PR
-        </label>
-        <label className="field-toggle">
-          <input type="checkbox" name="includeInactive" value="1" defaultChecked={includeInactive} />
-          แสดงรายการที่ปิดใช้งาน
-        </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
-        <Link className="lab-link-button lab-link-button--secondary" href="/inventory">ล้างตัวกรอง</Link>
-      </form>
+      <AutoFilterBench
+        ariaLabel="ตัวกรองรายการคลัง"
+        fields={[
+          { type: 'search', name: 'search', label: 'ค้นหา', value: search, placeholder: 'รหัส LS หรือชื่อน้ำยา' },
+          {
+            type: 'select',
+            name: 'department',
+            label: 'หน่วยงานที่รับผิดชอบ',
+            value: department,
+            options: [
+              { value: '', label: 'ทุกหน่วยงาน' },
+              ...departments.map((name) => ({ value: name, label: name })),
+            ],
+          },
+          { type: 'checkbox', name: 'onlyAlerts', label: 'เฉพาะรายการที่ต้องทำ PR', checked: onlyAlerts },
+          { type: 'checkbox', name: 'includeInactive', label: 'แสดงรายการที่ปิดใช้งาน', checked: includeInactive },
+        ]}
+      />
 
       {error ? (
         <section className="error-state" role="alert">

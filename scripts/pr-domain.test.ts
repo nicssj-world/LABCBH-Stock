@@ -35,12 +35,22 @@ assert.equal(
   'purchase sequence counts from one',
 )
 assert.equal(purchaseMethodSchema.safeParse({ kind: 'off_plan' }).success, true)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'e_bidding', contractId: 12 }).success,
+  true,
+  'an E-Bidding PR references its E-Bidding contract',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'e_bidding' }).success,
+  false,
+  'an E-Bidding PR must choose a contract',
+)
 assert.equal(purchaseMethodSchema.safeParse({ kind: 'unknown_method' }).success, false)
 
-// Only a contract purchase consumes contracted quantity.
+// Contract and E-Bidding purchases consume contracted quantity.
 assert.equal(methodRequiresContractItems({ kind: 'contract', contractId: 4, purchaseSequence: 1 }), true)
 assert.equal(methodRequiresContractItems({ kind: 'off_plan' }), false)
-assert.equal(methodRequiresContractItems({ kind: 'e_bidding' }), false)
+assert.equal(methodRequiresContractItems({ kind: 'e_bidding', contractId: 4 }), true)
 
 // Status flow: a PR is drafted, submitted, confirmed, and only then reversed.
 assert.deepEqual(
@@ -63,7 +73,7 @@ assert.equal(formatPurchaseRequestNumber(2569, 1234), 'PR-2569-1234')
 
 const validInput = {
   department: 'กลุ่มงานเทคนิคการแพทย์',
-  headName: 'หัวหน้ากลุ่มงาน',
+  headName: 'หัวหน้างาน',
   requestedDate: '2026-07-30',
   note: null,
   method: { kind: 'contract' as const, contractId: 12, purchaseSequence: 2 },
@@ -79,6 +89,31 @@ const validInput = {
 }
 
 assert.equal(purchaseRequestInputSchema.safeParse(validInput).success, true)
+assert.equal(
+  purchaseRequestInputSchema.safeParse({
+    ...validInput,
+    method: { kind: 'e_bidding' as const, contractId: 12 },
+  }).success,
+  true,
+  'an E-Bidding purchase must retain each chosen contract item for automatic deduction',
+)
+assert.equal(
+  purchaseRequestInputSchema.safeParse({
+    ...validInput,
+    method: { kind: 'e_bidding' as const, contractId: 12 },
+    items: [{ ...validInput.items[0], contractItemId: null }],
+  }).success,
+  false,
+  'an E-Bidding purchase must point every line at an item in its contract',
+)
+const missingHeadName = purchaseRequestInputSchema.safeParse({ ...validInput, headName: '' })
+assert.equal(missingHeadName.success, false)
+if (!missingHeadName.success) {
+  assert.ok(
+    missingHeadName.error.issues.some((issue) => issue.message === 'กรุณาระบุหัวหน้างาน'),
+    'the supervisor validation message uses the current label',
+  )
+}
 assert.equal(
   purchaseRequestInputSchema.safeParse({ ...validInput, items: [] }).success,
   false,

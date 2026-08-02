@@ -39,14 +39,17 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   }),
   z.object({ kind: z.literal('off_plan') }),
   z.object({ kind: z.literal('specific_contract') }),
-  z.object({ kind: z.literal('e_bidding') }),
+  z.object({
+    kind: z.literal('e_bidding'),
+    contractId: z.number().int().positive(),
+  }),
 ])
 
 export type PurchaseMethod = z.infer<typeof purchaseMethodSchema>
 
-/** Only a contract purchase draws down contracted quantity. */
+/** Contract and E-Bidding purchases draw down contracted quantity. */
 export function methodRequiresContractItems(method: PurchaseMethod): boolean {
-  return method.kind === 'contract'
+  return method.kind === 'contract' || method.kind === 'e_bidding'
 }
 
 const TRANSITIONS: Record<PurchaseRequestStatus, PurchaseRequestStatus[]> = {
@@ -87,7 +90,7 @@ export const purchaseRequestLineSchema = z
 export const purchaseRequestInputSchema = z
   .object({
     department: z.string().trim().min(1, 'กรุณาระบุหน่วยงานผู้ขอ'),
-    headName: z.string().trim().min(1, 'กรุณาระบุชื่อหัวหน้ากลุ่มงาน'),
+    headName: z.string().trim().min(1, 'กรุณาระบุหัวหน้างาน'),
     requestedDate: isoDateSchema,
     note: z.string().trim().max(1000).nullable(),
     method: purchaseMethodSchema,

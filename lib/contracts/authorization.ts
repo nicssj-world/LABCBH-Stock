@@ -1,4 +1,4 @@
-import { hasAppRole } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import type { Actor } from '@/lib/auth/actor'
 
 export class ContractAuthorizationError extends Error {
@@ -12,6 +12,11 @@ export function assertContractEditor(actor: Actor): void {
   if (!hasAppRole(actor, 'admin', 'head')) {
     throw new ContractAuthorizationError()
   }
+}
+
+/** Only stock operations staff may correct the auditable procurement timeline. */
+export function assertContractStageHistoryEditor(actor: Actor): void {
+  if (!canOperateStock(actor)) throw new ContractAuthorizationError()
 }
 
 export class ContractExpenseAuthorizationError extends Error {

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { RequisitionForm } from '@/components/requisitions/RequisitionForm'
 import { requireActor } from '@/lib/auth/actor'
 import { listInventoryItems } from '@/lib/inventory/queries'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 
 export default async function NewRequisitionPage() {
@@ -31,6 +32,7 @@ export default async function NewRequisitionPage() {
           onHand: item.onHand,
           minimumStock: item.minimumStock,
         }))}
+        departments={DEPARTMENTS}
         requesterName={actor.name ?? ''}
       />
     </div>

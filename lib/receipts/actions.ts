@@ -5,7 +5,13 @@ import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
 import { goodsReceiptInputSchema } from '@/lib/receipts/schema'
-import { PO_IMAGE_BUCKET, buildPoImagePath, isPoImagePathAllowed } from '@/lib/receipts/storage'
+import {
+  PO_IMAGE_BUCKET,
+  PO_MAX_FILE_SIZE_BYTES,
+  buildPoImagePath,
+  isPoFileTypeAllowed,
+  isPoImagePathAllowed,
+} from '@/lib/receipts/storage'
 import type { GoodsReceiptInput } from '@/lib/receipts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -58,7 +64,13 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
 
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error('กรุณาเลือกไฟล์ภาพใบสั่งซื้อ')
+    throw new Error('กรุณาเลือกไฟล์ PO')
+  }
+  if (!isPoFileTypeAllowed(file.type)) {
+    throw new Error('ไฟล์ PO ต้องเป็น JPG, PNG, WEBP หรือ PDF')
+  }
+  if (file.size > PO_MAX_FILE_SIZE_BYTES) {
+    throw new Error('ไฟล์ PO ต้องมีขนาดไม่เกิน 10 MB')
   }
 
   const { data: receipt, error: readError } = await supabaseAdmin
@@ -83,7 +95,7 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
     .from(PO_IMAGE_BUCKET)
     .upload(path, file, { upsert: true, contentType: file.type })
 
-  if (uploadError) throw new Error(`อัปโหลดภาพใบสั่งซื้อไม่สำเร็จ: ${uploadError.message}`)
+  if (uploadError) throw new Error(`อัปโหลดไฟล์ PO ไม่สำเร็จ: ${uploadError.message}`)
 
   const result = await supabaseAdmin.rpc('set_goods_receipt_image', {
     p_receipt_id: parsedId,
@@ -91,7 +103,7 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
     p_po_image_path: path,
   })
 
-  unwrapMutation('บันทึกภาพใบสั่งซื้อ', result)
+  unwrapMutation('บันทึกไฟล์ PO', result)
   revalidateReceipt(parsedId)
   return { path }
 }

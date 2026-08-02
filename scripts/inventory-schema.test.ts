@@ -11,6 +11,12 @@ assert.equal(migrationNames.length, 1, 'exactly one inventory ledger migration m
 const sql = readFileSync(join(migrationsDir, migrationNames[0]), 'utf8')
 const compactSql = sql.replace(/\s+/g, ' ')
 
+const catalogMigrationNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_add_inventory_item_catalog.sql'),
+)
+assert.equal(catalogMigrationNames.length, 1, 'the inventory catalog creation migration must exist exactly once')
+const catalogSql = readFileSync(join(migrationsDir, catalogMigrationNames[0]), 'utf8')
+
 const TABLES = ['inventory_items', 'inventory_item_aliases', 'inventory_lots', 'stock_movements']
 
 for (const table of TABLES) {
@@ -128,6 +134,21 @@ assert.match(sql, /grant execute on function public\.record_stock_adjustment[\s\
 assert.match(sql, /create or replace function public\.set_inventory_minimum_stock\s*\(/i)
 assert.match(sql, /grant execute on function public\.set_inventory_minimum_stock[\s\S]*?to service_role/i)
 assert.match(sql, /create table if not exists public\.inventory_minimum_stock_audit/i)
+
+// Catalog rows can be created directly and are also seeded from contract lines,
+// but neither path is allowed to create stock movements.
+assert.match(catalogSql, /create or replace function public\.create_inventory_item\s*\(/i)
+assert.match(catalogSql, /create or replace function public\.ensure_contract_item_inventory\s*\(/i)
+assert.match(catalogSql, /after insert or update of contract_id, ls_code, name, unit, unit_price/i)
+assert.match(catalogSql, /on conflict do nothing/i)
+assert.match(catalogSql, /grant execute on function public\.create_inventory_item[\s\S]*to service_role/i)
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    catalogSql,
+    new RegExp(`revoke execute on function public\\.create_inventory_item[\\s\\S]*?from ${role}`, 'i'),
+  )
+}
+assert.doesNotMatch(catalogSql, /insert into public\.stock_movements/i, 'catalog creation must not change stock')
 
 // Derived balances are views over the ledger, and they must not bypass RLS.
 for (const view of [

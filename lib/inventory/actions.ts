@@ -4,8 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
-import { minimumStockInputSchema, stockAdjustmentInputSchema } from '@/lib/inventory/schema'
-import type { MinimumStockInput, StockAdjustmentInput } from '@/lib/inventory/types'
+import {
+  createInventoryItemInputSchema,
+  minimumStockInputSchema,
+  stockAdjustmentInputSchema,
+} from '@/lib/inventory/schema'
+import type { CreateInventoryItemInput, MinimumStockInput, StockAdjustmentInput } from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const inventoryItemIdSchema = z.string().uuid()
@@ -22,6 +26,36 @@ function unwrapMutation(
 ) {
   if (result.error) throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
   return z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
+}
+
+export async function createInventoryItem(input: CreateInventoryItemInput) {
+  const actor = await requireStockOperator()
+  const parsed = createInventoryItemInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('create_inventory_item', {
+    p_ls_code: parsed.lsCode,
+    p_name: parsed.name,
+    p_base_unit: parsed.baseUnit,
+    p_responsible_department: parsed.responsibleDepartment ?? null,
+    p_default_unit_price: parsed.defaultUnitPrice ?? null,
+    p_minimum_stock_months: parsed.minimumStockMonths,
+    p_note: parsed.note ?? null,
+    p_actor_id: actor.id,
+  })
+
+  if (result.error) {
+    if (result.error.message.toLowerCase().includes('inventory_items_ls_code_normalized_key')) {
+      throw new Error('สร้างรายการน้ำยาไม่สำเร็จ: รหัส LS นี้มีอยู่ในคลังแล้ว')
+    }
+    throw new Error(`สร้างรายการน้ำยาไม่สำเร็จ: ${result.error.message}`)
+  }
+
+  const created = z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
+  revalidatePath('/inventory')
+  revalidatePath('/purchase-requests/new')
+  revalidatePath('/receipts/new')
+  revalidatePath('/requisitions/new')
+  return created
 }
 
 export async function setMinimumStock(itemId: string, input: MinimumStockInput) {

@@ -16,13 +16,18 @@ for (const file of requiredFiles) {
 }
 
 async function main() {
-  const { assertContractEditor, ContractAuthorizationError } = await import(
+  const {
+    assertContractEditor,
+    assertContractStageHistoryEditor,
+    ContractAuthorizationError,
+  } = await import(
     '../lib/contracts/authorization'
   )
   const {
     archiveContractInputSchema,
     createContractInputSchema,
     expireContractInputSchema,
+    stageHistoryCorrectionInputSchema,
     stageAdvanceSchema,
     updateContractInputSchema,
   } = await import('../lib/contracts/schema')
@@ -43,6 +48,16 @@ async function main() {
       () => assertContractEditor(actor(roles)),
       (error: unknown) => error instanceof ContractAuthorizationError,
       `${roles.join(',') || 'no role'} must fail closed`,
+    )
+  }
+
+  assert.doesNotThrow(() => assertContractStageHistoryEditor(actor(['admin'])))
+  assert.doesNotThrow(() => assertContractStageHistoryEditor(actor(['stock_officer'])))
+  for (const roles of [['head'], ['viewer'], []] as Actor['appRoles'][]) {
+    assert.throws(
+      () => assertContractStageHistoryEditor(actor(roles)),
+      (error: unknown) => error instanceof ContractAuthorizationError,
+      `${roles.join(',') || 'no role'} must not edit stage history`,
     )
   }
 
@@ -147,6 +162,14 @@ async function main() {
     }).success,
     false,
   )
+  assert.equal(
+    stageHistoryCorrectionInputSchema.safeParse({
+      historyId: '10000000-0000-4000-8000-000000000001',
+      effectiveDate: '2026-10-01',
+      reason: 'แก้ไขวันที่ที่บันทึกผิด',
+    }).success,
+    true,
+  )
 
   const presented = presentContract({
     id: 42,
@@ -182,6 +205,11 @@ async function main() {
   assert.doesNotMatch(queries, /supabaseAdmin/)
   assert.match(queries, /is_archived\.eq\.false,is_archived\.is\.null/)
   assert.match(queries, /contractReadRowSchema/)
+  assert.doesNotMatch(
+    queries,
+    /contract_stage_history\s*\([\s\S]*?contract_stage_history_corrections\s*\(/,
+    'base contract reads must not depend on an unapplied optional correction relation',
+  )
 
   const actions = readFileSync(join(process.cwd(), 'lib/contracts/actions.ts'), 'utf8')
   assert.match(actions, /requireActor/)
@@ -194,6 +222,8 @@ async function main() {
     'archive_contract',
     'expire_contract',
     'advance_contract_stage',
+    'correct_contract_stage_history',
+    'backfill_contract_stage_history',
   ]) {
     assert.match(actions, new RegExp(`\\.rpc\\(['"]${rpc}['"]`))
   }

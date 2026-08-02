@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   budgetSnapshot,
   contractMode,
+  contractRemainingPercent,
   expenseMonthlySeries,
   expenseMonthOptions,
   isExpiring,
@@ -55,6 +56,55 @@ assert.equal(isLowBudget(1000, 701), true, 'under 30% remaining')
 assert.equal(isLowBudget(1000, 700), false, 'exactly 30% is not low')
 assert.equal(isLowBudget(null, 700), false, 'unknown total is not low')
 assert.equal(isLowBudget(0, 0), false, 'zero total cannot be a ratio')
+
+// The register uses one remaining-balance metric for both contract modes:
+// leases draw down baht, while supply contracts draw down allocated quantities.
+assert.equal(
+  contractRemainingPercent({
+    contractType: 'equipment_lease',
+    total: 1000,
+    usage: [{ amount: 250 }, { amount: 250 }],
+    items: [],
+  }),
+  50,
+)
+assert.equal(
+  contractRemainingPercent({
+    contractType: 'e_bidding',
+    total: null,
+    usage: [],
+    items: [{ quantity: 10, unitPrice: 100, allocations: [{ quantity: 2 }] }],
+  }),
+  80,
+)
+assert.equal(
+  contractRemainingPercent({
+    contractType: 'e_bidding',
+    total: null,
+    usage: [],
+    items: [
+      { quantity: 1, unitPrice: 100, allocations: [] },
+      { quantity: 10, unitPrice: 10, allocations: [{ quantity: 10 }] },
+    ],
+  }),
+  50,
+  'the collapsed gauge must weight every item by its contract line value',
+)
+assert.equal(
+  contractRemainingPercent({ contractType: 'equipment_lease', total: null, usage: [], items: [] }),
+  null,
+  'a lease without a ceiling cannot report a percentage',
+)
+assert.equal(
+  contractRemainingPercent({
+    contractType: 'equipment_lease',
+    total: 1000,
+    usage: [{ amount: 1200 }],
+    items: [],
+  }),
+  0,
+  'an exhausted lease must not render a negative gauge',
+)
 
 // Options are bounded by the contract term so nobody bills a month it did not cover.
 assert.deepEqual(

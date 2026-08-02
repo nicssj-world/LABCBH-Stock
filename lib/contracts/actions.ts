@@ -2,13 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { isAdministrator } from '@/lib/auth/access'
+import { canOperateStock, isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { assertContractEditor } from '@/lib/contracts/authorization'
+import { assertContractEditor, assertContractStageHistoryEditor } from '@/lib/contracts/authorization'
 import {
   archiveContractInputSchema,
   createContractInputSchema,
   expireContractInputSchema,
+  stageHistoryBackfillInputSchema,
+  stageHistoryCorrectionInputSchema,
   stageAdvanceSchema,
   updateContractInputSchema,
 } from '@/lib/contracts/schema'
@@ -16,6 +18,8 @@ import type {
   ArchiveContractInput,
   CreateContractInput,
   ExpireContractInput,
+  StageHistoryBackfillInput,
+  StageHistoryCorrectionInput,
   StageAdvanceInput,
   UpdateContractInput,
 } from '@/lib/contracts/types'
@@ -131,4 +135,38 @@ export async function advanceContractStage(contractId: number, input: StageAdvan
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
   return advanced
+}
+
+export async function correctContractStageHistory(input: StageHistoryCorrectionInput) {
+  const actor = await requireActor()
+  assertContractStageHistoryEditor(actor)
+  const parsed = stageHistoryCorrectionInputSchema.parse(input)
+  const result = await supabaseAdmin.rpc('correct_contract_stage_history', {
+    p_history_id: parsed.historyId,
+    p_actor_id: actor.id,
+    p_effective_date: parsed.effectiveDate,
+    p_reason: parsed.reason,
+  })
+  const corrected = unwrapMutation('แก้ไขประวัติขั้นตอนสัญญา', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${corrected.id}`)
+  return corrected
+}
+
+export async function backfillContractStageHistory(contractId: number, input: StageHistoryBackfillInput) {
+  const actor = await requireActor()
+  if (!canOperateStock(actor)) throw new Error('ไม่มีสิทธิ์บันทึกขั้นตอนสัญญาย้อนหลัง')
+  const parsedContractId = z.number().int().positive().parse(contractId)
+  const parsed = stageHistoryBackfillInputSchema.parse(input)
+  const result = await supabaseAdmin.rpc('backfill_contract_stage_history', {
+    p_contract_id: parsedContractId,
+    p_actor_id: actor.id,
+    p_to_stage: parsed.toStage,
+    p_effective_date: parsed.effectiveDate,
+    p_note: parsed.note,
+  })
+  const backfilled = unwrapMutation('บันทึกขั้นตอนสัญญาย้อนหลัง', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${backfilled.id}`)
+  return backfilled
 }

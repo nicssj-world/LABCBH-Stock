@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 // The lab section that owns a contract lived on public.contracts already
@@ -8,6 +8,15 @@ import { join } from 'node:path'
 // require and persist it, and adds a table-level guard so no other write
 // path can slip in a value outside the known department list.
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations')
+const sharedDepartmentsPath = join(process.cwd(), 'lib', 'organization', 'departments.ts')
+assert.equal(existsSync(sharedDepartmentsPath), true, 'the standard department list must be shared outside contracts')
+const sharedDepartments = readFileSync(sharedDepartmentsPath, 'utf8')
+assert.match(sharedDepartments, /export const DEPARTMENTS = \[/)
+
+const contractSchema = readFileSync('lib/contracts/schema.ts', 'utf8')
+assert.match(contractSchema, /import \{ DEPARTMENTS \} from '@\/lib\/organization\/departments'/)
+assert.match(contractSchema, /export const CONTRACT_DEPARTMENTS = DEPARTMENTS/)
+
 const migrationNames = readdirSync(migrationsDir).filter((n) =>
   n.endsWith('_lab_stock_contract_department.sql'),
 )

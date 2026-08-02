@@ -32,6 +32,47 @@ export interface BudgetSnapshot {
   exhausted: boolean
 }
 
+export interface ContractRemainingInput {
+  contractType: ContractType | null
+  total: number | null
+  usage: Array<{ amount: number }>
+  items: Array<{
+    quantity: number
+    unitPrice: number
+    allocations?: Array<{ quantity: number }> | null
+  }>
+}
+
+function clampPercentage(value: number): number {
+  return Math.min(100, Math.max(0, value))
+}
+
+/**
+ * Returns the percentage of a contract that is still available for the
+ * register. Lease contracts are measured in baht; supply contracts are
+ * measured from their item quantities and allocation ledger.
+ */
+export function contractRemainingPercent(input: ContractRemainingInput): number | null {
+  if (contractMode(input.contractType ?? 'e_bidding') === 'budget') {
+    const snapshot = budgetSnapshot({ total: input.total, entries: input.usage })
+    return snapshot.percentUsed === null
+      ? null
+      : clampPercentage(100 - snapshot.percentUsed)
+  }
+
+  let totalValue = 0
+  let remainingValue = 0
+  for (const item of input.items) {
+    const allocatedQuantity = (item.allocations ?? [])
+      .reduce((sum, allocation) => sum + allocation.quantity, 0)
+    const remainingQuantity = Math.max(item.quantity - allocatedQuantity, 0)
+    totalValue += item.quantity * item.unitPrice
+    remainingValue += remainingQuantity * item.unitPrice
+  }
+
+  return totalValue > 0 ? clampPercentage((remainingValue / totalValue) * 100) : null
+}
+
 export function budgetSnapshot({ total, entries }: BudgetSnapshotInput): BudgetSnapshot {
   const usedSatang = entries.reduce((sum, entry) => sum + satang(entry.amount), 0)
   const used = usedSatang / 100

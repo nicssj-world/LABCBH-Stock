@@ -22,7 +22,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 const monthLabel = (isoMonth: string) => {
   const [year, month] = isoMonth.split('-').map(Number)
-  return new Intl.DateTimeFormat('th-TH', { month: 'short', year: '2-digit' }).format(
+  return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { month: 'short', year: 'numeric' }).format(
     new Date(Date.UTC(year, month - 1, 1)),
   )
 }

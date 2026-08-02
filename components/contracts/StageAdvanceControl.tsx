@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { advanceContractStage } from '@/lib/contracts/actions'
 import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { allowedNextStages, type ProcurementStage } from '@/lib/contracts/stages'
@@ -56,7 +57,7 @@ export function StageAdvanceControl({ contractId, currentStage }: { contractId: 
           </div>
           <label>
             วันที่มีผล
-            <input type="date" required value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
+            <ThaiDateInput required value={effectiveDate} onChange={setEffectiveDate} />
           </label>
           {nextStage === 'contract_started' && (
             <label>

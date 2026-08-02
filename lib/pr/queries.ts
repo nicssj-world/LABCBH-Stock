@@ -97,6 +97,7 @@ const REQUEST_SELECT = `
 export interface PurchaseRequestFilters {
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number]
   search?: string
+  department?: string
 }
 
 function mapItem(row: z.infer<typeof itemRowSchema>): PurchaseRequestItemRecord {
@@ -167,6 +168,7 @@ export async function listPurchaseRequests(
     .order('sequence_number', { ascending: false })
 
   if (filters.status) query = query.eq('status', filters.status)
+  if (filters.department) query = query.eq('department', filters.department)
 
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
   if (search) {
@@ -181,7 +183,7 @@ export async function listPurchaseRequests(
   const headerMatches = requestRowSchema.array().parse(data ?? []).map(mapRequest)
   if (!search) return headerMatches
 
-  const lineMatches = await findRequestsByLine(search, filters.status)
+  const lineMatches = await findRequestsByLine(search, filters.status, filters.department)
   const byId = new Map(headerMatches.map((request) => [request.id, request]))
   for (const request of lineMatches) byId.set(request.id, request)
 
@@ -195,6 +197,7 @@ export async function listPurchaseRequests(
 async function findRequestsByLine(
   search: string,
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number],
+  department?: string,
 ): Promise<PurchaseRequestRecord[]> {
   const supabase = await createClient()
 
@@ -228,6 +231,7 @@ async function findRequestsByLine(
 
   let query = supabase.from('purchase_requests').select(REQUEST_SELECT).in('id', requestIds)
   if (status) query = query.eq('status', status)
+  if (department) query = query.eq('department', department)
 
   const { data, error } = await query
   if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
@@ -247,6 +251,36 @@ export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRec
   if (!data) return null
 
   return mapRequest(requestRowSchema.parse(data))
+}
+
+/** Preview only: create_purchase_request recomputes this sequence under its transaction lock. */
+export async function listNextContractPurchaseSequences(contractIds: readonly number[]): Promise<Record<number, number>> {
+  const nextByContract = Object.fromEntries(contractIds.map((contractId) => [contractId, 1])) as Record<number, number>
+  if (contractIds.length === 0) return nextByContract
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('purchase_requests')
+    .select('status, method_details')
+    .eq('purchase_method', 'contract')
+    .not('status', 'in', '(cancelled,reversed)')
+
+  if (error) throw new Error(`อ่านลำดับการซื้อในสัญญาไม่สำเร็จ: ${error.message}`)
+
+  const rows = z.object({
+    status: z.enum(PURCHASE_REQUEST_STATUSES),
+    method_details: z.record(z.unknown()).nullable().transform((value) => value ?? {}),
+  }).array().parse(data ?? [])
+
+  for (const row of rows) {
+    const contractId = Number(row.method_details.contractId)
+    const purchaseSequence = Number(row.method_details.purchaseSequence)
+    if (!Number.isInteger(contractId) || !Number.isInteger(purchaseSequence) || purchaseSequence < 1) continue
+    if (!(contractId in nextByContract)) continue
+    nextByContract[contractId] = Math.max(nextByContract[contractId], purchaseSequence + 1)
+  }
+
+  return nextByContract
 }
 
 export interface ContractItemOption {

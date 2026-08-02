@@ -1,11 +1,12 @@
+import { StageHistoryEntryEditor } from '@/components/contracts/StageHistoryEntryEditor'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'
 
-const thaiDate = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
 
-export function StageTimeline({ contract }: { contract: ContractRecord }) {
+export function StageTimeline({ contract, canManageStageHistory = false }: { contract: ContractRecord; canManageStageHistory?: boolean }) {
   const currentIndex = contract.procurementStage
     ? PROCUREMENT_STAGES.indexOf(contract.procurementStage)
     : -1
@@ -25,12 +26,18 @@ export function StageTimeline({ contract }: { contract: ContractRecord }) {
                   <time dateTime={history.effectiveDate}>{thaiDate.format(new Date(`${history.effectiveDate}T00:00:00+07:00`))}</time>
                   {history.source !== 'labcbh_stock' && <small>นำเข้าจากระบบเดิม</small>}
                   {history.note && <small>{history.note}</small>}
+                  {history.correctionReason && <small>แก้ไขย้อนหลัง: {history.correctionReason}</small>}
                 </>
               ) : (
                 <small>{index <= currentIndex ? 'ไม่มีข้อมูลย้อนหลัง' : 'ยังไม่ถึงขั้นตอนนี้'}</small>
               )}
             </div>
-            {state === 'current' && <StatusChip tone="info">ขั้นตอนปัจจุบัน</StatusChip>}
+            <div className="stage-timeline__actions">
+              {state === 'current' && <StatusChip tone="info">ขั้นตอนปัจจุบัน</StatusChip>}
+              {canManageStageHistory && (history || index <= currentIndex) && (
+                <StageHistoryEntryEditor contractId={contract.id} stage={stage} history={history ?? null} />
+              )}
+            </div>
           </li>
         )
       })}

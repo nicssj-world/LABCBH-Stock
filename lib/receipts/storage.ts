@@ -1,4 +1,15 @@
 export const PO_IMAGE_BUCKET = 'lab-stock-po'
+export const PO_ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+] as const
+export const PO_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+export function isPoFileTypeAllowed(fileType: string): fileType is (typeof PO_ALLOWED_MIME_TYPES)[number] {
+  return (PO_ALLOWED_MIME_TYPES as readonly string[]).includes(fileType)
+}
 
 /**
  * PO images live at `po/<fiscal-year>/<receipt-id>/<file>`. The folder is part

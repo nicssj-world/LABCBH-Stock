@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setMembership } from '@/lib/access/actions'
 import { LAB_STOCK_ROLES } from '@/lib/access/schema'
@@ -26,12 +26,19 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole }: Ac
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const applyFilters = (nextRole: LabStockRoleName | null, nextSearch: string) => {
+  const applyFilters = useCallback((nextRole: LabStockRoleName | null, nextSearch: string) => {
     const params = new URLSearchParams()
     if (nextSearch.trim()) params.set('search', nextSearch.trim())
     if (nextRole) params.set('role', nextRole)
-    router.push(`/settings/access${params.size > 0 ? `?${params}` : ''}`)
-  }
+    router.replace(`/settings/access${params.size > 0 ? `?${params}` : ''}`, { scroll: false })
+  }, [router])
+
+  useEffect(() => {
+    if (search === initialSearch) return
+
+    const timer = window.setTimeout(() => applyFilters(activeRole, search), 350)
+    return () => window.clearTimeout(timer)
+  }, [activeRole, applyFilters, initialSearch, search])
 
   const toggle = (profile: MembershipProfile, role: LabStockRoleName, next: boolean) => {
     setError(null)
@@ -53,10 +60,7 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole }: Ac
       <form
         className="filter-bench"
         aria-label="ตัวกรองผู้ใช้งาน"
-        onSubmit={(event) => {
-          event.preventDefault()
-          applyFilters(activeRole, search)
-        }}
+        onSubmit={(event) => event.preventDefault()}
       >
         <label className="filter-bench__search">
           ค้นหา
@@ -67,7 +71,6 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole }: Ac
             placeholder="ชื่อผู้ใช้งาน หรือรหัส E-Phis"
           />
         </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
       </form>
 
       {/* Filters are buttons, not tabs: they narrow one list rather than

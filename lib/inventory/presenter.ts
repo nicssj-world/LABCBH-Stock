@@ -42,7 +42,7 @@ export function formatQuantity(value: number, unit?: string | null): string {
 export function formatThaiDate(isoDate: string | null): string {
   if (!isoDate) return 'ไม่ระบุ'
   const [year, month, day] = isoDate.split('-').map(Number)
-  return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(
+  return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' }).format(
     new Date(Date.UTC(year, month - 1, day)),
   )
 }

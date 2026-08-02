@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { isoDateSchema } from '@/lib/validation/date'
 import { PROCUREMENT_STAGES, allowedNextStages } from './stages'
 
@@ -17,19 +18,7 @@ export const CONTRACT_TYPES = [
 // The lab section that owns a contract. Carried over verbatim from the
 // legacy portal's own department list so a contract migrated from there
 // keeps matching against the same set of names.
-export const CONTRACT_DEPARTMENTS = [
-  'สำนักงานกลุ่มงานเทคนิคการแพทย์',
-  'งานเคมีคลินิก',
-  'งานโลหิตวิทยาคลินิก',
-  'งานภูมิคุ้มกันวิทยาคลินิก',
-  'งานจุลทรรศนศาสตร์คลินิก',
-  'งานอณูชีววิทยา',
-  'งานจุลชีววิทยา',
-  'งานคลังเลือด',
-  'งานตรวจพิเศษและห้องปฏิบัติการตรวจต่อ',
-  'งานบริการผู้ป่วยนอก',
-  'ห้องปฏิบัติการศูนย์สุขภาพชุมชนเมืองชลบุรี',
-] as const
+export const CONTRACT_DEPARTMENTS = DEPARTMENTS
 
 export const contractLineInputSchema = z.object({
   lsCode: z.string().trim().min(1, 'กรุณาระบุรหัสน้ำยา (LS)'),
@@ -164,6 +153,22 @@ export const stageAdvanceSchema = z
       })
     }
   })
+
+export const stageHistoryCorrectionInputSchema = z
+  .object({
+    historyId: z.string().uuid(),
+    effectiveDate: isoDateSchema,
+    reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลที่แก้ไขวันที่').max(1000),
+  })
+  .strict()
+
+export const stageHistoryBackfillInputSchema = z
+  .object({
+    toStage: z.enum(PROCUREMENT_STAGES),
+    effectiveDate: isoDateSchema,
+    note: z.string().trim().min(1, 'กรุณาระบุหมายเหตุการบันทึกย้อนหลัง').max(1000),
+  })
+  .strict()
 
 export const contractInputSchema = z
   .object({

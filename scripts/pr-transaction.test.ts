@@ -25,6 +25,16 @@ const read = (suffix: string) => {
 
 const accessSql = read('_lab_stock_contracts_and_access.sql')
 const prSql = read('_lab_stock_purchase_requests.sql')
+const sequenceSql = read('_contract_purchase_sequence.sql')
+
+const createWithSequence = sequenceSql.match(
+  /create or replace function public\.create_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(createWithSequence, 'the sequence migration must replace PR creation')
+assert.match(createWithSequence, /purchase_method = 'contract'/i)
+assert.match(createWithSequence, /status not in \('cancelled', 'reversed'\)/i)
+assert.match(createWithSequence, /pg_advisory_xact_lock/i)
+assert.match(createWithSequence, /jsonb_set[\s\S]*purchaseSequence/i)
 
 // 1. The over-allocation ceiling is enforced by a trigger on the allocation
 //    table itself, so no caller — RPC, import script, or manual fix — can slip

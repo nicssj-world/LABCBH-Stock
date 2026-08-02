@@ -11,6 +11,8 @@ import type {
   expireContractInputSchema,
   responsibleUsersInputSchema,
   stageAdvanceSchema,
+  stageHistoryBackfillInputSchema,
+  stageHistoryCorrectionInputSchema,
   updateContractInputSchema,
 } from './schema'
 import type { ProcurementStage } from './stages'
@@ -25,6 +27,8 @@ export type UpdateContractInput = z.infer<typeof updateContractInputSchema>
 export type ArchiveContractInput = z.infer<typeof archiveContractInputSchema>
 export type ExpireContractInput = z.infer<typeof expireContractInputSchema>
 export type StageAdvanceInput = z.infer<typeof stageAdvanceSchema>
+export type StageHistoryCorrectionInput = z.infer<typeof stageHistoryCorrectionInputSchema>
+export type StageHistoryBackfillInput = z.infer<typeof stageHistoryBackfillInputSchema>
 export type ContractExpenseInput = z.infer<typeof contractExpenseInputSchema>
 export type ResponsibleUsersInput = z.infer<typeof responsibleUsersInputSchema>
 export type ContractStatus = 'active' | 'expired' | 'cancelled' | 'pending'
@@ -50,6 +54,8 @@ export interface ContractStageHistoryRecord {
   source: string
   actorId: string | null
   createdAt: string
+  correctedAt: string | null
+  correctionReason: string | null
 }
 
 export interface ContractRecord {
@@ -70,6 +76,8 @@ export interface ContractRecord {
   // Budget mode reads these two: the ceiling to measure against, and who may
   // spend against it without holding an editor role.
   total: number | null
+  /** Percentage of the contract still available for the register gauge. */
+  remainingPercent?: number | null
   responsibleUserIds: string[]
   fileUrl: string | null
   items: ContractItemRecord[]

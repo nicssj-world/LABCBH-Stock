@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PurchaseRequestTable } from '@/components/pr/PurchaseRequestTable'
+import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { requireActor } from '@/lib/auth/actor'
 import { canRequestPurchase } from '@/lib/pr/authorization'
@@ -7,6 +8,7 @@ import { PURCHASE_REQUEST_STATUS_LABELS } from '@/lib/pr/presenter'
 import { listPurchaseRequests } from '@/lib/pr/queries'
 import { PURCHASE_REQUEST_STATUSES } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 
 interface PurchaseRequestsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -20,12 +22,13 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   const search = first(params.search)?.trim() ?? ''
   const statusValue = first(params.status)
   const status = PURCHASE_REQUEST_STATUSES.find((value) => value === statusValue)
+  const department = first(params.department)?.trim() ?? ''
 
   let requests: PurchaseRequestRecord[] = []
   let error: string | null = null
 
   try {
-    requests = await listPurchaseRequests({ status, search })
+    requests = await listPurchaseRequests({ status, search, department: department || undefined })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการใบ PR ไม่สำเร็จ'
   }
@@ -52,28 +55,38 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
         </div>
       </header>
 
-      <form className="filter-bench" method="get" aria-label="ตัวกรองใบ PR">
-        <label className="filter-bench__search">
-          ค้นหา
-          <input
-            type="search"
-            name="search"
-            defaultValue={search}
-            placeholder="เลขที่ PR, เลขที่ PO, รหัส LS หรือชื่อน้ำยา"
-          />
-        </label>
-        <label>
-          สถานะ
-          <select name="status" defaultValue={status ?? ''}>
-            <option value="">ทุกสถานะ</option>
-            {PURCHASE_REQUEST_STATUSES.map((value) => (
-              <option value={value} key={value}>{PURCHASE_REQUEST_STATUS_LABELS[value]}</option>
-            ))}
-          </select>
-        </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
-        <Link className="lab-link-button lab-link-button--secondary" href="/purchase-requests">ล้างตัวกรอง</Link>
-      </form>
+      <AutoFilterBench
+        ariaLabel="ตัวกรองใบ PR"
+        fields={[
+          {
+            type: 'search',
+            name: 'search',
+            label: 'ค้นหา',
+            value: search,
+            placeholder: 'เลขที่ PR, เลขที่ PO, รหัส LS หรือชื่อน้ำยา',
+          },
+          {
+            type: 'select',
+            name: 'status',
+            label: 'สถานะ',
+            value: status ?? '',
+            options: [
+              { value: '', label: 'ทุกสถานะ' },
+              ...PURCHASE_REQUEST_STATUSES.map((value) => ({ value, label: PURCHASE_REQUEST_STATUS_LABELS[value] })),
+            ],
+          },
+          {
+            type: 'select',
+            name: 'department',
+            label: 'หน่วยงาน',
+            value: department,
+            options: [
+              { value: '', label: 'ทุกหน่วยงาน' },
+              ...DEPARTMENTS.map((value) => ({ value, label: value })),
+            ],
+          },
+        ]}
+      />
 
       {error ? (
         <section className="error-state" role="alert">

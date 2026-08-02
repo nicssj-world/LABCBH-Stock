@@ -10,6 +10,7 @@ import { getGoodsReceipt } from '@/lib/receipts/queries'
 
 interface ReceiptDetailPageProps {
   params: Promise<{ id: string }>
+  searchParams?: Promise<{ poUpload?: string | string[] | undefined }>
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -26,15 +27,19 @@ const STATUS_TONES = {
   cancelled: 'danger',
 } as const
 
-export default async function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
+export default async function ReceiptDetailPage({ params, searchParams }: ReceiptDetailPageProps) {
   const actor = await requireActor()
-  const { id } = await params
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({ poUpload: undefined }),
+  ])
   if (!UUID_PATTERN.test(id)) notFound()
 
   const receipt = await getGoodsReceipt(id)
   if (!receipt) notFound()
 
   const canEdit = canOperateStock(actor)
+  const poUploadFailed = resolvedSearchParams.poUpload === 'failed'
 
   return (
     <div className="route-stack">
@@ -49,6 +54,12 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
           <p>รับเมื่อ {formatThaiDate(receipt.receivedDate)} โดย {receipt.receiverName}</p>
         </div>
       </header>
+
+      {poUploadFailed && (
+        <p className="inline-alert" role="alert">
+          สร้างใบรับเข้าแล้ว แต่แนบไฟล์ PO ไม่สำเร็จ กรุณาเลือกไฟล์อีกครั้งแล้วอัปโหลดจากช่องด้านขวา
+        </p>
+      )}
 
       <section className="contract-facts" aria-label="ข้อมูลสรุปใบรับเข้า">
         <dl>
@@ -102,7 +113,7 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">PO EVIDENCE</p>
-              <h2 id="po-image-title">ภาพใบสั่งซื้อ</h2>
+              <h2 id="po-image-title">ไฟล์ PO</h2>
             </div>
           </div>
           <PoImageUploader

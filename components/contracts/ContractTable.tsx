@@ -1,22 +1,14 @@
 import Link from 'next/link'
+import { ContractItemsDisclosure } from '@/components/contracts/ContractItemsDisclosure'
+import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
+import { ContractSummaryDialog } from '@/components/contracts/ContractSummaryDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { contractListValue, type PresentedContract } from '@/lib/contracts/presenter'
-
-const money = new Intl.NumberFormat('th-TH', {
-  style: 'currency',
-  currency: 'THB',
-  maximumFractionDigits: 0,
-})
+import type { PresentedContract } from '@/lib/contracts/presenter'
 
 function tone(contract: PresentedContract) {
   if (contract.effectiveStatus === 'active') return 'success' as const
   if (contract.effectiveStatus === 'cancelled' || contract.effectiveStatus === 'expired') return 'danger' as const
   return 'attention' as const
-}
-
-function formatContractValue(contract: PresentedContract) {
-  const value = contractListValue(contract)
-  return value === null ? 'ไม่ระบุ' : money.format(value)
 }
 
 export function ContractTable({ contracts }: { contracts: PresentedContract[] }) {
@@ -29,30 +21,31 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
       <div className="contract-table--desktop">
         <table className="data-table contract-register-table">
           <colgroup>
+            <col className="contract-register-table__number" />
             <col className="contract-register-table__name" />
             <col className="contract-register-table__type" />
             <col className="contract-register-table__stage" />
             <col className="contract-register-table__status" />
-            <col className="contract-register-table__number" />
-            <col className="contract-register-table__value" />
+            <col className="contract-register-table__remaining" />
             <col className="contract-register-table__action" />
           </colgroup>
           <thead>
             <tr>
+              <th>เลขที่สัญญา</th>
               <th>ชื่อสัญญา</th>
               <th>ประเภท</th>
               <th>ขั้นตอนจัดซื้อ</th>
               <th>สถานะสัญญา</th>
-              <th>เลขที่สัญญา</th>
-              <th className="numeric-cell">มูลค่า</th>
+              <th>คงเหลือ</th>
               <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
             </tr>
           </thead>
           <tbody>
             {contracts.map((contract) => (
               <tr key={contract.id}>
+                <td className="identifier">{contract.contractNumberLabel}</td>
                 <td>
-                  <strong>{contract.resolvedDisplayName}</strong>
+                  <ContractSummaryDialog contract={contract} />
                   <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'} · {contract.department || 'ไม่ระบุหน่วยงาน'}</small>
                   {contract.expiryNotice && (
                     <span className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
@@ -62,12 +55,12 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                       {contract.expiryNotice.label}
                     </span>
                   )}
+                  {contract.contractType !== 'equipment_lease' && <ContractItemsDisclosure items={contract.items} />}
                 </td>
                 <td>{contract.contractTypeLabel}</td>
                 <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
                 <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
-                <td className="identifier">{contract.contractNumberLabel}</td>
-                <td className="numeric-cell identifier">{formatContractValue(contract)}</td>
+                <td><ContractRemainingGauge percent={contract.remainingPercent} /></td>
                 <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
               </tr>
             ))}
@@ -80,11 +73,12 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
           <li key={contract.id}>
             <div className="task-card__topline">
               <StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip>
-              <span className="identifier">{formatContractValue(contract)}</span>
+              <ContractRemainingGauge percent={contract.remainingPercent} />
             </div>
-            <h3>{contract.resolvedDisplayName}</h3>
+            <div className="contract-task-card__title"><ContractSummaryDialog contract={contract} variant="card" /></div>
             <p>{contract.contractTypeLabel} · {contract.procurementStageLabel} · {contract.contractNumberLabel}</p>
             <p>{contract.department || 'ไม่ระบุหน่วยงาน'}</p>
+            {contract.contractType !== 'equipment_lease' && <ContractItemsDisclosure items={contract.items} />}
             {contract.expiryNotice && (
               <p className={`contract-renewal-hint contract-renewal-hint--${contract.expiryNotice.tone}`} role="status">
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">

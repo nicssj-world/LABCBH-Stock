@@ -9,8 +9,8 @@ import type { ContractExpenseRecord } from '@/lib/contracts/budget-queries'
 import { expenseCsv, expenseFileBase, expenseSheetXml } from '@/lib/contracts/export'
 
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
-const monthLabel = new Intl.DateTimeFormat('th-TH', { year: 'numeric', month: 'short' })
-const dayLabel = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
+const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'short' })
+const dayLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
 type DisplayLimit = 10 | 20 | 50 | 'all'
 
 function download(filename: string, contents: string, mime: string) {

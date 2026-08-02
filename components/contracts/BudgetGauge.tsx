@@ -30,12 +30,12 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
     )
   }
 
-  const capped = Math.min(100, Math.max(0, snapshot.percentUsed))
-  const remainingPercent = Math.max(0, 100 - capped)
-  const tone = snapshot.exhausted ? 'danger' : lowBudget ? 'warn' : 'ok'
-  const healthLabel = tone === 'danger'
+  const usedPercent = Math.min(100, Math.max(0, snapshot.percentUsed))
+  const remainingPercent = Math.max(0, 100 - usedPercent)
+  const tone = snapshot.exhausted ? 'danger' : lowBudget ? 'danger' : 'ok'
+  const healthLabel = snapshot.exhausted
     ? 'งบสัญญาถูกใช้ครบแล้ว'
-    : tone === 'warn'
+    : lowBudget
       ? 'งบคงเหลือต่ำกว่า 30%'
       : 'งบคงเหลือเพียงพอ'
 
@@ -44,15 +44,15 @@ export function BudgetGauge({ total, snapshot, lowBudget }: BudgetGaugeProps) {
       <div
         className={`budget-gauge__track budget-gauge__track--${tone}`}
         role="meter"
-        aria-valuenow={Math.round(snapshot.percentUsed)}
+        aria-valuenow={Math.round(remainingPercent)}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="สัดส่วนงบที่ใช้ไป"
+        aria-label="สัดส่วนงบคงเหลือ"
       >
-        <span className="budget-gauge__fill" style={{ transform: `scaleX(${capped / 100})` }} />
+        <span className="budget-gauge__fill" style={{ transform: `scaleX(${remainingPercent / 100})` }} />
       </div>
       <div className="budget-gauge__progress-meta" aria-hidden="true">
-        <span className="budget-gauge__progress-used"><i />ใช้ไปแล้ว <strong>{capped.toFixed(1)}%</strong></span>
+        <span className="budget-gauge__progress-used"><i />ใช้ไปแล้ว <strong>{usedPercent.toFixed(1)}%</strong></span>
         <span className={`budget-gauge__progress-remaining--${tone}`}><i />คงเหลือ <strong>{remainingPercent.toFixed(1)}%</strong></span>
       </div>
       <dl className="budget-gauge__figures">

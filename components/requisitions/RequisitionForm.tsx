@@ -3,6 +3,8 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { isProjectedBelowMinimum } from '@/lib/inventory/balance'
 import { MINIMUM_STOCK_WARNING } from '@/lib/pr/presenter'
@@ -31,13 +33,15 @@ interface DraftLine {
 
 export function RequisitionForm({
   catalog,
+  departments,
   requesterName: initialRequester,
 }: {
   catalog: RequisitionCatalogItem[]
+  departments: readonly string[]
   requesterName: string
 }) {
   const router = useRouter()
-  const [department, setDepartment] = useState('กลุ่มงานเทคนิคการแพทย์')
+  const [department, setDepartment] = useState(departments[0] ?? '')
   const [requesterName, setRequesterName] = useState(initialRequester)
   const [desiredDate, setDesiredDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [note, setNote] = useState('')
@@ -108,15 +112,19 @@ export function RequisitionForm({
         <div className="form-grid">
           <label className="field-row">
             หน่วยงานผู้ขอเบิก
-            <input type="text" required value={department} onChange={(event) => setDepartment(event.target.value)} />
+            <select required value={department} onChange={(event) => setDepartment(event.target.value)}>
+              {departments.map((department) => (
+                <option value={department} key={department}>{department}</option>
+              ))}
+            </select>
           </label>
           <label className="field-row">
             ชื่อผู้ขอเบิก
             <input type="text" required value={requesterName} onChange={(event) => setRequesterName(event.target.value)} />
           </label>
           <label className="field-row">
-            วันที่ต้องการรับของ
-            <input type="date" required value={desiredDate} onChange={(event) => setDesiredDate(event.target.value)} />
+            วันที่ขอเบิก
+            <ThaiDateInput required value={desiredDate} onChange={setDesiredDate} />
           </label>
           <label className="field-row form-grid__wide">
             หมายเหตุ
@@ -135,23 +143,20 @@ export function RequisitionForm({
         </div>
 
         <div className="requisition-lines">
-          <label className="field-row">
-            เพิ่มน้ำยาเข้าใบเบิก
-            <select
-              value=""
-              onChange={(event) => {
-                const choice = catalog.find((item) => item.inventoryItemId === event.target.value)
-                if (choice) addLine(choice)
-              }}
-            >
-              <option value="">เลือกน้ำยา…</option>
-              {catalog.map((item) => (
-                <option key={item.inventoryItemId} value={item.inventoryItemId}>
-                  {item.lsCode} · {item.name} (คงเหลือ {formatQuantity(item.onHand, item.unit)})
-                </option>
-              ))}
-            </select>
-          </label>
+          <CatalogItemCombobox
+            label="เพิ่มน้ำยาเข้าใบเบิก"
+            placeholder="พิมพ์รหัส LS หรือชื่อน้ำยา…"
+            options={catalog.map((item) => ({
+              id: item.inventoryItemId,
+              label: `${item.lsCode} · ${item.name}`,
+              hint: `คงเหลือ ${formatQuantity(item.onHand, item.unit)} · ขั้นต่ำ ${formatQuantity(item.minimumStock, item.unit)}`,
+              searchText: `${item.lsCode} ${item.name}`,
+            }))}
+            onSelect={(id) => {
+              const choice = catalog.find((item) => item.inventoryItemId === id)
+              if (choice) addLine(choice)
+            }}
+          />
 
           {lines.length === 0 ? (
             <p className="empty-state">ยังไม่ได้เลือกรายการที่ต้องการเบิก</p>

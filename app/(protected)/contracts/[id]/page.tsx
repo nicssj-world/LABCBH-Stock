@@ -9,7 +9,7 @@ import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { hasAppRole } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { contractMode } from '@/lib/contracts/budget'
 import { canRecordContractExpense } from '@/lib/contracts/authorization'
@@ -22,7 +22,7 @@ interface ContractDetailPageProps {
 }
 
 const money = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 })
-const thaiDate = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' })
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
 const displayDate = (value: string | null) => value
   ? thaiDate.format(new Date(`${value}T00:00:00+07:00`))
   : 'ไม่ระบุ'
@@ -37,6 +37,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const contract = presentContract(record)
   const canEdit = hasAppRole(actor, 'admin', 'head')
   const isAdmin = hasAppRole(actor, 'admin')
+  const canManageStageHistory = canOperateStock(actor)
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
   const responsibleCandidates = mode === 'budget' && isAdmin
@@ -59,7 +60,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         </div>
         <p>บันทึกตามวันที่มีผลของแต่ละขั้นตอน</p>
       </div>
-      <StageTimeline contract={contract} />
+      <StageTimeline contract={contract} canManageStageHistory={canManageStageHistory} />
     </section>
   )
 

@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { listGoodsReceipts } from '@/lib/receipts/queries'
 import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
 import type { GoodsReceiptRecord } from '@/lib/receipts/types'
@@ -31,12 +33,13 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   const search = first(params.search)?.trim() ?? ''
   const statusValue = first(params.status)
   const status = GOODS_RECEIPT_STATUSES.find((value) => value === statusValue)
+  const department = first(params.department)?.trim() ?? ''
 
   let receipts: GoodsReceiptRecord[] = []
   let error: string | null = null
 
   try {
-    receipts = await listGoodsReceipts({ status, search })
+    receipts = await listGoodsReceipts({ status, search, department: department || undefined })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการรับเข้าไม่สำเร็จ'
   }
@@ -63,28 +66,38 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
         </div>
       </header>
 
-      <form className="filter-bench" method="get" aria-label="ตัวกรองใบรับเข้า">
-        <label className="filter-bench__search">
-          ค้นหา
-          <input
-            type="search"
-            name="search"
-            defaultValue={search}
-            placeholder="เลขที่ PO, เลขที่ PR, รหัส LS หรือชื่อน้ำยา"
-          />
-        </label>
-        <label>
-          สถานะ
-          <select name="status" defaultValue={status ?? ''}>
-            <option value="">ทุกสถานะ</option>
-            {GOODS_RECEIPT_STATUSES.map((value) => (
-              <option value={value} key={value}>{STATUS_LABELS[value]}</option>
-            ))}
-          </select>
-        </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
-        <Link className="lab-link-button lab-link-button--secondary" href="/receipts">ล้างตัวกรอง</Link>
-      </form>
+      <AutoFilterBench
+        ariaLabel="ตัวกรองใบรับเข้า"
+        fields={[
+          {
+            type: 'search',
+            name: 'search',
+            label: 'ค้นหา',
+            value: search,
+            placeholder: 'เลขที่ PO, เลขที่ PR, รหัส LS หรือชื่อน้ำยา',
+          },
+          {
+            type: 'select',
+            name: 'status',
+            label: 'สถานะ',
+            value: status ?? '',
+            options: [
+              { value: '', label: 'ทุกสถานะ' },
+              ...GOODS_RECEIPT_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+            ],
+          },
+          {
+            type: 'select',
+            name: 'department',
+            label: 'หน่วยงาน',
+            value: department,
+            options: [
+              { value: '', label: 'ทุกหน่วยงาน' },
+              ...DEPARTMENTS.map((value) => ({ value, label: value })),
+            ],
+          },
+        ]}
+      />
 
       {error ? (
         <section className="error-state" role="alert">

@@ -4,6 +4,28 @@ import { MOVEMENT_TYPES } from './balance'
 
 export const MOVEMENT_TYPE_ENUM = z.enum(MOVEMENT_TYPES)
 
+export const createInventoryItemInputSchema = z
+  .object({
+    lsCode: z.string().trim().min(1, 'กรุณาระบุรหัส LS').max(100, 'รหัส LS ยาวเกินไป'),
+    name: z.string().trim().min(1, 'กรุณาระบุชื่อน้ำยา').max(240, 'ชื่อน้ำยาต้องไม่เกิน 240 ตัวอักษร'),
+    baseUnit: z.string().trim().min(1, 'กรุณาระบุหน่วยนับ').max(100, 'หน่วยนับยาวเกินไป'),
+    responsibleDepartment: z.string().trim().max(200, 'หน่วยงานยาวเกินไป').nullable().optional(),
+    defaultUnitPrice: z
+      .number()
+      .finite()
+      .min(0, 'ราคาต่อหน่วยต้องไม่ติดลบ')
+      .nullable()
+      .optional(),
+    minimumStockMonths: z
+      .number()
+      .finite()
+      .positive('จำนวนเดือนสำรองต้องมากกว่า 0')
+      .max(60, 'จำนวนเดือนสำรองต้องไม่เกิน 60')
+      .default(1.5),
+    note: z.string().trim().max(1000, 'หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร').nullable().optional(),
+  })
+  .strict()
+
 export const minimumStockInputSchema = z
   .object({
     // Null clears the override and hands the item back to the suggested value.

@@ -4,7 +4,11 @@ import { z } from 'zod'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { createClient } from '@/lib/supabase/server'
 import { GOODS_RECEIPT_STATUSES } from './schema'
-import type { GoodsReceiptItemRecord, GoodsReceiptRecord } from './types'
+import type {
+  GoodsReceiptItemRecord,
+  GoodsReceiptRecord,
+  ReceivablePurchaseRequest,
+} from './types'
 
 const numericSchema = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
 
@@ -71,6 +75,7 @@ const RECEIPT_SELECT = `
 export interface GoodsReceiptFilters {
   status?: (typeof GOODS_RECEIPT_STATUSES)[number]
   search?: string
+  department?: string
 }
 
 function mapItem(row: z.infer<typeof itemRowSchema>): GoodsReceiptItemRecord {
@@ -125,6 +130,7 @@ export async function listGoodsReceipts(
     .order('created_at', { ascending: false })
 
   if (filters.status) query = query.eq('status', filters.status)
+  if (filters.department) query = query.eq('department', filters.department)
 
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
   if (search) {
@@ -137,7 +143,7 @@ export async function listGoodsReceipts(
   const headerMatches = receiptRowSchema.array().parse(data ?? []).map(mapReceipt)
   if (!search) return headerMatches
 
-  const lineMatches = await findReceiptsByLine(search, filters.status)
+  const lineMatches = await findReceiptsByLine(search, filters.status, filters.department)
   const byId = new Map(headerMatches.map((receipt) => [receipt.id, receipt]))
   for (const receipt of lineMatches) byId.set(receipt.id, receipt)
 
@@ -150,6 +156,7 @@ export async function listGoodsReceipts(
 async function findReceiptsByLine(
   search: string,
   status?: (typeof GOODS_RECEIPT_STATUSES)[number],
+  department?: string,
 ): Promise<GoodsReceiptRecord[]> {
   const supabase = await createClient()
 
@@ -190,6 +197,7 @@ async function findReceiptsByLine(
         : query.in('purchase_request_id', requestIds)
 
   if (status) query = query.eq('status', status)
+  if (department) query = query.eq('department', department)
 
   const { data, error } = await query
   if (error) throw new Error(`อ่านรายการรับเข้าไม่สำเร็จ: ${error.message}`)
@@ -213,24 +221,74 @@ export async function getGoodsReceipt(id: string): Promise<GoodsReceiptRecord | 
 
 /** Confirmed PRs are what receiving is normally matched against. */
 export async function listReceivablePurchaseRequests(): Promise<
-  Array<{ id: string; documentNumber: string; poNumber: string | null }>
+  ReceivablePurchaseRequest[]
 > {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('purchase_requests')
-    .select('id, document_number, po_number')
-    .eq('status', 'completed')
-    .order('sequence_number', { ascending: false })
+  const [requestsResult, receiptsResult] = await Promise.all([
+    supabase
+      .from('purchase_requests')
+      .select(`
+        id,
+        document_number,
+        po_number,
+        department,
+        purchase_request_items (
+          line_number,
+          inventory_item_id,
+          requested_quantity,
+          unit,
+          inventory_items (ls_code, name)
+        )
+      `)
+      .eq('status', 'completed')
+      .order('sequence_number', { ascending: false }),
+    // A PR is receivable only once. Include drafts as well as posted receipts
+    // so a second officer cannot start another receipt while the first is open.
+    supabase
+      .from('goods_receipts')
+      .select('purchase_request_id')
+      .not('purchase_request_id', 'is', null),
+  ])
 
-  if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
+  if (requestsResult.error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${requestsResult.error.message}`)
+  if (receiptsResult.error) throw new Error(`อ่านใบ PR ที่ถูกอ้างอิงแล้วไม่สำเร็จ: ${receiptsResult.error.message}`)
 
-  return z
-    .object({
-      id: z.string().uuid(),
-      document_number: z.string(),
-      po_number: z.string().nullable(),
-    })
-    .array()
-    .parse(data ?? [])
-    .map((row) => ({ id: row.id, documentNumber: row.document_number, poNumber: row.po_number }))
+  const rowSchema = z.object({
+    id: z.string().uuid(),
+    document_number: z.string(),
+    po_number: z.string().nullable(),
+    department: z.string(),
+    purchase_request_items: z.array(z.object({
+      line_number: z.number().int().positive(),
+      inventory_item_id: z.string().uuid(),
+      requested_quantity: numericSchema,
+      unit: z.string(),
+      inventory_items: z.object({ ls_code: z.string(), name: z.string() }).nullable(),
+    })).nullable().default([]),
+  })
+
+  const referencedRequestIds = new Set(
+    z.object({ purchase_request_id: z.string().uuid().nullable() })
+      .array()
+      .parse(receiptsResult.data ?? [])
+      .flatMap((row) => row.purchase_request_id ? [row.purchase_request_id] : []),
+  )
+
+  return rowSchema.array().parse(requestsResult.data ?? [])
+    .filter((row) => !referencedRequestIds.has(row.id))
+    .map((row) => ({
+      id: row.id,
+      documentNumber: row.document_number,
+      poNumber: row.po_number,
+      department: row.department,
+      items: (row.purchase_request_items ?? [])
+        .sort((left, right) => left.line_number - right.line_number)
+        .map((item) => ({
+          inventoryItemId: item.inventory_item_id,
+          lsCode: item.inventory_items?.ls_code ?? '—',
+          name: item.inventory_items?.name ?? 'ไม่ระบุรายการ',
+          quantity: item.requested_quantity,
+          unit: item.unit,
+        })),
+    }))
 }

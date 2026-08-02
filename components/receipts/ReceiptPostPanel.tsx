@@ -40,7 +40,7 @@ export function ReceiptPostPanel({ receipt }: { receipt: GoodsReceiptRecord }) {
       </p>
       {!receipt.poImagePath && (
         <p className="inline-alert" role="status">
-          ยังไม่ได้แนบภาพใบสั่งซื้อ แนะนำให้แนบก่อนบันทึกเข้าคลังเพื่อใช้อ้างอิงภายหลัง
+          ยังไม่ได้แนบไฟล์ PO แนะนำให้แนบก่อนบันทึกเข้าคลังเพื่อใช้อ้างอิงภายหลัง
         </p>
       )}
       <Button type="button" onClick={post} disabled={isPending}>

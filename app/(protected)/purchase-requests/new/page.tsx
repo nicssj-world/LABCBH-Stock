@@ -8,8 +8,10 @@ import {
 import { requireActor } from '@/lib/auth/actor'
 import { listContracts } from '@/lib/contracts/queries'
 import { listInventoryItems } from '@/lib/inventory/queries'
+import { normalizeLsCode } from '@/lib/inventory/ls-code'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
-import { listContractItemOptions } from '@/lib/pr/queries'
+import { listContractItemOptions, listNextContractPurchaseSequences } from '@/lib/pr/queries'
 
 export default async function NewPurchaseRequestPage() {
   const actor = await requireActor()
@@ -20,8 +22,9 @@ export default async function NewPurchaseRequestPage() {
     listContractItemOptions(),
     listContracts({ procurementStage: 'contract_started' }),
   ])
+  const nextPurchaseSequenceByContract = await listNextContractPurchaseSequences(contracts.map((contract) => contract.id))
 
-  const inventoryByLsCode = new Map(inventoryItems.map((item) => [item.lsCode, item]))
+  const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
 
   const catalog: CatalogOption[] = inventoryItems.map((item) => ({
     inventoryItemId: item.id,
@@ -39,7 +42,7 @@ export default async function NewPurchaseRequestPage() {
   // Contract lines carry their own LS code; matching to the catalogue is what
   // lets the picker show live on-hand next to contracted balance.
   const contractLines: ContractLineOption[] = contractItems.flatMap((option) => {
-    const inventoryItem = inventoryByLsCode.get(option.lsCode)
+    const inventoryItem = inventoryByLsCode.get(normalizeLsCode(option.lsCode))
     if (!inventoryItem) return []
 
     return [{
@@ -71,14 +74,25 @@ export default async function NewPurchaseRequestPage() {
       </header>
 
       <PurchaseRequestForm
-        department="กลุ่มงานเทคนิคการแพทย์"
+        department={DEPARTMENTS[0]}
+        departments={DEPARTMENTS}
         headName={actor.name ?? ''}
         contracts={contracts.map((contract) => ({
           id: contract.id,
+          nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
           label: `${contract.displayName?.trim() || contract.product}${
             contract.contractNumber ? ` · ${contract.contractNumber}` : ''
           }`,
         }))}
+        eBiddingContracts={contracts
+          .filter((contract) => contract.contractType === 'e_bidding')
+          .map((contract) => ({
+            id: contract.id,
+            nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
+            label: `${contract.displayName?.trim() || contract.product}${
+              contract.contractNumber ? ` · ${contract.contractNumber}` : ''
+            }`,
+          }))}
         contractLines={contractLines}
         catalog={catalog}
       />

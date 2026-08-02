@@ -39,7 +39,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const presentedContracts = contracts.map(presentContract)
   const endedContracts = presentedContracts.filter((contract) => contract.effectiveStatus === 'expired')
   const statusVisibleContracts = showEnded
-    ? presentedContracts
+    ? presentedContracts.filter((contract) => contract.effectiveStatus === 'expired')
     : presentedContracts.filter((contract) => contract.effectiveStatus !== 'expired')
   const olderContracts = statusVisibleContracts.filter((contract) => (
     contract.fiscalYear !== null && contract.fiscalYear < oldestDefaultFiscalYear

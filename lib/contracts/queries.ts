@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { contractRemainingPercent } from '@/lib/contracts/budget'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'
@@ -20,7 +21,10 @@ const contractItemReadRowSchema = z.object({
   unit: z.string(),
   unit_price: numericSchema,
   line_total: numericSchema,
+  contract_item_allocations: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
 })
+
+const contractUsageReadRowSchema = z.object({ amount: numericSchema })
 
 const contractStageHistoryReadRowSchema = z.object({
   id: z.string().uuid(),
@@ -31,6 +35,13 @@ const contractStageHistoryReadRowSchema = z.object({
   note: z.string().nullable(),
   source: z.string(),
   actor_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+})
+
+const contractStageHistoryCorrectionReadRowSchema = z.object({
+  history_id: z.string().uuid(),
+  effective_date: z.string(),
+  reason: z.string(),
   created_at: z.string(),
 })
 
@@ -53,6 +64,7 @@ export const contractReadRowSchema = z.object({
   responsible_user_ids: z.array(z.string().uuid()).nullable().default([]),
   file_url: z.string().nullable(),
   contract_items: z.array(contractItemReadRowSchema).nullable().default([]),
+  contract_usage: z.array(contractUsageReadRowSchema).nullable().default([]),
   contract_stage_history: z.array(contractStageHistoryReadRowSchema).nullable().default([]),
 })
 
@@ -82,8 +94,10 @@ const CONTRACT_READ_SELECT = `
     quantity,
     unit,
     unit_price,
-    line_total
+    line_total,
+    contract_item_allocations (quantity)
   ),
+  contract_usage (amount),
   contract_stage_history (
     id,
     from_stage,
@@ -105,7 +119,10 @@ export interface ContractFilters {
   search?: string
 }
 
-function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRecord {
+function mapContractRow(
+  row: z.infer<typeof contractReadRowSchema>,
+  correctionsByHistoryId = new Map<string, z.infer<typeof contractStageHistoryCorrectionReadRowSchema>[]>(),
+): ContractRecord {
   return {
     id: row.id,
     product: row.product,
@@ -122,6 +139,16 @@ function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRec
     updatedAt: row.updated_at,
     isArchived: row.is_archived,
     total: row.total,
+    remainingPercent: contractRemainingPercent({
+      contractType: row.contract_type,
+      total: row.total,
+      usage: row.contract_usage ?? [],
+      items: (row.contract_items ?? []).map((item) => ({
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        allocations: item.contract_item_allocations ?? [],
+      })),
+    }),
     responsibleUserIds: row.responsible_user_ids ?? [],
     fileUrl: row.file_url,
     items: (row.contract_items ?? [])
@@ -138,18 +165,52 @@ function mapContractRow(row: z.infer<typeof contractReadRowSchema>): ContractRec
       })),
     stageHistory: (row.contract_stage_history ?? [])
       .sort((left, right) => left.effective_date.localeCompare(right.effective_date))
-      .map((history) => ({
-        id: history.id,
-        fromStage: history.from_stage,
-        toStage: history.to_stage,
-        effectiveDate: history.effective_date,
-        contractNumberSnapshot: history.contract_number_snapshot,
-        note: history.note,
-        source: history.source,
-        actorId: history.actor_id,
-        createdAt: history.created_at,
-      })),
+      .map((history) => {
+        const correction = [...(correctionsByHistoryId.get(history.id) ?? [])]
+          .sort((left, right) => right.created_at.localeCompare(left.created_at))[0]
+        return {
+          id: history.id,
+          fromStage: history.from_stage,
+          toStage: history.to_stage,
+          effectiveDate: correction?.effective_date ?? history.effective_date,
+          contractNumberSnapshot: history.contract_number_snapshot,
+          note: history.note,
+          source: history.source,
+          actorId: history.actor_id,
+          createdAt: history.created_at,
+          correctedAt: correction?.created_at ?? null,
+          correctionReason: correction?.reason ?? null,
+        }
+      }),
   }
+}
+
+function isMissingCorrectionSchema(error: { code?: string | null }): boolean {
+  return error.code === '42P01' || error.code === 'PGRST205'
+}
+
+async function listStageHistoryCorrections(
+  historyIds: string[],
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  if (historyIds.length === 0) return new Map<string, z.infer<typeof contractStageHistoryCorrectionReadRowSchema>[]>()
+
+  const { data, error } = await supabase
+    .from('contract_stage_history_corrections')
+    .select('history_id, effective_date, reason, created_at')
+    .in('history_id', historyIds)
+
+  if (error) {
+    if (isMissingCorrectionSchema(error)) return new Map<string, z.infer<typeof contractStageHistoryCorrectionReadRowSchema>[]>()
+    throw new Error(`อ่านประวัติการแก้ไขขั้นตอนสัญญาไม่สำเร็จ: ${error.message}`)
+  }
+
+  return contractStageHistoryCorrectionReadRowSchema.array().parse(data ?? []).reduce((grouped, correction) => {
+    const current = grouped.get(correction.history_id) ?? []
+    current.push(correction)
+    grouped.set(correction.history_id, current)
+    return grouped
+  }, new Map<string, z.infer<typeof contractStageHistoryCorrectionReadRowSchema>[]>())
 }
 
 export async function listContracts(filters: ContractFilters = {}): Promise<ContractRecord[]> {
@@ -176,7 +237,7 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
   const { data, error } = await query
   if (error) throw new Error(`อ่านรายการสัญญาไม่สำเร็จ: ${error.message}`)
 
-  return contractReadRowSchema.array().parse(data ?? []).map(mapContractRow)
+  return contractReadRowSchema.array().parse(data ?? []).map((row) => mapContractRow(row))
 }
 
 export async function getContract(
@@ -197,5 +258,10 @@ export async function getContract(
   if (error) throw new Error(`อ่านข้อมูลสัญญาไม่สำเร็จ: ${error.message}`)
   if (!data) return null
 
-  return mapContractRow(contractReadRowSchema.parse(data))
+  const row = contractReadRowSchema.parse(data)
+  const corrections = await listStageHistoryCorrections(
+    (row.contract_stage_history ?? []).map((history) => history.id),
+    supabase,
+  )
+  return mapContractRow(row, corrections)
 }

@@ -2,6 +2,8 @@
 
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { Button } from '@/components/ui/Button'
+import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { detectDuplicateLots } from '@/lib/receipts/schema'
 
 export interface ReceiptDraftLine {
@@ -26,6 +28,7 @@ export interface CatalogChoice {
 export interface ReceiptLinesEditorProps {
   lines: ReceiptDraftLine[]
   catalog: CatalogChoice[]
+  hasPurchaseRequest?: boolean
   onAdd: (item: CatalogChoice) => void
   onChange: (key: string, patch: Partial<ReceiptDraftLine>) => void
   onRemove: (key: string) => void
@@ -34,6 +37,7 @@ export interface ReceiptLinesEditorProps {
 export function ReceiptLinesEditor({
   lines,
   catalog,
+  hasPurchaseRequest = false,
   onAdd,
   onChange,
   onRemove,
@@ -44,23 +48,20 @@ export function ReceiptLinesEditor({
 
   return (
     <div className="receipt-lines">
-      <label className="field-row">
-        เพิ่มน้ำยาเข้าใบรับ
-        <select
-          value=""
-          onChange={(event) => {
-            const choice = catalog.find((item) => item.inventoryItemId === event.target.value)
-            if (choice) onAdd(choice)
-          }}
-        >
-          <option value="">เลือกน้ำยา…</option>
-          {catalog.map((item) => (
-            <option key={item.inventoryItemId} value={item.inventoryItemId}>
-              {item.lsCode} · {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CatalogItemCombobox
+        label="เพิ่มน้ำยาเข้าใบรับ"
+        placeholder="พิมพ์รหัส LS หรือชื่อน้ำยา…"
+        options={catalog.map((item) => ({
+          id: item.inventoryItemId,
+          label: `${item.lsCode} · ${item.name}`,
+          hint: `หน่วย ${item.unit} · หลังเลือกให้กรอกเลขล็อตและจำนวน`,
+          searchText: `${item.lsCode} ${item.name}`,
+        }))}
+        onSelect={(id) => {
+          const choice = catalog.find((item) => item.inventoryItemId === id)
+          if (choice) onAdd(choice)
+        }}
+      />
 
       {duplicates.size > 0 && (
         <p className="inline-alert" role="status">
@@ -71,57 +72,64 @@ export function ReceiptLinesEditor({
       {lines.length === 0 ? (
         <p className="empty-state">ยังไม่ได้เพิ่มรายการรับเข้า</p>
       ) : (
-        <ul className="receipt-line-list">
-          {lines.map((line) => (
-            <li key={line.key} className={isDuplicate(line) ? 'receipt-line--duplicate' : undefined}>
-              <div className="receipt-line__identity">
-                <span className="identifier">{line.lsCode}</span>
-                <strong>{line.name}</strong>
-              </div>
+        <>
+          {hasPurchaseRequest && (
+            <p className="receipt-lines__hint" role="status">
+              รายการและจำนวนจากใบ PR ถูกเติมให้อัตโนมัติแล้ว กรุณากรอก LOT และวันหมดอายุของแต่ละรายการ
+            </p>
+          )}
+          <ul className="receipt-line-list">
+            {lines.map((line) => (
+              <li key={line.key} className={isDuplicate(line) ? 'receipt-line--duplicate' : undefined}>
+                <div className="receipt-line__identity">
+                  <span className="identifier">{line.lsCode}</span>
+                  <strong>{line.name}</strong>
+                </div>
 
-              <div className="receipt-line__fields">
-                <label className="field-row">
-                  เลขที่ล็อต
-                  <input
-                    type="text"
-                    required
-                    value={line.lotNumber}
-                    onChange={(event) => onChange(line.key, { lotNumber: event.target.value })}
-                  />
-                </label>
-                <label className="field-row">
-                  วันหมดอายุ
-                  <input
-                    type="date"
-                    value={line.expiryDate}
-                    onChange={(event) => onChange(line.key, { expiryDate: event.target.value })}
-                  />
-                </label>
-                <label className="field-row">
-                  จำนวน ({line.unit})
-                  <input
-                    type="number"
-                    min="0.001"
-                    step="0.001"
-                    required
-                    value={line.quantity}
-                    onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
-                  />
-                </label>
-                <label className="field-row">
-                  จัดเก็บที่
-                  <input
-                    type="text"
-                    value={line.storageLocation}
-                    onChange={(event) => onChange(line.key, { storageLocation: event.target.value })}
-                  />
-                </label>
-              </div>
+                <div className="receipt-line__fields">
+                  <label className="field-row">
+                    LOT (เลขที่ล็อต)
+                    <input
+                      type="text"
+                      required
+                      value={line.lotNumber}
+                      placeholder="ระบุ LOT"
+                      onChange={(event) => onChange(line.key, { lotNumber: event.target.value })}
+                    />
+                  </label>
+                  <label className="field-row">
+                    Expired (วันหมดอายุ)
+                    <ThaiDateInput
+                      value={line.expiryDate}
+                      onChange={(expiryDate) => onChange(line.key, { expiryDate })}
+                    />
+                  </label>
+                  <label className="field-row">
+                    จำนวน ({line.unit})
+                    <input
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      required
+                      value={line.quantity}
+                      onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label className="field-row">
+                    จัดเก็บที่
+                    <input
+                      type="text"
+                      value={line.storageLocation}
+                      onChange={(event) => onChange(line.key, { storageLocation: event.target.value })}
+                    />
+                  </label>
+                </div>
 
-              <Button variant="ghost" onClick={() => onRemove(line.key)}>นำออก</Button>
-            </li>
-          ))}
-        </ul>
+                <Button variant="ghost" onClick={() => onRemove(line.key)}>นำออก</Button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <p className="items-editor__grand-total">

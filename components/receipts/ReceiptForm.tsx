@@ -3,31 +3,31 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import {
   ReceiptLinesEditor,
   type CatalogChoice,
   type ReceiptDraftLine,
 } from '@/components/receipts/ReceiptLinesEditor'
-import { createGoodsReceipt } from '@/lib/receipts/actions'
+import { createGoodsReceipt, uploadPoImage } from '@/lib/receipts/actions'
+import { preparePoFile } from '@/lib/receipts/po-file'
 import { detectDuplicateLots } from '@/lib/receipts/schema'
-
-export interface ReceivablePurchaseRequest {
-  id: string
-  documentNumber: string
-  poNumber: string | null
-}
+import type { ReceivablePurchaseRequest } from '@/lib/receipts/types'
 
 export interface ReceiptFormProps {
   catalog: CatalogChoice[]
+  departments: readonly string[]
   purchaseRequests: ReceivablePurchaseRequest[]
   receiverName: string
 }
 
-export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialReceiver }: ReceiptFormProps) {
+export function ReceiptForm({ catalog, departments, purchaseRequests, receiverName: initialReceiver }: ReceiptFormProps) {
   const router = useRouter()
   const [purchaseRequestId, setPurchaseRequestId] = useState('')
   const [poNumber, setPoNumber] = useState('')
-  const [department, setDepartment] = useState('กลุ่มงานเทคนิคการแพทย์')
+  const [poFile, setPoFile] = useState<File | null>(null)
+  const [department, setDepartment] = useState(departments[0] ?? '')
   const [receivedDate, setReceivedDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [receiverName, setReceiverName] = useState(initialReceiver)
   const [note, setNote] = useState('')
@@ -35,20 +35,26 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  const makeDraftLine = (
+    item: Pick<ReceiptDraftLine, 'inventoryItemId' | 'lsCode' | 'name' | 'unit'>,
+    quantity: number,
+    key: string,
+  ): ReceiptDraftLine => ({
+    key,
+    inventoryItemId: item.inventoryItemId,
+    lsCode: item.lsCode,
+    name: item.name,
+    lotNumber: '',
+    expiryDate: '',
+    quantity,
+    unit: item.unit,
+    storageLocation: '',
+  })
+
   const addLine = (item: CatalogChoice) => {
     setLines((current) => [
       ...current,
-      {
-        key: `${item.inventoryItemId}-${current.length}`,
-        inventoryItemId: item.inventoryItemId,
-        lsCode: item.lsCode,
-        name: item.name,
-        lotNumber: '',
-        expiryDate: '',
-        quantity: 1,
-        unit: item.unit,
-        storageLocation: '',
-      },
+      makeDraftLine(item, 1, `${item.inventoryItemId}-${current.length}`),
     ])
   }
 
@@ -60,12 +66,17 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
     setLines((current) => current.filter((line) => line.key !== key))
   }
 
-  // Selecting a PR pre-fills its PO number, one of the values officers would
-  // otherwise copy by hand.
+  // Selecting a PR pre-fills its PO number and requested lines. The officer
+  // only needs to complete LOT/Expired and adjust delivered quantities.
   const selectPurchaseRequest = (id: string) => {
     setPurchaseRequestId(id)
     const request = purchaseRequests.find((candidate) => candidate.id === id)
-    if (request?.poNumber) setPoNumber(request.poNumber)
+    setPoNumber(request?.poNumber ?? '')
+    setLines(
+      request?.items.map((item, index) =>
+        makeDraftLine(item, item.quantity, `pr-${request.id}-${item.inventoryItemId}-${index}`),
+      ) ?? [],
+    )
   }
 
   const hasDuplicates = detectDuplicateLots(lines).length > 0
@@ -93,8 +104,20 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
             storageLocation: line.storageLocation.trim() || null,
           })),
         })
-        // The draft exists before any image or stock, so an upload failure on
-        // the next screen cannot strand the officer's typing.
+        // The draft exists before the evidence upload. If resizing or uploading
+        // fails, the officer can retry from the receipt detail without losing
+        // the lines already entered.
+        if (poFile) {
+          try {
+            const preparedFile = await preparePoFile(poFile)
+            const formData = new FormData()
+            formData.set('file', preparedFile, preparedFile.name)
+            await uploadPoImage(created.id, formData)
+          } catch {
+            router.push(`/receipts/${created.id}?poUpload=failed`)
+            return
+          }
+        }
         router.push(`/receipts/${created.id}`)
         router.refresh()
       } catch (caught) {
@@ -118,21 +141,32 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
             <select value={purchaseRequestId} onChange={(event) => selectPurchaseRequest(event.target.value)}>
               <option value="">ไม่อ้างอิงใบ PR</option>
               {purchaseRequests.map((request) => (
-                <option key={request.id} value={request.id}>{request.documentNumber}</option>
+                <option key={request.id} value={request.id}>
+                  {request.documentNumber} · {request.items.length} รายการ
+                </option>
               ))}
             </select>
+            <small className="receipt-pr-hint">เลือกใบ PR แล้วระบบจะเติมรายการและจำนวนให้โดยอัตโนมัติ</small>
           </label>
           <label className="field-row">
             เลขที่ใบสั่งซื้อ (PO)
             <input type="text" value={poNumber} onChange={(event) => setPoNumber(event.target.value)} />
           </label>
+          <div className="field-row form-grid__wide">
+            <span>ไฟล์ PO</span>
+            <PoFileDropzone file={poFile} onChange={setPoFile} disabled={isPending} />
+          </div>
           <label className="field-row">
             หน่วยงานที่รับของ
-            <input type="text" required value={department} onChange={(event) => setDepartment(event.target.value)} />
+            <select required value={department} onChange={(event) => setDepartment(event.target.value)}>
+              {departments.map((department) => (
+                <option value={department} key={department}>{department}</option>
+              ))}
+            </select>
           </label>
           <label className="field-row">
             วันที่รับของ
-            <input type="date" required value={receivedDate} onChange={(event) => setReceivedDate(event.target.value)} />
+            <ThaiDateInput required value={receivedDate} onChange={setReceivedDate} />
           </label>
           <label className="field-row">
             ผู้รับของ
@@ -156,6 +190,7 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
         <ReceiptLinesEditor
           lines={lines}
           catalog={catalog}
+          hasPurchaseRequest={Boolean(purchaseRequestId)}
           onAdd={addLine}
           onChange={changeLine}
           onRemove={removeLine}
@@ -165,7 +200,7 @@ export function ReceiptForm({ catalog, purchaseRequests, receiverName: initialRe
       {error && <p className="form-error" role="alert">{error}</p>}
 
       <div className="form-action-bar">
-        <p>บันทึกเป็นฉบับร่างก่อน แนบภาพใบสั่งซื้อและตรวจทานแล้วจึงบันทึกเข้าคลัง</p>
+        <p>บันทึกเป็นฉบับร่างก่อน แนบไฟล์ PO และตรวจทานแล้วจึงบันทึกเข้าคลัง</p>
         <div className="form-action-bar__buttons">
           <Button variant="secondary" onClick={() => router.push('/receipts')} disabled={isPending}>
             ยกเลิก

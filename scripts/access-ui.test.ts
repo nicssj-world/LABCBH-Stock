@@ -16,6 +16,8 @@ assert.match(matrix, /head:\s*'หัวหน้างาน'/, 'the head role 
 assert.doesNotMatch(matrix, /ผู้ออกรายงาน/, 'the retired reporter role must not be offered in the access matrix')
 assert.match(matrix, /setMembership/)
 assert.match(matrix, /ค้นหา/, 'the admin must be able to find a profile')
+assert.doesNotMatch(matrix, /แสดงผล/, 'access search must not require an apply button')
+assert.match(matrix, /setTimeout/, 'access search must debounce URL updates automatically')
 assert.match(matrix, /สิทธิ์ในระบบพอร์ทัล/, 'the portal role is shown for context')
 assert.match(matrix, /บันทึกแล้ว|บันทึกสำเร็จ/, 'saving must confirm explicitly')
 

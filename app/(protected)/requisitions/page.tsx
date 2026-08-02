@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 import { listRequisitions } from '@/lib/requisitions/queries'
 import { REQUISITION_STATUSES } from '@/lib/requisitions/schema'
@@ -31,12 +33,13 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   const search = first(params.search)?.trim() ?? ''
   const statusValue = first(params.status)
   const status = REQUISITION_STATUSES.find((value) => value === statusValue)
+  const department = first(params.department)?.trim() ?? ''
 
   let requisitions: RequisitionRecord[] = []
   let error: string | null = null
 
   try {
-    requisitions = await listRequisitions({ status, search })
+    requisitions = await listRequisitions({ status, search, department: department || undefined })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการใบเบิกไม่สำเร็จ'
   }
@@ -63,28 +66,38 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
         </div>
       </header>
 
-      <form className="filter-bench" method="get" aria-label="ตัวกรองใบเบิก">
-        <label className="filter-bench__search">
-          ค้นหา
-          <input
-            type="search"
-            name="search"
-            defaultValue={search}
-            placeholder="เลขที่ใบเบิก ผู้ขอเบิก หรือหน่วยงาน"
-          />
-        </label>
-        <label>
-          สถานะ
-          <select name="status" defaultValue={status ?? ''}>
-            <option value="">ทุกสถานะ</option>
-            {REQUISITION_STATUSES.map((value) => (
-              <option value={value} key={value}>{STATUS_LABELS[value]}</option>
-            ))}
-          </select>
-        </label>
-        <button className="lab-button lab-button--primary" type="submit">แสดงผล</button>
-        <Link className="lab-link-button lab-link-button--secondary" href="/requisitions">ล้างตัวกรอง</Link>
-      </form>
+      <AutoFilterBench
+        ariaLabel="ตัวกรองใบเบิก"
+        fields={[
+          {
+            type: 'search',
+            name: 'search',
+            label: 'ค้นหา',
+            value: search,
+            placeholder: 'เลขที่ใบเบิก ผู้ขอเบิก หรือหน่วยงาน',
+          },
+          {
+            type: 'select',
+            name: 'status',
+            label: 'สถานะ',
+            value: status ?? '',
+            options: [
+              { value: '', label: 'ทุกสถานะ' },
+              ...REQUISITION_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+            ],
+          },
+          {
+            type: 'select',
+            name: 'department',
+            label: 'หน่วยงาน',
+            value: department,
+            options: [
+              { value: '', label: 'ทุกหน่วยงาน' },
+              ...DEPARTMENTS.map((value) => ({ value, label: value })),
+            ],
+          },
+        ]}
+      />
 
       {error ? (
         <section className="error-state" role="alert">

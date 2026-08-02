@@ -129,6 +129,7 @@ function mapRequisition(row: z.infer<typeof requisitionRowSchema>): RequisitionR
 export interface RequisitionFilters {
   status?: (typeof REQUISITION_STATUSES)[number]
   search?: string
+  department?: string
 }
 
 export async function listRequisitions(
@@ -142,6 +143,7 @@ export async function listRequisitions(
     .order('sequence_number', { ascending: false })
 
   if (filters.status) query = query.eq('status', filters.status)
+  if (filters.department) query = query.eq('department', filters.department)
 
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
   if (search) {

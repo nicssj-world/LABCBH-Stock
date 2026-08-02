@@ -4,6 +4,7 @@ import { ReceiptForm } from '@/components/receipts/ReceiptForm'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { listInventoryItems } from '@/lib/inventory/queries'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { listReceivablePurchaseRequests } from '@/lib/receipts/queries'
 
 export default async function NewReceiptPage() {
@@ -22,7 +23,7 @@ export default async function NewReceiptPage() {
           <Link className="back-link" href="/receipts">← รับเข้าคลัง</Link>
           <p className="section-kicker">NEW RECEIPT</p>
           <h1>สร้างใบรับเข้า</h1>
-          <p>บันทึกฉบับร่างก่อน จากนั้นแนบภาพใบสั่งซื้อและตรวจทานก่อนลงบัญชีคลัง</p>
+          <p>บันทึกฉบับร่างก่อน จากนั้นแนบไฟล์ PO และตรวจทานก่อนลงบัญชีคลัง</p>
         </div>
       </header>
 
@@ -33,6 +34,7 @@ export default async function NewReceiptPage() {
           name: item.name,
           unit: item.baseUnit,
         }))}
+        departments={DEPARTMENTS}
         purchaseRequests={purchaseRequests}
         receiverName={actor.name ?? ''}
       />

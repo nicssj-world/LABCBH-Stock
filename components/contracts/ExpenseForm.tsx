@@ -3,10 +3,11 @@
 import { useId, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { recordContractExpense } from '@/lib/contracts/budget-actions'
 import { expenseMonthOptions } from '@/lib/contracts/budget'
 
-const monthLabel = new Intl.DateTimeFormat('th-TH', { year: 'numeric', month: 'long' })
+const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long' })
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
 
 function todayIso() {
@@ -148,7 +149,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
       <div className="expense-form__secondary">
         <label>
           วันที่บันทึก
-          <input type="date" value={usageDate} onChange={(event) => setUsageDate(event.target.value)} />
+          <ThaiDateInput value={usageDate} onChange={setUsageDate} />
         </label>
         <label>
           หมายเหตุ (ถ้ามี)

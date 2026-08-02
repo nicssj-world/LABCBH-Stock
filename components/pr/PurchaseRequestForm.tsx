@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ContractItemPicker, type PickerOption } from '@/components/pr/ContractItemPicker'
 import { PurchaseMethodFields, type ContractOption } from '@/components/pr/PurchaseMethodFields'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest } from '@/lib/pr/actions'
 import { formatBaht } from '@/lib/pr/presenter'
@@ -29,8 +30,10 @@ export interface ContractLineOption extends CatalogOption {
 
 export interface PurchaseRequestFormProps {
   department: string
+  departments: readonly string[]
   headName: string
   contracts: ContractOption[]
+  eBiddingContracts: ContractOption[]
   contractLines: ContractLineOption[]
   catalog: CatalogOption[]
 }
@@ -48,8 +51,10 @@ interface DraftLine {
 
 export function PurchaseRequestForm({
   department: initialDepartment,
+  departments,
   headName: initialHeadName,
   contracts,
+  eBiddingContracts,
   contractLines,
   catalog,
 }: PurchaseRequestFormProps) {
@@ -63,10 +68,10 @@ export function PurchaseRequestForm({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  // A contract purchase picks from that contract's remaining lines; every other
-  // method picks straight from the catalogue and consumes no contracted amount.
+  // Contract and E-Bidding purchases pick from the selected contract's remaining
+  // lines; every other method picks straight from the catalogue.
   const options: PickerOption[] = useMemo(() => {
-    if (method.kind === 'contract') {
+    if (method.kind === 'contract' || method.kind === 'e_bidding') {
       return contractLines
         .filter((line) => line.contractId === method.contractId && line.contractRemaining > 0)
         .map((line) => ({
@@ -173,19 +178,23 @@ export function PurchaseRequestForm({
         <div className="form-grid">
           <label className="field-row">
             หน่วยงานผู้ขอ
-            <input type="text" required value={department} onChange={(event) => setDepartment(event.target.value)} />
+            <select required value={department} onChange={(event) => setDepartment(event.target.value)}>
+              {departments.map((department) => (
+                <option value={department} key={department}>{department}</option>
+              ))}
+            </select>
           </label>
           <label className="field-row">
-            ชื่อหัวหน้ากลุ่มงาน
+            หัวหน้างาน
             <input type="text" required value={headName} onChange={(event) => setHeadName(event.target.value)} />
           </label>
           <label className="field-row">
             วันที่ขอซื้อ
-            <input type="date" required value={requestedDate} onChange={(event) => setRequestedDate(event.target.value)} />
+            <ThaiDateInput required value={requestedDate} onChange={setRequestedDate} />
           </label>
-          <label className="field-row form-grid__wide">
+          <label className="field-row">
             หมายเหตุ
-            <input type="text" maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} />
+            <textarea rows={3} maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
         </div>
       </section>
@@ -197,7 +206,12 @@ export function PurchaseRequestForm({
             <h2 id="pr-method-title">เลือกวิธีจัดซื้อหนึ่งวิธี</h2>
           </div>
         </div>
-        <PurchaseMethodFields method={method} contracts={contracts} onChange={changeMethod} />
+        <PurchaseMethodFields
+          method={method}
+          contracts={contracts}
+          eBiddingContracts={eBiddingContracts}
+          onChange={changeMethod}
+        />
       </section>
 
       <section className="bench-panel" aria-labelledby="pr-picker-title">
@@ -284,7 +298,7 @@ export function PurchaseRequestForm({
         )}
 
         <p className="items-editor__grand-total">
-          <span>ยอดรวมทั้งใบ PR</span>
+          <span>ยอดรวม</span>
           <strong>{formatBaht(total)}</strong>
         </p>
       </section>
@@ -293,7 +307,7 @@ export function PurchaseRequestForm({
 
       <div className="form-action-bar">
         <p>
-          ส่งแล้วใบ PR จะรอเจ้าหน้าที่คลังยืนยัน ยอดในสัญญาจะถูกตัดเมื่อยืนยันเท่านั้น
+          ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น
           {lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ`}
         </p>
         <div className="form-action-bar__buttons">

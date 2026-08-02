@@ -22,6 +22,7 @@ assert.match(styles, /\.utility-button\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:
 assert.match(styles, /\.password-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/, 'the password control must meet the 44px touch-target minimum')
 
 const rootLayout = read('app/layout.tsx')
-assert.match(rootLayout, /labcbh-theme/, 'the saved theme must be restored before hydration')
+assert.doesNotMatch(rootLayout, /<script|<Script|next\/script/i, 'RootLayout must not render scripts through React')
+assert.match(shell, /localStorage\.getItem\('labcbh-theme'\)/, 'the client shell restores the saved theme after hydration')
 
 console.log('portal-aligned design refresh contract: ok')

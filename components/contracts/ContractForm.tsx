@@ -11,6 +11,7 @@ FORM: Established Laboratory Control Bench, Operate mode, dense single-page edit
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { ContractItemsEditor } from '@/components/contracts/ContractItemsEditor'
 import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
@@ -212,12 +213,6 @@ export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange 
               {CONTRACT_TYPES.map((type) => <option value={type} key={type}>{CONTRACT_TYPE_LABELS[type]}</option>)}
             </select>
           </label>
-          <label>
-            หน่วยงาน
-            <select value={state.department} onChange={(event) => patchState('department', event.target.value as FormState['department'])}>
-              {CONTRACT_DEPARTMENTS.map((department) => <option value={department} key={department}>{department}</option>)}
-            </select>
-          </label>
           <label className="form-grid__wide">
             ชื่อสัญญา
             <input value={state.displayName} onChange={(event) => patchState('displayName', event.target.value)} aria-invalid={Boolean(errors.displayName)} />
@@ -228,16 +223,22 @@ export function ContractForm({ mode, contract, onCancel, onSaved, onDirtyChange 
             <input value={state.vendor} onChange={(event) => patchState('vendor', event.target.value)} aria-invalid={Boolean(errors.vendor)} />
             {errors.vendor && <small className="field-error">{errors.vendor}</small>}
           </label>
+          <label>
+            หน่วยงาน
+            <select value={state.department} onChange={(event) => patchState('department', event.target.value as FormState['department'])}>
+              {CONTRACT_DEPARTMENTS.map((department) => <option value={department} key={department}>{department}</option>)}
+            </select>
+          </label>
           {mode === 'create' && (
             <label>
               วันที่ส่งพัสดุ
-              <input type="date" value={state.sentToProcurementDate} onChange={(event) => patchState('sentToProcurementDate', event.target.value)} aria-invalid={Boolean(errors.sentToProcurementDate)} />
+              <ThaiDateInput value={state.sentToProcurementDate} onChange={(value) => patchState('sentToProcurementDate', value)} aria-invalid={Boolean(errors.sentToProcurementDate)} />
               {errors.sentToProcurementDate && <small className="field-error">{errors.sentToProcurementDate}</small>}
             </label>
           )}
           <label>
             วันที่สิ้นสุด (ถ้ามี)
-            <input type="date" value={state.endDate} onChange={(event) => patchState('endDate', event.target.value)} aria-invalid={Boolean(errors.endDate)} />
+            <ThaiDateInput value={state.endDate} onChange={(value) => patchState('endDate', value)} aria-invalid={Boolean(errors.endDate)} />
             {errors.endDate && <small className="field-error">{errors.endDate}</small>}
           </label>
         </div>

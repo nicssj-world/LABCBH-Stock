@@ -42,3 +42,19 @@ export interface GoodsReceiptRecord {
   items: GoodsReceiptItemRecord[]
   totalQuantity: number
 }
+
+export interface ReceivablePurchaseRequestItem {
+  inventoryItemId: string
+  lsCode: string
+  name: string
+  quantity: number
+  unit: string
+}
+
+export interface ReceivablePurchaseRequest {
+  id: string
+  documentNumber: string
+  poNumber: string | null
+  department: string
+  items: ReceivablePurchaseRequestItem[]
+}
