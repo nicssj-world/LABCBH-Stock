@@ -68,7 +68,7 @@ export function InventoryMinimumStockSettings({ minimumStockMonths }: InventoryM
             </svg>
           </button>
         </header>
-        <form className="app-dialog__body" onSubmit={submit}>
+        <form className="app-dialog__body minimum-stock-settings" onSubmit={submit}>
           <label className="field-row">
             จำนวนเดือนสำรอง (ทุกรายการ)
             <input

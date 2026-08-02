@@ -1947,6 +1947,10 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .minimum-stock-editor__suggestion strong { margin-left: 6px; font-family: var(--font-mono); font-size: 15px; }
 .minimum-stock-editor__suggestion small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
 
+.minimum-stock-settings { display: grid; gap: 12px; }
+.minimum-stock-settings > small { display: block; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }
+.minimum-stock-settings > .lab-button { justify-self: end; margin-top: 2px; }
+
 .field-row {
   display: grid;
   align-content: start;
