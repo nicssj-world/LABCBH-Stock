@@ -79,7 +79,7 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">WATCHLIST · BELOW 30%</p>
-              <h2 id="watchlist-title">รายการที่ต้องเฝ้าระวัง</h2>
+              <h2 id="watchlist-title">รายการตามสัญญาคงเหลือต่ำ</h2>
             </div>
             <StatusChip tone={data.watchlist.length ? 'danger' : 'success'}>{data.watchlist.length} รายการ</StatusChip>
           </div>
@@ -112,7 +112,7 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">LEASE · EXPIRING OR LOW BUDGET</p>
-              <h2 id="lease-watchlist-title">สัญญาเช่าที่ต้องเฝ้าระวัง</h2>
+              <h2 id="lease-watchlist-title">สัญญาเช่าที่ต้องติดตาม</h2>
             </div>
             <StatusChip tone={data.leaseWatchlist.length ? 'danger' : 'success'}>
               {data.leaseWatchlist.length} สัญญา
@@ -120,7 +120,7 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           </div>
           {data.leaseWatchlist.length === 0 ? (
             <div className="empty-state">
-              <strong>ยังไม่มีสัญญาเช่าที่ต้องเฝ้าระวัง</strong>
+              <strong>ยังไม่มีสัญญาเช่าที่ต้องติดตาม</strong>
               <p>ทุกสัญญาเช่ายังมีงบคงเหลือเพียงพอและยังไม่ใกล้สิ้นสุด</p>
             </div>
           ) : (
