@@ -1,5 +1,6 @@
 interface ContractRemainingGaugeProps {
   percent: number | null | undefined
+  compact?: boolean
 }
 
 const percentFormatter = new Intl.NumberFormat('th-TH', {
@@ -30,22 +31,29 @@ function gaugeState(percent: number | null | undefined) {
   }
 }
 
-export function ContractRemainingGauge({ percent }: ContractRemainingGaugeProps) {
+export function ContractRemainingGauge({ percent, compact = false }: ContractRemainingGaugeProps) {
   const state = gaugeState(percent)
   const ariaLabel = state.tone === 'unknown'
     ? 'คงเหลือ: ไม่ระบุ'
     : `คงเหลือ ${state.value} · ${state.health}`
 
   return (
-    <div className={`remaining-gauge remaining-gauge--${state.tone}`} role="img" aria-label={ariaLabel}>
+    <div
+      className={`remaining-gauge remaining-gauge--${state.tone}${compact ? ' remaining-gauge--compact' : ''}`}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={state.tone === 'unknown' ? undefined : state.width}
+      aria-label={ariaLabel}
+    >
       <div className="remaining-gauge__label">
-        <span>คงเหลือ</span>
+        <span className={compact ? 'visually-hidden' : undefined}>คงเหลือ</span>
         <strong>{state.value}</strong>
       </div>
       <div className="remaining-gauge__track" aria-hidden="true">
         <span className="remaining-gauge__fill" style={{ width: `${state.width}%` }} />
       </div>
-      <small>{state.health}</small>
+      <small className={compact ? 'visually-hidden' : undefined}>{state.health}</small>
     </div>
   )
 }

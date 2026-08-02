@@ -5,7 +5,8 @@ import {
   allowedNextStages,
   requiresContractNumber,
 } from '../lib/contracts/stages'
-import { contractExpiryNotice, contractListValue } from '../lib/contracts/presenter'
+import { contractExpiryNotice, contractListValue, contractNeedsWatch } from '../lib/contracts/presenter'
+import type { PresentedContract } from '../lib/contracts/presenter'
 
 assert.deepEqual(CONTRACT_TYPES, [
   'equipment_lease',
@@ -164,6 +165,42 @@ assert.equal(
   contractInputSchema.safeParse({ ...validDraft, status: 'expired' }).success,
   false,
   'a contract cannot expire before it starts',
+)
+
+// The register's watchlist filter must agree with the two signals the
+// dashboard already flags: a renewal deadline notice, or a balance below 30%.
+const watchable = (patch: { effectiveStatus?: string | null; expiryNotice?: unknown; remainingPercent?: number | null }) =>
+  contractNeedsWatch({ effectiveStatus: 'active', expiryNotice: null, remainingPercent: null, ...patch } as PresentedContract)
+
+assert.equal(
+  watchable({ expiryNotice: { tone: 'attention', label: '', description: '' } }),
+  true,
+  'a contract with a renewal deadline notice needs watching regardless of balance',
+)
+assert.equal(
+  watchable({ remainingPercent: 29 }),
+  true,
+  'a contract with less than 30% remaining needs watching even without an expiry notice',
+)
+assert.equal(
+  watchable({ remainingPercent: 30 }),
+  false,
+  'a contract at exactly 30% remaining is not yet low enough to need watching',
+)
+assert.equal(
+  watchable({ remainingPercent: null }),
+  false,
+  'a contract with an unknown ceiling has nothing to alarm on',
+)
+assert.equal(
+  watchable({ effectiveStatus: 'expired', remainingPercent: 5 }),
+  false,
+  'an ended contract never needs watching, even with a low recorded balance',
+)
+assert.equal(
+  watchable({ effectiveStatus: 'cancelled', expiryNotice: { tone: 'danger', label: '', description: '' } }),
+  false,
+  'a cancelled contract never needs watching, even if it still carries a stale expiry notice',
 )
 
 assert.equal(

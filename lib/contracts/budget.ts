@@ -1,4 +1,5 @@
 import type { ContractType } from '@/lib/contracts/types'
+import { roundQuantity } from '@/lib/inventory/balance'
 
 export type ContractMode = 'budget' | 'supply'
 
@@ -43,8 +44,48 @@ export interface ContractRemainingInput {
   }>
 }
 
+export interface ContractSupplyItemBalance {
+  allocatedQuantity: number
+  remainingQuantity: number
+  remainingValue: number
+  remainingPercent: number
+}
+
+export interface ContractSupplyBalance {
+  totalValue: number
+  remainingValue: number
+  items: ContractSupplyItemBalance[]
+}
+
 function clampPercentage(value: number): number {
   return Math.min(100, Math.max(0, value))
+}
+
+/**
+ * Calculates supply-contract balances from the allocation ledger. Quantities
+ * follow the ledger's three-decimal precision and money follows satang so the
+ * detail page and register cannot drift because of floating-point artifacts.
+ */
+export function contractSupplyBalance(
+  items: ContractRemainingInput['items'],
+): ContractSupplyBalance {
+  const balances = items.map((item) => {
+    const allocatedQuantity = roundQuantity((item.allocations ?? [])
+      .reduce((sum, allocation) => sum + allocation.quantity, 0))
+    const remainingQuantity = roundQuantity(Math.max(item.quantity - allocatedQuantity, 0))
+    const remainingValue = satang(remainingQuantity * item.unitPrice) / 100
+    const remainingPercent = item.quantity > 0
+      ? clampPercentage((remainingQuantity / item.quantity) * 100)
+      : 0
+
+    return { allocatedQuantity, remainingQuantity, remainingValue, remainingPercent }
+  })
+
+  return {
+    totalValue: items.reduce((sum, item) => sum + satang(item.quantity * item.unitPrice), 0) / 100,
+    remainingValue: balances.reduce((sum, item) => sum + item.remainingValue, 0),
+    items: balances,
+  }
 }
 
 /**
@@ -60,17 +101,9 @@ export function contractRemainingPercent(input: ContractRemainingInput): number 
       : clampPercentage(100 - snapshot.percentUsed)
   }
 
-  let totalValue = 0
-  let remainingValue = 0
-  for (const item of input.items) {
-    const allocatedQuantity = (item.allocations ?? [])
-      .reduce((sum, allocation) => sum + allocation.quantity, 0)
-    const remainingQuantity = Math.max(item.quantity - allocatedQuantity, 0)
-    totalValue += item.quantity * item.unitPrice
-    remainingValue += remainingQuantity * item.unitPrice
-  }
+  const balance = contractSupplyBalance(input.items)
 
-  return totalValue > 0 ? clampPercentage((remainingValue / totalValue) * 100) : null
+  return balance.totalValue > 0 ? clampPercentage((balance.remainingValue / balance.totalValue) * 100) : null
 }
 
 export function budgetSnapshot({ total, entries }: BudgetSnapshotInput): BudgetSnapshot {

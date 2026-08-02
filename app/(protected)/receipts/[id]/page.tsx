@@ -44,15 +44,39 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
   return (
     <div className="route-stack">
       <header className="contract-detail-heading">
-        <div>
-          <Link className="back-link" href="/receipts">← รับเข้าคลัง</Link>
+        <div className="contract-detail-heading__top">
+          <Link className="contract-detail-back" href="/receipts">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="m14 6-6 6 6 6M8 12h10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>รับเข้าคลัง</span>
+          </Link>
           <div className="contract-detail-heading__status">
             <StatusChip tone={STATUS_TONES[receipt.status]}>{STATUS_LABELS[receipt.status]}</StatusChip>
             <span>{receipt.purchaseRequestNumber ?? 'ไม่อ้างอิงใบ PR'}</span>
           </div>
-          <h1 className="identifier">{receipt.poNumber ?? 'ไม่ระบุเลขที่ใบสั่งซื้อ'}</h1>
-          <p>รับเมื่อ {formatThaiDate(receipt.receivedDate)} โดย {receipt.receiverName}</p>
         </div>
+
+        <div className="contract-detail-heading__body">
+          <div className="contract-detail-heading__identity">
+            <h1 className="identifier">{receipt.poNumber ?? 'ไม่ระบุเลขที่ใบสั่งซื้อ'}</h1>
+            <p>รับเมื่อ {formatThaiDate(receipt.receivedDate)}</p>
+          </div>
+          <dl className="contract-detail-heading__value">
+            <dt>จำนวนล็อต</dt>
+            <dd>{receipt.items.length.toLocaleString('th-TH')}</dd>
+          </dl>
+        </div>
+
+        <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบรับเข้า">
+          <div><dt>หน่วยงาน</dt><dd>{receipt.department}</dd></div>
+          <div><dt>ผู้รับของ</dt><dd>{receipt.receiverName}</dd></div>
+          <div><dt>รวมที่รับเข้า</dt><dd className="identifier">{formatQuantity(receipt.totalQuantity)}</dd></div>
+          <div>
+            <dt>บันทึกเข้าคลัง</dt>
+            <dd>{receipt.postedAt ? `${formatThaiDate(receipt.postedAt.slice(0, 10))} · ${receipt.postedByName ?? ''}` : 'ยังไม่บันทึก'}</dd>
+          </div>
+        </dl>
       </header>
 
       {poUploadFailed && (
@@ -60,18 +84,6 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
           สร้างใบรับเข้าแล้ว แต่แนบไฟล์ PO ไม่สำเร็จ กรุณาเลือกไฟล์อีกครั้งแล้วอัปโหลดจากช่องด้านขวา
         </p>
       )}
-
-      <section className="contract-facts" aria-label="ข้อมูลสรุปใบรับเข้า">
-        <dl>
-          <div><dt>หน่วยงาน</dt><dd>{receipt.department}</dd></div>
-          <div><dt>จำนวนล็อต</dt><dd className="identifier">{receipt.items.length}</dd></div>
-          <div><dt>รวมที่รับเข้า</dt><dd className="identifier">{formatQuantity(receipt.totalQuantity)}</dd></div>
-          <div>
-            <dt>บันทึกเข้าคลัง</dt>
-            <dd>{receipt.postedAt ? `${formatThaiDate(receipt.postedAt.slice(0, 10))} · ${receipt.postedByName ?? ''}` : 'ยังไม่บันทึก'}</dd>
-          </div>
-        </dl>
-      </section>
 
       <div className="inventory-detail-grid">
         <section className="bench-panel" aria-labelledby="receipt-detail-lines-title">
@@ -125,11 +137,14 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
       </div>
 
       {canEdit && (
-        <section className="bench-panel" aria-labelledby="receipt-post-title">
+        <section
+          className={receipt.status === 'draft' ? 'bench-panel bench-panel--decision' : 'bench-panel'}
+          aria-labelledby="receipt-post-title"
+        >
           <div className="bench-panel__header">
             <div>
-              <p className="section-kicker">POST TO STOCK</p>
-              <h2 id="receipt-post-title">บันทึกเข้าคลัง</h2>
+              <p className="section-kicker">STOCK OFFICER</p>
+              <h2 id="receipt-post-title">การดำเนินการของเจ้าหน้าที่คลัง</h2>
             </div>
           </div>
           <ReceiptPostPanel receipt={receipt} />

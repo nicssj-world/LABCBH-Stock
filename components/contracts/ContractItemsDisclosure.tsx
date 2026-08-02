@@ -1,3 +1,4 @@
+import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import type { ContractItemRecord } from '@/lib/contracts/types'
 
 const quantityFormatter = new Intl.NumberFormat('th-TH', {
@@ -16,13 +17,17 @@ export function ContractItemsDisclosure({ items }: { items: ContractItemRecord[]
       <ul className="contract-items-disclosure__list">
         {items.map((item) => (
           <li key={item.id}>
-            <span className="contract-items-disclosure__identity">
+            <div className="contract-items-disclosure__identity">
               <strong>{item.name}</strong>
-              <small>{item.lsCode || 'ไม่ระบุรหัส'}</small>
-            </span>
-            <span className="contract-items-disclosure__quantity">
-              {quantityFormatter.format(item.quantity)} {item.unit}
-            </span>
+              <div className="contract-items-disclosure__meta">
+                <span>
+                  คงเหลือ {quantityFormatter.format(item.remainingQuantity)} / {quantityFormatter.format(item.quantity)} {item.unit}
+                </span>
+              </div>
+            </div>
+            <div className="contract-items-disclosure__gauge">
+              <ContractRemainingGauge compact percent={item.remainingPercent} />
+            </div>
           </li>
         ))}
       </ul>

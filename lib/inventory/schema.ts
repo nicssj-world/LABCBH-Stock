@@ -34,12 +34,17 @@ export const minimumStockInputSchema = z
       .finite()
       .min(0, 'ค่าขั้นต่ำต้องไม่ติดลบ')
       .nullable(),
+    reason: z.string().trim().max(1000).nullable().optional(),
+  })
+  .strict()
+
+export const inventoryMinimumStockSettingsInputSchema = z
+  .object({
     minimumStockMonths: z
       .number()
       .finite()
       .positive('จำนวนเดือนสำรองต้องมากกว่า 0')
       .max(60, 'จำนวนเดือนสำรองต้องไม่เกิน 60'),
-    reason: z.string().trim().max(1000).nullable().optional(),
   })
   .strict()
 

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
-import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, presentContract } from '@/lib/contracts/presenter'
+import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, presentContract } from '@/lib/contracts/presenter'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
@@ -21,6 +21,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const search = first(params.search)?.trim() ?? ''
   const showEnded = first(params.showEnded) === '1'
   const showOlder = first(params.showOlder) === '1'
+  const showWatchlist = first(params.watchlist) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
   const department = CONTRACT_DEPARTMENTS.find((dept) => dept === departmentValue)
@@ -44,11 +45,16 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const olderContracts = statusVisibleContracts.filter((contract) => (
     contract.fiscalYear !== null && contract.fiscalYear < oldestDefaultFiscalYear
   ))
-  const visibleContracts = showOlder || fiscalYear
-    ? statusVisibleContracts
-    : statusVisibleContracts.filter((contract) => (
-      contract.fiscalYear === null || contract.fiscalYear >= oldestDefaultFiscalYear
-    ))
+  const watchlistContracts = statusVisibleContracts.filter(contractNeedsWatch)
+  // A contract needing attention must surface even if its fiscal year would
+  // otherwise be hidden behind the default 5-year window.
+  const visibleContracts = showWatchlist
+    ? watchlistContracts
+    : showOlder || fiscalYear
+      ? statusVisibleContracts
+      : statusVisibleContracts.filter((contract) => (
+        contract.fiscalYear === null || contract.fiscalYear >= oldestDefaultFiscalYear
+      ))
   const grouped = new Map<string, ReturnType<typeof presentContract>[]>()
   for (const contract of visibleContracts) {
     const key = contract.fiscalYear ? String(contract.fiscalYear) : 'unknown'
@@ -63,6 +69,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   if (search) activeParams.set('search', search)
   if (showEnded) activeParams.set('showEnded', '1')
   if (showOlder) activeParams.set('showOlder', '1')
+  if (showWatchlist) activeParams.set('watchlist', '1')
   const toggleHref = (params: URLSearchParams) => {
     const query = params.toString()
     return query ? `/contracts?${query}` : '/contracts'
@@ -75,6 +82,10 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   if (showOlder) olderToggleParams.delete('showOlder')
   else olderToggleParams.set('showOlder', '1')
   const olderContractsHref = toggleHref(olderToggleParams)
+  const watchlistToggleParams = new URLSearchParams(activeParams)
+  if (showWatchlist) watchlistToggleParams.delete('watchlist')
+  else watchlistToggleParams.set('watchlist', '1')
+  const watchlistHref = toggleHref(watchlistToggleParams)
 
   return (
     <div className="route-stack">
@@ -95,6 +106,11 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
               {showEnded ? 'ซ่อนสัญญาที่สิ้นสุดแล้ว' : `แสดงสัญญาที่สิ้นสุดแล้ว (${endedContracts.length})`}
             </Link>
           )}
+          {(showWatchlist || watchlistContracts.length > 0) && (
+            <Link className="lab-link-button lab-link-button--secondary contracts-visibility-toggle" href={watchlistHref}>
+              {showWatchlist ? 'แสดงสัญญาทั้งหมด' : `เฉพาะสัญญาที่ต้องเฝ้าระวัง (${watchlistContracts.length})`}
+            </Link>
+          )}
           <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>
         </div>
       </header>
@@ -107,6 +123,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         procurementStage={procurementStage ?? ''}
         showEnded={showEnded}
         showOlder={showOlder}
+        showWatchlist={showWatchlist}
         fiscalYears={fiscalYears}
         contractTypes={CONTRACT_TYPES.map((type) => ({ value: type, label: CONTRACT_TYPE_LABELS[type] }))}
         departments={[...CONTRACT_DEPARTMENTS]}
@@ -121,8 +138,8 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         </section>
       ) : grouped.size === 0 ? (
         <section className="empty-state empty-state--panel">
-          <h2>{showEnded ? 'ไม่พบสัญญาตามตัวกรอง' : !showOlder && !fiscalYear && olderContracts.length > 0 ? 'ไม่พบสัญญาใน 5 ปีล่าสุด' : 'ไม่พบสัญญาที่ยังไม่สิ้นสุด'}</h2>
-          <p>{showEnded ? 'ลองล้างตัวกรอง หรือเพิ่มสัญญาใหม่เพื่อเริ่มต้นทะเบียน' : !showOlder && !fiscalYear && olderContracts.length > 0 ? 'เลือกแสดงปีเก่าทั้งหมด หากต้องการตรวจสอบสัญญาย้อนหลัง' : 'เลือกแสดงสัญญาที่สิ้นสุดแล้ว หากต้องการตรวจสอบข้อมูลย้อนหลัง'}</p>
+          <h2>{showWatchlist ? 'ไม่มีสัญญาที่ต้องเฝ้าระวัง' : showEnded ? 'ไม่พบสัญญาตามตัวกรอง' : !showOlder && !fiscalYear && olderContracts.length > 0 ? 'ไม่พบสัญญาใน 5 ปีล่าสุด' : 'ไม่พบสัญญาที่ยังไม่สิ้นสุด'}</h2>
+          <p>{showWatchlist ? 'ไม่มีสัญญาที่ใกล้สิ้นสุดหรือคงเหลือน้อยกว่า 30% ตามตัวกรองอื่นที่เลือกไว้' : showEnded ? 'ลองล้างตัวกรอง หรือเพิ่มสัญญาใหม่เพื่อเริ่มต้นทะเบียน' : !showOlder && !fiscalYear && olderContracts.length > 0 ? 'เลือกแสดงปีเก่าทั้งหมด หากต้องการตรวจสอบสัญญาย้อนหลัง' : 'เลือกแสดงสัญญาที่สิ้นสุดแล้ว หากต้องการตรวจสอบข้อมูลย้อนหลัง'}</p>
         </section>
       ) : (
         Array.from(grouped.entries()).map(([year, yearContracts]) => (

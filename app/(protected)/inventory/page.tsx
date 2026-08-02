@@ -1,10 +1,15 @@
 import Link from 'next/link'
+import { InventoryMinimumStockSettings } from '@/components/inventory/InventoryMinimumStockSettings'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { canOperateStock } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { listInventoryDepartments, listInventoryItems } from '@/lib/inventory/queries'
+import {
+  getInventoryMinimumStockMonths,
+  listInventoryDepartments,
+  listInventoryItems,
+} from '@/lib/inventory/queries'
 import type { InventoryItemRecord } from '@/lib/inventory/types'
 
 interface InventoryPageProps {
@@ -23,12 +28,14 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
   let items: InventoryItemRecord[] = []
   let departments: string[] = []
+  let minimumStockMonths = 1.5
   let error: string | null = null
 
   try {
-    ;[items, departments] = await Promise.all([
+    ;[items, departments, minimumStockMonths] = await Promise.all([
       listInventoryItems({ search, department: department || undefined, includeInactive }),
       listInventoryDepartments(),
+      getInventoryMinimumStockMonths(),
     ])
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านข้อมูลคลังไม่สำเร็จ'
@@ -37,9 +44,27 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const alertCount = items.filter((item) => item.stockLevel !== 'healthy').length
   const visibleItems = onlyAlerts ? items.filter((item) => item.stockLevel !== 'healthy') : items
 
+  const activeParams = new URLSearchParams()
+  if (search) activeParams.set('search', search)
+  if (department) activeParams.set('department', department)
+  if (includeInactive) activeParams.set('includeInactive', '1')
+  if (onlyAlerts) activeParams.set('onlyAlerts', '1')
+  const toggleHref = (nextParams: URLSearchParams) => {
+    const query = nextParams.toString()
+    return query ? `/inventory?${query}` : '/inventory'
+  }
+  const alertsToggleParams = new URLSearchParams(activeParams)
+  if (onlyAlerts) alertsToggleParams.delete('onlyAlerts')
+  else alertsToggleParams.set('onlyAlerts', '1')
+  const alertsHref = toggleHref(alertsToggleParams)
+  const inactiveToggleParams = new URLSearchParams(activeParams)
+  if (includeInactive) inactiveToggleParams.delete('includeInactive')
+  else inactiveToggleParams.set('includeInactive', '1')
+  const inactiveHref = toggleHref(inactiveToggleParams)
+
   return (
     <div className="route-stack">
-      <header className="page-heading page-heading--actions">
+      <header className="page-heading page-heading--actions page-heading--stack">
         <div>
           <p className="section-kicker">INVENTORY CATALOG</p>
           <h1>คลังน้ำยาและวัสดุวิทยาศาสตร์</h1>
@@ -49,6 +74,17 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           <StatusChip tone={alertCount ? 'danger' : 'success'}>
             {alertCount ? `${alertCount} รายการต้องทำ PR` : 'ยอดคงเหลือเพียงพอทุกรายการ'}
           </StatusChip>
+          {alertCount > 0 && (
+            <Link className="lab-link-button lab-link-button--secondary" href={alertsHref}>
+              {onlyAlerts ? 'แสดงทุกรายการ' : 'เฉพาะรายการที่ต้องทำ PR'}
+            </Link>
+          )}
+          <Link className="lab-link-button lab-link-button--secondary" href={inactiveHref}>
+            {includeInactive ? 'ซ่อนรายการที่ปิดใช้งาน' : 'แสดงรายการที่ปิดใช้งาน'}
+          </Link>
+          {hasAppRole(actor, 'admin') && (
+            <InventoryMinimumStockSettings minimumStockMonths={minimumStockMonths} />
+          )}
           {canOperateStock(actor) && (
             <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
               เพิ่มรายการน้ำยา
@@ -71,8 +107,6 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
               ...departments.map((name) => ({ value: name, label: name })),
             ],
           },
-          { type: 'checkbox', name: 'onlyAlerts', label: 'เฉพาะรายการที่ต้องทำ PR', checked: onlyAlerts },
-          { type: 'checkbox', name: 'includeInactive', label: 'แสดงรายการที่ปิดใช้งาน', checked: includeInactive },
         ]}
       />
 
@@ -91,7 +125,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
             <p>{visibleItems.length} รายการ</p>
           </div>
-          <InventoryTable items={visibleItems} />
+          <InventoryTable items={visibleItems} canEdit={canOperateStock(actor)} />
         </section>
       )}
     </div>

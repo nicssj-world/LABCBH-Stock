@@ -3,12 +3,14 @@ import type { LotExpiryStatus, MovementType, StockLevel } from './balance'
 import type {
   createInventoryItemInputSchema,
   inventoryFiltersSchema,
+  inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   stockAdjustmentInputSchema,
 } from './schema'
 
 export type CreateInventoryItemInput = z.infer<typeof createInventoryItemInputSchema>
 export type MinimumStockInput = z.infer<typeof minimumStockInputSchema>
+export type InventoryMinimumStockSettingsInput = z.infer<typeof inventoryMinimumStockSettingsInputSchema>
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>
 export type InventoryFilters = z.infer<typeof inventoryFiltersSchema>
 

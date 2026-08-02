@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, type FormEvent } from 'react'
+import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
@@ -15,6 +15,7 @@ export interface PoImageUploaderProps {
 
 export function PoImageUploader({ receiptId, hasImage, canEdit }: PoImageUploaderProps) {
   const router = useRouter()
+  const previewDialogRef = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -43,18 +44,25 @@ export function PoImageUploader({ receiptId, hasImage, canEdit }: PoImageUploade
     setError(null)
     startTransition(async () => {
       try {
-        setPreviewUrl(await getPoImageUrl(receiptId))
+        const signedUrl = await getPoImageUrl(receiptId)
+        setPreviewUrl(signedUrl)
+        previewDialogRef.current?.showModal()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'เปิดไฟล์ PO ไม่สำเร็จ')
       }
     })
   }
 
+  const closePreview = () => {
+    previewDialogRef.current?.close()
+    setPreviewUrl(null)
+  }
+
   return (
     <div className="po-uploader">
       <p className="po-uploader__status">
         {hasImage ? 'แนบไฟล์ PO แล้ว' : 'ยังไม่ได้แนบไฟล์ PO'}
-        <small>เก็บในที่จัดเก็บส่วนตัว เปิดดูผ่านลิงก์ชั่วคราวที่มีสิทธิ์เท่านั้น</small>
+        <small>{hasImage ? 'เปิดดูไฟล์ในหน้านี้ได้ทันที' : 'เก็บในที่จัดเก็บส่วนตัว เปิดดูผ่านลิงก์ชั่วคราวที่มีสิทธิ์เท่านั้น'}</small>
       </p>
 
       {canEdit && (
@@ -72,15 +80,38 @@ export function PoImageUploader({ receiptId, hasImage, canEdit }: PoImageUploade
       {hasImage && (
         <div className="po-uploader__preview">
           <Button variant="ghost" onClick={preview} disabled={isPending}>เปิดดูไฟล์ PO</Button>
-          {previewUrl && (
-            <a className="text-link" href={previewUrl} target="_blank" rel="noreferrer">
-              เปิดในแท็บใหม่ (ลิงก์หมดอายุใน 5 นาที)
-            </a>
-          )}
         </div>
       )}
 
       {error && <p className="form-error" role="alert">{error}</p>}
+
+      <dialog
+        ref={previewDialogRef}
+        className="app-dialog file-preview-dialog"
+        aria-labelledby="po-file-preview-title"
+        onCancel={(event) => {
+          event.preventDefault()
+          closePreview()
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closePreview()
+        }}
+      >
+        <header className="app-dialog__header">
+          <div>
+            <h2 id="po-file-preview-title">ไฟล์ PO</h2>
+            <p>แสดงเอกสารจากที่จัดเก็บส่วนตัวในหน้ารายละเอียดนี้</p>
+          </div>
+          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่างไฟล์ PO" onClick={closePreview}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </header>
+        <div className="app-dialog__body file-preview-dialog__body">
+          {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
+        </div>
+      </dialog>
     </div>
   )
 }

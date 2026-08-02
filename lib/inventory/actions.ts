@@ -2,14 +2,21 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
 import {
   createInventoryItemInputSchema,
+  inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   stockAdjustmentInputSchema,
 } from '@/lib/inventory/schema'
-import type { CreateInventoryItemInput, MinimumStockInput, StockAdjustmentInput } from '@/lib/inventory/types'
+import type {
+  CreateInventoryItemInput,
+  InventoryMinimumStockSettingsInput,
+  MinimumStockInput,
+  StockAdjustmentInput,
+} from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const inventoryItemIdSchema = z.string().uuid()
@@ -63,17 +70,40 @@ export async function setMinimumStock(itemId: string, input: MinimumStockInput) 
   const parsedItemId = inventoryItemIdSchema.parse(itemId)
   const parsed = minimumStockInputSchema.parse(input)
 
+  // Reserve months is a system-wide setting now (setInventoryMinimumStockMonths
+  // below); passing null here leaves the item's stored value untouched.
   const result = await supabaseAdmin.rpc('set_inventory_minimum_stock', {
     p_inventory_item_id: parsedItemId,
     p_actor_id: actor.id,
     p_minimum_stock_override: parsed.minimumStockOverride,
-    p_minimum_stock_months: parsed.minimumStockMonths,
+    p_minimum_stock_months: null,
     p_reason: parsed.reason ?? null,
   })
 
   const updated = unwrapMutation('บันทึกค่าขั้นต่ำ', result)
   revalidatePath('/inventory')
   revalidatePath(`/inventory/${parsedItemId}`)
+  revalidatePath('/dashboard')
+  return updated
+}
+
+/** Admin-only: one reserve-months value drives every item's suggested minimum. */
+export async function setInventoryMinimumStockMonths(input: InventoryMinimumStockSettingsInput) {
+  const actor = await requireActor()
+  if (!hasAppRole(actor, 'admin')) throw new Error('เฉพาะผู้ดูแลระบบเท่านั้นที่ตั้งค่านี้ได้')
+  const parsed = inventoryMinimumStockSettingsInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('set_inventory_minimum_stock_months', {
+    p_actor_id: actor.id,
+    p_minimum_stock_months: parsed.minimumStockMonths,
+  })
+
+  if (result.error) throw new Error(`บันทึกจำนวนเดือนสำรองไม่สำเร็จ: ${result.error.message}`)
+  const updated = z
+    .object({ minimum_stock_months: z.union([z.number(), z.string()]).transform(Number) })
+    .passthrough()
+    .parse(result.data)
+  revalidatePath('/inventory')
   revalidatePath('/dashboard')
   return updated
 }

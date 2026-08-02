@@ -48,7 +48,7 @@ assert.doesNotMatch(form, /createBrowserClient|supabase\.from/)
 
 assert.match(linesEditor, /เลขที่ล็อต/)
 assert.match(linesEditor, /วันหมดอายุ/)
-assert.match(linesEditor, /จัดเก็บที่/)
+assert.doesNotMatch(linesEditor, /จัดเก็บที่/, 'storage location is not captured when receiving stock')
 assert.match(linesEditor, /detectDuplicateLots/, 'duplicate lots must warn before posting')
 assert.match(linesEditor, /ล็อตซ้ำ/)
 

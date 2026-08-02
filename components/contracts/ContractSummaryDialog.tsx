@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { Button } from '@/components/ui/Button'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { contractFileUrl } from '@/lib/contracts/file-actions'
 import type { PresentedContract } from '@/lib/contracts/presenter'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 
@@ -21,12 +22,36 @@ interface ContractSummaryDialogProps {
 
 export function ContractSummaryDialog({ contract, variant = 'table' }: ContractSummaryDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const previewDialogRef = useRef<HTMLDialogElement>(null)
   const dialogId = `contract-summary-dialog-${contract.id}-${variant}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [isPreviewPending, startPreviewTransition] = useTransition()
 
   const openDialog = () => dialogRef.current?.showModal()
   const closeDialog = () => dialogRef.current?.close()
+
+  const openFilePreview = () => {
+    if (!contract.fileUrl) return
+    setPreviewError(null)
+    startPreviewTransition(async () => {
+      try {
+        const signedUrl = await contractFileUrl(contract.id, contract.fileUrl!)
+        setPreviewUrl(signedUrl)
+        closeDialog()
+        previewDialogRef.current?.showModal()
+      } catch (caught) {
+        setPreviewError(caught instanceof Error ? caught.message : 'เปิดไฟล์สัญญาไม่สำเร็จ')
+      }
+    })
+  }
+
+  const closeFilePreview = () => {
+    previewDialogRef.current?.close()
+    setPreviewUrl(null)
+  }
 
   return (
     <>
@@ -118,12 +143,56 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
           )}
         </div>
 
+        {previewError && <p className="form-error contract-summary-dialog__error" role="alert">{previewError}</p>}
+
         <footer className="contract-summary-dialog__footer">
+          {contract.fileUrl && (
+            <Button
+              variant="ghost"
+              className="contract-file-control contract-file-control--view contract-summary-dialog__preview-trigger"
+              aria-label="เปิดดูไฟล์สัญญา"
+              title="เปิดดูไฟล์สัญญา"
+              disabled={isPreviewPending}
+              onClick={openFilePreview}
+            >
+              <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Button>
+          )}
           <Link className="lab-link-button lab-link-button--primary" href={`/contracts/${contract.id}`} onClick={closeDialog}>
             เปิดรายละเอียดเต็ม
           </Link>
           <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
         </footer>
+      </dialog>
+
+      <dialog
+        ref={previewDialogRef}
+        className="app-dialog file-preview-dialog"
+        aria-labelledby={`${dialogId}-file-title`}
+        onCancel={(event) => {
+          event.preventDefault()
+          closeFilePreview()
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeFilePreview()
+        }}
+      >
+        <header className="app-dialog__header">
+          <div>
+            <h2 id={`${dialogId}-file-title`}>ไฟล์สัญญา</h2>
+            <p>{contract.resolvedDisplayName} · {contract.contractNumberLabel}</p>
+          </div>
+          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่างไฟล์สัญญา" onClick={closeFilePreview}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </header>
+        <div className="app-dialog__body file-preview-dialog__body">
+          {previewUrl && <iframe title="ตัวอย่างไฟล์สัญญา" src={previewUrl} />}
+        </div>
       </dialog>
     </>
   )

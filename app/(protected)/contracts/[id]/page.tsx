@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
+import { ContractFileCard } from '@/components/contracts/ContractFileCard'
+import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
@@ -22,6 +24,7 @@ interface ContractDetailPageProps {
 }
 
 const money = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 })
+const quantity = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 })
 const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
 const displayDate = (value: string | null) => value
   ? thaiDate.format(new Date(`${value}T00:00:00+07:00`))
@@ -51,6 +54,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
     mode === 'budget'
       ? contract.total
       : contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
+  const remainingTotal = mode === 'supply'
+    ? contract.items.reduce((sum, item) => sum + item.remainingValue, 0)
+    : null
   const stageHistory = (
     <section className="bench-panel contract-history" aria-labelledby="stage-history-title">
       <div className="bench-panel__header">
@@ -105,6 +111,15 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           <dl className="contract-detail-heading__value">
             <dt>มูลค่าสัญญา</dt>
             <dd>{total === null ? 'ไม่ระบุ' : money.format(total)}</dd>
+            {mode === 'supply' && remainingTotal !== null && (
+              <>
+                <dt className="contract-detail-heading__remaining-label">ยอดคงเหลือรวม</dt>
+                <dd className="contract-detail-heading__remaining-value">
+                  <span>{money.format(remainingTotal)}</span>
+                  <ContractRemainingGauge percent={contract.remainingPercent} />
+                </dd>
+              </>
+            )}
           </dl>
         </div>
 
@@ -164,6 +179,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           canEdit={canEdit}
         />
       ) : (
+      <>
       <section className="bench-panel" aria-labelledby="contract-lines-title">
         <div className="bench-panel__header">
           <div>
@@ -175,13 +191,29 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         {contract.items.length === 0 ? <p className="empty-state">ยังไม่มีรายการน้ำยา</p> : (
           <div className="detail-items-table">
             <table className="data-table">
-              <thead><tr><th>รหัสพัสดุ</th><th>ชื่อน้ำยา</th><th className="numeric-cell">จำนวน</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย</th><th className="numeric-cell">รวม</th></tr></thead>
+              <thead><tr><th>รหัสพัสดุ</th><th>ชื่อน้ำยา</th><th className="numeric-cell">จำนวน</th><th className="numeric-cell">คงเหลือ</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย</th><th className="numeric-cell">รวม</th></tr></thead>
               <tbody>
                 {contract.items.map((item) => (
                   <tr key={item.id}>
                     <td className="identifier">{item.lsCode}</td>
                     <td>{item.name}</td>
-                    <td className="numeric-cell identifier">{item.quantity.toLocaleString('th-TH')}</td>
+                    <td className="numeric-cell identifier">{quantity.format(item.quantity)}</td>
+                    <td className="numeric-cell identifier contract-line-balance">
+                      <strong>{quantity.format(item.remainingQuantity)}</strong>
+                      <small>มูลค่า {money.format(item.remainingValue)}</small>
+                      <small>ใช้ไป {quantity.format(item.allocatedQuantity)}</small>
+                      <div
+                        className={`contract-line-balance__track contract-line-balance__track--${item.remainingPercent < 30 ? 'danger' : 'ok'}`}
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(item.remainingPercent)}
+                        aria-label={`ยอดคงเหลือของ ${item.name} ${quantity.format(item.remainingPercent)}%`}
+                      >
+                        <span style={{ width: `${item.remainingPercent}%` }} />
+                      </div>
+                      <small>{quantity.format(item.remainingPercent)}% เหลือ</small>
+                    </td>
                     <td>{item.unit}</td>
                     <td className="numeric-cell identifier">{money.format(item.unitPrice)}</td>
                     <td className="numeric-cell identifier"><strong>{money.format(item.lineTotal)}</strong></td>
@@ -192,6 +224,17 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </div>
         )}
       </section>
+
+      <section className="bench-panel contract-file-panel" aria-labelledby="contract-file-title">
+        <div className="bench-panel__header">
+          <div>
+            <p className="section-kicker">CONTRACT DOCUMENT</p>
+            <h2 id="contract-file-title">ไฟล์สัญญา</h2>
+          </div>
+        </div>
+        <ContractFileCard contractId={contract.id} filePath={contract.fileUrl} canEdit={canEdit} />
+      </section>
+      </>
       )}
 
       {isAdmin && <ArchiveContractControl contractId={contract.id} />}

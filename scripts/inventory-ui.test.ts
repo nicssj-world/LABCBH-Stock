@@ -14,6 +14,9 @@ assert.match(listPage, /InventoryTable/)
 assert.match(listPage, /canOperateStock/, 'only stock operators may see the catalog creation action')
 assert.match(listPage, /href="\/inventory\/new"/)
 assert.doesNotMatch(listPage, /^['"]use client['"]/m, 'the catalog page stays a Server Component')
+assert.match(listPage, /InventoryMinimumStockSettings/, 'the catalog header must offer the system-wide minimum-stock control')
+assert.match(listPage, /hasAppRole\(actor, 'admin'\)/, 'only admins may see the system-wide minimum-stock control')
+assert.match(listPage, /getInventoryMinimumStockMonths/, 'the current reserve-months value must come from the shared setting')
 
 const newItemPage = read('app/(protected)/inventory/new/page.tsx')
 assert.match(newItemPage, /canOperateStock/, 'the new-item route must enforce the stock-operator role')
@@ -38,9 +41,12 @@ const detailPage = read('app/(protected)/inventory/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 params must be awaited')
 assert.match(detailPage, /getInventoryItem\(/)
 assert.match(detailPage, /LotTable/)
-assert.match(detailPage, /MinimumStockEditor/)
+assert.doesNotMatch(
+  detailPage,
+  /MinimumStockEditor/,
+  'per-item minimum editing moved to the catalog table, not the detail page',
+)
 assert.match(detailPage, /ชื่อเรียกอื่นที่พบในข้อมูลเดิม/, 'aliases must stay visible for reconciliation')
-assert.match(detailPage, /canOperateStock/, 'only admin/stock officers may edit the minimum')
 
 const table = read('components/inventory/InventoryTable.tsx')
 assert.match(table, /ต้องทำ PR/, 'items at or below minimum must show the Thai call to action')
@@ -48,11 +54,14 @@ assert.match(table, /inventory-table--desktop/, 'desktop table variant must exis
 assert.match(table, /inventory-task-cards/, 'mobile task-card variant must exist')
 assert.match(table, /คงเหลือ/)
 assert.match(table, /ขั้นต่ำ/)
+assert.match(table, /MinimumStockEditor/, 'the catalog row is where the per-item override now lives')
+assert.match(table, /canEdit/, 'the override trigger must be gated by edit permission')
 
 const lotTable = read('components/inventory/LotTable.tsx')
 assert.match(lotTable, /เลขที่ล็อต/)
 assert.match(lotTable, /LOT_EXPIRY_LABELS/, 'expiry wording comes from the shared presenter')
 assert.match(lotTable, /LOT_EXPIRY_TONES/, 'severity must carry a text label, not colour alone')
+assert.doesNotMatch(lotTable, /จัดเก็บที่/, 'storage location is not shown on the lot table')
 
 // The presenter is the single source of the Thai expiry vocabulary.
 const presenter = read('lib/inventory/presenter.ts')
@@ -67,21 +76,38 @@ assert.match(editor, /setMinimumStock/, 'the editor must call a typed Server Act
 assert.match(editor, /ค่าที่ระบบแนะนำ/, 'the suggested minimum must stay visible next to the override')
 assert.doesNotMatch(
   editor,
+  /min="0\.5"[\s\S]{0,40}max="60"/,
+  'the per-item reserve-months input must be gone now that it is a system-wide setting',
+)
+assert.doesNotMatch(
+  editor,
   /createBrowserClient|supabase\.from/,
   'the browser must never mutate Supabase directly',
 )
 
+const settingsControl = read('components/inventory/InventoryMinimumStockSettings.tsx')
+assert.match(settingsControl, /^['"]use client['"]/m)
+assert.match(settingsControl, /setInventoryMinimumStockMonths/, 'the control must call the admin-only Server Action')
+assert.match(settingsControl, /จำนวนเดือนสำรอง/)
+
 const actions = read('lib/inventory/actions.ts')
 assert.match(actions, /^['"]use server['"]/m)
 assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock'/)
+assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock_months'/)
 assert.match(actions, /supabaseAdmin\.rpc\('record_stock_adjustment'/)
 assert.match(actions, /assertStockOperator/, 'adjustments require an authorized stock operator')
+assert.match(
+  actions,
+  /hasAppRole\(actor, 'admin'\)/,
+  'the system-wide minimum-stock setting must be admin-only',
+)
 
 const queries = read('lib/inventory/queries.ts')
 assert.match(queries, /server-only/)
 assert.match(queries, /createClient/, 'catalog reads stay under RLS')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'reads must not escalate to the service role')
 assert.match(queries, /stock_movements/, 'balances come from the movement ledger')
+assert.match(queries, /getInventoryMinimumStockMonths/, 'the suggested minimum must read the shared setting')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/inventory/, 'the shell must link to the inventory catalog')

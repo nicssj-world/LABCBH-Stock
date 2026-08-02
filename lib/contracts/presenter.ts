@@ -122,6 +122,18 @@ export function contractExpiryNotice(
   return null
 }
 
+/**
+ * A contract needs watching when it is heading toward a renewal deadline or
+ * has little value left to draw on — the same two signals the dashboard
+ * watchlists already use, unified here so the register can filter by them.
+ * An ended or cancelled contract never needs watching regardless of balance.
+ */
+export function contractNeedsWatch(contract: PresentedContract): boolean {
+  if (contract.effectiveStatus === 'expired' || contract.effectiveStatus === 'cancelled') return false
+  if (contract.expiryNotice) return true
+  return typeof contract.remainingPercent === 'number' && contract.remainingPercent < 30
+}
+
 /** The contract end date is inclusive; expiry takes effect on the following Bangkok calendar day. */
 export function effectiveContractStatus(
   status: ContractStatus | null,

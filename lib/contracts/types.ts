@@ -45,6 +45,8 @@ export interface ContractItemRecord {
   /** Confirmed against purchase requests so far. */
   allocatedQuantity: number
   remainingQuantity: number
+  remainingValue: number
+  remainingPercent: number
 }
 
 export interface ContractStageHistoryRecord {

@@ -164,7 +164,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
 
       <dialog
         ref={previewDialogRef}
-        className="app-dialog contract-file-preview-dialog"
+        className="app-dialog file-preview-dialog"
         aria-labelledby="contract-file-preview-title"
         onCancel={(event) => {
           event.preventDefault()
@@ -185,7 +185,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
             </svg>
           </button>
         </header>
-        <div className="app-dialog__body contract-file-preview-dialog__body">
+        <div className="app-dialog__body file-preview-dialog__body">
           {openUrl && <iframe title="ตัวอย่างไฟล์สัญญา" src={openUrl} />}
         </div>
       </dialog>

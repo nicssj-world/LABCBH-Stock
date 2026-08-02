@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { LayersIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
-import { MinimumStockEditor } from '@/components/inventory/MinimumStockEditor'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { canOperateStock } from '@/lib/auth/access'
-import { requireActor } from '@/lib/auth/actor'
 import {
   MOVEMENT_TYPE_LABELS,
   STOCK_LEVEL_LABELS,
@@ -28,14 +26,12 @@ const monthLabel = (isoMonth: string) => {
 }
 
 export default async function InventoryDetailPage({ params }: InventoryDetailPageProps) {
-  const actor = await requireActor()
   const { id } = await params
   if (!UUID_PATTERN.test(id)) notFound()
 
   const item = await getInventoryItem(id)
   if (!item) notFound()
 
-  const canEdit = canOperateStock(actor)
   const monthKeys = completedMonthKeys(bangkokToday())
   const usableLots = item.lots.filter((lot) => lot.expiryStatus !== 'expired' && lot.balance > 0)
 
@@ -44,7 +40,9 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
       <header className="page-heading page-heading--actions">
         <div>
           <Link className="back-link" href="/inventory">← คลังน้ำยา</Link>
-          <p className="identifier">{item.lsCode}</p>
+          <p className="inventory-detail__code">
+            <StatusChip tone="info">{item.lsCode}</StatusChip>
+          </p>
           <h1>{item.name}</h1>
           <p>{item.responsibleDepartment ?? 'ไม่ระบุหน่วยงานที่รับผิดชอบ'}</p>
         </div>
@@ -53,24 +51,36 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
         </StatusChip>
       </header>
 
-      <section className="executive-strip" aria-label="ยอดคงเหลือและเกณฑ์ขั้นต่ำ">
-        <div>
-          <span>คงเหลือทั้งหมด</span>
+      <section className="executive-strip executive-strip--even" aria-label="ยอดคงเหลือและเกณฑ์ขั้นต่ำ">
+        <div className={`executive-strip__card${item.stockLevel !== 'healthy' ? ' executive-strip__cell--risk' : ''}`}>
+          <div className="executive-strip__head">
+            <span>คงเหลือทั้งหมด</span>
+            <span className="executive-strip__icon" aria-hidden="true"><StockBoxIcon /></span>
+          </div>
           <strong>{formatQuantity(item.onHand, item.baseUnit)}</strong>
           <small>รวมทุกล็อตจากบัญชีเคลื่อนไหว</small>
         </div>
-        <div>
-          <span>ขั้นต่ำที่ใช้จริง</span>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>ขั้นต่ำที่ใช้จริง</span>
+            <span className="executive-strip__icon" aria-hidden="true"><ThresholdIcon /></span>
+          </div>
           <strong>{formatQuantity(item.minimumStock, item.baseUnit)}</strong>
           <small>{item.minimumStockOverride === null ? 'ค่าที่ระบบแนะนำ' : 'ผู้ดูแลกำหนดเอง'}</small>
         </div>
-        <div>
-          <span>ล็อตที่ใช้งานได้</span>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>ล็อตที่ใช้งานได้</span>
+            <span className="executive-strip__icon" aria-hidden="true"><LayersIcon /></span>
+          </div>
           <strong>{usableLots.length.toLocaleString('th-TH')}</strong>
           <small>จากทั้งหมด {item.lots.length.toLocaleString('th-TH')} ล็อต</small>
         </div>
-        <div>
-          <span>เบิกเฉลี่ยต่อเดือน</span>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>เบิกเฉลี่ยต่อเดือน</span>
+            <span className="executive-strip__icon" aria-hidden="true"><TrendIcon /></span>
+          </div>
           <strong>
             {formatQuantity(
               item.monthlyIssues.reduce((sum, value) => sum + value, 0) /
@@ -88,36 +98,16 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
         </p>
       )}
 
-      <div className="inventory-detail-grid">
-        <section className="bench-panel" aria-labelledby="lot-title">
-          <div className="bench-panel__header">
-            <div>
-              <p className="section-kicker">LOTS · FIFO ORDER</p>
-              <h2 id="lot-title">ล็อตคงเหลือ</h2>
-            </div>
-            <p>เรียงตามลำดับที่ควรเบิกก่อน</p>
+      <section className="bench-panel" aria-labelledby="lot-title">
+        <div className="bench-panel__header">
+          <div>
+            <p className="section-kicker">LOTS · FIFO ORDER</p>
+            <h2 id="lot-title">ล็อตคงเหลือ</h2>
           </div>
-          <LotTable lots={item.lots} unit={item.baseUnit} />
-        </section>
-
-        {canEdit && (
-          <aside className="bench-panel" aria-labelledby="minimum-title">
-            <div className="bench-panel__header">
-              <div>
-                <p className="section-kicker">MINIMUM STOCK</p>
-                <h2 id="minimum-title">ตั้งค่าขั้นต่ำ</h2>
-              </div>
-            </div>
-            <MinimumStockEditor
-              itemId={item.id}
-              unit={item.baseUnit}
-              suggestedMinimum={item.suggestedMinimum}
-              minimumStockOverride={item.minimumStockOverride}
-              minimumStockMonths={item.minimumStockMonths}
-            />
-          </aside>
-        )}
-      </div>
+          <p>เรียงตามลำดับที่ควรเบิกก่อน</p>
+        </div>
+        <LotTable lots={item.lots} unit={item.baseUnit} />
+      </section>
 
       <section className="bench-panel" aria-labelledby="issue-history-title">
         <div className="bench-panel__header">

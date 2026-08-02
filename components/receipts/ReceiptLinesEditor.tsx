@@ -115,14 +115,6 @@ export function ReceiptLinesEditor({
                       onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
                     />
                   </label>
-                  <label className="field-row">
-                    จัดเก็บที่
-                    <input
-                      type="text"
-                      value={line.storageLocation}
-                      onChange={(event) => onChange(line.key, { storageLocation: event.target.value })}
-                    />
-                  </label>
                 </div>
 
                 <Button variant="ghost" onClick={() => onRemove(line.key)}>นำออก</Button>

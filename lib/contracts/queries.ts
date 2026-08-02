@@ -1,8 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { contractRemainingPercent } from '@/lib/contracts/budget'
-import { roundQuantity } from '@/lib/inventory/balance'
+import { contractRemainingPercent, contractSupplyBalance } from '@/lib/contracts/budget'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'
@@ -124,6 +123,14 @@ function mapContractRow(
   row: z.infer<typeof contractReadRowSchema>,
   correctionsByHistoryId = new Map<string, z.infer<typeof contractStageHistoryCorrectionReadRowSchema>[]>(),
 ): ContractRecord {
+  const contractItems = [...(row.contract_items ?? [])]
+    .sort((left, right) => left.line_number - right.line_number)
+  const supplyBalance = contractSupplyBalance(contractItems.map((item) => ({
+    quantity: item.quantity,
+    unitPrice: item.unit_price,
+    allocations: item.contract_item_allocations ?? [],
+  })))
+
   return {
     id: row.id,
     product: row.product,
@@ -152,9 +159,9 @@ function mapContractRow(
     }),
     responsibleUserIds: row.responsible_user_ids ?? [],
     fileUrl: row.file_url,
-    items: (row.contract_items ?? [])
-      .sort((left, right) => left.line_number - right.line_number)
-      .map((item) => ({
+    items: contractItems.map((item, index) => {
+      const balance = supplyBalance.items[index]
+      return {
         id: item.id,
         lineNumber: item.line_number,
         lsCode: item.ls_code,
@@ -163,7 +170,12 @@ function mapContractRow(
         unit: item.unit,
         unitPrice: item.unit_price,
         lineTotal: item.line_total,
-      })),
+        allocatedQuantity: balance.allocatedQuantity,
+        remainingQuantity: balance.remainingQuantity,
+        remainingValue: balance.remainingValue,
+        remainingPercent: balance.remainingPercent,
+      }
+    }),
     stageHistory: (row.contract_stage_history ?? [])
       .sort((left, right) => left.effective_date.localeCompare(right.effective_date))
       .map((history) => {

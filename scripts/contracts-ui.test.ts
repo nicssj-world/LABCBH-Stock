@@ -223,7 +223,7 @@ assert.match(globalStyles, /\.contract-register-table\s*\{[\s\S]*table-layout:\s
 
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')
-assert.match(dashboardPage, /รายการที่ต้องเฝ้าระวัง/, 'Composition C must lead with a watchlist')
+assert.match(dashboardPage, /รายการตามสัญญาคงเหลือต่ำ/, 'Composition C must lead with a watchlist')
 assert.doesNotMatch(dashboardPage, /minimum stock/i, 'stock-ledger alert stays out until Milestone 4')
 
 const dashboardValueCards = read('components/dashboard/ContractValueCards.tsx')

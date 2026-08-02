@@ -43,25 +43,55 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots
   }
 
+  const totalRequested = requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0)
+
   return (
     <div className="route-stack">
       <header className="contract-detail-heading">
-        <div>
-          <Link className="back-link" href="/requisitions">← ใบเบิกน้ำยา</Link>
+        <div className="contract-detail-heading__top">
+          <Link className="contract-detail-back" href="/requisitions">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="m14 6-6 6 6 6M8 12h10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>ใบเบิกน้ำยา</span>
+          </Link>
           <div className="contract-detail-heading__status">
             <StatusChip tone={STATUS_TONES[requisition.status]}>
               {STATUS_LABELS[requisition.status]}
             </StatusChip>
             <span>{requisition.department}</span>
+            {requisition.status === 'fulfilled' && (
+              <Link className="lab-link-button lab-link-button--secondary" href={`/requisitions/${requisition.id}/print`}>
+                พิมพ์ใบเบิก
+              </Link>
+            )}
           </div>
-          <h1 className="identifier">{requisition.documentNumber}</h1>
-          <p>ผู้ขอเบิก {requisition.requesterName} · ต้องการรับ {formatThaiDate(requisition.desiredDate)}</p>
         </div>
-        {requisition.status === 'fulfilled' && (
-          <Link className="lab-link-button lab-link-button--secondary" href={`/requisitions/${requisition.id}/print`}>
-            พิมพ์ใบเบิก
-          </Link>
-        )}
+
+        <div className="contract-detail-heading__body">
+          <div className="contract-detail-heading__identity">
+            <h1 className="identifier">{requisition.documentNumber}</h1>
+            <p>ผู้ขอเบิก {requisition.requesterName} · ต้องการรับ {formatThaiDate(requisition.desiredDate)}</p>
+          </div>
+          <dl className="contract-detail-heading__value">
+            <dt>รวมที่ขอ</dt>
+            <dd>{formatQuantity(totalRequested)}</dd>
+          </dl>
+        </div>
+
+        <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบเบิก">
+          <div><dt>ผู้ขอเบิก</dt><dd>{requisition.requesterName}</dd></div>
+          <div><dt>หน่วยงาน</dt><dd>{requisition.department}</dd></div>
+          <div><dt>จำนวนรายการ</dt><dd className="identifier">{requisition.items.length}</dd></div>
+          <div>
+            <dt>การจ่ายของ</dt>
+            <dd>
+              {requisition.status === 'fulfilled'
+                ? `${formatThaiDateTime(requisition.fulfilledAt)} · ${requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'}`
+                : 'ยังไม่จ่าย'}
+            </dd>
+          </div>
+        </dl>
       </header>
 
       <section className="bench-panel" aria-labelledby="requisition-detail-lines-title">
@@ -120,10 +150,10 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
       </section>
 
       {canFulfil && (
-        <section className="bench-panel" aria-labelledby="fulfillment-title">
+        <section className="bench-panel bench-panel--decision" aria-labelledby="fulfillment-title">
           <div className="bench-panel__header">
             <div>
-              <p className="section-kicker">FIFO FULFILMENT</p>
+              <p className="section-kicker">STOCK OFFICER</p>
               <h2 id="fulfillment-title">เลือกล็อตเพื่อจ่ายของ</h2>
             </div>
             <p>ล็อตเรียงตามลำดับที่ควรจ่ายก่อน</p>

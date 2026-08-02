@@ -43,11 +43,34 @@ export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
     }),
   ]
 
+  const yearOptions = Array.from({ length: 21 }, (_, index) => today.getFullYear() + 10 - index)
+  if (!yearOptions.includes(viewYear)) yearOptions.push(viewYear)
+  yearOptions.sort((a, b) => b - a)
+
   return (
     <div className="calendar-picker">
       <div className="calendar-picker__header">
         <button type="button" aria-label="เดือนก่อนหน้า" onClick={() => changeMonth(-1)}>‹</button>
-        <strong>{THAI_MONTHS[viewMonth - 1]} {viewYear + BUDDHIST_ERA_OFFSET}</strong>
+        <div className="calendar-picker__jump">
+          <select
+            aria-label="เลือกเดือน"
+            value={viewMonth}
+            onChange={(event) => setViewMonth(Number(event.target.value))}
+          >
+            {THAI_MONTHS.map((label, index) => (
+              <option key={label} value={index + 1}>{label}</option>
+            ))}
+          </select>
+          <select
+            aria-label="เลือกปี"
+            value={viewYear}
+            onChange={(event) => setViewYear(Number(event.target.value))}
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>{year + BUDDHIST_ERA_OFFSET}</option>
+            ))}
+          </select>
+        </div>
         <button type="button" aria-label="เดือนถัดไป" onClick={() => changeMonth(1)}>›</button>
       </div>
       <div className="calendar-picker__weekdays" aria-hidden="true">

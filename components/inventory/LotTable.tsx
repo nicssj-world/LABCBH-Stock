@@ -20,10 +20,9 @@ export function LotTable({ lots, unit }: { lots: InventoryLotRecord[]; unit: str
         </caption>
         <thead>
           <tr>
+            <th>รับเข้าเมื่อ</th>
             <th>เลขที่ล็อต</th>
             <th>วันหมดอายุ</th>
-            <th>รับเข้าเมื่อ</th>
-            <th>จัดเก็บที่</th>
             <th className="numeric-cell">คงเหลือ</th>
             <th>สถานะ</th>
           </tr>
@@ -31,10 +30,9 @@ export function LotTable({ lots, unit }: { lots: InventoryLotRecord[]; unit: str
         <tbody>
           {lots.map((lot) => (
             <tr key={lot.id}>
+              <td>{formatThaiDate(lot.receivedDate)}</td>
               <td className="identifier">{lot.lotNumber}</td>
               <td>{formatThaiDate(lot.expiryDate)}</td>
-              <td>{formatThaiDate(lot.receivedDate)}</td>
-              <td>{lot.storageLocation ?? 'ไม่ระบุ'}</td>
               <td className="numeric-cell identifier">
                 {formatQuantity(lot.balance, unit)}
                 <small>รับเข้า {formatQuantity(lot.originalQuantity, unit)}</small>

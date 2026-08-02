@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { MinimumStockEditor } from '@/components/inventory/MinimumStockEditor'
 import { StatusChip } from '@/components/ui/StatusChip'
 import {
   STOCK_LEVEL_LABELS,
@@ -12,7 +13,7 @@ function needsPurchaseRequest(item: InventoryItemRecord) {
   return item.stockLevel !== 'healthy'
 }
 
-export function InventoryTable({ items }: { items: InventoryItemRecord[] }) {
+export function InventoryTable({ items, canEdit = false }: { items: InventoryItemRecord[]; canEdit?: boolean }) {
   if (items.length === 0) {
     return <p className="empty-state">ไม่พบรายการน้ำยาตามเงื่อนไขที่เลือก</p>
   }
@@ -42,7 +43,16 @@ export function InventoryTable({ items }: { items: InventoryItemRecord[] }) {
                 <td className="numeric-cell identifier">{formatQuantity(item.onHand, item.baseUnit)}</td>
                 <td className="numeric-cell identifier">
                   {formatQuantity(item.minimumStock, item.baseUnit)}
-                  {item.minimumStockOverride === null ? <small>ค่าที่ระบบแนะนำ</small> : <small>กำหนดเอง</small>}
+                  <small>{item.minimumStockOverride === null ? 'ค่าที่ระบบแนะนำ' : 'กำหนดเอง'}</small>
+                  {canEdit && (
+                    <MinimumStockEditor
+                      itemId={item.id}
+                      itemName={item.name}
+                      unit={item.baseUnit}
+                      suggestedMinimum={item.suggestedMinimum}
+                      minimumStockOverride={item.minimumStockOverride}
+                    />
+                  )}
                 </td>
                 <td>
                   <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
@@ -72,6 +82,15 @@ export function InventoryTable({ items }: { items: InventoryItemRecord[] }) {
               {formatQuantity(item.minimumStock, item.baseUnit)}
             </p>
             {needsPurchaseRequest(item) && <p className="task-card__callout">ต้องทำ PR</p>}
+            {canEdit && (
+              <MinimumStockEditor
+                itemId={item.id}
+                itemName={item.name}
+                unit={item.baseUnit}
+                suggestedMinimum={item.suggestedMinimum}
+                minimumStockOverride={item.minimumStockOverride}
+              />
+            )}
             <Link className="text-link task-card__action" href={`/inventory/${item.id}`}>
               ดูรายละเอียดน้ำยา
             </Link>

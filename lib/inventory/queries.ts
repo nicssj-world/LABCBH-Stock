@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { rankLotsForFifo } from '@/lib/requisitions/fifo'
 import { createClient } from '@/lib/supabase/server'
 import {
+  DEFAULT_MINIMUM_STOCK_MONTHS,
   MINIMUM_STOCK_WINDOW_MONTHS,
   MOVEMENT_TYPES,
   calculateSuggestedMinimum,
@@ -29,7 +30,6 @@ const itemRowSchema = z.object({
   base_unit: z.string(),
   responsible_department: z.string().nullable(),
   default_unit_price: numericSchema.nullable(),
-  minimum_stock_months: numericSchema,
   minimum_stock_override: numericSchema.nullable(),
   is_active: z.boolean(),
   note: z.string().nullable(),
@@ -84,7 +84,6 @@ const ITEM_SELECT = `
   base_unit,
   responsible_department,
   default_unit_price,
-  minimum_stock_months,
   minimum_stock_override,
   is_active,
   note
@@ -159,8 +158,9 @@ function toItemRecord(
   row: z.infer<typeof itemRowSchema>,
   onHand: number,
   monthlyIssues: number[],
+  minimumStockMonths: number,
 ): InventoryItemRecord {
-  const suggestedMinimum = calculateSuggestedMinimum(monthlyIssues, row.minimum_stock_months)
+  const suggestedMinimum = calculateSuggestedMinimum(monthlyIssues, minimumStockMonths)
   const minimumStock = resolveMinimumStock(row.minimum_stock_override, suggestedMinimum)
 
   return {
@@ -170,7 +170,7 @@ function toItemRecord(
     baseUnit: row.base_unit,
     responsibleDepartment: row.responsible_department,
     defaultUnitPrice: row.default_unit_price,
-    minimumStockMonths: row.minimum_stock_months,
+    minimumStockMonths,
     minimumStockOverride: row.minimum_stock_override,
     isActive: row.is_active,
     onHand,
@@ -179,6 +179,21 @@ function toItemRecord(
     stockLevel: classifyStockLevel({ onHand, minimum: minimumStock }),
     monthlyIssues,
   }
+}
+
+const minimumStockSettingsRowSchema = z.object({ minimum_stock_months: numericSchema })
+
+/** One system-wide reserve-months value drives every item's suggested minimum. */
+export async function getInventoryMinimumStockMonths(): Promise<number> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('inventory_minimum_stock_settings')
+    .select('minimum_stock_months')
+    .eq('id', true)
+    .maybeSingle()
+
+  if (error) throw new Error(`อ่านค่าจำนวนเดือนสำรองไม่สำเร็จ: ${error.message}`)
+  return data ? minimumStockSettingsRowSchema.parse(data).minimum_stock_months : DEFAULT_MINIMUM_STOCK_MONTHS
 }
 
 export async function listInventoryItems(
@@ -201,16 +216,17 @@ export async function listInventoryItems(
   const rows = itemRowSchema.array().parse(data ?? [])
   if (rows.length === 0) return []
 
-  const { monthKeys, onHandByItem, issuesByItem } = await readBalancesAndIssues(
-    supabase,
-    rows.map((row) => row.id),
-  )
+  const [{ monthKeys, onHandByItem, issuesByItem }, minimumStockMonths] = await Promise.all([
+    readBalancesAndIssues(supabase, rows.map((row) => row.id)),
+    getInventoryMinimumStockMonths(),
+  ])
 
   return rows.map((row) =>
     toItemRecord(
       row,
       onHandByItem.get(row.id) ?? 0,
       buildMonthlyIssues(monthKeys, issuesByItem.get(row.id) ?? new Map()),
+      minimumStockMonths,
     ),
   )
 }
@@ -248,7 +264,7 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   const row = itemRowSchema.parse(data)
   const today = bangkokToday()
 
-  const [balancesAndIssues, lotResult, aliasResult, movementResult] = await Promise.all([
+  const [balancesAndIssues, lotResult, aliasResult, movementResult, minimumStockMonths] = await Promise.all([
     readBalancesAndIssues(supabase, [row.id]),
     supabase
       .from('inventory_lots')
@@ -265,6 +281,7 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
       .order('occurred_on', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50),
+    getInventoryMinimumStockMonths(),
   ])
 
   if (lotResult.error) throw new Error(`อ่านข้อมูลล็อตไม่สำเร็จ: ${lotResult.error.message}`)
@@ -299,6 +316,7 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
       row,
       onHandByItem.get(row.id) ?? 0,
       buildMonthlyIssues(monthKeys, issuesByItem.get(row.id) ?? new Map()),
+      minimumStockMonths,
     ),
     note: row.note,
     lots,

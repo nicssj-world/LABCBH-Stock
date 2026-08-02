@@ -15,7 +15,6 @@ interface FormState {
   baseUnit: string
   responsibleDepartment: string
   defaultUnitPrice: string
-  minimumStockMonths: string
   note: string
 }
 
@@ -25,7 +24,6 @@ const INITIAL_STATE: FormState = {
   baseUnit: '',
   responsibleDepartment: '',
   defaultUnitPrice: '',
-  minimumStockMonths: '1.5',
   note: '',
 }
 
@@ -56,7 +54,9 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
           baseUnit: state.baseUnit,
           responsibleDepartment: state.responsibleDepartment.trim() || null,
           defaultUnitPrice,
-          minimumStockMonths: Number(state.minimumStockMonths),
+          // The reserve-months multiplier is a system-wide setting (admin-only,
+          // from the inventory catalog header), not something set per item.
+          minimumStockMonths: 1.5,
           note: state.note.trim() || null,
         })
         router.push(`/inventory/${created.id}`)

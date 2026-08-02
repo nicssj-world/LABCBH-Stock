@@ -11,6 +11,7 @@ interface ContractFiltersProps {
   procurementStage: string
   showEnded: boolean
   showOlder: boolean
+  showWatchlist: boolean
   fiscalYears: number[]
   contractTypes: Array<{ value: string; label: string }>
   departments: string[]
@@ -25,6 +26,7 @@ export function ContractFilters({
   procurementStage,
   showEnded,
   showOlder,
+  showWatchlist,
   fiscalYears,
   contractTypes,
   departments,
@@ -62,6 +64,7 @@ export function ContractFilters({
     const nextParams = new URLSearchParams()
     if (showEnded) nextParams.set('showEnded', '1')
     if (showOlder) nextParams.set('showOlder', '1')
+    if (showWatchlist) nextParams.set('watchlist', '1')
     replaceFilters(nextParams)
   }
 
