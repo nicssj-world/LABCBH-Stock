@@ -145,7 +145,7 @@ export function RequisitionForm({
         <div className="requisition-lines">
           <CatalogItemCombobox
             label="เพิ่มน้ำยาเข้าใบเบิก"
-            placeholder="พิมพ์รหัส LS หรือชื่อน้ำยา…"
+            placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
             options={catalog.map((item) => ({
               id: item.inventoryItemId,
               label: `${item.lsCode} · ${item.name}`,

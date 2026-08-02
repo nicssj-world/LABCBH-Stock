@@ -175,7 +175,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         {contract.items.length === 0 ? <p className="empty-state">ยังไม่มีรายการน้ำยา</p> : (
           <div className="detail-items-table">
             <table className="data-table">
-              <thead><tr><th>รหัส LS</th><th>ชื่อน้ำยา</th><th className="numeric-cell">จำนวน</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย</th><th className="numeric-cell">รวม</th></tr></thead>
+              <thead><tr><th>รหัสพัสดุ</th><th>ชื่อน้ำยา</th><th className="numeric-cell">จำนวน</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย</th><th className="numeric-cell">รวม</th></tr></thead>
               <tbody>
                 {contract.items.map((item) => (
                   <tr key={item.id}>

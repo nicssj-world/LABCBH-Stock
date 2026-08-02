@@ -63,7 +63,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
             name: 'search',
             label: 'ค้นหา',
             value: search,
-            placeholder: 'เลขที่ PR, เลขที่ PO, รหัส LS หรือชื่อน้ำยา',
+            placeholder: 'เลขที่ PR, เลขที่ PO, รหัสพัสดุ หรือชื่อน้ำยา',
           },
           {
             type: 'select',

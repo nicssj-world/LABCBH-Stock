@@ -50,7 +50,7 @@ export function ReceiptLinesEditor({
     <div className="receipt-lines">
       <CatalogItemCombobox
         label="เพิ่มน้ำยาเข้าใบรับ"
-        placeholder="พิมพ์รหัส LS หรือชื่อน้ำยา…"
+        placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
         options={catalog.map((item) => ({
           id: item.inventoryItemId,
           label: `${item.lsCode} · ${item.name}`,

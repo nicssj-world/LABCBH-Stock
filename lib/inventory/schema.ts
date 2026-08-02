@@ -6,7 +6,7 @@ export const MOVEMENT_TYPE_ENUM = z.enum(MOVEMENT_TYPES)
 
 export const createInventoryItemInputSchema = z
   .object({
-    lsCode: z.string().trim().min(1, 'กรุณาระบุรหัส LS').max(100, 'รหัส LS ยาวเกินไป'),
+    lsCode: z.string().trim().min(1, 'กรุณาระบุรหัสพัสดุ').max(100, 'รหัสพัสดุยาวเกินไป'),
     name: z.string().trim().min(1, 'กรุณาระบุชื่อน้ำยา').max(240, 'ชื่อน้ำยาต้องไม่เกิน 240 ตัวอักษร'),
     baseUnit: z.string().trim().min(1, 'กรุณาระบุหน่วยนับ').max(100, 'หน่วยนับยาวเกินไป'),
     responsibleDepartment: z.string().trim().max(200, 'หน่วยงานยาวเกินไป').nullable().optional(),

@@ -22,7 +22,7 @@ export function CatalogItemCombobox({
   placeholder,
   options,
   onSelect,
-  instruction = 'พิมพ์รหัส LS หรือชื่อรายการ แล้วเลือกจากคำแนะนำ',
+  instruction = 'พิมพ์รหัสพัสดุ หรือชื่อรายการ แล้วเลือกจากคำแนะนำ',
 }: CatalogItemComboboxProps) {
   const inputId = useId()
   const hintId = `${inputId}-hint`
@@ -87,7 +87,7 @@ export function CatalogItemCombobox({
 
       {normalizedQuery && matches.length === 0 && (
         <p className="catalog-combobox__empty" role="status">
-          ไม่พบรายการ ลองพิมพ์รหัส LS หรือชื่อรายการอื่น
+          ไม่พบรายการ ลองพิมพ์รหัสพัสดุ หรือชื่อรายการอื่น
         </p>
       )}
     </div>

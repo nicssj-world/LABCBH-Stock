@@ -122,11 +122,13 @@ Fixtures are consumed by the runs that use them; reseed before each run.
 
 | | Ref | Use |
 |---|---|---|
-| Lab_management Project | `fslagsuorkcckvvtrmyi` | **Production.** Legacy portal data. Not yet migrated. |
-| LABCBH Stock Staging | `stogulcfwsvunydmwrex` | Development and E2E. Carries all migrations. |
+| Lab_management Project | `fslagsuorkcckvvtrmyi` | **Production.** Legacy portal data, and carries every LABCBH Stock migration — confirmed 2026-08-02 via REST (`contracts.sent_to_stock_officer_date`, `purchase_requests.created_contract_id` both present, from that day's migrations). `.env.local` points here by default. |
+| LABCBH Stock Staging | `stogulcfwsvunydmwrex` | Development and E2E. |
 
 `.env.local` decides which one the app talks to. Check it before assuming what
-you are looking at.
+you are looking at — it is not a given that it points at Staging just because
+that's the project meant for development; verify against the actual project,
+not this table, since either side can drift.
 
 **`supabase db push` silently applies nothing** while `[db.migrations] enabled`
 is `false` in `supabase/config.toml`, which is how it ships. To push, set that

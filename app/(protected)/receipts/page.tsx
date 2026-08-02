@@ -74,7 +74,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
             name: 'search',
             label: 'ค้นหา',
             value: search,
-            placeholder: 'เลขที่ PO, เลขที่ PR, รหัส LS หรือชื่อน้ำยา',
+            placeholder: 'เลขที่ PO, เลขที่ PR, รหัสพัสดุ หรือชื่อน้ำยา',
           },
           {
             type: 'select',

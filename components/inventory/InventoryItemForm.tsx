@@ -80,7 +80,7 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
 
         <div className="form-grid">
           <label>
-            รหัส LS <span aria-hidden="true">*</span>
+            รหัสพัสดุ <span aria-hidden="true">*</span>
             <input
               required
               maxLength={100}

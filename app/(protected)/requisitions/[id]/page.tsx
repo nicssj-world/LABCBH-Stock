@@ -76,7 +76,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
           <table className="data-table">
             <thead>
               <tr>
-                <th>รหัส LS</th>
+                <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอเบิก</th>
                 <th className="numeric-cell">จ่ายแล้ว</th>

@@ -35,7 +35,7 @@ assert.match(form, /requestedQuantity|item\.quantity/, 'PR quantities are carrie
 const linesEditor = read('components/receipts/ReceiptLinesEditor.tsx')
 assert.match(linesEditor, /CatalogItemCombobox/, 'receiving items must be searchable by typing')
 const catalogCombobox = read('components/ui/CatalogItemCombobox.tsx')
-assert.match(catalogCombobox, /พิมพ์รหัส LS หรือชื่อรายการ/, 'receiving item search must provide a hint')
+assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หรือชื่อรายการ/, 'receiving item search must provide a hint')
 const styles = read('app/globals.css')
 assert.match(styles, /\.field-row input,\s*\.field-row select\s*\{[\s\S]*?height:\s*46px/, 'field inputs and selects must have equal height')
 assert.match(styles, /\.form-grid\s*\{[^}]*align-items:\s*start;[^}]*\}/, 'form fields must share the same top alignment')

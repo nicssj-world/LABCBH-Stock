@@ -45,7 +45,7 @@ export async function createInventoryItem(input: CreateInventoryItemInput) {
 
   if (result.error) {
     if (result.error.message.toLowerCase().includes('inventory_items_ls_code_normalized_key')) {
-      throw new Error('สร้างรายการน้ำยาไม่สำเร็จ: รหัส LS นี้มีอยู่ในคลังแล้ว')
+      throw new Error('สร้างรายการน้ำยาไม่สำเร็จ: รหัสพัสดุนี้มีอยู่ในคลังแล้ว')
     }
     throw new Error(`สร้างรายการน้ำยาไม่สำเร็จ: ${result.error.message}`)
   }

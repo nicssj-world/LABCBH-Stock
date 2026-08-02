@@ -85,7 +85,7 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>รหัส LS</th>
+                  <th>รหัสพัสดุ</th>
                   <th>ชื่อน้ำยา</th>
                   <th>เลขที่ล็อต</th>
                   <th>วันหมดอายุ</th>

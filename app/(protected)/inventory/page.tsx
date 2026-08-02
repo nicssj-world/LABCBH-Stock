@@ -60,7 +60,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       <AutoFilterBench
         ariaLabel="ตัวกรองรายการคลัง"
         fields={[
-          { type: 'search', name: 'search', label: 'ค้นหา', value: search, placeholder: 'รหัส LS หรือชื่อน้ำยา' },
+          { type: 'search', name: 'search', label: 'ค้นหา', value: search, placeholder: 'รหัสพัสดุ หรือชื่อน้ำยา' },
           {
             type: 'select',
             name: 'department',

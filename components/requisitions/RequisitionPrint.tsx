@@ -42,7 +42,7 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
         <thead>
           <tr>
             <th scope="col">ลำดับ</th>
-            <th scope="col">รหัส LS</th>
+            <th scope="col">รหัสพัสดุ</th>
             <th scope="col">รายการ</th>
             <th scope="col">เลขที่ล็อต</th>
             <th scope="col">วันหมดอายุ</th>

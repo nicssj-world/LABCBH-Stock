@@ -23,7 +23,7 @@ export function InventoryTable({ items }: { items: InventoryItemRecord[] }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>รหัส LS / ชื่อน้ำยา</th>
+              <th>รหัสพัสดุ / ชื่อน้ำยา</th>
               <th>หน่วยงาน</th>
               <th className="numeric-cell">คงเหลือ</th>
               <th className="numeric-cell">ขั้นต่ำ</th>

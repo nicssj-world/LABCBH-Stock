@@ -136,7 +136,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <table className="data-table">
             <thead>
               <tr>
-                <th>รหัส LS</th>
+                <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอซื้อ</th>
                 <th className="numeric-cell">คงเหลือขณะยื่น</th>

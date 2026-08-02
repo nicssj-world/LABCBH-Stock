@@ -311,7 +311,7 @@ export function PurchaseRequestForm({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>รหัส LS</th>
+                  <th>รหัสพัสดุ</th>
                   <th>ชื่อน้ำยา</th>
                   <th className="numeric-cell">จำนวนที่ขอ</th>
                   <th>หน่วย</th>

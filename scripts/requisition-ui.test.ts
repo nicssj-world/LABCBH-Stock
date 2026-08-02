@@ -20,7 +20,7 @@ assert.match(form, /\{departments\.map\(\(department\)/)
 assert.doesNotMatch(form, /<input type="text" required value=\{department\}/)
 assert.match(form, /CatalogItemCombobox/, 'requisition items must be searchable by typing')
 const catalogCombobox = read('components/ui/CatalogItemCombobox.tsx')
-assert.match(catalogCombobox, /พิมพ์รหัส LS หรือชื่อรายการ/, 'requisition item search must provide a hint')
+assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หรือชื่อรายการ/, 'requisition item search must provide a hint')
 
 const queries = read('lib/requisitions/queries.ts')
 assert.match(queries, /department\?: string/, 'requisition queries accept a department filter')
