@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PurchaseRequestSummaryDialog } from '@/components/pr/PurchaseRequestSummaryDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import {
@@ -8,6 +9,14 @@ import {
   formatBaht,
 } from '@/lib/pr/presenter'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
+
+/** A lease PR carries zero items, so request.total (summed from items) is
+ *  always 0 — the ceiling entered on the contract draft is the real figure. */
+function leaseCeilingLabel(request: PurchaseRequestRecord): string {
+  const draft = request.methodDetails.contractDraft
+  const total = draft && typeof draft === 'object' ? (draft as Record<string, unknown>).total : null
+  return typeof total === 'number' ? formatBaht(total) : 'ไม่ระบุ'
+}
 
 export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRecord[] }) {
   if (requests.length === 0) {
@@ -33,7 +42,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
             {requests.map((request) => (
               <tr key={request.id}>
                 <td>
-                  <strong className="identifier">{request.documentNumber}</strong>
+                  <PurchaseRequestSummaryDialog request={request} />
                   <small>{request.poNumber ? `PO ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</small>
                 </td>
                 <td>{formatThaiDate(request.requestedDate)}</td>
@@ -42,7 +51,9 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                   {request.requesterName ?? 'ไม่ระบุ'}
                   <small>{request.department}</small>
                 </td>
-                <td className="numeric-cell identifier">{formatBaht(request.total)}</td>
+                <td className="numeric-cell identifier">
+                  {request.purchaseMethod === 'equipment_lease' ? leaseCeilingLabel(request) : formatBaht(request.total)}
+                </td>
                 <td>
                   <StatusChip tone={PURCHASE_REQUEST_STATUS_TONES[request.status]}>
                     {PURCHASE_REQUEST_STATUS_LABELS[request.status]}
@@ -64,12 +75,14 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
               <StatusChip tone={PURCHASE_REQUEST_STATUS_TONES[request.status]}>
                 {PURCHASE_REQUEST_STATUS_LABELS[request.status]}
               </StatusChip>
-              <span className="identifier">{formatBaht(request.total)}</span>
+              <span className="identifier">
+                {request.purchaseMethod === 'equipment_lease' ? leaseCeilingLabel(request) : formatBaht(request.total)}
+              </span>
             </div>
-            <h3 className="identifier">{request.documentNumber}</h3>
+            <h3 className="identifier"><PurchaseRequestSummaryDialog request={request} variant="card" /></h3>
             <p>
-              {PURCHASE_METHOD_LABELS[request.purchaseMethod]} · {formatThaiDate(request.requestedDate)} ·{' '}
-              {request.items.length} รายการ
+              {PURCHASE_METHOD_LABELS[request.purchaseMethod]} · {formatThaiDate(request.requestedDate)}
+              {request.purchaseMethod !== 'equipment_lease' && ` · ${request.items.length} รายการ`}
             </p>
             <Link className="text-link task-card__action" href={`/purchase-requests/${request.id}`}>
               ดูรายละเอียดใบ PR

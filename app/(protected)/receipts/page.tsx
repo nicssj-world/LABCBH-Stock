@@ -5,6 +5,8 @@ import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
+import { GoodsReceiptSummaryDialog } from '@/components/receipts/GoodsReceiptSummaryDialog'
+import { GOODS_RECEIPT_STATUS_LABELS, GOODS_RECEIPT_STATUS_TONES } from '@/lib/receipts/presenter'
 import { listGoodsReceipts } from '@/lib/receipts/queries'
 import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
 import type { GoodsReceiptRecord } from '@/lib/receipts/types'
@@ -14,18 +16,6 @@ interface ReceiptsPageProps {
 }
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
-
-const STATUS_LABELS: Record<(typeof GOODS_RECEIPT_STATUSES)[number], string> = {
-  draft: 'ฉบับร่าง',
-  posted: 'บันทึกเข้าคลังแล้ว',
-  cancelled: 'ยกเลิก',
-}
-
-const STATUS_TONES: Record<(typeof GOODS_RECEIPT_STATUSES)[number], 'attention' | 'success' | 'danger'> = {
-  draft: 'attention',
-  posted: 'success',
-  cancelled: 'danger',
-}
 
 export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) {
   const actor = await requireActor()
@@ -83,7 +73,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
             value: status ?? '',
             options: [
               { value: '', label: 'ทุกสถานะ' },
-              ...GOODS_RECEIPT_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+              ...GOODS_RECEIPT_STATUSES.map((value) => ({ value, label: GOODS_RECEIPT_STATUS_LABELS[value] })),
             ],
           },
           {
@@ -135,7 +125,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                   {receipts.map((receipt) => (
                     <tr key={receipt.id}>
                       <td>
-                        <strong className="identifier">{receipt.poNumber ?? 'ไม่ระบุ PO'}</strong>
+                        <GoodsReceiptSummaryDialog receipt={receipt} />
                         <small>{receipt.purchaseRequestNumber ?? 'ไม่อ้างอิงใบ PR'}</small>
                       </td>
                       <td>{formatThaiDate(receipt.receivedDate)}</td>
@@ -143,8 +133,8 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                       <td className="numeric-cell identifier">{receipt.items.length}</td>
                       <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
                       <td>
-                        <StatusChip tone={STATUS_TONES[receipt.status]}>
-                          {STATUS_LABELS[receipt.status]}
+                        <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>
+                          {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}
                         </StatusChip>
                       </td>
                       <td><Link className="text-link" href={`/receipts/${receipt.id}`}>ดูรายละเอียด</Link></td>

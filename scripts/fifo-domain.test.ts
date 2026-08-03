@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {
+  defaultLotSelection,
   isLotSelectable,
   rankLotsForFifo,
   requiresOverrideReason,
@@ -111,5 +112,36 @@ assert.deepEqual(
   }),
   ['เลือกล็อตเดียวกันซ้ำ'],
 )
+
+// The panel pre-fills rank 1 at the full request, capped to what it has, so
+// the officer doesn't have to click before adjusting the common case.
+const rankedLots = [
+  { id: 'top', balance: 100, selectable: true },
+  { id: 'second', balance: 100, selectable: true },
+]
+assert.deepEqual(
+  defaultLotSelection(rankedLots, 50),
+  [{ lotId: 'top', quantity: 50 }],
+  'the top-ranked lot is pre-filled at the requested quantity',
+)
+assert.deepEqual(
+  defaultLotSelection(rankedLots, 150),
+  [{ lotId: 'top', quantity: 100 }],
+  'a request bigger than the top lot is capped, not left over-filled',
+)
+assert.deepEqual(
+  defaultLotSelection(
+    [{ id: 'expired', balance: 100, selectable: false }, { id: 'usable', balance: 20, selectable: true }],
+    5,
+  ),
+  [{ lotId: 'usable', quantity: 5 }],
+  'an unselectable lot ranked first must be skipped, not pre-filled',
+)
+assert.deepEqual(
+  defaultLotSelection([{ id: 'expired', balance: 100, selectable: false }], 5),
+  [],
+  'nothing is pre-filled when no lot is currently selectable',
+)
+assert.deepEqual(defaultLotSelection([], 5), [])
 
 console.log('FIFO domain: ok')

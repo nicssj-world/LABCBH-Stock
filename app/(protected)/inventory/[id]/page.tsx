@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { LayersIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
+import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
+import { LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { canOperateStock } from '@/lib/auth/access'
+import { requireActor } from '@/lib/auth/actor'
 import {
   MOVEMENT_TYPE_LABELS,
   STOCK_LEVEL_LABELS,
   STOCK_LEVEL_TONES,
+  formatBaht,
   formatQuantity,
   formatThaiDate,
 } from '@/lib/inventory/presenter'
@@ -29,6 +33,9 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
   const { id } = await params
   if (!UUID_PATTERN.test(id)) notFound()
 
+  const actor = await requireActor()
+  const canEdit = canOperateStock(actor)
+
   const item = await getInventoryItem(id)
   if (!item) notFound()
 
@@ -46,12 +53,23 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
           <h1>{item.name}</h1>
           <p>{item.responsibleDepartment ?? 'ไม่ระบุหน่วยงานที่รับผิดชอบ'}</p>
         </div>
-        <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
-          {STOCK_LEVEL_LABELS[item.stockLevel]}
-        </StatusChip>
+        <div className="page-heading__cluster">
+          <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
+            {STOCK_LEVEL_LABELS[item.stockLevel]}
+          </StatusChip>
+          {!item.isActive && <StatusChip tone="danger">ปิดใช้งานแล้ว</StatusChip>}
+          {canEdit && (
+            <>
+              <Link className="lab-link-button lab-link-button--secondary" href={`/inventory/${item.id}/edit`}>
+                แก้ไขข้อมูล
+              </Link>
+              <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} />
+            </>
+          )}
+        </div>
       </header>
 
-      <section className="executive-strip executive-strip--even" aria-label="ยอดคงเหลือและเกณฑ์ขั้นต่ำ">
+      <section className="executive-strip executive-strip--even-5" aria-label="ยอดคงเหลือ เกณฑ์ขั้นต่ำ และราคาต่อหน่วย">
         <div className={`executive-strip__card${item.stockLevel !== 'healthy' ? ' executive-strip__cell--risk' : ''}`}>
           <div className="executive-strip__head">
             <span>คงเหลือทั้งหมด</span>
@@ -89,6 +107,14 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             )}
           </strong>
           <small>ค่าเฉลี่ย 3 เดือนที่ผ่านมา</small>
+        </div>
+        <div className="executive-strip__card">
+          <div className="executive-strip__head">
+            <span>ราคาต่อหน่วย</span>
+            <span className="executive-strip__icon" aria-hidden="true"><PriceTagIcon /></span>
+          </div>
+          <strong>{formatBaht(item.defaultUnitPrice)}</strong>
+          <small>ราคาอ้างอิงล่าสุดที่บันทึกไว้</small>
         </div>
       </section>
 

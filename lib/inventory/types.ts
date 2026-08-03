@@ -5,10 +5,14 @@ import type {
   inventoryFiltersSchema,
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
+  setInventoryItemActiveInputSchema,
   stockAdjustmentInputSchema,
+  updateInventoryItemInputSchema,
 } from './schema'
 
 export type CreateInventoryItemInput = z.infer<typeof createInventoryItemInputSchema>
+export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemInputSchema>
+export type SetInventoryItemActiveInput = z.infer<typeof setInventoryItemActiveInputSchema>
 export type MinimumStockInput = z.infer<typeof minimumStockInputSchema>
 export type InventoryMinimumStockSettingsInput = z.infer<typeof inventoryMinimumStockSettingsInputSchema>
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>

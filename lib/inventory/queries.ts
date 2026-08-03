@@ -374,6 +374,23 @@ export async function getOnHand(itemId: string): Promise<number> {
   return data ? roundQuantity(balanceRowSchema.parse(data).on_hand) : 0
 }
 
+/** Batch form of getOnHand, for a detail page listing several items at once. */
+export async function listOnHand(itemIds: string[]): Promise<Record<string, number>> {
+  if (itemIds.length === 0) return {}
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('inventory_item_balances')
+    .select('inventory_item_id, on_hand')
+    .in('inventory_item_id', itemIds)
+
+  if (error) throw new Error(`อ่านยอดคงเหลือไม่สำเร็จ: ${error.message}`)
+
+  return Object.fromEntries(
+    balanceRowSchema.array().parse(data ?? []).map((row) => [row.inventory_item_id, roundQuantity(row.on_hand)]),
+  )
+}
+
 export async function getLotBalance(lotId: string): Promise<number> {
   const supabase = await createClient()
   const { data, error } = await supabase

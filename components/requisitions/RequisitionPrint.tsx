@@ -90,14 +90,31 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
       {requisition.note && <p className="print-note">หมายเหตุ: {requisition.note}</p>}
 
       <div className="print-signatures">
-        {SIGNATURE_BLOCKS.map((block) => (
-          <div key={block.role}>
-            <p className="print-signature__line">ลงชื่อ ..................................................</p>
-            <p className="print-signature__role">({block.role})</p>
-            <p className="print-signature__hint">{block.hint}</p>
-            <p className="print-signature__date">วันที่ ......../......../..........</p>
-          </div>
-        ))}
+        {SIGNATURE_BLOCKS.map((block) => {
+          // The receiving head's block already has a digital signature —
+          // print what was actually captured instead of a blank line to sign.
+          const isReceiverBlock = block.role === 'หัวหน้าหน่วยงานผู้รับ'
+          if (isReceiverBlock && requisition.signature) {
+            return (
+              <div key={block.role}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through */}
+                <img className="print-signature__image" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+                <p className="print-signature__role">({requisition.receivedByName})</p>
+                <p className="print-signature__hint">{block.hint}</p>
+                <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.signedAt?.slice(0, 10) ?? null)}</p>
+              </div>
+            )
+          }
+
+          return (
+            <div key={block.role}>
+              <p className="print-signature__line">ลงชื่อ ..................................................</p>
+              <p className="print-signature__role">({block.role})</p>
+              <p className="print-signature__hint">{block.hint}</p>
+              <p className="print-signature__date">วันที่ ......../......../..........</p>
+            </div>
+          )
+        })}
       </div>
     </article>
   )

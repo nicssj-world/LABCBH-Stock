@@ -44,13 +44,21 @@ function unwrapMutation(
 export async function createContract(input: CreateContractInput) {
   const actor = await requireContractEditor()
   const parsed = createContractInputSchema.parse(input)
-  const { items, sentToProcurementDate, ...contract } = parsed
+  const { items, sentToProcurementDate, contractNumber, ...contract } = parsed
+
+  // Creating a contract that has already started (contract number supplied
+  // up front, no fabricated procurement stages) is restricted to admins,
+  // narrower than the admin-or-head editor check above.
+  if (contractNumber && !isAdministrator(actor)) {
+    throw new Error('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเพิ่มสัญญาที่เริ่มใช้งานแล้วได้')
+  }
 
   const result = await supabaseAdmin.rpc('create_contract', {
     p_actor_id: actor.id,
     p_contract: contract,
     p_items: items,
     p_effective_date: sentToProcurementDate,
+    p_contract_number: contractNumber ?? null,
   })
 
   const created = unwrapMutation('สร้างสัญญา', result)

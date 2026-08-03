@@ -4,6 +4,7 @@ import { ArchiveContractControl } from '@/components/contracts/ArchiveContractCo
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
 import { ContractFileCard } from '@/components/contracts/ContractFileCard'
+import { ContractPurchaseHistory } from '@/components/contracts/ContractPurchaseHistory'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
@@ -18,6 +19,7 @@ import { canRecordContractExpense } from '@/lib/contracts/authorization'
 import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract } from '@/lib/contracts/queries'
+import { listContractPurchaseHistory } from '@/lib/pr/queries'
 
 interface ContractDetailPageProps {
   params: Promise<{ id: string }>
@@ -47,6 +49,11 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
     ? await fetchResponsibleCandidates()
     : []
   const isContractStarted = contract.procurementStage === 'contract_started'
+  // A lease never uses the "ซื้อในสัญญา" PR method, and a contract that hasn't
+  // started yet cannot have been purchased against.
+  const purchaseHistory = mode === 'supply' && isContractStarted
+    ? await listContractPurchaseHistory(contract.id)
+    : []
   const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
   // is the sum of its lines.
@@ -224,6 +231,19 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </div>
         )}
       </section>
+
+      {isContractStarted && (
+        <section className="bench-panel" aria-labelledby="contract-purchase-history-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">PURCHASE HISTORY</p>
+              <h2 id="contract-purchase-history-title">ประวัติการซื้อ</h2>
+            </div>
+            <p>{purchaseHistory.length} ครั้ง</p>
+          </div>
+          <ContractPurchaseHistory entries={purchaseHistory} />
+        </section>
+      )}
 
       <section className="bench-panel contract-file-panel" aria-labelledby="contract-file-title">
         <div className="bench-panel__header">

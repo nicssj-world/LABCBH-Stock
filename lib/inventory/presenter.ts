@@ -39,6 +39,16 @@ export function formatQuantity(value: number, unit?: string | null): string {
   return unit ? `${formatted} ${unit}` : formatted
 }
 
+const money = new Intl.NumberFormat('th-TH', {
+  style: 'currency',
+  currency: 'THB',
+  minimumFractionDigits: 2,
+})
+
+export function formatBaht(value: number | null): string {
+  return value === null ? 'ไม่ระบุ' : money.format(value)
+}
+
 export function formatThaiDate(isoDate: string | null): string {
   if (!isoDate) return 'ไม่ระบุ'
   const [year, month, day] = isoDate.split('-').map(Number)

@@ -223,4 +223,70 @@ assert.match(
   /grant execute on function public\.confirm_purchase_request\(uuid, uuid, date\) to service_role/i,
 )
 
-console.log(`purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]})`)
+// An equipment-lease PR originates a contract too, but has zero reagent
+// lines — the ceiling lives on the contract draft itself instead.
+const leaseNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_lease_origination.sql'),
+)
+assert.equal(leaseNames.length, 1, 'exactly one PR lease-origination migration must exist')
+
+const leaseSql = readFileSync(join(migrationsDir, leaseNames[0]), 'utf8')
+
+const leaseCreatePr = leaseSql.match(
+  /create or replace function public\.create_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(leaseCreatePr, 'create_purchase_request must be redefined to allow a lease with zero items')
+assert.match(leaseCreatePr, /jsonb_array_length\(p_items\) = 0 and parsed_method <> 'equipment_lease'/i)
+assert.match(leaseCreatePr, /jsonb_array_length\(p_items\) > 0 and parsed_method = 'equipment_lease'/i)
+
+const leaseConfirm = leaseSql.match(
+  /create or replace function public\.confirm_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(leaseConfirm, 'confirm_purchase_request must be redefined for the lease branch')
+assert.match(leaseConfirm, /'specific_contract', 'e_bidding', 'equipment_lease'/i)
+assert.match(
+  leaseConfirm,
+  /if locked_request\.purchase_method <> 'equipment_lease' then[\s\S]*?jsonb_agg/i,
+  'a lease must never aggregate purchase_request_items into contract_items',
+)
+assert.match(
+  leaseConfirm,
+  /'contractType', 'equipment_lease'[\s\S]*?'total', contract_draft -> 'total'/i,
+  'the lease branch must pass the ceiling through to create_contract',
+)
+
+const leaseCreateContract = leaseSql.match(
+  /create or replace function public\.create_contract[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(leaseCreateContract, 'create_contract must be redefined to accept an optional total')
+assert.match(
+  leaseCreateContract,
+  /field_name not in \('fiscalYear', 'contractType', 'department', 'displayName', 'vendor', 'endDate', 'total'\)/i,
+)
+assert.match(
+  leaseCreateContract,
+  /p_contract \? 'total' and \(p_contract ->> 'contractType'\) is distinct from 'equipment_lease'/i,
+  'total must be rejected outright for any non-lease contract type',
+)
+assert.match(
+  leaseCreateContract,
+  /if parsed_contract_type = 'equipment_lease' then\s*parsed_total := round\(nullif\(p_contract ->> 'total', ''\)::numeric, 2\);/i,
+)
+
+// The table-level check constraint on purchase_method is separate from the
+// RPCs' own jsonb-payload validation — 20260803150000 taught the RPCs about
+// 'equipment_lease' but missed this constraint, so every lease PR insert was
+// rejected at the database before the RPC logic ever ran.
+const methodCheckNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_lease_purchase_method_check.sql'),
+)
+assert.equal(methodCheckNames.length, 1, 'exactly one PR purchase_method check-constraint fix must exist')
+
+const methodCheckSql = readFileSync(join(migrationsDir, methodCheckNames[0]), 'utf8')
+assert.match(methodCheckSql, /drop constraint purchase_requests_purchase_method_check/i)
+assert.match(methodCheckSql, /add constraint purchase_requests_purchase_method_check/i)
+assert.match(methodCheckSql, /'equipment_lease'/)
+
+console.log(
+  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]})`,
+)

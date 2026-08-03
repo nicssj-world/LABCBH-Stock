@@ -70,6 +70,9 @@ export const createContractInputSchema = z
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
     sentToProcurementDate: isoDateSchema,
+    // Only set on the admin-only "already started" fast path: creates the
+    // contract directly at contract_started instead of sent_to_procurement.
+    contractNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่สัญญา').nullable().optional(),
     items: z.array(contractLineInputSchema),
   })
   .strict()

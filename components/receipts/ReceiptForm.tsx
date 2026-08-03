@@ -12,7 +12,7 @@ import {
 } from '@/components/receipts/ReceiptLinesEditor'
 import { createGoodsReceipt, uploadPoImage } from '@/lib/receipts/actions'
 import { preparePoFile } from '@/lib/receipts/po-file'
-import { detectDuplicateLots } from '@/lib/receipts/schema'
+import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
 import type { ReceivablePurchaseRequest } from '@/lib/receipts/types'
 
 export interface ReceiptFormProps {
@@ -79,8 +79,27 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
     )
   }
 
+  const selectedRequest = purchaseRequests.find((request) => request.id === purchaseRequestId)
+
+  // "ใบ PR ที่เกี่ยวข้อง" only offers PRs from the department currently
+  // receiving, so the list stays short as the number of open PRs grows.
+  const departmentPurchaseRequests = purchaseRequests.filter((request) => request.department === department)
+
+  const changeDepartment = (nextDepartment: string) => {
+    setDepartment(nextDepartment)
+    // The selected PR may not belong to the newly chosen department; clear it
+    // rather than leave a stale selection the dropdown no longer shows.
+    if (selectedRequest && selectedRequest.department !== nextDepartment) {
+      selectPurchaseRequest('')
+    }
+  }
+  const requestedByItem = Object.fromEntries(
+    (selectedRequest?.items ?? []).map((item) => [item.inventoryItemId, item.quantity]),
+  )
+
   const hasDuplicates = detectDuplicateLots(lines).length > 0
   const hasIncompleteLot = lines.some((line) => !line.lotNumber.trim())
+  const hasOverRequestedLine = findOverRequestedItems(lines, requestedByItem).length > 0
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -140,13 +159,17 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
             ใบ PR ที่เกี่ยวข้อง
             <select value={purchaseRequestId} onChange={(event) => selectPurchaseRequest(event.target.value)}>
               <option value="">ไม่อ้างอิงใบ PR</option>
-              {purchaseRequests.map((request) => (
+              {departmentPurchaseRequests.map((request) => (
                 <option key={request.id} value={request.id}>
                   {request.documentNumber} · {request.items.length} รายการ
                 </option>
               ))}
             </select>
-            <small className="receipt-pr-hint">เลือกใบ PR แล้วระบบจะเติมรายการและจำนวนให้โดยอัตโนมัติ</small>
+            <small className="receipt-pr-hint">
+              {departmentPurchaseRequests.length === 0
+                ? 'หน่วยงานนี้ไม่มีใบ PR ที่รอรับของ'
+                : 'เลือกใบ PR แล้วระบบจะเติมรายการและจำนวนให้โดยอัตโนมัติ'}
+            </small>
           </label>
           <label className="field-row">
             เลขที่ใบสั่งซื้อ (PO)
@@ -158,7 +181,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
           </div>
           <label className="field-row">
             หน่วยงานที่รับของ
-            <select required value={department} onChange={(event) => setDepartment(event.target.value)}>
+            <select required value={department} onChange={(event) => changeDepartment(event.target.value)}>
               {departments.map((department) => (
                 <option value={department} key={department}>{department}</option>
               ))}
@@ -191,6 +214,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
           lines={lines}
           catalog={catalog}
           hasPurchaseRequest={Boolean(purchaseRequestId)}
+          requestedByItem={requestedByItem}
           onAdd={addLine}
           onChange={changeLine}
           onRemove={removeLine}
@@ -205,7 +229,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
           <Button variant="secondary" onClick={() => router.push('/receipts')} disabled={isPending}>
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || lines.length === 0 || hasDuplicates || hasIncompleteLot}>
+          <Button type="submit" disabled={isPending || lines.length === 0 || hasDuplicates || hasIncompleteLot || hasOverRequestedLine}>
             {isPending ? 'กำลังบันทึก…' : 'บันทึกฉบับร่าง'}
           </Button>
         </div>

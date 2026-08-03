@@ -9,6 +9,7 @@ export const PURCHASE_METHODS = [
   'off_plan',
   'specific_contract',
   'e_bidding',
+  'equipment_lease',
 ] as const
 
 export type PurchaseMethodKind = (typeof PURCHASE_METHODS)[number]
@@ -24,7 +25,7 @@ export type PurchasePurpose = (typeof PURCHASE_PURPOSES)[number]
 
 export const PURCHASE_METHODS_BY_PURPOSE = {
   purchase_order: ['annual_plan', 'contract', 'awaiting_contract', 'off_plan'],
-  new_contract: ['specific_contract', 'e_bidding'],
+  new_contract: ['specific_contract', 'e_bidding', 'equipment_lease'],
 } as const satisfies Record<PurchasePurpose, readonly PurchaseMethodKind[]>
 
 export function purchaseMethodPurpose(kind: PurchaseMethodKind): PurchasePurpose {
@@ -36,6 +37,7 @@ export function purchaseMethodPurpose(kind: PurchaseMethodKind): PurchasePurpose
 const METHOD_CONTRACT_TYPE: Partial<Record<PurchaseMethodKind, ContractType>> = {
   specific_contract: 'specific',
   e_bidding: 'e_bidding',
+  equipment_lease: 'equipment_lease',
 }
 
 /** The contract type auto-filled when this method originates a new contract. */
@@ -53,18 +55,35 @@ export const PURCHASE_REQUEST_STATUSES = [
 
 export type PurchaseRequestStatus = (typeof PURCHASE_REQUEST_STATUSES)[number]
 
+const contractDraftBaseSchema = z.object({
+  fiscalYear: z.number().int().min(2500).max(3000),
+  displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
+  sentToStockOfficerDate: isoDateSchema,
+})
+
 /**
  * The minimal facts needed to open a contract at stage 1 (ส่งพัสดุ) once the
  * stock officer confirms. Department and contract type are not carried here:
  * department mirrors the PR's own requester department, and contract type is
  * derived from the method kind via `contractTypeForMethod`.
+ *
+ * Vendor is required here (ทำสัญญาเจาะจง already knows who the vendor is), but
+ * not for e_bidding/equipment_lease — see contractDraftWithOptionalVendorSchema.
  */
-export const contractDraftSchema = z
-  .object({
-    fiscalYear: z.number().int().min(2500).max(3000),
-    displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
+export const contractDraftSchema = contractDraftBaseSchema
+  .extend({
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
-    sentToStockOfficerDate: isoDateSchema,
+  })
+  .strict()
+
+/**
+ * E-Bidding and a new lease are both requested before the vendor is decided
+ * — bidding hasn't run, or the lessor isn't chosen yet — so vendor is left
+ * blank rather than forced.
+ */
+export const contractDraftWithOptionalVendorSchema = contractDraftBaseSchema
+  .extend({
+    vendor: z.string().trim().nullable(),
   })
   .strict()
 
@@ -92,7 +111,18 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('e_bidding'),
-    contractDraft: contractDraftSchema,
+    contractDraft: contractDraftWithOptionalVendorSchema,
+  }),
+  z.object({
+    kind: z.literal('equipment_lease'),
+    // Only a lease carries a ceiling: it has no line items to sum a total
+    // from, unlike specific_contract/e_bidding. Required here — unlike the
+    // direct "เพิ่มสัญญา" form, which still allows an unknown ("ไม่ระบุ")
+    // ceiling — because a lease requested through a PR is expected to already
+    // have a quoted figure to open against.
+    contractDraft: contractDraftWithOptionalVendorSchema.extend({
+      total: z.number({ required_error: 'กรุณาระบุมูลค่าสัญญา' }).finite().positive('มูลค่าสัญญาต้องมากกว่า 0'),
+    }),
   }),
 ])
 
@@ -150,10 +180,29 @@ export const purchaseRequestInputSchema = z
     requestedDate: isoDateSchema,
     note: z.string().trim().max(1000).nullable(),
     method: purchaseMethodSchema,
-    items: z.array(purchaseRequestLineSchema).min(1, 'ต้องมีรายการขอซื้ออย่างน้อย 1 รายการ'),
+    items: z.array(purchaseRequestLineSchema),
   })
   .strict()
   .superRefine((value, context) => {
+    // A lease has no reagent lines to pick — it originates a contract with
+    // zero contract_items, same invariant create_contract already enforces.
+    // Every other method still needs at least one line.
+    if (value.method.kind !== 'equipment_lease' && value.items.length < 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'ต้องมีรายการขอซื้ออย่างน้อย 1 รายการ',
+      })
+    }
+
+    if (value.method.kind === 'equipment_lease' && value.items.length > 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'การเช่าเครื่องไม่มีรายการขอซื้อ',
+      })
+    }
+
     const requiresContractItems = methodRequiresContractItems(value.method)
     // Every line here becomes a contract_items row the moment the stock
     // officer confirms; catching a free/zero price now (instead of at

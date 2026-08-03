@@ -23,6 +23,7 @@ interface ContractFormProps {
   mode: 'create' | 'edit'
   contract?: ContractRecord
   catalog?: ContractCatalogChoice[]
+  isAdmin?: boolean
   onCancel?: () => void
   onSaved?: () => void
   onDirtyChange?: (dirty: boolean) => void
@@ -36,6 +37,8 @@ interface FormState {
   vendor: string
   endDate: string
   sentToProcurementDate: string
+  startImmediately: boolean
+  contractNumber: string
   items: ContractItemUpdateInput[]
 }
 
@@ -58,6 +61,8 @@ function initialState(contract?: ContractRecord): FormState {
     vendor: contract?.vendor ?? '',
     endDate: contract?.endDate ?? '',
     sentToProcurementDate: todayIso(),
+    startImmediately: false,
+    contractNumber: '',
     items: contract?.items.map((item) => ({
       id: item.id,
       lsCode: item.lsCode,
@@ -69,7 +74,7 @@ function initialState(contract?: ContractRecord): FormState {
   }
 }
 
-export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDirtyChange }: ContractFormProps) {
+export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSaved, onDirtyChange }: ContractFormProps) {
   const router = useRouter()
   const [state, setState] = useState(() => initialState(contract))
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -145,6 +150,7 @@ export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDir
       ? createContractInputSchema.safeParse({
           ...shared,
           sentToProcurementDate: state.sentToProcurementDate,
+          contractNumber: state.startImmediately ? state.contractNumber.trim() : null,
           items: tracking === 'budget'
             ? []
             : state.items.map((item) => ({
@@ -192,6 +198,16 @@ export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDir
     })
   }
 
+  const cancel = () => {
+    // Discard the auto-saved draft on an explicit cancel — otherwise it
+    // resurfaces on the next "new contract" attempt, since create mode has
+    // no contract id to key the draft on.
+    localStorage.removeItem(draftKey)
+    setDirty(false)
+    if (onCancel) onCancel()
+    else router.back()
+  }
+
   return (
     <form className="contract-form" onSubmit={submit} noValidate>
       <section className="bench-panel form-panel" aria-labelledby="contract-metadata-title">
@@ -230,11 +246,28 @@ export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDir
               {CONTRACT_DEPARTMENTS.map((department) => <option value={department} key={department}>{department}</option>)}
             </select>
           </label>
+          {mode === 'create' && isAdmin && (
+            <label className="form-grid__wide field-toggle">
+              <input
+                type="checkbox"
+                checked={state.startImmediately}
+                onChange={(event) => patchState('startImmediately', event.target.checked)}
+              />
+              สัญญานี้เริ่มใช้งานแล้ว (มีเลขที่สัญญาอยู่แล้ว)
+            </label>
+          )}
           {mode === 'create' && (
             <label>
-              วันที่ส่งพัสดุ
+              {state.startImmediately ? 'วันที่เริ่มสัญญา' : 'วันที่ส่งพัสดุ'}
               <ThaiDateInput value={state.sentToProcurementDate} onChange={(value) => patchState('sentToProcurementDate', value)} aria-invalid={Boolean(errors.sentToProcurementDate)} />
               {errors.sentToProcurementDate && <small className="field-error">{errors.sentToProcurementDate}</small>}
+            </label>
+          )}
+          {mode === 'create' && state.startImmediately && (
+            <label>
+              เลขที่สัญญา
+              <input value={state.contractNumber} onChange={(event) => patchState('contractNumber', event.target.value)} aria-invalid={Boolean(errors.contractNumber)} />
+              {errors.contractNumber && <small className="field-error">{errors.contractNumber}</small>}
             </label>
           )}
           <label>
@@ -273,7 +306,7 @@ export function ContractForm({ mode, contract, catalog, onCancel, onSaved, onDir
           {message && <p className={Object.keys(errors).length ? 'form-error' : 'form-notice'}>{message}</p>}
         </div>
         <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => onCancel ? onCancel() : router.back()} disabled={isPending}>ยกเลิก</Button>
+          <Button variant="secondary" onClick={cancel} disabled={isPending}>ยกเลิก</Button>
           <Button type="submit" disabled={isPending}>{isPending ? 'กำลังบันทึก…' : mode === 'create' ? 'บันทึกสัญญา' : 'บันทึกการแก้ไข'}</Button>
         </div>
       </div>

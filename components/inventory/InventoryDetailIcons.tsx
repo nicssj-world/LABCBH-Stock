@@ -38,3 +38,12 @@ export function TrendIcon() {
     </svg>
   )
 }
+
+export function PriceTagIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M11.5 3.5H5.5A2 2 0 0 0 3.5 5.5v6l9 9a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8l-9-9Z" />
+      <path d="M8.5 8.5h.01" />
+    </svg>
+  )
+}

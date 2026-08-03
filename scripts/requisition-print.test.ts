@@ -30,6 +30,12 @@ assert.match(printComponent, /วันที่จ่าย/)
 assert.match(printComponent, /SIGNATURE_BLOCKS/)
 assert.match(printComponent, /ลงชื่อ/)
 
+// The receiver's block prints the digitally captured signature once it
+// exists, instead of a blank line the recipient has already signed on-screen.
+assert.match(printComponent, /requisition\.signature/, 'the print view must check for a captured digital signature')
+assert.match(printComponent, /requisition\.receivedByName/)
+assert.match(printComponent, /print-signature__image/)
+
 const printCss = read('app/globals.css')
 assert.match(printCss, /@page\s*\{[^}]*size:\s*A4/i)
 assert.match(printCss, /@page\s*\{[^}]*margin:\s*12mm/i)

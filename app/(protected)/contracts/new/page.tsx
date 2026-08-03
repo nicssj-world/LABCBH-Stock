@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ContractForm } from '@/components/contracts/ContractForm'
-import { hasAppRole } from '@/lib/auth/access'
+import { hasAppRole, isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { listInventoryItems } from '@/lib/inventory/queries'
 
@@ -23,6 +23,7 @@ export default async function NewContractPage() {
       </header>
       <ContractForm
         mode="create"
+        isAdmin={isAdministrator(actor)}
         catalog={inventoryItems.map((item) => ({
           id: item.id,
           lsCode: item.lsCode,

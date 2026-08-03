@@ -4,11 +4,13 @@ import type {
   fulfillRequisitionInputSchema,
   requisitionInputSchema,
   requisitionLineInputSchema,
+  signRequisitionInputSchema,
 } from './schema'
 
 export type RequisitionInput = z.infer<typeof requisitionInputSchema>
 export type RequisitionLineInput = z.infer<typeof requisitionLineInputSchema>
 export type FulfillRequisitionInput = z.infer<typeof fulfillRequisitionInputSchema>
+export type SignRequisitionInput = z.infer<typeof signRequisitionInputSchema>
 
 export interface RequisitionLotAllocationRecord {
   id: string
@@ -45,6 +47,9 @@ export interface RequisitionRecord {
   note: string | null
   fulfilledAt: string | null
   fulfilledByName: string | null
+  receivedByName: string | null
+  signature: string | null
+  signedAt: string | null
   createdAt: string
   items: RequisitionItemRecord[]
 }

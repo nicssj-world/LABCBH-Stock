@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FulfillmentPanel } from '@/components/requisitions/FulfillmentPanel'
+import { RequisitionSignaturePanel } from '@/components/requisitions/RequisitionSignaturePanel'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { bangkokToday } from '@/lib/inventory/queries'
+import { bangkokToday, listOnHand } from '@/lib/inventory/queries'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getRequisition, listSelectableLots } from '@/lib/requisitions/queries'
 import type { SelectableLot } from '@/lib/requisitions/types'
@@ -44,6 +45,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
   }
 
   const totalRequested = requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0)
+  const onHandByItem = await listOnHand(requisition.items.map((item) => item.inventoryItemId))
 
   return (
     <div className="route-stack">
@@ -109,6 +111,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                 <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอเบิก</th>
+                <th className="numeric-cell">คงเหลือในคลัง</th>
                 <th className="numeric-cell">จ่ายแล้ว</th>
                 <th>ล็อตที่จ่าย</th>
               </tr>
@@ -122,6 +125,9 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                     {item.note && <small>{item.note}</small>}
                   </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
+                  <td className="numeric-cell identifier">
+                    {formatQuantity(onHandByItem[item.inventoryItemId] ?? 0, item.unit)}
+                  </td>
                   <td className="numeric-cell identifier">
                     {item.fulfilledQuantity === null ? '—' : formatQuantity(item.fulfilledQuantity, item.unit)}
                   </td>
@@ -172,6 +178,38 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
           จ่ายของเมื่อ {formatThaiDateTime(requisition.fulfilledAt ?? null)} โดย{' '}
           {requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'} · บัญชีเคลื่อนไหวบันทึกแล้วและแก้ย้อนหลังไม่ได้
         </p>
+      )}
+
+      {canOperateStock(actor) && requisition.status === 'fulfilled' && !requisition.signedAt && (
+        <section className="bench-panel bench-panel--decision" aria-labelledby="signature-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">STOCK OFFICER</p>
+              <h2 id="signature-title">เซ็นต์รับของ</h2>
+            </div>
+            <p>ให้ผู้รับของเซ็นต์ยืนยันการรับของก่อนปิดใบเบิก</p>
+          </div>
+          <RequisitionSignaturePanel requisitionId={requisition.id} defaultReceiverName={requisition.requesterName} />
+        </section>
+      )}
+
+      {requisition.signedAt && (
+        <section className="bench-panel" aria-labelledby="signature-evidence-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">PROOF OF RECEIPT</p>
+              <h2 id="signature-evidence-title">หลักฐานการรับของ</h2>
+            </div>
+          </div>
+          <dl className="contract-facts">
+            <div><dt>ผู้รับของ</dt><dd>{requisition.receivedByName}</dd></div>
+            <div><dt>เซ็นต์รับเมื่อ</dt><dd className="identifier">{formatThaiDateTime(requisition.signedAt)}</dd></div>
+          </dl>
+          {requisition.signature && (
+            // eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through
+            <img className="requisition-signature__evidence" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+          )}
+        </section>
       )}
     </div>
   )

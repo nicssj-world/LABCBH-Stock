@@ -86,13 +86,32 @@ async function main() {
     false,
     'controlled contracts require at least one item',
   )
-  for (const forbiddenField of ['status', 'procurementStage', 'contractNumber', 'startDate']) {
+  for (const forbiddenField of ['status', 'procurementStage', 'startDate']) {
     assert.equal(
       createContractInputSchema.safeParse({ ...createInput, [forbiddenField]: 'forbidden' }).success,
       false,
       `create input must reject workflow field ${forbiddenField}`,
     )
   }
+
+  // contractNumber is the one deliberate exception: the admin-only
+  // "already started" fast path supplies it at creation time instead of
+  // reaching contract_started through advance_contract_stage.
+  assert.equal(
+    createContractInputSchema.safeParse({ ...createInput, contractNumber: null }).success,
+    true,
+    'omitting contractNumber keeps the normal creation path',
+  )
+  assert.equal(
+    createContractInputSchema.safeParse({ ...createInput, contractNumber: 'CN-2569-001' }).success,
+    true,
+    'a non-blank contractNumber is accepted for the start-immediately fast path',
+  )
+  assert.equal(
+    createContractInputSchema.safeParse({ ...createInput, contractNumber: '   ' }).success,
+    false,
+    'a blank contractNumber must still be rejected',
+  )
 
   const updateInput = {
     fiscalYear: 2570,

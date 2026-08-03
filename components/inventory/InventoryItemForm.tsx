@@ -3,9 +3,12 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { createInventoryItem } from '@/lib/inventory/actions'
+import { createInventoryItem, updateInventoryItem } from '@/lib/inventory/actions'
+import type { InventoryItemDetail } from '@/lib/inventory/types'
 
 interface InventoryItemFormProps {
+  mode?: 'create' | 'edit'
+  item?: InventoryItemDetail
   departments: readonly string[]
 }
 
@@ -18,18 +21,20 @@ interface FormState {
   note: string
 }
 
-const INITIAL_STATE: FormState = {
-  lsCode: '',
-  name: '',
-  baseUnit: '',
-  responsibleDepartment: '',
-  defaultUnitPrice: '',
-  note: '',
+function initialState(item?: InventoryItemDetail): FormState {
+  return {
+    lsCode: item?.lsCode ?? '',
+    name: item?.name ?? '',
+    baseUnit: item?.baseUnit ?? '',
+    responsibleDepartment: item?.responsibleDepartment ?? '',
+    defaultUnitPrice: item?.defaultUnitPrice != null ? String(item.defaultUnitPrice) : '',
+    note: item?.note ?? '',
+  }
 }
 
-export function InventoryItemForm({ departments }: InventoryItemFormProps) {
+export function InventoryItemForm({ mode = 'create', item, departments }: InventoryItemFormProps) {
   const router = useRouter()
-  const [state, setState] = useState<FormState>(INITIAL_STATE)
+  const [state, setState] = useState<FormState>(() => initialState(item))
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -48,6 +53,19 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
 
     startTransition(async () => {
       try {
+        if (mode === 'edit' && item) {
+          await updateInventoryItem(item.id, {
+            name: state.name,
+            baseUnit: state.baseUnit,
+            responsibleDepartment: state.responsibleDepartment.trim() || null,
+            defaultUnitPrice,
+            note: state.note.trim() || null,
+          })
+          router.push(`/inventory/${item.id}`)
+          router.refresh()
+          return
+        }
+
         const created = await createInventoryItem({
           lsCode: state.lsCode,
           name: state.name,
@@ -62,7 +80,13 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
         router.push(`/inventory/${created.id}`)
         router.refresh()
       } catch (caught) {
-        setMessage(caught instanceof Error ? caught.message : 'สร้างรายการน้ำยาไม่สำเร็จ กรุณาลองใหม่')
+        setMessage(
+          caught instanceof Error
+            ? caught.message
+            : mode === 'edit'
+              ? 'บันทึกการแก้ไขรายการน้ำยาไม่สำเร็จ กรุณาลองใหม่'
+              : 'สร้างรายการน้ำยาไม่สำเร็จ กรุณาลองใหม่',
+        )
       }
     })
   }
@@ -75,7 +99,7 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
             <p className="section-kicker">INVENTORY CATALOG</p>
             <h2 id="inventory-item-form-title">ข้อมูลรายการน้ำยา</h2>
           </div>
-          <span className="draft-state">สร้างรายการใหม่เข้าคลัง</span>
+          <span className="draft-state">{mode === 'edit' ? 'แก้ไขข้อมูลรายการ' : 'สร้างรายการใหม่เข้าคลัง'}</span>
         </div>
 
         <div className="form-grid">
@@ -83,13 +107,18 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
             รหัสพัสดุ <span aria-hidden="true">*</span>
             <input
               required
+              readOnly={mode === 'edit'}
               maxLength={100}
               value={state.lsCode}
               onChange={(event) => update('lsCode', event.target.value)}
               placeholder="เช่น LS046022"
               autoComplete="off"
             />
-            <small className="form-field-note">รหัสต้องไม่ซ้ำกับรายการที่มีอยู่ในคลัง</small>
+            <small className="form-field-note">
+              {mode === 'edit'
+                ? 'แก้ไขรหัสพัสดุไม่ได้ เพราะใช้เป็นกุญแจจับคู่กับรายการในสัญญาและ PR ที่มีอยู่'
+                : 'รหัสต้องไม่ซ้ำกับรายการที่มีอยู่ในคลัง'}
+            </small>
           </label>
 
           <label>
@@ -151,20 +180,28 @@ export function InventoryItemForm({ departments }: InventoryItemFormProps) {
         </div>
       </section>
 
-      <p className="inline-alert inline-alert--info" role="note">
-        การสร้างรายการนี้ยังไม่เพิ่มยอด stock ต้องทำใบรับเข้าและยืนยันรับของก่อน
-      </p>
+      {mode === 'create' && (
+        <p className="inline-alert inline-alert--info" role="note">
+          การสร้างรายการนี้ยังไม่เพิ่มยอด stock ต้องทำใบรับเข้าและยืนยันรับของก่อน
+        </p>
+      )}
 
       <div className="form-action-bar">
         <div aria-live="polite">
           {message && <p className="form-error" role="alert">{message}</p>}
         </div>
         <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => router.push('/inventory')} disabled={isPending}>
+          <Button
+            variant="secondary"
+            onClick={() => router.push(mode === 'edit' && item ? `/inventory/${item.id}` : '/inventory')}
+            disabled={isPending}
+          >
             ยกเลิก
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'กำลังสร้างรายการ…' : 'สร้างรายการน้ำยา'}
+            {isPending
+              ? mode === 'edit' ? 'กำลังบันทึก…' : 'กำลังสร้างรายการ…'
+              : mode === 'edit' ? 'บันทึกการแก้ไข' : 'สร้างรายการน้ำยา'}
           </Button>
         </div>
       </div>

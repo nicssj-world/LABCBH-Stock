@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { LotPicker, type LotSelection } from '@/components/requisitions/LotPicker'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { fulfillRequisition } from '@/lib/requisitions/actions'
-import { requiresOverrideReason, validateLotAllocations } from '@/lib/requisitions/fifo'
+import { defaultLotSelection, requiresOverrideReason, validateLotAllocations } from '@/lib/requisitions/fifo'
 import type { RequisitionItemRecord, SelectableLot } from '@/lib/requisitions/types'
 
 export interface FulfillmentPanelProps {
@@ -23,7 +23,20 @@ export function FulfillmentPanel({
   today,
 }: FulfillmentPanelProps) {
   const router = useRouter()
-  const [selections, setSelections] = useState<Record<string, LotSelection[]>>({})
+  // Pre-fill the lot the officer should take first (rank 1 — earliest to
+  // expire) at the full requested quantity, capped to what that lot actually
+  // has. Saves a click for the common case where one lot covers the request;
+  // anything left over still has to be picked manually from later lots.
+  const [selections, setSelections] = useState<Record<string, LotSelection[]>>(() =>
+    Object.fromEntries(
+      items.map((item) => [
+        item.id,
+        defaultLotSelection(lotsByItem[item.inventoryItemId] ?? [], item.requestedQuantity).map(
+          (allocation) => ({ inventoryLotId: allocation.lotId, quantity: allocation.quantity }),
+        ),
+      ]),
+    ),
+  )
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -109,7 +122,10 @@ export function FulfillmentPanel({
               <span className="identifier">{item.lsCode}</span>
               <h3 id={`fulfil-${item.id}`}>{item.name}</h3>
             </div>
-            <p>ขอเบิก {formatQuantity(item.requestedQuantity, item.unit)}</p>
+            <p className="fulfillment-item__requested">
+              <span>ขอเบิก</span>
+              <strong>{formatQuantity(item.requestedQuantity, item.unit)}</strong>
+            </p>
           </div>
 
           <LotPicker

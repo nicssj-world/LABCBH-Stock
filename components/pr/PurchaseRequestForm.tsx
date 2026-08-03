@@ -228,6 +228,10 @@ export function PurchaseRequestForm({
     }
   }
 
+  // A lease originates a contract with zero line items — it never picks from
+  // the reagent catalogue or draws down a contract balance.
+  const isLease = method.kind === 'equipment_lease'
+
   const methodSelectionMissing =
     (method.kind === 'contract' && (departmentContracts.length === 0 || method.contractId === 0)) ||
     (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0)
@@ -318,7 +322,7 @@ export function PurchaseRequestForm({
         />
       </section>
 
-      {method.kind !== 'contract' && (
+      {method.kind !== 'contract' && !isLease && (
         <section className="bench-panel" aria-labelledby="pr-picker-title">
           <div className="bench-panel__header">
             <div>
@@ -335,6 +339,19 @@ export function PurchaseRequestForm({
         </section>
       )}
 
+      {isLease ? (
+        <section className="bench-panel" aria-labelledby="pr-lease-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">LEASE BUDGET</p>
+              <h2 id="pr-lease-title">สัญญาเช่าเครื่องตัดงบเป็นรายเดือน</h2>
+            </div>
+          </div>
+          <p className="items-editor__note">
+            การเช่าเครื่องไม่มีรายการขอซื้อ — บันทึกค่าใช้จ่ายรายเดือนได้ที่หน้ารายละเอียดสัญญาหลังเปิดสัญญาแล้ว
+          </p>
+        </section>
+      ) : (
       <section className="bench-panel" aria-labelledby="pr-lines-title">
         <div className="bench-panel__header">
           <div>
@@ -434,6 +451,7 @@ export function PurchaseRequestForm({
           <strong>{formatBaht(total)}</strong>
         </p>
       </section>
+      )}
 
       {error && <p className="form-error" role="alert">{error}</p>}
 
@@ -442,7 +460,7 @@ export function PurchaseRequestForm({
           {purpose === 'new_contract'
             ? 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที'
             : 'ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น'}
-          {lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
+          {!isLease && lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
           {methodSelectionMissing && ' · ยังส่งไม่ได้จนกว่าจะมีสัญญาให้เลือกตามเงื่อนไขด้านบน'}
           {hasOverLimitLine && ' · มีรายการที่ขอเกินยอดคงเหลือในสัญญา กรุณาแก้ไขก่อนส่ง'}
         </p>
@@ -450,7 +468,7 @@ export function PurchaseRequestForm({
           <Button variant="secondary" onClick={() => router.push('/purchase-requests')} disabled={isPending}>
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || lines.length === 0 || methodSelectionMissing || hasOverLimitLine}>
+          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasOverLimitLine}>
             {isPending ? 'กำลังส่ง…' : 'ส่งใบ PR'}
           </Button>
         </div>

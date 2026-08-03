@@ -5,6 +5,8 @@ import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
+import { RequisitionSummaryDialog } from '@/components/requisitions/RequisitionSummaryDialog'
+import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requisitions/presenter'
 import { listRequisitions } from '@/lib/requisitions/queries'
 import { REQUISITION_STATUSES } from '@/lib/requisitions/schema'
 import type { RequisitionRecord } from '@/lib/requisitions/types'
@@ -14,18 +16,6 @@ interface RequisitionsPageProps {
 }
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
-
-const STATUS_LABELS = {
-  waiting: 'รอจ่าย',
-  fulfilled: 'จ่ายสำเร็จ',
-  cancelled: 'ยกเลิก',
-} as const
-
-const STATUS_TONES = {
-  waiting: 'attention',
-  fulfilled: 'success',
-  cancelled: 'danger',
-} as const
 
 export default async function RequisitionsPage({ searchParams }: RequisitionsPageProps) {
   const actor = await requireActor()
@@ -83,7 +73,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
             value: status ?? '',
             options: [
               { value: '', label: 'ทุกสถานะ' },
-              ...REQUISITION_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+              ...REQUISITION_STATUSES.map((value) => ({ value, label: REQUISITION_STATUS_LABELS[value] })),
             ],
           },
           {
@@ -134,7 +124,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                 <tbody>
                   {requisitions.map((requisition) => (
                     <tr key={requisition.id}>
-                      <td className="identifier"><strong>{requisition.documentNumber}</strong></td>
+                      <td className="identifier"><RequisitionSummaryDialog requisition={requisition} /></td>
                       <td>{formatThaiDate(requisition.desiredDate)}</td>
                       <td>
                         {requisition.requesterName}
@@ -147,8 +137,8 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                         )}
                       </td>
                       <td>
-                        <StatusChip tone={STATUS_TONES[requisition.status]}>
-                          {STATUS_LABELS[requisition.status]}
+                        <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
+                          {REQUISITION_STATUS_LABELS[requisition.status]}
                         </StatusChip>
                       </td>
                       <td>

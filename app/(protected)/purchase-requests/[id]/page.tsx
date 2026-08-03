@@ -145,7 +145,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอซื้อ</th>
-                <th className="numeric-cell">คงเหลือขณะยื่น</th>
+                <th className="numeric-cell">คงเหลือในสัญญา</th>
                 <th className="numeric-cell">เบิกเฉลี่ย/เดือน</th>
                 <th className="numeric-cell">ราคาต่อหน่วย</th>
                 <th className="numeric-cell">รวม</th>
@@ -160,7 +160,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     <small>{item.contractDisplayName ?? 'ไม่ตัดยอดสัญญา'}</small>
                   </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
-                  <td className="numeric-cell identifier">{formatQuantity(item.onHandSnapshot, item.unit)}</td>
+                  <td className="numeric-cell identifier">
+                    {item.contractRemaining === null
+                      ? 'ไม่ตัดยอดสัญญา'
+                      : formatQuantity(item.contractRemaining, item.unit)}
+                  </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.monthlyUsageSnapshot, item.unit)}</td>
                   <td className="numeric-cell identifier">{formatBaht(item.unitPrice)}</td>
                   <td className="numeric-cell identifier"><strong>{formatBaht(item.lineTotal)}</strong></td>

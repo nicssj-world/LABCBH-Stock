@@ -57,8 +57,8 @@ assert.match(
 assert.match(form, /optionsFor\(next\)/, 'selecting a contract must auto-fill its remaining lines, not just clear the picker')
 assert.match(
   form,
-  /method\.kind !== 'contract' && \([\s\S]*?SELECT ITEMS/,
-  'the item picker must hide once a contract auto-fills the request lines — nothing outside that contract is eligible anyway',
+  /method\.kind !== 'contract' && !isLease && \([\s\S]*?SELECT ITEMS/,
+  'the item picker must hide once a contract auto-fills the request lines, and for a lease which has no reagent lines at all',
 )
 assert.match(
   form,
@@ -68,7 +68,12 @@ assert.match(
 assert.match(form, /จุดประสงค์และวิธีจัดซื้อ/)
 assert.match(form, /isOverContractLimit/, 'requesting more than a contract line has left must be caught before submit')
 assert.match(form, /isLowContractBalance/, 'a line under 30% remaining must be flagged, matching the dashboard watchlist threshold')
-assert.match(form, /disabled=\{isPending \|\| lines\.length === 0 \|\| methodSelectionMissing \|\| hasOverLimitLine\}/, 'submit must stay blocked while any line exceeds its contract remaining')
+assert.match(
+  form,
+  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasOverLimitLine\}/,
+  'submit must stay blocked while any line exceeds its contract remaining, but a lease with zero lines must still be submittable',
+)
+assert.match(form, /const isLease = method\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')
 assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
 assert.match(form, /changeDepartment/, 'changing the requesting department must re-filter its contract lists')
 assert.match(form, /changePurpose/)
@@ -108,6 +113,7 @@ assert.match(methodFields, /contractId: 0,[\s\S]*?purchaseSequence: 1/, 'a contr
 assert.match(methodFields, /<option value=\{0\} disabled>เลือกสัญญา<\/option>/, 'the contract dropdown must show an explicit placeholder, not silently pre-pick one')
 assert.match(methodFields, /awaitingContracts/)
 assert.match(methodFields, /method\.kind === 'e_bidding'/)
+assert.match(methodFields, /method\.kind === 'equipment_lease'/, 'a lease method gets its own ceiling field')
 assert.match(methodFields, /contractDraft/, 'specific_contract/e_bidding draft a new contract inline')
 assert.match(methodFields, /contractTypeForMethod/, 'the auto-filled contract type is shown, not asked for')
 assert.match(
@@ -131,6 +137,11 @@ assert.match(review, /contractTypeForMethod/, 'confirming a specific_contract\/e
 assert.match(review, /ยืนยันและสร้างสัญญา/, 'the button must name its irreversible consequence, not just say "confirm"')
 assert.match(review, /วันที่ส่งพัสดุ/, 'the stock officer supplies the real ส่งพัสดุ date at confirm time')
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
+assert.match(
+  review,
+  /!contractType && \(\s*<label className="field-row">\s*เลขที่ใบสั่งซื้อ/,
+  'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
+)
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
 assert.match(review, /ยืนยันโดย.*acknowledgedByName/, 'a completed or reversed PR must name who confirmed it')
 assert.match(review, /กลับรายการโดย.*reversedByName/, 'a reversed PR must name who reversed it, distinct from who confirmed it')
@@ -143,6 +154,7 @@ assert.match(presenter, /ซื้อในสัญญา/)
 assert.match(presenter, /นอกแผน/)
 assert.match(presenter, /ซื้อเจาะจงระหว่างรอสัญญา/)
 assert.match(presenter, /ทำสัญญาเจาะจง/)
+assert.match(presenter, /เช่าเครื่อง/, 'a lease PR method needs its own label')
 assert.match(presenter, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork needs its own labels, distinct from the method labels')
 assert.match(presenter, /ทำใบ PR เพื่อสั่งซื้อ/)
 assert.match(presenter, /ทำใบ PR เพื่อเริ่มสัญญาใหม่/)
@@ -166,6 +178,19 @@ assert.match(queries, /filters\.department/, 'purchase-request queries apply the
 assert.match(queries, /listNextContractPurchaseSequences/)
 assert.match(queries, /created_contract_id/, 'a confirmed PR must link forward to the contract it opened')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'PR reads stay under RLS')
+
+const table = read('components/pr/PurchaseRequestTable.tsx')
+assert.match(table, /PurchaseRequestSummaryDialog request=\{request\}/, 'the desktop row must open the mini summary popup, not a plain cell')
+assert.match(table, /PurchaseRequestSummaryDialog request=\{request\} variant="card"/, 'the mobile card must open the same popup')
+assert.match(table, /ดูรายละเอียด/, 'the trailing detail link must remain alongside the new popup trigger')
+
+const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
+assert.match(summaryDialog, /^['"]use client['"]/m)
+assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
+assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
+assert.match(summaryDialog, /list-summary-dialog/)
+assert.match(summaryDialog, /StatusChip tone=\{PURCHASE_REQUEST_STATUS_TONES/, 'status must never be a bare colored word')
+assert.match(summaryDialog, /createdContractId/, 'a PR that opened a contract must link to it from the popup')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/purchase-requests/)

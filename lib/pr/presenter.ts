@@ -12,6 +12,7 @@ export const PURCHASE_METHOD_LABELS: Record<PurchaseMethodKind, string> = {
   off_plan: 'ซื้อนอกแผน',
   specific_contract: 'ทำสัญญาเจาะจง',
   e_bidding: 'E-Bidding',
+  equipment_lease: 'เช่าเครื่อง',
 }
 
 export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, string> = {

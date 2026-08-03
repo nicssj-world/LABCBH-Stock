@@ -17,6 +17,7 @@ export interface RequisitionCatalogItem {
   unit: string
   onHand: number
   minimumStock: number
+  responsibleDepartment: string | null
 }
 
 interface DraftLine {
@@ -48,6 +49,19 @@ export function RequisitionForm({
   const [lines, setLines] = useState<DraftLine[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Narrows the item picker to what this department is responsible for, so the
+  // list stays short as the catalog grows. Items with no department assigned
+  // belong to no one in particular, so every department can still reach them.
+  // If nothing matches — a department whose items were never tagged, or a
+  // legacy responsibleDepartment value that doesn't match this department's
+  // exact name — fall back to the full catalog rather than leaving the picker
+  // silently empty.
+  const scopedCatalog = catalog.filter(
+    (item) => item.responsibleDepartment === null || item.responsibleDepartment === department,
+  )
+  const departmentCatalog = scopedCatalog.length > 0 ? scopedCatalog : catalog
+  const showingUnfilteredCatalog = scopedCatalog.length === 0 && catalog.length > 0
 
   const addLine = (item: RequisitionCatalogItem) => {
     setLines((current) => [
@@ -143,20 +157,46 @@ export function RequisitionForm({
         </div>
 
         <div className="requisition-lines">
+          <label className="field-row">
+            เลือกน้ำยาจากรายการ
+            <select
+              value=""
+              onChange={(event) => {
+                const choice = departmentCatalog.find((item) => item.inventoryItemId === event.target.value)
+                if (choice) addLine(choice)
+              }}
+            >
+              <option value="" disabled>เลือกน้ำยา…</option>
+              {departmentCatalog.map((item) => (
+                <option key={item.inventoryItemId} value={item.inventoryItemId}>
+                  {item.lsCode} · {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <CatalogItemCombobox
-            label="เพิ่มน้ำยาเข้าใบเบิก"
+            label="หรือพิมพ์ค้นหาน้ำยา"
             placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
-            options={catalog.map((item) => ({
+            options={departmentCatalog.map((item) => ({
               id: item.inventoryItemId,
               label: `${item.lsCode} · ${item.name}`,
               hint: `คงเหลือ ${formatQuantity(item.onHand, item.unit)} · ขั้นต่ำ ${formatQuantity(item.minimumStock, item.unit)}`,
               searchText: `${item.lsCode} ${item.name}`,
             }))}
             onSelect={(id) => {
-              const choice = catalog.find((item) => item.inventoryItemId === id)
+              const choice = departmentCatalog.find((item) => item.inventoryItemId === id)
               if (choice) addLine(choice)
             }}
           />
+          {departmentCatalog.length === 0 && (
+            <p className="empty-state">ยังไม่มีรายการน้ำยาในคลัง</p>
+          )}
+          {showingUnfilteredCatalog && (
+            <p className="form-field-note" role="status">
+              ไม่พบรายการที่ระบุหน่วยงานนี้โดยตรง จึงแสดงรายการน้ำยาทั้งหมดในคลังแทน
+            </p>
+          )}
 
           {lines.length === 0 ? (
             <p className="empty-state">ยังไม่ได้เลือกรายการที่ต้องการเบิก</p>

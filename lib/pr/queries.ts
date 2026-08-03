@@ -301,6 +301,24 @@ export async function listNextContractPurchaseSequences(contractIds: readonly nu
   return nextByContract
 }
 
+/** Every "ซื้อในสัญญา" PR against one contract, newest purchase first. */
+export async function listContractPurchaseHistory(contractId: number): Promise<PurchaseRequestRecord[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('purchase_requests')
+    .select(REQUEST_SELECT)
+    .eq('purchase_method', 'contract')
+
+  if (error) throw new Error(`อ่านประวัติการซื้อไม่สำเร็จ: ${error.message}`)
+
+  return requestRowSchema
+    .array()
+    .parse(data ?? [])
+    .map(mapRequest)
+    .filter((request) => Number(request.methodDetails.contractId) === contractId)
+    .sort((left, right) => Number(right.methodDetails.purchaseSequence) - Number(left.methodDetails.purchaseSequence))
+}
+
 export interface ContractItemOption {
   id: string
   contractId: number

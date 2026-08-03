@@ -47,3 +47,13 @@ export const fulfillRequisitionInputSchema = z
     allocations: z.array(lotAllocationInputSchema).min(1, 'ต้องเลือกล็อตอย่างน้อย 1 ล็อต'),
   })
   .strict()
+
+export const signRequisitionInputSchema = z
+  .object({
+    receivedByName: z.string().trim().min(1, 'กรุณาระบุชื่อผู้รับของ'),
+    signature: z
+      .string()
+      .refine((value) => value.startsWith('data:image/png;base64,'), 'รูปแบบลายเซ็นต์ไม่ถูกต้อง')
+      .refine((value) => value.length <= 500_000, 'ไฟล์ลายเซ็นต์ใหญ่เกินไป'),
+  })
+  .strict()

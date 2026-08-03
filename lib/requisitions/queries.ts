@@ -45,6 +45,9 @@ const requisitionRowSchema = z.object({
   status: z.enum(REQUISITION_STATUSES),
   note: z.string().nullable(),
   fulfilled_at: z.string().nullable(),
+  received_by_name: z.string().nullable(),
+  signature: z.string().nullable(),
+  signed_at: z.string().nullable(),
   created_at: z.string(),
   fulfiller: z.object({ name: z.string().nullable() }).nullable(),
   requisition_items: z.array(itemRowSchema).nullable().default([]),
@@ -61,6 +64,9 @@ const REQUISITION_SELECT = `
   status,
   note,
   fulfilled_at,
+  received_by_name,
+  signature,
+  signed_at,
   created_at,
   fulfiller:profiles!requisitions_fulfilled_by_fkey (name),
   requisition_items (
@@ -119,6 +125,9 @@ function mapRequisition(row: z.infer<typeof requisitionRowSchema>): RequisitionR
     note: row.note,
     fulfilledAt: row.fulfilled_at,
     fulfilledByName: row.fulfiller?.name ?? null,
+    receivedByName: row.received_by_name,
+    signature: row.signature,
+    signedAt: row.signed_at,
     createdAt: row.created_at,
     items: (row.requisition_items ?? [])
       .sort((left, right) => left.line_number - right.line_number)

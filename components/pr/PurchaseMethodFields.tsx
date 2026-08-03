@@ -82,6 +82,48 @@ export function emptyMethod(
           sentToStockOfficerDate: todayIso(),
         },
       }
+    case 'equipment_lease':
+      return {
+        kind,
+        contractDraft: {
+          fiscalYear: currentThaiFiscalYear(),
+          displayName: '',
+          vendor: null,
+          sentToStockOfficerDate: todayIso(),
+          // 0 fails the schema's positive() check, same as how a fresh
+          // contract line defaults to an invalid value until the requester
+          // types a real one — it forces an edit rather than silently
+          // submitting an unset ceiling.
+          total: 0,
+        },
+      }
+  }
+}
+
+type ContractOriginationMethod = Extract<
+  PurchaseMethod,
+  { kind: 'specific_contract' | 'e_bidding' | 'equipment_lease' }
+>
+
+/**
+ * Patches the shared contractDraft fields (name/fiscal year/vendor/date)
+ * without losing the lease variant's extra `total` field. A plain
+ * `{ ...method, contractDraft: { ...method.contractDraft, ... } }` doesn't
+ * type-check here: with `method` narrowed to a 3-member union, TS can't
+ * re-correlate which contractDraft shape goes with which `kind` after a
+ * spread, even though each individual branch below is sound. Switching on
+ * `method.kind` narrows to exactly one member per branch instead.
+ */
+function patchContractDraft(
+  method: ContractOriginationMethod,
+  patch: Partial<Pick<ContractOriginationMethod['contractDraft'], 'fiscalYear' | 'displayName' | 'vendor' | 'sentToStockOfficerDate'>>,
+): ContractOriginationMethod {
+  switch (method.kind) {
+    case 'specific_contract':
+    case 'e_bidding':
+      return { ...method, contractDraft: { ...method.contractDraft, ...patch } }
+    case 'equipment_lease':
+      return { ...method, contractDraft: { ...method.contractDraft, ...patch } }
   }
 }
 
@@ -216,7 +258,7 @@ export function PurchaseMethodFields({
           )
         )}
 
-        {(method.kind === 'specific_contract' || method.kind === 'e_bidding') && (
+        {(method.kind === 'specific_contract' || method.kind === 'e_bidding' || method.kind === 'equipment_lease') && (
           <>
             <label className="field-row">
               ชื่อสัญญา
@@ -224,9 +266,7 @@ export function PurchaseMethodFields({
                 type="text"
                 required
                 value={method.contractDraft.displayName}
-                onChange={(event) =>
-                  onChange({ ...method, contractDraft: { ...method.contractDraft, displayName: event.target.value } })
-                }
+                onChange={(event) => onChange(patchContractDraft(method, { displayName: event.target.value }))}
               />
             </label>
 
@@ -239,12 +279,7 @@ export function PurchaseMethodFields({
                   max="3000"
                   required
                   value={method.contractDraft.fiscalYear}
-                  onChange={(event) =>
-                    onChange({
-                      ...method,
-                      contractDraft: { ...method.contractDraft, fiscalYear: Number(event.target.value) },
-                    })
-                  }
+                  onChange={(event) => onChange(patchContractDraft(method, { fiscalYear: Number(event.target.value) }))}
                 />
               </label>
               <label className="field-row">
@@ -256,29 +291,41 @@ export function PurchaseMethodFields({
                 คู่สัญญา
                 <input
                   type="text"
-                  required
+                  required={method.kind === 'specific_contract'}
                   value={method.contractDraft.vendor ?? ''}
-                  onChange={(event) =>
-                    onChange({
-                      ...method,
-                      contractDraft: { ...method.contractDraft, vendor: event.target.value },
-                    })
-                  }
+                  onChange={(event) => onChange(patchContractDraft(method, { vendor: event.target.value }))}
                 />
+                {method.kind !== 'specific_contract' && <small>ยังไม่ทราบได้ เว้นว่างไว้ก่อนได้</small>}
               </label>
               <label className="field-row">
                 วันที่ส่งเจ้าหน้าที่คลัง
                 <ThaiDateInput
                   required
                   value={method.contractDraft.sentToStockOfficerDate}
-                  onChange={(isoDate) =>
-                    onChange({
-                      ...method,
-                      contractDraft: { ...method.contractDraft, sentToStockOfficerDate: isoDate },
-                    })
-                  }
+                  onChange={(isoDate) => onChange(patchContractDraft(method, { sentToStockOfficerDate: isoDate }))}
                 />
               </label>
+              {method.kind === 'equipment_lease' && (
+                <label className="field-row">
+                  มูลค่าสัญญา
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    value={method.contractDraft.total || ''}
+                    onChange={(event) =>
+                      onChange({
+                        ...method,
+                        contractDraft: {
+                          ...method.contractDraft,
+                          total: event.target.value === '' ? 0 : Number(event.target.value),
+                        },
+                      })
+                    }
+                  />
+                </label>
+              )}
             </div>
           </>
         )}

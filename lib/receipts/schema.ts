@@ -61,6 +61,25 @@ export function detectDuplicateLots(
   return [...duplicates]
 }
 
+/**
+ * A reagent can arrive split across several lots — several draft lines share
+ * one inventoryItemId. Sums across all of them before comparing against what
+ * the PR actually requested, so splitting into lots cannot hide an overage.
+ */
+export function findOverRequestedItems(
+  lines: Array<{ inventoryItemId: string; quantity: number }>,
+  requestedByItem: Record<string, number>,
+): string[] {
+  const totals = new Map<string, number>()
+  for (const line of lines) {
+    totals.set(line.inventoryItemId, (totals.get(line.inventoryItemId) ?? 0) + line.quantity)
+  }
+
+  return [...totals.entries()]
+    .filter(([itemId, total]) => itemId in requestedByItem && total > requestedByItem[itemId])
+    .map(([itemId]) => itemId)
+}
+
 export function summarizeReceiptLines(
   lines: Array<{ quantity: number }>,
 ): { lineCount: number; totalQuantity: number } {

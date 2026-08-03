@@ -31,6 +31,7 @@ export default async function NewRequisitionPage() {
           unit: item.baseUnit,
           onHand: item.onHand,
           minimumStock: item.minimumStock,
+          responsibleDepartment: item.responsibleDepartment,
         }))}
         departments={DEPARTMENTS}
         requesterName={actor.name ?? ''}

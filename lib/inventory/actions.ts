@@ -9,13 +9,17 @@ import {
   createInventoryItemInputSchema,
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
+  setInventoryItemActiveInputSchema,
   stockAdjustmentInputSchema,
+  updateInventoryItemInputSchema,
 } from '@/lib/inventory/schema'
 import type {
   CreateInventoryItemInput,
   InventoryMinimumStockSettingsInput,
   MinimumStockInput,
+  SetInventoryItemActiveInput,
   StockAdjustmentInput,
+  UpdateInventoryItemInput,
 } from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -63,6 +67,47 @@ export async function createInventoryItem(input: CreateInventoryItemInput) {
   revalidatePath('/receipts/new')
   revalidatePath('/requisitions/new')
   return created
+}
+
+export async function updateInventoryItem(itemId: string, input: UpdateInventoryItemInput) {
+  const actor = await requireStockOperator()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+  const parsed = updateInventoryItemInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('update_inventory_item', {
+    p_inventory_item_id: parsedItemId,
+    p_actor_id: actor.id,
+    p_name: parsed.name,
+    p_base_unit: parsed.baseUnit,
+    p_responsible_department: parsed.responsibleDepartment ?? null,
+    p_default_unit_price: parsed.defaultUnitPrice ?? null,
+    p_note: parsed.note ?? null,
+  })
+
+  const updated = unwrapMutation('บันทึกการแก้ไขรายการน้ำยา', result)
+  revalidatePath('/inventory')
+  revalidatePath(`/inventory/${parsedItemId}`)
+  return updated
+}
+
+export async function setInventoryItemActive(itemId: string, input: SetInventoryItemActiveInput) {
+  const actor = await requireStockOperator()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+  const parsed = setInventoryItemActiveInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('set_inventory_item_active', {
+    p_inventory_item_id: parsedItemId,
+    p_actor_id: actor.id,
+    p_is_active: parsed.isActive,
+  })
+
+  const updated = unwrapMutation(
+    parsed.isActive ? 'เปิดใช้งานรายการน้ำยา' : 'ปิดใช้งานรายการน้ำยา',
+    result,
+  )
+  revalidatePath('/inventory')
+  revalidatePath(`/inventory/${parsedItemId}`)
+  return updated
 }
 
 export async function setMinimumStock(itemId: string, input: MinimumStockInput) {

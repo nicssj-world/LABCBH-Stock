@@ -62,6 +62,28 @@ export interface LotAllocationInput {
   quantity: number
 }
 
+export interface RankedSelectableLot {
+  id: string
+  balance: number
+  selectable: boolean
+}
+
+/**
+ * The lot the officer should take first, pre-filled at the full requested
+ * quantity capped to what that lot actually has — saves a click for the
+ * common case where one lot covers the request. Empty when nothing is
+ * currently selectable. `rankedLots` must already be FIFO-ranked (as
+ * listSelectableLots returns them); this does not re-sort.
+ */
+export function defaultLotSelection(
+  rankedLots: RankedSelectableLot[],
+  requestedQuantity: number,
+): LotAllocationInput[] {
+  const topLot = rankedLots.find((lot) => lot.selectable)
+  if (!topLot) return []
+  return [{ lotId: topLot.id, quantity: roundQuantity(Math.min(topLot.balance, requestedQuantity)) }]
+}
+
 /**
  * Front-line validation so the officer sees a named problem instead of a
  * database error. The RPC re-checks all of this under row locks.

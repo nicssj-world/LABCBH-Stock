@@ -4,7 +4,7 @@ import { formatQuantity } from '@/lib/inventory/presenter'
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
-import { detectDuplicateLots } from '@/lib/receipts/schema'
+import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
 
 export interface ReceiptDraftLine {
   key: string
@@ -29,6 +29,7 @@ export interface ReceiptLinesEditorProps {
   lines: ReceiptDraftLine[]
   catalog: CatalogChoice[]
   hasPurchaseRequest?: boolean
+  requestedByItem?: Record<string, number>
   onAdd: (item: CatalogChoice) => void
   onChange: (key: string, patch: Partial<ReceiptDraftLine>) => void
   onRemove: (key: string) => void
@@ -38,6 +39,7 @@ export function ReceiptLinesEditor({
   lines,
   catalog,
   hasPurchaseRequest = false,
+  requestedByItem = {},
   onAdd,
   onChange,
   onRemove,
@@ -45,6 +47,12 @@ export function ReceiptLinesEditor({
   const duplicates = new Set(detectDuplicateLots(lines))
   const isDuplicate = (line: ReceiptDraftLine) =>
     duplicates.has(`${line.inventoryItemId}::${line.lotNumber.trim().toUpperCase()}`)
+
+  // A reagent can be split across lots (several lines share one inventoryItemId);
+  // this flags every line in a group whose combined quantity exceeds what the
+  // referenced PR actually requested for that item.
+  const overRequested = new Set(findOverRequestedItems(lines, requestedByItem))
+  const isOverRequested = (line: ReceiptDraftLine) => overRequested.has(line.inventoryItemId)
 
   return (
     <div className="receipt-lines">
@@ -80,7 +88,16 @@ export function ReceiptLinesEditor({
           )}
           <ul className="receipt-line-list">
             {lines.map((line) => (
-              <li key={line.key} className={isDuplicate(line) ? 'receipt-line--duplicate' : undefined}>
+              <li
+                key={line.key}
+                className={
+                  isDuplicate(line)
+                    ? 'receipt-line--duplicate'
+                    : isOverRequested(line)
+                      ? 'receipt-line--over-requested'
+                      : undefined
+                }
+              >
                 <div className="receipt-line__identity">
                   <span className="identifier">{line.lsCode}</span>
                   <strong>{line.name}</strong>
@@ -111,9 +128,15 @@ export function ReceiptLinesEditor({
                       min="0.001"
                       step="0.001"
                       required
+                      aria-invalid={isOverRequested(line)}
                       value={line.quantity}
                       onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
                     />
+                    {isOverRequested(line) && (
+                      <small className="field-error">
+                        เกินจำนวนที่ขอซื้อ (สั่ง {formatQuantity(requestedByItem[line.inventoryItemId], line.unit)})
+                      </small>
+                    )}
                   </label>
                 </div>
 

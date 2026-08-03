@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { detectDuplicateLots, summarizeReceiptLines } from '../lib/receipts/schema'
+import { detectDuplicateLots, findOverRequestedItems, summarizeReceiptLines } from '../lib/receipts/schema'
 
 /**
  * Contract test for posting a receipt.
@@ -77,5 +77,65 @@ assert.deepEqual(detectDuplicateLots(lines), ['a::L1'], 'lot numbers match case-
 assert.deepEqual(detectDuplicateLots([lines[0], lines[2]]), [])
 
 assert.deepEqual(summarizeReceiptLines(lines), { lineCount: 3, totalQuantity: 10 })
+
+// 8. Receiving more of a reagent than the referenced PR requested is caught,
+//    even when split across two lots (two lines share one inventoryItemId).
+assert.deepEqual(
+  findOverRequestedItems(
+    [{ inventoryItemId: 'a', quantity: 30 }, { inventoryItemId: 'a', quantity: 30 }],
+    { a: 50 },
+  ),
+  ['a'],
+  'splitting the same item across two lots must not hide an overage',
+)
+assert.deepEqual(
+  findOverRequestedItems([{ inventoryItemId: 'a', quantity: 50 }], { a: 50 }),
+  [],
+  'receiving exactly the requested quantity is not an overage',
+)
+assert.deepEqual(
+  findOverRequestedItems([{ inventoryItemId: 'a', quantity: 999 }], {}),
+  [],
+  'an item the PR never listed has no ceiling to exceed',
+)
+assert.deepEqual(
+  findOverRequestedItems(
+    [{ inventoryItemId: 'a', quantity: 10 }, { inventoryItemId: 'b', quantity: 999 }],
+    { a: 50 },
+  ),
+  [],
+  'only the flagged item must be reported, not every line',
+)
+
+// 9. create_goods_receipt itself must reject the same overage server-side —
+//    the client check alone would be decoration without this.
+const receivingCeilingSql = read('_goods_receipt_quantity_ceiling.sql')
+const createGoodsReceipt = receivingCeilingSql.match(
+  /create or replace function public\.create_goods_receipt[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(createGoodsReceipt, 'create_goods_receipt must be redefined with the quantity ceiling')
+assert.match(createGoodsReceipt, /security invoker/i)
+assert.match(createGoodsReceipt, /set search_path = ''/i)
+assert.match(
+  createGoodsReceipt,
+  /group by \(item ->> 'inventoryItemId'\)::uuid/i,
+  'quantities must be grouped by item so a split-across-lots receipt cannot dodge the ceiling',
+)
+assert.match(
+  createGoodsReceipt,
+  /join public\.purchase_request_items pr_item[\s\S]*?total_quantity > pr_item\.requested_quantity/i,
+)
+assert.match(createGoodsReceipt, /received quantity exceeds the purchase request''s requested quantity/i)
+assert.match(createGoodsReceipt, /if parsed_purchase_request_id is not null then/i)
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    receivingCeilingSql,
+    new RegExp(`revoke execute on function public\\.create_goods_receipt[\\s\\S]*?from[\\s\\S]*?${role}`, 'i'),
+  )
+}
+assert.match(
+  receivingCeilingSql,
+  /grant execute on function public\.create_goods_receipt[\s\S]*?to service_role/i,
+)
 
 console.log('receiving transaction contract: ok (static; live post/retry pass pending a database)')

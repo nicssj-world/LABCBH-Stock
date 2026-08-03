@@ -11,6 +11,19 @@ assert.match(listPage, /หน่วยงาน/, 'officers can filter receipts
 assert.match(listPage, /AutoFilterBench/, 'receiving filters must update the list immediately')
 assert.doesNotMatch(listPage, /แสดงผล/, 'receiving filters must not require an apply button')
 assert.doesNotMatch(listPage, /^['"]use client['"]/m)
+assert.match(listPage, /GoodsReceiptSummaryDialog receipt=\{receipt\}/, 'the list row must open the mini summary popup, not a plain PO cell')
+assert.match(listPage, /GOODS_RECEIPT_STATUS_LABELS|GOODS_RECEIPT_STATUS_TONES/, 'the list page must use the shared receipts presenter, not a local status map')
+
+const receiptPresenter = read('lib/receipts/presenter.ts')
+assert.match(receiptPresenter, /GOODS_RECEIPT_STATUS_LABELS/)
+assert.match(receiptPresenter, /GOODS_RECEIPT_STATUS_TONES/)
+
+const summaryDialog = read('components/receipts/GoodsReceiptSummaryDialog.tsx')
+assert.match(summaryDialog, /^['"]use client['"]/m)
+assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
+assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
+assert.match(summaryDialog, /list-summary-dialog/)
+assert.match(summaryDialog, /StatusChip tone=\{GOODS_RECEIPT_STATUS_TONES/, 'status must never be a bare colored word')
 
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)
@@ -51,6 +64,31 @@ assert.match(linesEditor, /วันหมดอายุ/)
 assert.doesNotMatch(linesEditor, /จัดเก็บที่/, 'storage location is not captured when receiving stock')
 assert.match(linesEditor, /detectDuplicateLots/, 'duplicate lots must warn before posting')
 assert.match(linesEditor, /ล็อตซ้ำ/)
+
+// Receiving more of an item than its PR requested must block submission, even
+// when the overage is split across two lots for the same reagent.
+assert.match(form, /findOverRequestedItems/, 'the form must know when any line exceeds what the PR requested')
+assert.match(
+  form,
+  /disabled=\{isPending \|\| lines\.length === 0 \|\| hasDuplicates \|\| hasIncompleteLot \|\| hasOverRequestedLine\}/,
+  'submit must stay blocked while any line exceeds its PR-requested quantity',
+)
+assert.match(linesEditor, /findOverRequestedItems/)
+assert.match(linesEditor, /เกินจำนวนที่ขอซื้อ/, 'the offending line must say it exceeds what was requested')
+
+// The "ใบ PR ที่เกี่ยวข้อง" picker only offers PRs from the department
+// currently receiving, so the list stays short as open PRs accumulate.
+assert.match(
+  form,
+  /departmentPurchaseRequests = purchaseRequests\.filter\(\(request\) => request\.department === department\)/,
+  'the PR picker must be scoped to the receiving department',
+)
+assert.match(form, /departmentPurchaseRequests\.map/, 'the select must render the department-filtered list, not every PR')
+assert.match(
+  form,
+  /selectedRequest\.department !== nextDepartment/,
+  'switching department must clear a PR selection that no longer belongs to it',
+)
 
 const uploader = read('components/receipts/PoImageUploader.tsx')
 assert.match(uploader, /^['"]use client['"]/m)

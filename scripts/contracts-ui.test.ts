@@ -114,6 +114,11 @@ assert.match(form, /onSaved\?\.\(\)/, 'contract form must notify the popup after
 
 const globalStyles = read('app/globals.css')
 assert.match(globalStyles, /\.app-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'application popups must stay centered in the viewport')
+assert.match(
+  globalStyles,
+  /\.data-table tbody tr:hover \.remaining-gauge__track\s*\{[\s\S]*?border-color:\s*var\(--lab-border-strong\);[\s\S]*?\}/,
+  'the remaining-quantity gauge track must gain a stronger border on row hover, so its pale background does not blend into the pale hover highlight',
+)
 
 const expenseHistory = read('components/contracts/ExpenseHistory.tsx')
 assert.match(expenseHistory, /expense-history__exports/, 'CSV and Excel exports must be grouped as one coherent toolbar')

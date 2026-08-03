@@ -27,12 +27,15 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
   const formId = useId()
   const months = useMemo(() => expenseMonthOptions(startDate, endDate), [startDate, endDate])
 
-  // Default to the current month when the contract covers it, otherwise the
-  // closest month it does cover, so the common case needs no thought.
+  // Default to last month (expenses are usually logged after the month
+  // closes) when the contract covers it, otherwise the closest month it
+  // does cover, so the common case needs no thought.
   const defaultMonth = useMemo(() => {
     if (months.length === 0) return ''
-    const current = `${todayIso().slice(0, 7)}-01`
-    return months.includes(current) ? current : months[months.length - 1]
+    const today = new Date()
+    const previous = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const previousIso = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-01`
+    return months.includes(previousIso) ? previousIso : months[months.length - 1]
   }, [months])
 
   const [usageMonth, setUsageMonth] = useState(defaultMonth)

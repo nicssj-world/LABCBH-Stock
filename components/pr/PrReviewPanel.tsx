@@ -20,6 +20,8 @@ interface ContractDraftDetails {
   fiscalYear: number
   displayName: string
   vendor: string | null
+  /** Only present for an equipment-lease draft — the ceiling budget.ts calls "ไม่ระบุ" when null. */
+  total: number | null
 }
 
 /** `methodDetails` is read as unknown JSON; this reads back only the shape a
@@ -27,9 +29,14 @@ interface ContractDraftDetails {
 function readContractDraft(methodDetails: Record<string, unknown>): ContractDraftDetails | null {
   const draft = methodDetails.contractDraft
   if (!draft || typeof draft !== 'object') return null
-  const { fiscalYear, displayName, vendor } = draft as Record<string, unknown>
+  const { fiscalYear, displayName, vendor, total } = draft as Record<string, unknown>
   if (typeof fiscalYear !== 'number' || typeof displayName !== 'string') return null
-  return { fiscalYear, displayName, vendor: typeof vendor === 'string' ? vendor : null }
+  return {
+    fiscalYear,
+    displayName,
+    vendor: typeof vendor === 'string' ? vendor : null,
+    total: typeof total === 'number' ? total : null,
+  }
 }
 
 export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
@@ -80,14 +87,23 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
               <dt>ปีงบประมาณ</dt>
               <dd>{contractDraft.fiscalYear}</dd>
             </div>
-            <div>
-              <dt>จำนวนรายการ</dt>
-              <dd>{formatQuantity(request.items.length)} รายการ</dd>
-            </div>
-            <div>
-              <dt>มูลค่ารวม</dt>
-              <dd>{formatBaht(request.total)}</dd>
-            </div>
+            {contractType === 'equipment_lease' ? (
+              <div>
+                <dt>มูลค่าสัญญา</dt>
+                <dd>{contractDraft.total === null ? 'ไม่ระบุ' : formatBaht(contractDraft.total)}</dd>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <dt>จำนวนรายการ</dt>
+                  <dd>{formatQuantity(request.items.length)} รายการ</dd>
+                </div>
+                <div>
+                  <dt>มูลค่ารวม</dt>
+                  <dd>{formatBaht(request.total)}</dd>
+                </div>
+              </>
+            )}
           </dl>
 
           <label className="field-row">
@@ -167,25 +183,32 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
       {request.status === 'completed' && (
         <>
-          <label className="field-row">
-            เลขที่ใบสั่งซื้อ (บันทึกภายหลังได้ ไม่กระทบยอดที่ตัดไปแล้ว)
-            <input type="text" value={poNumber} onChange={(event) => setPoNumber(event.target.value)} />
-          </label>
+          {/* A contract-originating PR (specific_contract/e_bidding/equipment_lease)
+              never becomes a purchase order — it opens a contract directly, so
+              there is nothing here for a PO number to record. */}
+          {!contractType && (
+            <label className="field-row">
+              เลขที่ใบสั่งซื้อ (บันทึกภายหลังได้ ไม่กระทบยอดที่ตัดไปแล้ว)
+              <input type="text" value={poNumber} onChange={(event) => setPoNumber(event.target.value)} />
+            </label>
+          )}
           <div className="pr-review__actions">
             <div className="pr-review__actions-buttons">
-              <Button
-                variant="secondary"
-                type="button"
-                disabled={isPending || !poNumber.trim()}
-                onClick={() =>
-                  run(
-                    () => setPurchaseOrderNumber(request.id, { poNumber }),
-                    'บันทึกเลขที่ใบสั่งซื้อไม่สำเร็จ',
-                  )
-                }
-              >
-                บันทึกเลขที่ใบสั่งซื้อ
-              </Button>
+              {!contractType && (
+                <Button
+                  variant="secondary"
+                  type="button"
+                  disabled={isPending || !poNumber.trim()}
+                  onClick={() =>
+                    run(
+                      () => setPurchaseOrderNumber(request.id, { poNumber }),
+                      'บันทึกเลขที่ใบสั่งซื้อไม่สำเร็จ',
+                    )
+                  }
+                >
+                  บันทึกเลขที่ใบสั่งซื้อ
+                </Button>
+              )}
               {!reversing && (
                 <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
                   กลับรายการใบ PR

@@ -25,7 +25,7 @@ const contractDraft = {
 // Exactly one purchase method, each with its own conditional fields.
 assert.deepEqual(
   [...PURCHASE_METHODS],
-  ['annual_plan', 'contract', 'awaiting_contract', 'off_plan', 'specific_contract', 'e_bidding'],
+  ['annual_plan', 'contract', 'awaiting_contract', 'off_plan', 'specific_contract', 'e_bidding', 'equipment_lease'],
 )
 
 // Purpose is a grouping over the same six methods, not a stored value: every
@@ -41,11 +41,15 @@ assert.equal(purchaseMethodPurpose('awaiting_contract'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('off_plan'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('specific_contract'), 'new_contract')
 assert.equal(purchaseMethodPurpose('e_bidding'), 'new_contract')
+assert.equal(purchaseMethodPurpose('equipment_lease'), 'new_contract')
 
 // specific_contract auto-fills a "specific" contract, e_bidding an "e_bidding"
-// one; every purchase_order method leaves contract type undecided.
+// one, equipment_lease an "equipment_lease" one; every purchase_order method
+// leaves contract type undecided. A lease never places a purchase order (it
+// draws cost down monthly instead), so it has no purchase_order counterpart.
 assert.equal(contractTypeForMethod('specific_contract'), 'specific')
 assert.equal(contractTypeForMethod('e_bidding'), 'e_bidding')
+assert.equal(contractTypeForMethod('equipment_lease'), 'equipment_lease')
 assert.equal(contractTypeForMethod('annual_plan'), null)
 assert.equal(contractTypeForMethod('contract'), null)
 assert.equal(contractTypeForMethod('awaiting_contract'), null)
@@ -91,6 +95,14 @@ assert.equal(
   'a specific-contract PR must carry its contract draft',
 )
 assert.equal(
+  // vendor is `.nullable()` on every variant (an explicit null always passes);
+  // the UI never sends that literal null, only a blank string, so that's what
+  // actually exercises "required" here.
+  purchaseMethodSchema.safeParse({ kind: 'specific_contract', contractDraft: { ...contractDraft, vendor: '' } }).success,
+  false,
+  'ทำสัญญาเจาะจง already knows its vendor, so a blank one must be rejected',
+)
+assert.equal(
   purchaseMethodSchema.safeParse({ kind: 'e_bidding', contractDraft }).success,
   true,
   'an E-Bidding PR drafts a new contract rather than referencing one',
@@ -100,7 +112,45 @@ assert.equal(
   false,
   'e_bidding no longer references an existing started contract',
 )
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'e_bidding', contractDraft: { ...contractDraft, vendor: '' } }).success,
+  true,
+  'E-Bidding is requested before bidding runs, so a blank vendor must be accepted',
+)
 assert.equal(purchaseMethodSchema.safeParse({ kind: 'unknown_method' }).success, false)
+
+// เช่าเครื่อง drafts a lease contract, carrying a required ceiling the other
+// two origination methods must never accept.
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'equipment_lease', contractDraft: { ...contractDraft, total: 1_200_000 } }).success,
+  true,
+  'a lease PR carries a ceiling on its contract draft',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'equipment_lease', contractDraft: { ...contractDraft, total: null } }).success,
+  false,
+  'unlike the direct "เพิ่มสัญญา" form, a lease requested via PR must state its ceiling',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'equipment_lease', contractDraft }).success,
+  false,
+  'a lease draft must carry a total field',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'equipment_lease', contractDraft: { ...contractDraft, total: 0 } }).success,
+  false,
+  'a zero ceiling is rejected the same way create_contract would reject a non-positive total',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'specific_contract', contractDraft: { ...contractDraft, total: 1_200_000 } }).success,
+  false,
+  'only a lease draft may carry a ceiling',
+)
+assert.equal(
+  purchaseMethodSchema.safeParse({ kind: 'equipment_lease', contractDraft: { ...contractDraft, vendor: '', total: 1_200_000 } }).success,
+  true,
+  'the lessor may not be chosen yet when the lease is first requested, so a blank vendor must be accepted',
+)
 
 // Only an ordinary contract drawdown consumes contracted quantity; opening a
 // brand-new contract (specific_contract/e_bidding) has nothing to draw down.
@@ -109,9 +159,10 @@ assert.equal(methodRequiresContractItems({ kind: 'off_plan' }), false)
 assert.equal(methodRequiresContractItems({ kind: 'e_bidding', contractDraft }), false)
 assert.equal(methodRequiresContractItems({ kind: 'awaiting_contract', contractId: 4 }), false)
 
-// methodCreatesContract flags exactly the two new_contract methods.
+// methodCreatesContract flags exactly the three new_contract methods.
 assert.equal(methodCreatesContract({ kind: 'specific_contract', contractDraft }), true)
 assert.equal(methodCreatesContract({ kind: 'e_bidding', contractDraft }), true)
+assert.equal(methodCreatesContract({ kind: 'equipment_lease', contractDraft: { ...contractDraft, total: 1_200_000 } }), true)
 assert.equal(methodCreatesContract({ kind: 'contract', contractId: 4, purchaseSequence: 1 }), false)
 assert.equal(methodCreatesContract({ kind: 'off_plan' }), false)
 
@@ -231,6 +282,25 @@ assert.equal(
   }).success,
   false,
   'the same contract item cannot appear twice in one PR',
+)
+
+// A lease has no reagent lines: zero items is required, not just allowed.
+assert.equal(
+  purchaseRequestInputSchema.safeParse({
+    ...validInput,
+    method: { kind: 'equipment_lease' as const, contractDraft: { ...contractDraft, total: 1_200_000 } },
+    items: [],
+  }).success,
+  true,
+  'a lease PR originates a contract with zero items',
+)
+assert.equal(
+  purchaseRequestInputSchema.safeParse({
+    ...validInput,
+    method: { kind: 'equipment_lease' as const, contractDraft: { ...contractDraft, total: 1_200_000 } },
+  }).success,
+  false,
+  'a lease PR must not carry any reagent lines',
 )
 
 console.log('purchase request domain: ok')
