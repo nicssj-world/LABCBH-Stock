@@ -104,6 +104,22 @@ export async function archiveContract(contractId: number, input: ArchiveContract
   return archived
 }
 
+export async function restoreContract(contractId: number) {
+  const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์กู้คืนสัญญา')
+  const parsedContractId = z.number().int().positive().parse(contractId)
+
+  const result = await supabaseAdmin.rpc('restore_contract', {
+    p_contract_id: parsedContractId,
+    p_actor_id: actor.id,
+  })
+
+  const restored = unwrapMutation('กู้คืนสัญญา', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${parsedContractId}`)
+  return restored
+}
+
 export async function expireContract(contractId: number, input: ExpireContractInput) {
   const actor = await requireActor()
   if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์เปลี่ยนสถานะสิ้นสุดสัญญา')

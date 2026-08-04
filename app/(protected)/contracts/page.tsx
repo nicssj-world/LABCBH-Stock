@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
+import { hasAppRole } from '@/lib/auth/access'
+import { requireActor } from '@/lib/auth/actor'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, presentContract } from '@/lib/contracts/presenter'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
@@ -13,6 +15,8 @@ interface ContractsPageProps {
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value
 
 export default async function ContractsPage({ searchParams }: ContractsPageProps) {
+  const actor = await requireActor()
+  const isAdmin = hasAppRole(actor, 'admin')
   const params = await searchParams
   const fiscalYearValue = first(params.fiscalYear)
   const contractTypeValue = first(params.contractType)
@@ -22,10 +26,65 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const showEnded = first(params.showEnded) === '1'
   const showOlder = first(params.showOlder) === '1'
   const showWatchlist = first(params.watchlist) === '1'
+  const showArchived = isAdmin && first(params.showArchived) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
   const department = CONTRACT_DEPARTMENTS.find((dept) => dept === departmentValue)
   const procurementStage = PROCUREMENT_STAGES.find((stage) => stage === stageValue)
+
+  // Archived is a distinct admin-only recovery view (find a mistakenly
+  // archived contract to restore), not another filter on the normal
+  // register, so it bypasses the fiscal-year grouping entirely.
+  if (showArchived) {
+    let archivedContracts: Awaited<ReturnType<typeof listContracts>> = []
+    let archivedError: string | null = null
+    try {
+      archivedContracts = await listContracts({ includeArchived: true })
+    } catch (caught) {
+      archivedError = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาที่ถูกลบไม่สำเร็จ'
+    }
+    const presentedArchived = archivedContracts.map(presentContract)
+
+    return (
+      <div className="route-stack">
+        <header className="page-heading page-heading--actions">
+          <div>
+            <p className="section-kicker">ADMIN CLEANUP</p>
+            <h1>สัญญาที่ถูกลบออกจากรายการใช้งาน</h1>
+            <p>สัญญาที่ถูกลบด้วยเหตุผลสร้างผิดหรือซ้ำ กู้คืนได้จากหน้ารายละเอียดของสัญญานั้น</p>
+          </div>
+          <div className="page-heading__actions">
+            <Link className="lab-link-button lab-link-button--secondary contracts-visibility-toggle" href="/contracts">
+              กลับไปรายการสัญญาปกติ
+            </Link>
+          </div>
+        </header>
+
+        {archivedError ? (
+          <section className="error-state" role="alert">
+            <h2>ไม่สามารถแสดงรายการสัญญาที่ถูกลบได้</h2>
+            <p>{archivedError}</p>
+          </section>
+        ) : presentedArchived.length === 0 ? (
+          <section className="empty-state empty-state--panel">
+            <h2>ไม่มีสัญญาที่ถูกลบ</h2>
+            <p>ยังไม่มีสัญญาใดถูกลบออกจากรายการใช้งานในระบบนี้</p>
+          </section>
+        ) : (
+          <section className="bench-panel contract-year-group" aria-labelledby="archived-contracts-title">
+            <div className="bench-panel__header">
+              <div>
+                <p className="section-kicker">ARCHIVED</p>
+                <h2 id="archived-contracts-title">สัญญาที่ถูกลบ</h2>
+              </div>
+              <p>{presentedArchived.length} สัญญา</p>
+            </div>
+            <ContractTable contracts={presentedArchived} />
+          </section>
+        )}
+      </div>
+    )
+  }
 
   let contracts: Awaited<ReturnType<typeof listContracts>> = []
   let error: string | null = null
@@ -109,6 +168,11 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
           {(showWatchlist || watchlistContracts.length > 0) && (
             <Link className="lab-link-button lab-link-button--secondary contracts-visibility-toggle" href={watchlistHref}>
               {showWatchlist ? 'แสดงสัญญาทั้งหมด' : `เฉพาะสัญญาที่ต้องเฝ้าระวัง (${watchlistContracts.length})`}
+            </Link>
+          )}
+          {isAdmin && (
+            <Link className="lab-link-button lab-link-button--secondary contracts-visibility-toggle" href="/contracts?showArchived=1">
+              สัญญาที่ถูกลบ
             </Link>
           )}
           <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>

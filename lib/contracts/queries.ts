@@ -60,6 +60,8 @@ export const contractReadRowSchema = z.object({
   end_date: z.string().nullable(),
   updated_at: z.string().nullable(),
   is_archived: z.boolean().nullable(),
+  archived_at: z.string().nullable(),
+  archive_reason: z.string().nullable(),
   total: numericSchema.nullable(),
   responsible_user_ids: z.array(z.string().uuid()).nullable().default([]),
   file_url: z.string().nullable(),
@@ -83,6 +85,8 @@ const CONTRACT_READ_SELECT = `
   end_date,
   updated_at,
   is_archived,
+  archived_at,
+  archive_reason,
   total,
   responsible_user_ids,
   file_url,
@@ -117,6 +121,7 @@ export interface ContractFilters {
   department?: (typeof CONTRACT_DEPARTMENTS)[number]
   procurementStage?: (typeof PROCUREMENT_STAGES)[number]
   search?: string
+  includeArchived?: boolean
 }
 
 function mapContractRow(
@@ -146,6 +151,8 @@ function mapContractRow(
     endDate: row.end_date,
     updatedAt: row.updated_at,
     isArchived: row.is_archived,
+    archivedAt: row.archived_at,
+    archiveReason: row.archive_reason,
     total: row.total,
     remainingPercent: contractRemainingPercent({
       contractType: row.contract_type,
@@ -231,9 +238,15 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
   let query = supabase
     .from('contracts')
     .select(CONTRACT_READ_SELECT)
-    .or('is_archived.eq.false,is_archived.is.null')
     .order('fiscal_year', { ascending: false, nullsFirst: false })
     .order('id', { ascending: false })
+
+  // The archived toggle is a separate view, not an additional filter: an
+  // admin looking to restore a mistakenly archived contract needs exactly
+  // those rows, not the normal register with a few extras mixed in.
+  query = filters.includeArchived
+    ? query.eq('is_archived', true)
+    : query.or('is_archived.eq.false,is_archived.is.null')
 
   if (filters.fiscalYear) query = query.eq('fiscal_year', filters.fiscalYear)
   if (filters.contractType) query = query.eq('contract_type', filters.contractType)

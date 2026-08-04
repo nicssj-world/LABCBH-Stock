@@ -8,6 +8,7 @@ import { ContractPurchaseHistory } from '@/components/contracts/ContractPurchase
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
+import { RestoreContractControl } from '@/components/contracts/RestoreContractControl'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
@@ -38,11 +39,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const { id } = await params
   const contractId = Number(id)
   if (!Number.isInteger(contractId) || contractId <= 0) notFound()
-  const record = await getContract(contractId)
+  const isAdmin = hasAppRole(actor, 'admin')
+  // Only an admin can even see that an archived contract exists, since
+  // archiving is meant for mistaken/duplicate records; anyone else hitting
+  // the id of one gets the same not-found as before.
+  const record = await getContract(contractId, { includeArchived: isAdmin })
   if (!record) notFound()
   const contract = presentContract(record)
-  const canEdit = hasAppRole(actor, 'admin', 'head')
-  const isAdmin = hasAppRole(actor, 'admin')
+  const canEdit = hasAppRole(actor, 'admin', 'head') && !record.isArchived
   const canManageStageHistory = canOperateStock(actor)
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
@@ -269,7 +273,20 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       </>
       )}
 
-      {isAdmin && <ArchiveContractControl contractId={contract.id} />}
+      {isAdmin && (
+        record.isArchived
+          ? (
+            <section className="bench-panel archive-zone" aria-labelledby="restore-contract-title">
+              <div className="archive-control__copy">
+                <p className="archive-control__eyebrow">ADMIN CLEANUP</p>
+                <h2 id="restore-contract-title">สัญญานี้ถูกลบออกจากรายการใช้งาน</h2>
+                <p>{record.archiveReason ? `เหตุผลที่ลบ: ${record.archiveReason}` : 'ไม่ระบุเหตุผลที่ลบ'}</p>
+              </div>
+              <RestoreContractControl contractId={contract.id} />
+            </section>
+          )
+          : <ArchiveContractControl contractId={contract.id} />
+      )}
     </div>
   )
 }
