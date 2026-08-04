@@ -2,8 +2,8 @@ import type { CSSProperties } from 'react'
 import type { ExpenseMonthlySeriesEntry } from '@/lib/contracts/budget'
 
 const money = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0 })
-const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { month: 'short' })
-const fullMonthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long' })
+const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { month: 'short', timeZone: 'Asia/Bangkok' })
+const fullMonthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long', timeZone: 'Asia/Bangkok' })
 
 interface ExpenseMonthlyChartProps {
   series: ExpenseMonthlySeriesEntry[]

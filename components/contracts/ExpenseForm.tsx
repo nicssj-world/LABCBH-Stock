@@ -7,7 +7,7 @@ import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { recordContractExpense } from '@/lib/contracts/budget-actions'
 import { expenseMonthOptions } from '@/lib/contracts/budget'
 
-const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long' })
+const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long', timeZone: 'Asia/Bangkok' })
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
 
 function todayIso() {
