@@ -2552,6 +2552,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-file-control--view { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border)); }
 .contract-file-control--remove:hover:not(:disabled) { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 32%, var(--lab-border)); }
 .contract-file-control__spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: control-spin .72s linear infinite; }
+.contract-file-card__progress { display: block; width: 100%; height: 4px; margin-top: 2px; background: var(--lab-surface-muted); border-radius: 999px; overflow: hidden; }
+.contract-file-card__progress span { display: block; height: 100%; background: var(--lab-primary); border-radius: 999px; transition: width .15s ease-out; }
 .contract-file-card__error { grid-column: 1 / -1; margin: 0; }
 .file-preview-dialog { width: min(1100px, calc(100vw - 32px)); max-height: min(90dvh, 920px); }
 .file-preview-dialog__body { max-height: calc(min(90dvh, 920px) - 92px); padding: 0; overflow: hidden; background: var(--lab-canvas); }

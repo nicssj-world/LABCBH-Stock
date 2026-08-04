@@ -3,11 +3,30 @@
 import { useRef, useState, useTransition, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import {
-  contractFileUrl,
-  removeContractFile,
-  uploadContractFile,
-} from '@/lib/contracts/file-actions'
+import { contractFileUrl, removeContractFile } from '@/lib/contracts/file-actions'
+
+/** XMLHttpRequest, not fetch, is what exposes upload progress events. */
+function uploadWithProgress(contractId: number, formData: FormData, onProgress: (percent: number) => void) {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api/contracts/${contractId}/file`)
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100))
+    }
+    xhr.onerror = () => reject(new Error('อัปโหลดไฟล์สัญญาไม่สำเร็จ'))
+    xhr.onload = () => {
+      let body: { error?: string } = {}
+      try {
+        body = JSON.parse(xhr.responseText)
+      } catch {
+        // non-JSON response (e.g. a login redirect) falls through to the generic message below
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else reject(new Error(body.error ?? 'อัปโหลดไฟล์สัญญาไม่สำเร็จ'))
+    }
+    xhr.send(formData)
+  })
+}
 
 export interface ContractFileCardProps {
   contractId: number
@@ -22,6 +41,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
   const [error, setError] = useState<string | null>(null)
   const [openUrl, setOpenUrl] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<'upload' | 'open' | 'remove' | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -30,12 +50,13 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
 
     setError(null)
     setPendingAction('upload')
+    setUploadProgress(0)
     const formData = new FormData()
     formData.set('file', file)
 
     startTransition(async () => {
       try {
-        await uploadContractFile(contractId, formData)
+        await uploadWithProgress(contractId, formData, setUploadProgress)
         setOpenUrl(null)
         router.refresh()
       } catch (caught) {
@@ -43,6 +64,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
       } finally {
         event.target.value = ''
         setPendingAction(null)
+        setUploadProgress(null)
       }
     })
   }
@@ -95,7 +117,23 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
         </span>
         <p>
           <strong>{filePath ? 'แนบไฟล์สัญญาแล้ว' : 'ยังไม่ได้แนบไฟล์สัญญา'}</strong>
-          <small>{filePath ? 'เปิดดูไฟล์ในหน้านี้ได้ทันที' : 'รองรับ PDF, JPG, PNG และ WEBP'}</small>
+          <small>
+            {pendingAction === 'upload' && uploadProgress !== null
+              ? `กำลังอัปโหลด ${uploadProgress}%`
+              : filePath ? 'เปิดดูไฟล์ในหน้านี้ได้ทันที' : 'รองรับ PDF, JPG, PNG และ WEBP'}
+          </small>
+          {pendingAction === 'upload' && uploadProgress !== null && (
+            <span
+              className="contract-file-card__progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={uploadProgress}
+              aria-label="ความคืบหน้าการอัปโหลดไฟล์สัญญา"
+            >
+              <span style={{ width: `${uploadProgress}%` }} />
+            </span>
+          )}
         </p>
       </div>
 

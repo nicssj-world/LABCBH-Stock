@@ -14,11 +14,14 @@ function unwrap(operation: string, result: { error: { message: string } | null }
   if (result.error) throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
 }
 
-export async function uploadContractFile(contractId: number, formData: FormData) {
-  const actor = await requireActor()
-
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) {
+/**
+ * Shared by the no-JS `uploadContractFile` action and the progress-tracking
+ * upload route: validation, the storage write, and the RPC that authorises
+ * and records it. Kept here (not in files.ts) so files.ts stays free of the
+ * supabaseAdmin import and testable from plain node/tsx without a build.
+ */
+export async function storeContractFile(actorId: string, contractId: number, file: File) {
+  if (file.size === 0) {
     throw new Error('กรุณาเลือกไฟล์สัญญา')
   }
   if (!CONTRACT_FILE_TYPES.includes(file.type as (typeof CONTRACT_FILE_TYPES)[number])) {
@@ -38,11 +41,24 @@ export async function uploadContractFile(contractId: number, formData: FormData)
 
   // Authorisation lives in the RPC so the storage write is never the only gate.
   const result = await supabaseAdmin.rpc('set_contract_file', {
-    p_actor_id: actor.id,
+    p_actor_id: actorId,
     p_contract_id: contractId,
     p_file_url: path,
   })
   unwrap('บันทึกไฟล์สัญญา', result)
+
+  return { path }
+}
+
+export async function uploadContractFile(contractId: number, formData: FormData) {
+  const actor = await requireActor()
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) {
+    throw new Error('กรุณาเลือกไฟล์สัญญา')
+  }
+
+  const { path } = await storeContractFile(actor.id, contractId, file)
 
   revalidatePath(`/contracts/${contractId}`)
   return { path }
