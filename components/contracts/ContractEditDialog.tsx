@@ -2,9 +2,10 @@
 
 import { useRef, useState } from 'react'
 import { ContractForm } from '@/components/contracts/ContractForm'
+import type { ContractCatalogChoice } from '@/components/contracts/ContractItemsEditor'
 import type { ContractRecord } from '@/lib/contracts/types'
 
-export function ContractEditDialog({ contract }: { contract: ContractRecord }) {
+export function ContractEditDialog({ contract, catalog }: { contract: ContractRecord, catalog?: ContractCatalogChoice[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [formSession, setFormSession] = useState(0)
   const [dirty, setDirty] = useState(false)
@@ -73,6 +74,7 @@ export function ContractEditDialog({ contract }: { contract: ContractRecord }) {
             key={formSession}
             mode="edit"
             contract={contract}
+            catalog={catalog}
             onCancel={requestClose}
             onSaved={handleSaved}
             onDirtyChange={setDirty}

@@ -19,6 +19,7 @@ import { canRecordContractExpense } from '@/lib/contracts/authorization'
 import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract } from '@/lib/contracts/queries'
+import { listInventoryItems } from '@/lib/inventory/queries'
 import { listContractPurchaseHistory } from '@/lib/pr/queries'
 
 interface ContractDetailPageProps {
@@ -54,6 +55,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const purchaseHistory = mode === 'supply' && isContractStarted
     ? await listContractPurchaseHistory(contract.id)
     : []
+  // A lease has no line items, so the edit dialog's catalog lookup is only
+  // needed for editors of a supply contract.
+  const editCatalog = canEdit && mode !== 'budget' ? await listInventoryItems({}) : []
   const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
   // is the sum of its lines.
@@ -92,7 +96,15 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             <StatusChip tone={contract.effectiveStatus === 'active' ? 'success' : contract.effectiveStatus === 'expired' || contract.effectiveStatus === 'cancelled' ? 'danger' : 'attention'}>{contract.contractStatusLabel}</StatusChip>
             <StatusChip tone="neutral">{contract.contractTypeLabel}</StatusChip>
             {canEdit && (
-              <ContractEditDialog contract={record} />
+              <ContractEditDialog
+                contract={record}
+                catalog={editCatalog.map((item) => ({
+                  id: item.id,
+                  lsCode: item.lsCode,
+                  name: item.name,
+                  unit: item.baseUnit,
+                }))}
+              />
             )}
             {isAdmin && isContractStarted && contract.effectiveStatus === 'active' && (
               <ExpireContractDialog contractId={contract.id} />
