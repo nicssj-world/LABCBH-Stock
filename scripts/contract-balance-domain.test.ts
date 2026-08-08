@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 interface SupplyItemInput {
   quantity: number
   unitPrice: number
-  allocations?: Array<{ quantity: number }> | null
+  allocations?: Array<{ quantity: number; allocationKind?: string }> | null
 }
 
 interface SupplyBalance {
@@ -11,6 +11,7 @@ interface SupplyBalance {
   remainingValue: number
   items: Array<{
     allocatedQuantity: number
+    openingUsedQuantity: number
     remainingQuantity: number
     remainingValue: number
   }>
@@ -40,10 +41,28 @@ async function main() {
     totalValue: 4255,
     remainingValue: 1066.75,
     items: [
-      { allocatedQuantity: 1.5, remainingQuantity: 8.5, remainingValue: 1066.75, remainingPercent: 85 },
-      { allocatedQuantity: 3, remainingQuantity: 0, remainingValue: 0, remainingPercent: 0 },
+      { allocatedQuantity: 1.5, openingUsedQuantity: 0, remainingQuantity: 8.5, remainingValue: 1066.75, remainingPercent: 85 },
+      { allocatedQuantity: 3, openingUsedQuantity: 0, remainingQuantity: 0, remainingValue: 0, remainingPercent: 0 },
     ],
   }, 'remaining quantities and baht values must come from the net allocation ledger')
+
+  // A line with an opening_balance row is reported separately from allocatedQuantity
+  // (which still totals every kind), so the UI can show "used before this system" apart
+  // from "used since".
+  const withOpeningBalance = budget.contractSupplyBalance!([
+    {
+      quantity: 100,
+      unitPrice: 10,
+      allocations: [{ quantity: 30, allocationKind: 'opening_balance' }, { quantity: 5, allocationKind: 'purchase_request' }],
+    },
+  ])
+  assert.deepEqual(withOpeningBalance.items[0], {
+    allocatedQuantity: 35,
+    openingUsedQuantity: 30,
+    remainingQuantity: 65,
+    remainingValue: 650,
+    remainingPercent: 65,
+  }, 'openingUsedQuantity must isolate only the opening_balance rows while allocatedQuantity keeps the ledger total')
 
   console.log('contract balance domain: ok')
 }

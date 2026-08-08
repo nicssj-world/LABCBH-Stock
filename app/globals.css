@@ -1783,6 +1783,15 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .archive-control__dialog-body label { display: grid; gap: 7px; color: var(--lab-ink); font-size: 13px; font-weight: 700; }
 .archive-control__dialog-body textarea { width: 100%; min-height: 104px; padding: 10px 12px; color: var(--lab-ink); font: inherit; background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: var(--radius-control); resize: vertical; }
 .archive-control__dialog-body textarea:focus { outline: 0; border-color: var(--lab-red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-red) 16%, transparent); }
+.opening-balance-dialog { width: min(720px, calc(100vw - 32px)); }
+.opening-balance-dialog__body { display: grid; gap: 16px; max-height: calc(min(84dvh, 760px) - 92px); }
+.opening-balance-dialog__body > .detail-items-table { max-height: 320px; overflow-y: auto; }
+.opening-balance-dialog__body label { display: grid; gap: 7px; color: var(--lab-ink); font-size: 13px; font-weight: 700; }
+.opening-balance-dialog__body textarea { width: 100%; min-height: 88px; padding: 10px 12px; color: var(--lab-ink); font: inherit; background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: var(--radius-control); resize: vertical; }
+.opening-balance-dialog__body textarea:focus { outline: 0; border-color: var(--lab-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-primary) 16%, transparent); }
+.opening-balance-history__lines { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.opening-balance-history__lines li { white-space: nowrap; }
+.data-table td .opening-balance-history__lines strong { display: inline; }
 .detail-items-table { overflow-x: auto; }
 .contract-line-balance { min-width: 148px; }
 .contract-line-balance strong { white-space: nowrap; }

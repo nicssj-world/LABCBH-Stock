@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { contractRemainingPercent, contractSupplyBalance } from '@/lib/contracts/budget'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
-import type { ContractRecord } from '@/lib/contracts/types'
+import type { ContractOpeningBalanceHistoryEntry, ContractRecord } from '@/lib/contracts/types'
 import { createClient } from '@/lib/supabase/server'
 
 const numericSchema = z
@@ -21,7 +21,7 @@ const contractItemReadRowSchema = z.object({
   unit: z.string(),
   unit_price: numericSchema,
   line_total: numericSchema,
-  contract_item_allocations: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
+  contract_item_allocations: z.array(z.object({ quantity: numericSchema, allocation_kind: z.string() })).nullable().default([]),
 })
 
 const contractUsageReadRowSchema = z.object({ amount: numericSchema })
@@ -99,7 +99,7 @@ const CONTRACT_READ_SELECT = `
     unit,
     unit_price,
     line_total,
-    contract_item_allocations (quantity)
+    contract_item_allocations (quantity, allocation_kind)
   ),
   contract_usage (amount),
   contract_stage_history (
@@ -133,7 +133,10 @@ function mapContractRow(
   const supplyBalance = contractSupplyBalance(contractItems.map((item) => ({
     quantity: item.quantity,
     unitPrice: item.unit_price,
-    allocations: item.contract_item_allocations ?? [],
+    allocations: (item.contract_item_allocations ?? []).map((allocation) => ({
+      quantity: allocation.quantity,
+      allocationKind: allocation.allocation_kind,
+    })),
   })))
 
   return {
@@ -161,7 +164,10 @@ function mapContractRow(
       items: (row.contract_items ?? []).map((item) => ({
         quantity: item.quantity,
         unitPrice: item.unit_price,
-        allocations: item.contract_item_allocations ?? [],
+        allocations: (item.contract_item_allocations ?? []).map((allocation) => ({
+          quantity: allocation.quantity,
+          allocationKind: allocation.allocation_kind,
+        })),
       })),
     }),
     responsibleUserIds: row.responsible_user_ids ?? [],
@@ -178,6 +184,7 @@ function mapContractRow(
         unitPrice: item.unit_price,
         lineTotal: item.line_total,
         allocatedQuantity: balance.allocatedQuantity,
+        openingUsedQuantity: balance.openingUsedQuantity,
         remainingQuantity: balance.remainingQuantity,
         remainingValue: balance.remainingValue,
         remainingPercent: balance.remainingPercent,
@@ -290,4 +297,66 @@ export async function getContract(
     supabase,
   )
   return mapContractRow(row, corrections)
+}
+
+const openingBalanceMetadataSchema = z.object({
+  effective_date: z.string().nullable().optional(),
+  previous_quantity: z.number().optional(),
+  target_quantity: z.number().optional(),
+}).passthrough()
+
+const openingBalanceAllocationRowSchema = z.object({
+  quantity: numericSchema,
+  allocation_kind: z.string(),
+  note: z.string().nullable(),
+  created_at: z.string(),
+  source_metadata: openingBalanceMetadataSchema.nullable().default({}),
+})
+
+const openingBalanceItemRowSchema = z.object({
+  ls_code: z.string(),
+  name: z.string(),
+  contract_item_allocations: z.array(openingBalanceAllocationRowSchema).nullable().default([]),
+})
+
+/**
+ * Every call to set_contract_opening_balances (plus create_contract's fast
+ * path) grouped back into one entry per call: every delta row it inserts
+ * shares the same transaction timestamp, which is the only linking key the
+ * ledger carries — there is no batch id.
+ */
+export async function listContractOpeningBalanceHistory(
+  contractId: number,
+): Promise<ContractOpeningBalanceHistoryEntry[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contract_items')
+    .select('ls_code, name, contract_item_allocations (quantity, allocation_kind, note, created_at, source_metadata)')
+    .eq('contract_id', contractId)
+
+  if (error) throw new Error(`อ่านประวัติยอดใช้ก่อนเข้าระบบไม่สำเร็จ: ${error.message}`)
+
+  const rows = openingBalanceItemRowSchema.array().parse(data ?? [])
+  const grouped = new Map<string, ContractOpeningBalanceHistoryEntry>()
+
+  for (const item of rows) {
+    for (const allocation of item.contract_item_allocations ?? []) {
+      if (allocation.allocation_kind !== 'opening_balance') continue
+      const entry = grouped.get(allocation.created_at) ?? {
+        createdAt: allocation.created_at,
+        effectiveDate: allocation.source_metadata?.effective_date ?? null,
+        note: allocation.note ?? '',
+        lines: [],
+      }
+      entry.lines.push({
+        lsCode: item.ls_code,
+        name: item.name,
+        previousQuantity: allocation.source_metadata?.previous_quantity ?? 0,
+        targetQuantity: allocation.source_metadata?.target_quantity ?? 0,
+      })
+      grouped.set(allocation.created_at, entry)
+    }
+  }
+
+  return [...grouped.values()].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 }

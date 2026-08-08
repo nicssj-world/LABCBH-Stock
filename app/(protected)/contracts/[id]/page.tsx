@@ -4,9 +4,11 @@ import { ArchiveContractControl } from '@/components/contracts/ArchiveContractCo
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
 import { ContractFileCard } from '@/components/contracts/ContractFileCard'
+import { ContractOpeningBalanceHistory } from '@/components/contracts/ContractOpeningBalanceHistory'
 import { ContractPurchaseHistory } from '@/components/contracts/ContractPurchaseHistory'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
+import { OpeningBalanceDialog } from '@/components/contracts/OpeningBalanceDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
 import { RestoreContractControl } from '@/components/contracts/RestoreContractControl'
 import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
@@ -19,7 +21,7 @@ import { contractMode } from '@/lib/contracts/budget'
 import { canRecordContractExpense } from '@/lib/contracts/authorization'
 import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
-import { getContract } from '@/lib/contracts/queries'
+import { getContract, listContractOpeningBalanceHistory } from '@/lib/contracts/queries'
 import { listInventoryItems } from '@/lib/inventory/queries'
 import { listContractPurchaseHistory } from '@/lib/pr/queries'
 
@@ -58,6 +60,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   // started yet cannot have been purchased against.
   const purchaseHistory = mode === 'supply' && isContractStarted
     ? await listContractPurchaseHistory(contract.id)
+    : []
+  const openingBalanceHistory = mode === 'supply' && isContractStarted
+    ? await listContractOpeningBalanceHistory(contract.id)
     : []
   // A lease has no line items, so the edit dialog's catalog lookup is only
   // needed for editors of a supply contract.
@@ -210,6 +215,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             <h2 id="contract-lines-title">รายการน้ำยาในสัญญา</h2>
           </div>
           <p>{contract.items.length} รายการ · {total === null ? 'ไม่ระบุ' : money.format(total)}</p>
+          {isAdmin && isContractStarted && !record.isArchived && (
+            <OpeningBalanceDialog contractId={contract.id} items={contract.items} />
+          )}
         </div>
         {contract.items.length === 0 ? <p className="empty-state">ยังไม่มีรายการน้ำยา</p> : (
           <div className="detail-items-table">
@@ -225,6 +233,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
                       <strong>{quantity.format(item.remainingQuantity)}</strong>
                       <small>มูลค่า {money.format(item.remainingValue)}</small>
                       <small>ใช้ไป {quantity.format(item.allocatedQuantity)}</small>
+                      {item.openingUsedQuantity > 0 && (
+                        <small>ใช้ก่อนเข้าระบบ {quantity.format(item.openingUsedQuantity)}</small>
+                      )}
                       <div
                         className={`contract-line-balance__track contract-line-balance__track--${item.remainingPercent < 30 ? 'danger' : 'ok'}`}
                         role="progressbar"
@@ -258,6 +269,19 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             <p>{purchaseHistory.length} ครั้ง</p>
           </div>
           <ContractPurchaseHistory entries={purchaseHistory} />
+        </section>
+      )}
+
+      {isContractStarted && openingBalanceHistory.length > 0 && (
+        <section className="bench-panel" aria-labelledby="contract-opening-balance-history-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">OPENING BALANCE</p>
+              <h2 id="contract-opening-balance-history-title">ประวัติยอดใช้ก่อนเข้าระบบ</h2>
+            </div>
+            <p>{openingBalanceHistory.length} ครั้ง</p>
+          </div>
+          <ContractOpeningBalanceHistory entries={openingBalanceHistory} />
         </section>
       )}
 

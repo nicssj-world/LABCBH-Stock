@@ -67,4 +67,52 @@ assert.match(purchaseHistoryComponent, /formatBaht\(selected\.total\)/, 'the pop
 assert.match(purchaseHistoryComponent, /formatBaht\(item\.unitPrice\)/, 'the popup must show each line\'s unit price')
 assert.match(purchaseHistoryComponent, /formatBaht\(item\.lineTotal\)/, 'the popup must show each line\'s total')
 
+// Opening balance dialog: admin-only, started supply contracts only, and its
+// note/date fields must carry a dedicated body class — app-dialog__body alone
+// styles neither <label> nor <textarea>, which previously left the required
+// note field visually blank so the submit button looked permanently disabled.
+assert.match(detailPage, /OpeningBalanceDialog/, 'a started supply contract must expose the opening-balance dialog')
+assert.match(
+  detailPage,
+  /isAdmin && isContractStarted && !record\.isArchived[\s\S]*?<OpeningBalanceDialog/,
+  'the opening-balance dialog must be admin-only and require a started, non-archived contract',
+)
+const openingBalanceDialog = read('components/contracts/OpeningBalanceDialog.tsx')
+assert.match(openingBalanceDialog, /^['"]use client['"]/m)
+assert.match(openingBalanceDialog, /className="app-dialog opening-balance-dialog"/)
+assert.match(
+  openingBalanceDialog,
+  /className="app-dialog__body opening-balance-dialog__body"/,
+  'the form body needs its own styling class, not just app-dialog__body, or the note field renders without a visible box',
+)
+assert.match(openingBalanceDialog, /disabled=\{isPending \|\| !note\.trim\(\)\}/, 'the note field is required before submitting')
+
+const dialogStyles = read('app/globals.css')
+assert.match(
+  dialogStyles,
+  /\.opening-balance-dialog__body textarea\s*\{[^}]*border:\s*1px solid var\(--lab-border-strong\)/,
+  'the note textarea must have a visible border, matching every other dialog textarea in this app',
+)
+assert.match(
+  dialogStyles,
+  /\.data-table td \.opening-balance-history__lines strong\s*\{[^}]*display:\s*inline;/,
+  'the changed-item quantity override must outrank the data-table strong display rule',
+)
+
+// The note field is required before it can be recorded, so it must actually
+// surface somewhere — otherwise forcing an admin to type it is pointless.
+assert.match(detailPage, /listContractOpeningBalanceHistory/, 'the detail page must read back the opening-balance history it collects')
+assert.match(detailPage, /ContractOpeningBalanceHistory/, 'the detail page must render the opening-balance history')
+assert.match(queries, /export async function listContractOpeningBalanceHistory/)
+assert.match(
+  queries,
+  /allocation\.source_metadata\?\.previous_quantity[\s\S]*?allocation\.source_metadata\?\.target_quantity/,
+  'history must read back the previous/target quantities recorded alongside each delta row',
+)
+assert.match(queries, /allocation\.allocation_kind !== 'opening_balance'/, 'history must exclude every other allocation kind')
+
+const openingBalanceHistory = read('components/contracts/ContractOpeningBalanceHistory.tsx')
+assert.match(openingBalanceHistory, /entry\.note/, 'each history row must show the note that was required to record it')
+assert.match(openingBalanceHistory, /ยังไม่มีการบันทึกยอดใช้ก่อนเข้าระบบ/, 'an empty history needs its own explicit state')
+
 console.log('contract detail UI: ok')

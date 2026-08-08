@@ -7,6 +7,7 @@ import { requireActor } from '@/lib/auth/actor'
 import { assertContractEditor, assertContractStageHistoryEditor } from '@/lib/contracts/authorization'
 import {
   archiveContractInputSchema,
+  contractOpeningBalanceInputSchema,
   createContractInputSchema,
   expireContractInputSchema,
   stageHistoryBackfillInputSchema,
@@ -16,6 +17,7 @@ import {
 } from '@/lib/contracts/schema'
 import type {
   ArchiveContractInput,
+  ContractOpeningBalanceInput,
   CreateContractInput,
   ExpireContractInput,
   StageHistoryBackfillInput,
@@ -83,6 +85,27 @@ export async function updateContract(contractId: number, input: UpdateContractIn
   const updated = unwrapMutation('บันทึกการแก้ไขสัญญา', result)
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
+  return updated
+}
+
+export async function setContractOpeningBalances(contractId: number, input: ContractOpeningBalanceInput) {
+  const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('ไม่มีสิทธิ์บันทึกยอดใช้ก่อนเข้าระบบ')
+  const parsedContractId = z.number().int().positive().parse(contractId)
+  const parsed = contractOpeningBalanceInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('set_contract_opening_balances', {
+    p_contract_id: parsedContractId,
+    p_actor_id: actor.id,
+    p_lines: parsed.lines.map((line) => ({ contractItemId: line.contractItemId, usedQuantity: line.usedQuantity })),
+    p_effective_date: parsed.effectiveDate,
+    p_note: parsed.note,
+  })
+
+  const updated = unwrapMutation('บันทึกยอดใช้ก่อนเข้าระบบ', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${parsedContractId}`)
+  revalidatePath('/dashboard')
   return updated
 }
 

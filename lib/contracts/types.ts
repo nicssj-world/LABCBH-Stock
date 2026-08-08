@@ -3,10 +3,12 @@ import type {
   CONTRACT_DEPARTMENTS,
   CONTRACT_TYPES,
   archiveContractInputSchema,
+  contractCreateLineInputSchema,
   contractExpenseInputSchema,
   contractInputSchema,
   contractItemUpdateInputSchema,
   contractLineInputSchema,
+  contractOpeningBalanceInputSchema,
   createContractInputSchema,
   expireContractInputSchema,
   responsibleUsersInputSchema,
@@ -21,7 +23,10 @@ export type ContractType = (typeof CONTRACT_TYPES)[number]
 export type ContractDepartment = (typeof CONTRACT_DEPARTMENTS)[number]
 export type ContractInput = z.infer<typeof contractInputSchema>
 export type ContractLineInput = z.infer<typeof contractLineInputSchema>
+export type ContractCreateLineInput = z.infer<typeof contractCreateLineInputSchema>
 export type ContractItemUpdateInput = z.infer<typeof contractItemUpdateInputSchema>
+/** Shared shape for the item-row editor: an existing/new line plus the create-only opening balance field. */
+export type ContractFormItemInput = ContractItemUpdateInput & { openingUsedQuantity?: number | null }
 export type CreateContractInput = z.infer<typeof createContractInputSchema>
 export type UpdateContractInput = z.infer<typeof updateContractInputSchema>
 export type ArchiveContractInput = z.infer<typeof archiveContractInputSchema>
@@ -31,7 +36,23 @@ export type StageHistoryCorrectionInput = z.infer<typeof stageHistoryCorrectionI
 export type StageHistoryBackfillInput = z.infer<typeof stageHistoryBackfillInputSchema>
 export type ContractExpenseInput = z.infer<typeof contractExpenseInputSchema>
 export type ResponsibleUsersInput = z.infer<typeof responsibleUsersInputSchema>
+export type ContractOpeningBalanceInput = z.infer<typeof contractOpeningBalanceInputSchema>
 export type ContractStatus = 'active' | 'expired' | 'cancelled' | 'pending'
+
+export interface ContractOpeningBalanceHistoryLine {
+  lsCode: string
+  name: string
+  previousQuantity: number
+  targetQuantity: number
+}
+
+/** One call to set_contract_opening_balances (or the create_contract fast path), grouped by its shared transaction timestamp. */
+export interface ContractOpeningBalanceHistoryEntry {
+  createdAt: string
+  effectiveDate: string | null
+  note: string
+  lines: ContractOpeningBalanceHistoryLine[]
+}
 
 export interface ContractItemRecord {
   id: string
@@ -42,8 +63,10 @@ export interface ContractItemRecord {
   unit: string
   unitPrice: number
   lineTotal: number
-  /** Confirmed against purchase requests so far. */
+  /** Committed against the contract so far, across every allocation kind. */
   allocatedQuantity: number
+  /** Portion of allocatedQuantity that was used before the contract was registered here. */
+  openingUsedQuantity: number
   remainingQuantity: number
   remainingValue: number
   remainingPercent: number

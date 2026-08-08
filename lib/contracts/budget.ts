@@ -40,12 +40,14 @@ export interface ContractRemainingInput {
   items: Array<{
     quantity: number
     unitPrice: number
-    allocations?: Array<{ quantity: number }> | null
+    allocations?: Array<{ quantity: number; allocationKind?: string }> | null
   }>
 }
 
 export interface ContractSupplyItemBalance {
   allocatedQuantity: number
+  /** Portion of allocatedQuantity recorded as used before the contract entered this system. */
+  openingUsedQuantity: number
   remainingQuantity: number
   remainingValue: number
   remainingPercent: number
@@ -70,7 +72,11 @@ export function contractSupplyBalance(
   items: ContractRemainingInput['items'],
 ): ContractSupplyBalance {
   const balances = items.map((item) => {
-    const allocatedQuantity = roundQuantity((item.allocations ?? [])
+    const allocations = item.allocations ?? []
+    const allocatedQuantity = roundQuantity(allocations
+      .reduce((sum, allocation) => sum + allocation.quantity, 0))
+    const openingUsedQuantity = roundQuantity(allocations
+      .filter((allocation) => allocation.allocationKind === 'opening_balance')
       .reduce((sum, allocation) => sum + allocation.quantity, 0))
     const remainingQuantity = roundQuantity(Math.max(item.quantity - allocatedQuantity, 0))
     const remainingValue = satang(remainingQuantity * item.unitPrice) / 100
@@ -78,7 +84,7 @@ export function contractSupplyBalance(
       ? clampPercentage((remainingQuantity / item.quantity) * 100)
       : 0
 
-    return { allocatedQuantity, remainingQuantity, remainingValue, remainingPercent }
+    return { allocatedQuantity, openingUsedQuantity, remainingQuantity, remainingValue, remainingPercent }
   })
 
   return {

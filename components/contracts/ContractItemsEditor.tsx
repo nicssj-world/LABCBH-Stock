@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
-import type { ContractItemUpdateInput } from '@/lib/contracts/types'
+import type { ContractFormItemInput } from '@/lib/contracts/types'
 
 export interface ContractCatalogChoice {
   id: string
@@ -12,11 +12,13 @@ export interface ContractCatalogChoice {
 }
 
 interface ContractItemsEditorProps {
-  items: ContractItemUpdateInput[]
-  onChange: (items: ContractItemUpdateInput[]) => void
+  items: ContractFormItemInput[]
+  onChange: (items: ContractFormItemInput[]) => void
   errors?: Record<string, string>
   disabled?: boolean
   catalog?: ContractCatalogChoice[]
+  /** Only the admin "already started" fast path records opening balances at create time. */
+  showOpeningBalance?: boolean
 }
 
 const money = new Intl.NumberFormat('th-TH', {
@@ -25,33 +27,34 @@ const money = new Intl.NumberFormat('th-TH', {
   minimumFractionDigits: 2,
 })
 
-const emptyItem = (): ContractItemUpdateInput => ({
+const emptyItem = (): ContractFormItemInput => ({
   id: null,
   lsCode: '',
   name: '',
   quantity: 1,
   unit: '',
   unitPrice: 1,
+  openingUsedQuantity: null,
 })
 
 // The form always starts with one blank row so the editor is never empty. If a
 // catalog pick lands while that row is still untouched, fill it in place
 // rather than leaving a dangling blank row the officer has to remember to delete.
-const isUntouchedRow = (item: ContractItemUpdateInput) => {
+const isUntouchedRow = (item: ContractFormItemInput) => {
   const blank = emptyItem()
   return !item.id && item.lsCode === blank.lsCode && item.name === blank.name
     && item.unit === blank.unit && item.quantity === blank.quantity && item.unitPrice === blank.unitPrice
 }
 
-export function ContractItemsEditor({ items, onChange, errors = {}, disabled, catalog = [] }: ContractItemsEditorProps) {
-  const update = (index: number, field: keyof ContractItemUpdateInput, value: string | number) => {
+export function ContractItemsEditor({ items, onChange, errors = {}, disabled, catalog = [], showOpeningBalance }: ContractItemsEditorProps) {
+  const update = (index: number, field: keyof ContractFormItemInput, value: string | number | null) => {
     onChange(items.map((item, itemIndex) => (
       itemIndex === index ? { ...item, [field]: value } : item
     )))
   }
 
   const addFromCatalog = (choice: ContractCatalogChoice) => {
-    const filled: ContractItemUpdateInput = { id: null, lsCode: choice.lsCode, name: choice.name, quantity: 1, unit: choice.unit, unitPrice: 1 }
+    const filled: ContractFormItemInput = { id: null, lsCode: choice.lsCode, name: choice.name, quantity: 1, unit: choice.unit, unitPrice: 1, openingUsedQuantity: null }
     onChange(items.length === 1 && isUntouchedRow(items[0]) ? [filled] : [...items, filled])
   }
 
@@ -116,6 +119,23 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
               <input type="number" min="0.01" step="0.01" inputMode="decimal" value={item.unitPrice} onChange={(event) => update(index, 'unitPrice', Number(event.target.value))} aria-invalid={Boolean(errors[`items.${index}.unitPrice`])} />
               {errors[`items.${index}.unitPrice`] && <small className="field-error">{errors[`items.${index}.unitPrice`]}</small>}
             </label>
+            {showOpeningBalance && (
+              <label>
+                ใช้ไปแล้วก่อนเข้าระบบ
+                <input
+                  type="number"
+                  min="0"
+                  max={item.quantity}
+                  step="0.001"
+                  inputMode="decimal"
+                  value={item.openingUsedQuantity ?? ''}
+                  onChange={(event) => update(index, 'openingUsedQuantity', event.target.value === '' ? null : Number(event.target.value))}
+                  aria-invalid={Boolean(errors[`items.${index}.openingUsedQuantity`])}
+                />
+                <small>คงเหลือจะเป็น {Math.max(item.quantity - (item.openingUsedQuantity ?? 0), 0)} {item.unit}</small>
+                {errors[`items.${index}.openingUsedQuantity`] && <small className="field-error">{errors[`items.${index}.openingUsedQuantity`]}</small>}
+              </label>
+            )}
             <div className="item-edit-row__total">
               <span>ราคารวม</span>
               <strong>{money.format(item.quantity * item.unitPrice)}</strong>

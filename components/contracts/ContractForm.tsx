@@ -17,7 +17,7 @@ import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
-import type { ContractItemUpdateInput, ContractRecord } from '@/lib/contracts/types'
+import type { ContractFormItemInput, ContractRecord } from '@/lib/contracts/types'
 
 interface ContractFormProps {
   mode: 'create' | 'edit'
@@ -39,7 +39,7 @@ interface FormState {
   sentToProcurementDate: string
   startImmediately: boolean
   contractNumber: string
-  items: ContractItemUpdateInput[]
+  items: ContractFormItemInput[]
 }
 
 function currentThaiFiscalYear() {
@@ -70,7 +70,7 @@ function initialState(contract?: ContractRecord): FormState {
       quantity: item.quantity,
       unit: item.unit,
       unitPrice: item.unitPrice,
-    })) ?? [{ id: null, lsCode: '', name: '', quantity: 1, unit: '', unitPrice: 1 }],
+    })) ?? [{ id: null, lsCode: '', name: '', quantity: 1, unit: '', unitPrice: 1, openingUsedQuantity: null }],
   }
 }
 
@@ -159,6 +159,10 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
                 quantity: item.quantity,
                 unit: item.unit,
                 unitPrice: item.unitPrice,
+                // Only meaningful on the admin "already started" fast path —
+                // otherwise omitted so a stale draft cannot fail validation
+                // against a contract that never got a number.
+                ...(state.startImmediately ? { openingUsedQuantity: item.openingUsedQuantity ?? null } : {}),
               })),
         })
       : updateContractInputSchema.safeParse({
@@ -298,6 +302,7 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
           errors={errors}
           disabled={isPending}
           catalog={catalog}
+          showOpeningBalance={mode === 'create' && isAdmin && state.startImmediately}
         />
       )}
 

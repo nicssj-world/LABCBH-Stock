@@ -33,6 +33,27 @@ export const contractItemUpdateInputSchema = contractLineInputSchema.extend({
 })
 
 /**
+ * Create-only: how much of this line was already used outside the system
+ * before the contract was registered here (paper-signed, partially spent
+ * e-bidding contracts). Deliberately not part of contractItemUpdateInputSchema
+ * — update_contract's item allowlist has no such key, and adding it there
+ * would trip its "unexpected contract item field" guard.
+ */
+export const contractCreateLineInputSchema = contractLineInputSchema
+  .extend({
+    openingUsedQuantity: z.number().finite().nonnegative('ยอดใช้ก่อนเข้าระบบต้องไม่ติดลบ').nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.openingUsedQuantity != null && value.openingUsedQuantity > value.quantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['openingUsedQuantity'],
+        message: 'ยอดใช้ก่อนเข้าระบบต้องไม่เกินจำนวนในสัญญา',
+      })
+    }
+  })
+
+/**
  * An equipment lease is billed in baht against a ceiling and holds no line
  * items; the database rejects them outright. Every other contract type still
  * needs at least one. Applied to create and update alike, or a lease could be
@@ -61,6 +82,28 @@ function refineItemsForContractType(
   }
 }
 
+/**
+ * A per-line opening balance only means something on the admin fast path: a
+ * contract that never fabricates procurement stages already has a contract
+ * number, while one that still climbs the normal stages has nothing to
+ * reconcile against yet.
+ */
+function refineOpeningBalanceRequiresContractNumber(
+  value: { contractNumber?: string | null; items: { openingUsedQuantity?: number | null }[] },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.contractNumber) return
+  value.items.forEach((item, index) => {
+    if (item.openingUsedQuantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items', index, 'openingUsedQuantity'],
+        message: 'ยอดใช้ก่อนเข้าระบบระบุได้เฉพาะสัญญาที่เริ่มใช้งานแล้ว',
+      })
+    }
+  })
+}
+
 export const createContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
@@ -73,10 +116,11 @@ export const createContractInputSchema = z
     // Only set on the admin-only "already started" fast path: creates the
     // contract directly at contract_started instead of sent_to_procurement.
     contractNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่สัญญา').nullable().optional(),
-    items: z.array(contractLineInputSchema),
+    items: z.array(contractCreateLineInputSchema),
   })
   .strict()
   .superRefine(refineItemsForContractType)
+  .superRefine(refineOpeningBalanceRequiresContractNumber)
 
 export const updateContractInputSchema = z
   .object({
@@ -119,6 +163,21 @@ export const archiveContractInputSchema = z
 export const expireContractInputSchema = z
   .object({
     reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลที่สิ้นสุดสัญญา').max(500),
+  })
+  .strict()
+
+export const contractOpeningBalanceLineInputSchema = z
+  .object({
+    contractItemId: z.string().uuid(),
+    usedQuantity: z.number().finite().nonnegative('ยอดใช้ก่อนเข้าระบบต้องไม่ติดลบ'),
+  })
+  .strict()
+
+export const contractOpeningBalanceInputSchema = z
+  .object({
+    effectiveDate: isoDateSchema,
+    note: z.string().trim().min(1, 'กรุณาระบุที่มาของยอดใช้ก่อนเข้าระบบ').max(1000),
+    lines: z.array(contractOpeningBalanceLineInputSchema).min(1, 'ต้องมีอย่างน้อย 1 รายการ'),
   })
   .strict()
 
