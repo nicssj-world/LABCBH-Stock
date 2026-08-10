@@ -10,6 +10,7 @@ import { formatQuantity, formatThaiDateTime } from '@/lib/inventory/presenter'
 import {
   confirmPurchaseRequest,
   reversePurchaseRequest,
+  setEphisPrNumber,
   setPurchaseOrderNumber,
 } from '@/lib/pr/actions'
 import { formatBaht } from '@/lib/pr/presenter'
@@ -45,17 +46,22 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
   const [reversing, setReversing] = useState(false)
   const [reason, setReason] = useState('')
   const [poNumber, setPoNumber] = useState(request.poNumber ?? '')
+  const [ephisPrNumberInput, setEphisPrNumberInput] = useState(request.ephisPrNumber ?? '')
+  // Once a number is saved, the field locks — "แก้ไข" is a deliberate second
+  // step before it can be typed over again.
+  const [isEditingEphisPrNumber, setIsEditingEphisPrNumber] = useState(!request.ephisPrNumber)
   const [sentToProcurementDate, setSentToProcurementDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [isPending, startTransition] = useTransition()
 
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
   const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
 
-  const run = (operation: () => Promise<unknown>, fallback: string) => {
+  const run = (operation: () => Promise<unknown>, fallback: string, onSuccess?: () => void) => {
     setError(null)
     startTransition(async () => {
       try {
         await operation()
+        onSuccess?.()
         router.refresh()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : fallback)
@@ -65,6 +71,37 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
   return (
     <div className="pr-review">
+      <label className="field-row">
+        เลข PR จาก E-Phis
+        <input
+          type="text"
+          readOnly={!isEditingEphisPrNumber}
+          value={ephisPrNumberInput}
+          onChange={(event) => setEphisPrNumberInput(event.target.value)}
+        />
+      </label>
+      <Button
+        variant="secondary"
+        type="button"
+        disabled={isPending || (isEditingEphisPrNumber && !ephisPrNumberInput.trim())}
+        onClick={() => {
+          if (!isEditingEphisPrNumber) {
+            setIsEditingEphisPrNumber(true)
+            return
+          }
+          run(
+            () => setEphisPrNumber(request.id, { ephisPrNumber: ephisPrNumberInput }),
+            'บันทึกเลข PR จาก E-Phis ไม่สำเร็จ',
+            () => setIsEditingEphisPrNumber(false),
+          )
+        }}
+      >
+        {isEditingEphisPrNumber ? 'บันทึกเลข PR จาก E-Phis' : 'แก้เลข PR จาก E-Phis'}
+      </Button>
+      {request.ephisPrNumber && request.updatedByName && (
+        <p className="pr-review__intro">บันทึกเลข PR จาก E-Phis โดย {request.updatedByName}</p>
+      )}
+
       {request.status === 'pending' && contractType && contractDraft && (
         <>
           <p className="pr-review__intro">

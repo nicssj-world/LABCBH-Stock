@@ -263,6 +263,10 @@ export const purchaseOrderNumberSchema = z
   .object({ poNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่ใบสั่งซื้อ') })
   .strict()
 
+export const ephisPrNumberSchema = z
+  .object({ ephisPrNumber: z.string().trim().min(1, 'กรุณาระบุเลข PR จาก E-Phis') })
+  .strict()
+
 export const purchaseRequestReversalSchema = z
   .object({ reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลในการกลับรายการ') })
   .strict()

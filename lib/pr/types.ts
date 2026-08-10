@@ -2,6 +2,7 @@ import type { z } from 'zod'
 import type {
   PurchaseMethod,
   PurchaseRequestStatus,
+  ephisPrNumberSchema,
   purchaseOrderNumberSchema,
   purchaseRequestInputSchema,
   purchaseRequestLineSchema,
@@ -11,6 +12,7 @@ import type {
 export type PurchaseRequestInput = z.infer<typeof purchaseRequestInputSchema>
 export type PurchaseRequestLineInput = z.infer<typeof purchaseRequestLineSchema>
 export type PurchaseOrderNumberInput = z.infer<typeof purchaseOrderNumberSchema>
+export type EphisPrNumberInput = z.infer<typeof ephisPrNumberSchema>
 export type PurchaseRequestReversalInput = z.infer<typeof purchaseRequestReversalSchema>
 
 export interface PurchaseRequestItemRecord {
@@ -47,6 +49,7 @@ export interface PurchaseRequestRecord {
   methodDetails: Record<string, unknown>
   status: PurchaseRequestStatus
   poNumber: string | null
+  ephisPrNumber: string | null
   /** Set once confirmation opens a contract from this PR (specific_contract/e_bidding). */
   createdContractId: number | null
   acknowledgedBy: string | null

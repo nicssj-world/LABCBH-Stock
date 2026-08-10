@@ -43,6 +43,7 @@ const requestRowSchema = z.object({
   method_details: z.record(z.unknown()).nullable().default({}),
   status: z.enum(PURCHASE_REQUEST_STATUSES),
   po_number: z.string().nullable(),
+  ephis_pr_number: z.string().nullable(),
   created_contract_id: z.number().int().nullable(),
   note: z.string().nullable(),
   acknowledged_by: z.string().uuid().nullable(),
@@ -72,6 +73,7 @@ const REQUEST_SELECT = `
   method_details,
   status,
   po_number,
+  ephis_pr_number,
   created_contract_id,
   note,
   acknowledged_by,
@@ -158,6 +160,7 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     methodDetails: row.method_details ?? {},
     status: row.status,
     poNumber: row.po_number,
+    ephisPrNumber: row.ephis_pr_number,
     createdContractId: row.created_contract_id,
     acknowledgedBy: row.acknowledged_by,
     acknowledgedByName: row.acknowledger?.name ?? null,
@@ -192,7 +195,9 @@ export async function listPurchaseRequests(
   if (search) {
     // Officers search by PO, PR, LS code, or reagent name. The first two live on
     // the header; the last two are resolved separately and merged below.
-    query = query.or(`document_number.ilike.%${search}%,po_number.ilike.%${search}%`)
+    query = query.or(
+      `document_number.ilike.%${search}%,po_number.ilike.%${search}%,ephis_pr_number.ilike.%${search}%`,
+    )
   }
 
   const { data, error } = await query

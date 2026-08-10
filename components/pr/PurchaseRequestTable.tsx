@@ -30,6 +30,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
           <thead>
             <tr>
               <th>เลขที่ใบ PR</th>
+              <th>เลข PR (E-Phis)</th>
               <th>วันที่ขอ</th>
               <th>วิธีจัดซื้อ</th>
               <th>ผู้ขอ</th>
@@ -45,6 +46,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                   <PurchaseRequestSummaryDialog request={request} />
                   <small>{request.poNumber ? `PO ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</small>
                 </td>
+                <td className="identifier">{request.ephisPrNumber ?? 'ยังไม่มี'}</td>
                 <td>{formatThaiDate(request.requestedDate)}</td>
                 <td>{PURCHASE_METHOD_LABELS[request.purchaseMethod]}</td>
                 <td>

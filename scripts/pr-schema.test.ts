@@ -287,6 +287,49 @@ assert.match(methodCheckSql, /drop constraint purchase_requests_purchase_method_
 assert.match(methodCheckSql, /add constraint purchase_requests_purchase_method_check/i)
 assert.match(methodCheckSql, /'equipment_lease'/)
 
+// "ซื้อในสัญญา" (contract) lines must always price at whatever the contract
+// currently says, never at what the client submitted — every other method
+// (annual_plan, awaiting_contract, off_plan, and the new-contract-origination
+// methods) has no contract to check against and keeps trusting the payload.
+const priceLockNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_contract_line_price_lock.sql'),
+)
+assert.equal(priceLockNames.length, 1, 'exactly one PR contract-line price-lock migration must exist')
+
+const priceLockSql = readFileSync(join(migrationsDir, priceLockNames[0]), 'utf8')
+const priceLockCreatePr = priceLockSql.match(
+  /create or replace function public\.create_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(priceLockCreatePr, 'create_purchase_request must be redefined to lock contract-line prices')
+
+// The contract price is looked up before the payload's unitPrice is trusted.
+assert.match(
+  priceLockCreatePr,
+  /resolved_contract_item_id := nullif\(line ->> 'contractItemId', ''\)::uuid;[\s\S]*?if resolved_contract_item_id is not null then/i,
+)
+assert.match(
+  priceLockCreatePr,
+  /select contract_item\.unit_price\s+into resolved_unit_price\s+from public\.contract_items contract_item\s+where contract_item\.id = resolved_contract_item_id/i,
+)
+assert.match(priceLockCreatePr, /if not found then\s*raise exception/i)
+
+// Non-contract lines still trust the client-submitted price.
+assert.match(
+  priceLockCreatePr,
+  /else\s*resolved_unit_price := \(line ->> 'unitPrice'\)::numeric;/i,
+)
+
+// The insert must use the resolved variable, not the raw payload value.
+assert.match(
+  priceLockCreatePr,
+  /insert into public\.purchase_request_items \([\s\S]*?\)\s*values \([\s\S]*?resolved_unit_price\s*\);/i,
+)
+assert.doesNotMatch(
+  priceLockCreatePr.split('insert into public.purchase_request_items')[1] ?? '',
+  /\(line ->> 'unitPrice'\)::numeric/i,
+  'the insert must not fall back to the raw payload price once resolved_unit_price exists',
+)
+
 console.log(
-  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]})`,
+  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]}, ${priceLockNames[0]})`,
 )

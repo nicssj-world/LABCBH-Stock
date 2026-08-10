@@ -56,6 +56,8 @@ interface DraftLine {
   /** Null when the purchase does not draw down a contract. */
   contractRemaining: number | null
   contractedQuantity: number | null
+  /** Reference only — the confirmed snapshot is computed server-side at submission. */
+  averageMonthlyUsage: number
 }
 
 /** Requesting more than the contract has left — the RPC would refuse it too, but the requester should see this before submitting, not after. */
@@ -96,7 +98,7 @@ export function PurchaseRequestForm({
 }: PurchaseRequestFormProps) {
   const router = useRouter()
   const [department, setDepartment] = useState(initialDepartment)
-  const [headName, setHeadName] = useState(initialHeadName)
+  const headName = initialHeadName
   const [requestedDate, setRequestedDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [note, setNote] = useState('')
   const [purpose, setPurpose] = useState<PurchasePurpose>('purchase_order')
@@ -168,6 +170,7 @@ export function PurchaseRequestForm({
     requestedQuantity: 1,
     contractRemaining: option.contractRemaining,
     contractedQuantity: option.contractedQuantity,
+    averageMonthlyUsage: option.averageMonthlyUsage,
   })
 
   const addLine = (option: PickerOption) => {
@@ -293,7 +296,7 @@ export function PurchaseRequestForm({
           </label>
           <label className="field-row">
             หัวหน้างาน
-            <input type="text" required value={headName} onChange={(event) => setHeadName(event.target.value)} />
+            <input type="text" required readOnly value={headName} title="ชื่อผู้สร้างใบขอซื้อ แก้ไขไม่ได้" />
           </label>
           <label className="field-row">
             วันที่ขอซื้อ
@@ -377,6 +380,7 @@ export function PurchaseRequestForm({
                   <th>รหัสพัสดุ</th>
                   <th>ชื่อน้ำยา</th>
                   <th className="pr-line-cell--center">คงเหลือในสัญญา</th>
+                  <th className="pr-line-cell--center">อัตราใช้/เดือน</th>
                   <th className="pr-line-cell--center">จำนวนที่ขอ</th>
                   <th className="pr-line-cell--center">หน่วย</th>
                   <th className="pr-line-cell--center">ราคาต่อหน่วย</th>
@@ -403,6 +407,16 @@ export function PurchaseRequestForm({
                         </>
                       )}
                     </td>
+                    <td className="pr-line-cell--center identifier">
+                      <input
+                        type="text"
+                        readOnly
+                        tabIndex={-1}
+                        aria-label={`อัตราใช้/เดือนของ ${line.name}`}
+                        title="คำนวณจากประวัติการเบิกจริง แก้ไขไม่ได้"
+                        value={formatQuantity(line.averageMonthlyUsage, line.unit)}
+                      />
+                    </td>
                     <td className="pr-line-cell--center">
                       <input
                         type="number"
@@ -428,7 +442,10 @@ export function PurchaseRequestForm({
                         min="0"
                         step="0.01"
                         required
+                        readOnly={line.contractItemId !== null}
+                        tabIndex={line.contractItemId !== null ? -1 : undefined}
                         aria-label={`ราคาต่อหน่วยของ ${line.name}`}
+                        title={line.contractItemId !== null ? 'ราคากำหนดตามสัญญา แก้ไขไม่ได้' : undefined}
                         value={line.unitPrice}
                         onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })}
                       />
