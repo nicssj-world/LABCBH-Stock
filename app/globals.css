@@ -2139,6 +2139,17 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   border-color: color-mix(in srgb, var(--lab-primary) 34%, var(--lab-border));
 }
 
+input.no-spinner::-webkit-outer-spin-button,
+input.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input.no-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
 .field-toggle input {
   flex: 0 0 auto;
   appearance: none;

@@ -61,8 +61,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const purchaseHistory = mode === 'supply' && isContractStarted
     ? await listContractPurchaseHistory(contract.id)
     : []
+  // Supplementary display only — a failure here (e.g. a transient DB error)
+  // must not take down the whole contract page, so it degrades to an empty
+  // history instead of throwing during Server Component render.
   const openingBalanceHistory = mode === 'supply' && isContractStarted
-    ? await listContractOpeningBalanceHistory(contract.id)
+    ? await listContractOpeningBalanceHistory(contract.id).catch((error) => {
+        console.error(`listContractOpeningBalanceHistory failed for contract ${contract.id}`, error)
+        return []
+      })
     : []
   // A lease has no line items, so the edit dialog's catalog lookup is only
   // needed for editors of a supply contract.

@@ -255,13 +255,15 @@ export function PurchaseRequestForm({
           requestedDate,
           note: note.trim() || null,
           method,
-          items: lines.map((line) => ({
-            inventoryItemId: line.inventoryItemId,
-            contractItemId: line.contractItemId,
-            requestedQuantity: line.requestedQuantity,
-            unit: line.unit,
-            unitPrice: line.unitPrice,
-          })),
+          items: lines
+            .filter((line) => line.requestedQuantity > 0)
+            .map((line) => ({
+              inventoryItemId: line.inventoryItemId,
+              contractItemId: line.contractItemId,
+              requestedQuantity: line.requestedQuantity,
+              unit: line.unit,
+              unitPrice: line.unitPrice,
+            })),
         })
         router.push(`/purchase-requests/${created.id}`)
         router.refresh()
@@ -404,9 +406,9 @@ export function PurchaseRequestForm({
                     <td className="pr-line-cell--center">
                       <input
                         type="number"
-                        min="0.001"
-                        step="0.001"
-                        required
+                        className="no-spinner"
+                        min="0"
+                        step="1"
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
