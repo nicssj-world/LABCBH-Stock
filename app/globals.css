@@ -2139,13 +2139,14 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   border-color: color-mix(in srgb, var(--lab-primary) 34%, var(--lab-border));
 }
 
-input.no-spinner::-webkit-outer-spin-button,
-input.no-spinner::-webkit-inner-spin-button {
+/* Number inputs never show the native up/down spinner buttons anywhere in the app. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-input.no-spinner {
+input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
 }

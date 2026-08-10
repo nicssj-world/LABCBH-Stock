@@ -406,7 +406,6 @@ export function PurchaseRequestForm({
                     <td className="pr-line-cell--center">
                       <input
                         type="number"
-                        className="no-spinner"
                         min="0"
                         step="1"
                         aria-invalid={overLimit}
