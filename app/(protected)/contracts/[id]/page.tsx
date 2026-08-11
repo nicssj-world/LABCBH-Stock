@@ -31,7 +31,10 @@ interface ContractDetailPageProps {
 
 const money = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 })
 const quantity = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 })
-const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Bangkok',
+})
 const displayDate = (value: string | null) => value
   ? thaiDate.format(new Date(`${value}T00:00:00+07:00`))
   : 'ไม่ระบุ'

@@ -4,7 +4,10 @@ import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractRecord } from '@/lib/contracts/types'
 
-const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Bangkok',
+})
 
 export function StageTimeline({ contract, canManageStageHistory = false }: { contract: ContractRecord; canManageStageHistory?: boolean }) {
   const currentIndex = contract.procurementStage

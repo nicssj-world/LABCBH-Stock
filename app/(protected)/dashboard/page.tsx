@@ -11,7 +11,10 @@ const money = new Intl.NumberFormat('th-TH', {
   maximumFractionDigits: 0,
 })
 
-const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { dateStyle: 'medium' })
+const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Bangkok',
+})
 const displayDate = (value: string) => thaiDate.format(new Date(`${value}T00:00:00+07:00`))
 
 interface MixRow {
