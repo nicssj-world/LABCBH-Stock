@@ -44,4 +44,16 @@ assert.match(
   'the database must keep the optional opening balance guard explicit',
 )
 
+const compatibilityMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20260811062816_contract_nullable_opening_balance.sql'),
+  'utf8',
+)
+assert.match(compatibilityMigration, /rename to create_contract_strict/i)
+assert.match(
+  compatibilityMigration,
+  /jsonb_typeof\(item -> 'openingUsedQuantity'\) = 'null'[\s\S]*item - 'openingUsedQuantity'/i,
+  'the compatibility wrapper must omit JSON null opening balances before strict validation',
+)
+assert.match(compatibilityMigration, /create or replace function public\.create_contract\(/i)
+
 console.log('RPC payload nullability boundaries: ok')
