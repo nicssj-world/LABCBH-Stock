@@ -26,7 +26,10 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const search = first(params.search)?.trim() ?? ''
   const showEnded = first(params.showEnded) === '1'
   const showOlder = first(params.showOlder) === '1'
-  const showWatchlist = first(params.watchlist) === '1'
+  // Ended contracts and the watchlist are separate views. If an older URL
+  // contains both flags, ended contracts must win because contractNeedsWatch
+  // intentionally excludes them.
+  const showWatchlist = !showEnded && first(params.watchlist) === '1'
   const showArchived = isAdmin && first(params.showArchived) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
@@ -137,7 +140,10 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   }
   const endedToggleParams = new URLSearchParams(activeParams)
   if (showEnded) endedToggleParams.delete('showEnded')
-  else endedToggleParams.set('showEnded', '1')
+  else {
+    endedToggleParams.set('showEnded', '1')
+    endedToggleParams.delete('watchlist')
+  }
   const endedContractsHref = toggleHref(endedToggleParams)
   const olderToggleParams = new URLSearchParams(activeParams)
   if (showOlder) olderToggleParams.delete('showOlder')
@@ -145,7 +151,10 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const olderContractsHref = toggleHref(olderToggleParams)
   const watchlistToggleParams = new URLSearchParams(activeParams)
   if (showWatchlist) watchlistToggleParams.delete('watchlist')
-  else watchlistToggleParams.set('watchlist', '1')
+  else {
+    watchlistToggleParams.set('watchlist', '1')
+    watchlistToggleParams.delete('showEnded')
+  }
   const watchlistHref = toggleHref(watchlistToggleParams)
 
   return (
