@@ -235,6 +235,9 @@ async function main() {
   const actions = readFileSync(join(process.cwd(), 'lib/contracts/actions.ts'), 'utf8')
   assert.match(actions, /requireActor/)
   assert.match(actions, /assertContractEditor/)
+  assert.match(actions, /import \{ omitNullishProperties \} from ['"]@\/lib\/validation\/json['"]/, 'contract actions must use the shared JSON payload normalizer')
+  assert.match(actions, /const rpcItems = items\.map\(omitNullishProperties\)/, 'contract creation must normalize nullable item fields before the RPC call')
+  assert.match(actions, /p_items: rpcItems/, 'contract creation must send the normalized item payload')
   assert.match(actions, /if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์เก็บรายการสัญญา/, 'archive writes must reject non-admin callers')
   assert.match(actions, /expireContract[\s\S]*if \(!isAdministrator\(actor\)\)[\s\S]*ไม่มีสิทธิ์เปลี่ยนสถานะสิ้นสุดสัญญา/, 'manual expiry writes must reject non-admin callers')
   for (const rpc of [

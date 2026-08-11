@@ -19,6 +19,7 @@ import type {
   PurchaseRequestReversalInput,
 } from '@/lib/pr/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { omitNullishProperties } from '@/lib/validation/json'
 
 const purchaseRequestIdSchema = z.string().uuid()
 
@@ -57,7 +58,7 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
     p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
     // Usage and on-hand snapshots are taken inside the transaction, not here,
     // so a stale browser value can never be recorded as fact.
-    p_items: items,
+    p_items: items.map(omitNullishProperties),
   })
 
   const created = unwrapMutation('สร้างใบ PR', result)

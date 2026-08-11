@@ -179,6 +179,8 @@ assert.match(expiryDialog, /เหตุผลที่สิ้นสุดส�
 
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')
+assert.match(form, /state\.startImmediately\s*&&\s*item\.openingUsedQuantity\s*!=\s*null/, 'start-immediately contracts must only send a numeric opening balance when entered')
+assert.doesNotMatch(form, /openingUsedQuantity:\s*item\.openingUsedQuantity\s*\?\?\s*null/, 'start-immediately contracts must not serialize an untouched opening balance as null')
 assert.match(form, /localStorage/, 'form must autosave a local draft')
 assert.match(form, /beforeunload/, 'form must warn before leaving an unsaved draft')
 assert.doesNotMatch(form, /createBrowserClient|supabase\.from/, 'browser form must not mutate Supabase')

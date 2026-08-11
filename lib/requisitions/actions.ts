@@ -12,6 +12,7 @@ import {
 } from '@/lib/requisitions/schema'
 import type { FulfillRequisitionInput, RequisitionInput, SignRequisitionInput } from '@/lib/requisitions/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { omitNullishProperties } from '@/lib/validation/json'
 
 const requisitionIdSchema = z.string().uuid()
 
@@ -39,7 +40,7 @@ export async function createRequisition(input: RequisitionInput) {
   const result = await supabaseAdmin.rpc('create_requisition', {
     p_actor_id: actor.id,
     p_requisition: requisition,
-    p_items: items,
+    p_items: items.map(omitNullishProperties),
   })
 
   const created = unwrapMutation('สร้างใบเบิก', result)
@@ -61,7 +62,7 @@ export async function fulfillRequisition(
   const result = await supabaseAdmin.rpc('fulfill_requisition', {
     p_requisition_id: parsedId,
     p_actor_id: actor.id,
-    p_allocations: parsed.allocations,
+    p_allocations: parsed.allocations.map(omitNullishProperties),
   })
 
   const fulfilled = unwrapMutation('จ่ายของตามใบเบิก', result)

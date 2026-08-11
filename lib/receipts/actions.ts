@@ -14,6 +14,7 @@ import {
 } from '@/lib/receipts/storage'
 import type { GoodsReceiptInput } from '@/lib/receipts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { omitNullishProperties } from '@/lib/validation/json'
 
 const receiptIdSchema = z.string().uuid()
 
@@ -45,7 +46,7 @@ export async function createGoodsReceipt(input: GoodsReceiptInput) {
   const result = await supabaseAdmin.rpc('create_goods_receipt', {
     p_actor_id: actor.id,
     p_receipt: receipt,
-    p_items: items,
+    p_items: items.map(omitNullishProperties),
   })
 
   const created = unwrapMutation('สร้างใบรับเข้า', result)

@@ -26,6 +26,7 @@ import type {
   UpdateContractInput,
 } from '@/lib/contracts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { omitNullishProperties } from '@/lib/validation/json'
 
 const mutationResultSchema = z.object({ id: z.coerce.number().int().positive() }).passthrough()
 
@@ -47,6 +48,11 @@ export async function createContract(input: CreateContractInput) {
   const actor = await requireContractEditor()
   const parsed = createContractInputSchema.parse(input)
   const { items, sentToProcurementDate, contractNumber, ...contract } = parsed
+  // Keep the RPC payload compatible with guarded JSON fields: an untouched
+  // optional input is represented by an omitted key, not JSON null. This also
+  // protects the action from older clients that still serialize nullable form
+  // fields explicitly.
+  const rpcItems = items.map(omitNullishProperties)
 
   // Creating a contract that has already started (contract number supplied
   // up front, no fabricated procurement stages) is restricted to admins,
@@ -58,7 +64,7 @@ export async function createContract(input: CreateContractInput) {
   const result = await supabaseAdmin.rpc('create_contract', {
     p_actor_id: actor.id,
     p_contract: contract,
-    p_items: items,
+    p_items: rpcItems,
     p_effective_date: sentToProcurementDate,
     p_contract_number: contractNumber ?? null,
   })
@@ -78,7 +84,7 @@ export async function updateContract(contractId: number, input: UpdateContractIn
     p_contract_id: parsedContractId,
     p_actor_id: actor.id,
     p_contract: contract,
-    p_items: items,
+    p_items: items.map(omitNullishProperties),
     p_expected_updated_at: expectedUpdatedAt,
   })
 

@@ -159,10 +159,13 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
                 quantity: item.quantity,
                 unit: item.unit,
                 unitPrice: item.unitPrice,
-                // Only meaningful on the admin "already started" fast path —
-                // otherwise omitted so a stale draft cannot fail validation
-                // against a contract that never got a number.
-                ...(state.startImmediately ? { openingUsedQuantity: item.openingUsedQuantity ?? null } : {}),
+                // Only meaningful on the admin "already started" fast path.
+                // Omit an untouched field instead of serializing null: the
+                // create_contract RPC treats a missing opening balance as
+                // "not supplied" and validates numeric values when present.
+                ...(state.startImmediately && item.openingUsedQuantity != null
+                  ? { openingUsedQuantity: item.openingUsedQuantity }
+                  : {}),
               })),
         })
       : updateContractInputSchema.safeParse({
