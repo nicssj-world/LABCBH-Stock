@@ -52,4 +52,17 @@ for (const department of newDepartments) {
   )
 }
 
+// Production had already received the create/opening-balance fix but still
+// carried an older update RPC and department check. Keep that compatibility
+// hotfix tracked so the same drift cannot silently return.
+const hotfixNames = readdirSync(migrationsDir).filter((n) =>
+  n.endsWith('_contract_department_poct.sql'),
+)
+assert.equal(hotfixNames.length, 1, 'exactly one POCT production compatibility migration must exist')
+const hotfixSql = readFileSync(join(migrationsDir, hotfixNames[0]), 'utf8')
+assert.match(hotfixSql, /drop constraint if exists contracts_department_check/i)
+assert.match(hotfixSql, /add constraint contracts_department_check/i)
+assert.match(hotfixSql, /public\.update_contract/i)
+assert.match(hotfixSql, /''POCT''/i)
+
 console.log(`contracts department (stock/POCT addition): ok (${migrationNames[0]})`)
