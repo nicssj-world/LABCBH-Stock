@@ -69,6 +69,7 @@ export function detectDuplicateLots(
 export function findOverRequestedItems(
   lines: Array<{ inventoryItemId: string; quantity: number }>,
   requestedByItem: Record<string, number>,
+  enforceRequestedItems = false,
 ): string[] {
   const totals = new Map<string, number>()
   for (const line of lines) {
@@ -76,7 +77,10 @@ export function findOverRequestedItems(
   }
 
   return [...totals.entries()]
-    .filter(([itemId, total]) => itemId in requestedByItem && total > requestedByItem[itemId])
+    .filter(([itemId, total]) =>
+      (enforceRequestedItems && !(itemId in requestedByItem)) ||
+      (itemId in requestedByItem && total > requestedByItem[itemId]),
+    )
     .map(([itemId]) => itemId)
 }
 

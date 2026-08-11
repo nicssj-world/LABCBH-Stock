@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { setContractOpeningBalances } from '@/lib/contracts/actions'
 import type { ContractItemRecord } from '@/lib/contracts/types'
+import { bangkokIsoDate } from '@/lib/date/thai'
 
 const quantity = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 })
 
 function todayIso() {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return bangkokIsoDate()
 }
 
 export function OpeningBalanceDialog({ contractId, items }: { contractId: number; items: ContractItemRecord[] }) {

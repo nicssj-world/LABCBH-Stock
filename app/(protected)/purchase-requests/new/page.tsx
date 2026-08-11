@@ -24,20 +24,23 @@ export default async function NewPurchaseRequestPage() {
     listContracts({}),
   ])
 
-  // "ซื้อในสัญญา" only orders against a contract that has already started,
-  // is not an equipment lease (which has no line items to draw down), and has
-  // not already ended.
+  // "ซื้อในสัญญา" only orders against a contract that is currently active,
+  // has already started, is not an equipment lease (which has no line items
+  // to draw down), and has not already ended. The Server Action/RPC repeats
+  // this check because this page can stay open while a contract is cancelled.
   const startedContracts = allContracts.filter(
     (contract) =>
       contract.procurementStage === 'contract_started' &&
       contract.contractType !== 'equipment_lease' &&
-      effectiveContractStatus(contract.status, contract.endDate) !== 'expired',
+      effectiveContractStatus(contract.status, contract.endDate) === 'active',
   )
   // "ซื้อเจาะจงระหว่างรอสัญญา" references a contract still working through the
   // procurement stages — it exists to identify which arrangement is being
   // waited on, and never draws down a balance.
   const awaitingContracts = allContracts.filter(
-    (contract) => contract.procurementStage !== 'contract_started',
+    (contract) =>
+      contract.procurementStage !== 'contract_started' &&
+      effectiveContractStatus(contract.status, contract.endDate) === 'pending',
   )
 
   const contracts = startedContracts.map((contract) => ({

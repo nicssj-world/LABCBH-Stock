@@ -7,6 +7,7 @@ import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, pre
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
+import { bangkokIsoDate } from '@/lib/date/thai'
 
 interface ContractsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -94,7 +95,8 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
     error = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาไม่สำเร็จ'
   }
 
-  const thisFiscalYear = new Date().getFullYear() + (new Date().getMonth() >= 9 ? 544 : 543)
+  const [currentYear, currentMonth] = bangkokIsoDate().split('-').map(Number)
+  const thisFiscalYear = currentYear + (currentMonth >= 10 ? 544 : 543)
   const oldestDefaultFiscalYear = thisFiscalYear - 4
   const presentedContracts = contracts.map(presentContract)
   const endedContracts = presentedContracts.filter((contract) => contract.effectiveStatus === 'expired')

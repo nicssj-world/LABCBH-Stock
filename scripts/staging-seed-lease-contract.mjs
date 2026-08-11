@@ -15,7 +15,10 @@ if (!url.includes('stogulcfwsvunydmwrex')) {
 
 const supabase = createClient(url, key)
 
-const year = new Date().getFullYear()
+const year = Number(new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+}).format(new Date()))
 const start = `${year}-01-01`
 const end = `${year}-12-31`
 

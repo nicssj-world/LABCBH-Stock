@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { formatThaiDateInput, parseThaiDateInput } from '../lib/date/thai'
+import { bangkokIsoDate, formatThaiDateInput, parseThaiDateInput } from '../lib/date/thai'
 
 assert.equal(formatThaiDateInput('2026-08-02'), '02/08/2569')
 assert.equal(parseThaiDateInput('02/08/2569'), '2026-08-02')
@@ -9,6 +9,11 @@ assert.equal(parseThaiDateInput('2026-08-02'), '2026-08-02', 'ISO paste remains 
 assert.equal(parseThaiDateInput('๐๒/๐๘/๒๕๖๙'), '2026-08-02', 'Thai digits are accepted')
 assert.equal(parseThaiDateInput('31/02/2569'), null, 'invalid calendar dates are rejected')
 assert.equal(parseThaiDateInput(''), '')
+assert.equal(
+  bangkokIsoDate(new Date('2026-08-10T18:00:00.000Z')),
+  '2026-08-11',
+  'business dates must follow Bangkok at the UTC day boundary',
+)
 
 const dateInput = readFileSync('components/ui/ThaiDateInput.tsx', 'utf8')
 assert.match(dateInput, /พ\.ศ\./, 'date fields explain the Buddhist Era input format')
@@ -31,7 +36,17 @@ for (const path of [
   'components/contracts/StageHistoryEntryEditor.tsx',
 ]) {
   const source = readFileSync(path, 'utf8')
-  assert.doesNotMatch(source, /type=["']date["']/, `${path} must use the Buddhist Era date input`)
+assert.doesNotMatch(source, /type=["']date["']/, `${path} must use the Buddhist Era date input`)
 }
+
+const businessDateMigration = readFileSync(
+  'supabase/migrations/20260811140000_bangkok_business_dates.sql',
+  'utf8',
+)
+assert.match(businessDateMigration, /set timezone = 'Asia\/Bangkok'/i)
+assert.match(businessDateMigration, /occurred_on set default public\.lab_stock_today\(\)/i)
+
+const leaseSeed = readFileSync('scripts/staging-seed-lease-contract.mjs', 'utf8')
+assert.match(leaseSeed, /timeZone:\s*'Asia\/Bangkok'/, 'staging fixtures must use the same business timezone')
 
 console.log('Thai Buddhist Era dates: ok')

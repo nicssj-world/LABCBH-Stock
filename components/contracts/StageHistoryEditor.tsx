@@ -3,13 +3,14 @@
 import { useMemo, useState, useTransition, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { backfillContractStageHistory, correctContractStageHistory } from '@/lib/contracts/actions'
 import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { PROCUREMENT_STAGES, type ProcurementStage } from '@/lib/contracts/stages'
 import type { ContractStageHistoryRecord } from '@/lib/contracts/types'
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10)
+  return bangkokIsoDate()
 }
 
 export function StageHistoryEditor({

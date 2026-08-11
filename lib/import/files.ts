@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import readXlsxFile from 'read-excel-file/node'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import type {
   RawContractRow,
   RawItemRow,
@@ -78,7 +79,7 @@ function columnName(index: number): string {
 }
 
 function cellValue(value: CellValue): unknown {
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (value instanceof Date) return bangkokIsoDate(value)
   return value
 }
 

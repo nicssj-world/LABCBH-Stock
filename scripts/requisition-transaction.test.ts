@@ -24,6 +24,7 @@ const read = (suffix: string) => {
 
 const ledgerSql = read('_lab_stock_inventory_ledger.sql')
 const requisitionSql = read('_lab_stock_requisitions.sql')
+const fifoGuardSql = read('_requisition_fifo_guard.sql')
 
 const fulfil = requisitionSql.match(
   /create or replace function public\.fulfill_requisition[\s\S]*?\$function\$;/i,
@@ -84,5 +85,20 @@ assert.match(
   ledgerSql,
   /create trigger stock_movements_append_only\s+before update or delete on public\.stock_movements/i,
 )
+
+// 8. FIFO is a database boundary, not only a client-side hint. The guard uses
+// the same received-date/expiry/balance ordering and requires a reason for a
+// usable lot skipped before a later selected lot.
+assert.match(fifoGuardSql, /create or replace function public\.assert_requisition_fifo/i)
+assert.match(fifoGuardSql, /left join public\.inventory_lot_balances/i)
+assert.match(fifoGuardSql, /lot\.received_date asc[\s\S]*lot\.expiry_date asc nulls last/i)
+assert.match(fifoGuardSql, /skipped_before_selected and not has_override_reason/i)
+assert.match(fifoGuardSql, /create trigger requisition_lot_allocations_fifo_guard\s+before insert/i)
+const guardedFulfil = fifoGuardSql.match(
+  /create or replace function public\.fulfill_requisition[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(guardedFulfil, 'the FIFO guard migration must replace fulfill_requisition')
+assert.match(guardedFulfil, /perform public\.assert_requisition_fifo\(line\.id, p_allocations\)/i)
+assert.match(guardedFulfil, /public\.lab_stock_today\(\)/i)
 
 console.log('requisition transaction contract: ok (static; live concurrency pass pending a database)')

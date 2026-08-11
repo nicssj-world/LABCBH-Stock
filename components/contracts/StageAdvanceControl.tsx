@@ -4,13 +4,13 @@ import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { advanceContractStage } from '@/lib/contracts/actions'
 import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { allowedNextStages, type ProcurementStage } from '@/lib/contracts/stages'
 
 function todayIso() {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return bangkokIsoDate()
 }
 
 export function StageAdvanceControl({ contractId, currentStage }: { contractId: number; currentStage: ProcurementStage }) {

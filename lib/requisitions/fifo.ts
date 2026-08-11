@@ -35,8 +35,10 @@ export function isLotSelectable(lot: FifoLot, today: string): boolean {
 }
 
 /**
- * True when a usable lot that ranks ahead of everything selected was passed
- * over. Skipping forward is allowed, but it has to be explained.
+ * True when a usable lot before the last selected lot was passed over.
+ * Skipping forward is allowed, but every gap before a selected lot has to be
+ * explained. Lots after the last selected lot are not a FIFO violation: the
+ * request may simply not need them.
  */
 export function requiresOverrideReason(
   lots: FifoLot[],
@@ -47,14 +49,13 @@ export function requiresOverrideReason(
 
   const selectable = rankLotsForFifo(lots.filter((lot) => isLotSelectable(lot, today)))
   const selected = new Set(selectedLotIds)
+  const lastSelectedIndex = selectable.reduce(
+    (lastIndex, lot, index) => (selected.has(lot.id) ? index : lastIndex),
+    -1,
+  )
 
-  for (const lot of selectable) {
-    if (selected.has(lot.id)) return false
-    // A usable lot ranked ahead of every selection was skipped.
-    return true
-  }
-
-  return false
+  if (lastSelectedIndex < 0) return false
+  return selectable.slice(0, lastSelectedIndex).some((lot) => !selected.has(lot.id))
 }
 
 export interface LotAllocationInput {

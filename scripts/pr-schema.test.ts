@@ -330,6 +330,24 @@ assert.doesNotMatch(
   'the insert must not fall back to the raw payload price once resolved_unit_price exists',
 )
 
+const integrityNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_contract_integrity.sql'),
+)
+assert.equal(integrityNames.length, 1, 'exactly one PR contract-integrity migration must exist')
+const integritySql = readFileSync(join(migrationsDir, integrityNames[0]), 'utf8')
+const integrityCreatePr = integritySql.match(
+  /create or replace function public\.create_purchase_request[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(integrityCreatePr, 'the contract-integrity migration must redefine PR creation')
+assert.match(integritySql, /create or replace function public\.validate_purchase_request_contract/i)
+assert.match(integritySql, /purchase_request_items_contract_integrity\s+on public\.purchase_request_items/i)
+assert.match(integritySql, /contract_item_row\.contract_id is distinct from target_contract\.id/i)
+assert.match(integritySql, /regexp_replace\(contract_item_row\.ls_code/i)
+assert.match(integrityCreatePr, /perform public\.validate_purchase_request_contract/i)
+assert.match(integrityCreatePr, /resolved_contract_id is distinct from parsed_contract_id/i)
+assert.match(integritySql, /create or replace function public\.validate_contract_item_allocation/i)
+assert.match(integritySql, /validate_purchase_request_contract\(\s*expected_contract_id/i)
+
 console.log(
-  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]}, ${priceLockNames[0]})`,
+  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]}, ${priceLockNames[0]}, ${integrityNames[0]})`,
 )

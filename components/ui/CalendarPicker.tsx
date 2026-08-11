@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BUDDHIST_ERA_OFFSET, THAI_MONTHS, THAI_WEEKDAYS_SHORT } from '@/lib/date/thai'
+import { bangkokIsoDate, BUDDHIST_ERA_OFFSET, THAI_MONTHS, THAI_WEEKDAYS_SHORT } from '@/lib/date/thai'
 
 export interface CalendarPickerProps {
   value: string
@@ -20,11 +20,11 @@ function partsFromIso(isoDate: string): { year: number; month: number } | null {
 
 /** A month grid for picking a date by click, alongside ThaiDateInput's typed entry. */
 export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
-  const today = new Date()
-  const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  const todayIso = bangkokIsoDate()
+  const todayParts = partsFromIso(todayIso)!
   const initial = partsFromIso(value)
-  const [viewYear, setViewYear] = useState(initial?.year ?? today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(initial?.month ?? today.getMonth() + 1)
+  const [viewYear, setViewYear] = useState(initial?.year ?? todayParts.year)
+  const [viewMonth, setViewMonth] = useState(initial?.month ?? todayParts.month)
 
   const changeMonth = (delta: number) => {
     const zeroBased = viewMonth - 1 + delta
@@ -43,7 +43,7 @@ export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
     }),
   ]
 
-  const yearOptions = Array.from({ length: 21 }, (_, index) => today.getFullYear() + 10 - index)
+  const yearOptions = Array.from({ length: 21 }, (_, index) => todayParts.year + 10 - index)
   if (!yearOptions.includes(viewYear)) yearOptions.push(viewYear)
   yearOptions.sort((a, b) => b - a)
 

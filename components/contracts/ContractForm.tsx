@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'rea
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { ContractItemsEditor, type ContractCatalogChoice } from '@/components/contracts/ContractItemsEditor'
 import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
@@ -43,13 +44,12 @@ interface FormState {
 }
 
 function currentThaiFiscalYear() {
-  const today = new Date()
-  return today.getFullYear() + (today.getMonth() >= 9 ? 544 : 543)
+  const [year, month] = bangkokIsoDate().split('-').map(Number)
+  return year + (month >= 10 ? 544 : 543)
 }
 
 function todayIso() {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return bangkokIsoDate()
 }
 
 function initialState(contract?: ContractRecord): FormState {

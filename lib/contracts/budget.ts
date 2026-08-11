@@ -1,5 +1,6 @@
 import type { ContractType } from '@/lib/contracts/types'
 import { roundQuantity } from '@/lib/inventory/balance'
+import { bangkokIsoDate } from '@/lib/date/thai'
 
 export type ContractMode = 'budget' | 'supply'
 
@@ -136,7 +137,11 @@ const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30
 
 export function monthsLeft(endDate: string | null, now: Date = new Date()): number {
   if (!endDate) return 999
-  return Math.floor((new Date(endDate).getTime() - now.getTime()) / MS_PER_MONTH)
+  const [endYear, endMonth, endDay] = endDate.slice(0, 10).split('-').map(Number)
+  const [todayYear, todayMonth, todayDay] = bangkokIsoDate(now).split('-').map(Number)
+  const endUtc = Date.UTC(endYear, endMonth - 1, endDay)
+  const todayUtc = Date.UTC(todayYear, todayMonth - 1, todayDay)
+  return Math.floor((endUtc - todayUtc) / MS_PER_MONTH)
 }
 
 // A larger contract needs more lead time to re-tender, so it warns earlier.
@@ -201,7 +206,7 @@ export function expenseMonthlySeries(
       .map(([month, amount]) => ({ month, amount: amount / 100 }))
   }
 
-  const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
+  const currentMonth = `${bangkokIsoDate(now).slice(0, 7)}-01`
   const contractEndMonth = endDate ? normalizeUsageMonth(endDate) : null
   const lastMonth = contractEndMonth && contractEndMonth < currentMonth
     ? contractEndMonth

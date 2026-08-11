@@ -1,6 +1,7 @@
 'use client'
 
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import { PURCHASE_METHOD_LABELS, PURCHASE_PURPOSE_LABELS } from '@/lib/pr/presenter'
 import {
@@ -43,13 +44,13 @@ const PURPOSE_CONSEQUENCE: Record<PurchasePurpose, string> = {
 }
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+  return bangkokIsoDate()
 }
 
 /** The Thai fiscal year rolls on 1 October, mirroring lib/pr/actions.ts's thaiFiscalYear. */
 function currentThaiFiscalYear(): number {
-  const now = new Date()
-  return now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0)
+  const [year, month] = bangkokIsoDate().split('-').map(Number)
+  return year + 543 + (month >= 10 ? 1 : 0)
 }
 
 /** A fresh method carries only its own fields, so stale values never leak. */

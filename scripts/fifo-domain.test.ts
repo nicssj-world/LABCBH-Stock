@@ -54,10 +54,18 @@ assert.equal(isLotSelectable({ id: 'a', receivedAt: '2026-01-01', expiryDate: nu
 // Skipping an older usable lot must be justified in writing.
 const lots = [
   { id: 'old', receivedAt: '2026-01-01', expiryDate: '2026-12-01', balance: 5 },
+  { id: 'middle', receivedAt: '2026-03-01', expiryDate: '2026-12-15', balance: 5 },
   { id: 'new', receivedAt: '2026-05-01', expiryDate: '2027-01-01', balance: 5 },
 ]
 assert.equal(requiresOverrideReason(lots, ['old'], today), false)
-assert.equal(requiresOverrideReason(lots, ['old', 'new'], today), false, 'taking both starts at the oldest')
+assert.equal(requiresOverrideReason(lots, ['old', 'new'], today), true, 'skipping the middle usable lot needs a reason')
+assert.equal(requiresOverrideReason(lots, ['old', 'middle'], today), false)
+assert.equal(requiresOverrideReason(lots, ['old', 'middle', 'new'], today), false)
+assert.equal(
+  requiresOverrideReason(lots, ['old', 'new'], today),
+  true,
+  'skipping the middle usable lot needs a reason',
+)
 assert.equal(requiresOverrideReason(lots, ['new'], today), true, 'skipping the oldest usable lot needs a reason')
 assert.equal(
   requiresOverrideReason(

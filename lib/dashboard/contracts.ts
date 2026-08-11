@@ -133,6 +133,8 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
   const typeMix = new Map<ContractType, { count: number; value: number }>()
 
   for (const contract of rows) {
+    const lifecycleStatus = effectiveContractStatus(contract.status, contract.end_date)
+
     if (contract.procurement_stage) {
       pipeline.set(contract.procurement_stage, (pipeline.get(contract.procurement_stage) ?? 0) + 1)
     }
@@ -155,12 +157,12 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
 
       const expiring = isExpiring(contract.total, contract.end_date)
       const lowBudget = isLowBudget(contract.total, snapshot.used)
-      // A lease past its end date is done, not "expiring" or "low budget" —
+      // A lease past its end date or explicitly cancelled is done, not
+      // "expiring" or "low budget" —
       // the register already hides it as สิ้นสุดแล้ว and the dashboard
       // watchlist should agree instead of nagging about a closed contract.
-      const hasEnded = effectiveContractStatus(contract.status, contract.end_date) === 'expired'
 
-      if ((expiring || lowBudget) && !hasEnded) {
+      if ((expiring || lowBudget) && lifecycleStatus === 'active') {
         leaseWatchlist.push({
           contractId: contract.id,
           contractName: contract.display_name?.trim() || contract.product,
@@ -201,7 +203,7 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
       supplyTotal += lineValue
       supplyRemaining += remainingValue
 
-      if (remainingPercent < 30) {
+      if (remainingPercent < 30 && lifecycleStatus === 'active') {
         watchlist.push({
           contractId: contract.id,
           contractName: contract.display_name?.trim() || contract.product,
@@ -228,8 +230,12 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
   }
 
   return {
-    activeContracts: rows.filter((contract) => contract.status === 'active').length,
-    pendingContracts: rows.filter((contract) => contract.status === 'pending').length,
+    activeContracts: rows.filter(
+      (contract) => effectiveContractStatus(contract.status, contract.end_date) === 'active',
+    ).length,
+    pendingContracts: rows.filter(
+      (contract) => effectiveContractStatus(contract.status, contract.end_date) === 'pending',
+    ).length,
     totalContractValue,
     remainingContractValue,
     leaseContractValue: { total: leaseTotal, remaining: leaseRemaining },

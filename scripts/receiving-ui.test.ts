@@ -75,6 +75,7 @@ assert.match(
 )
 assert.match(linesEditor, /findOverRequestedItems/)
 assert.match(linesEditor, /เกินจำนวนที่ขอซื้อ/, 'the offending line must say it exceeds what was requested')
+assert.match(linesEditor, /ไม่มีอยู่ในใบ PR/, 'a linked receipt must flag an item that was not requested')
 
 // The "ใบ PR ที่เกี่ยวข้อง" picker only offers PRs from the department
 // currently receiving, so the list stays short as open PRs accumulate.

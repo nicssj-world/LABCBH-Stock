@@ -51,6 +51,11 @@ assert.equal(isExpiring(5_000_000, '2026-12-01', now), false, 'small contract, 4
 assert.equal(isExpiring(5_000_000, '2026-09-15', now), true, 'small contract, under 3 months')
 assert.equal(isExpiring(5_000_000, null, now), false, 'no end date never expires')
 assert.equal(monthsLeft(null, now), 999)
+assert.equal(
+  monthsLeft('2026-08-11', new Date('2026-08-10T18:00:00.000Z')),
+  0,
+  'a contract ending today in Bangkok must not appear one month negative at midnight UTC boundary',
+)
 
 assert.equal(isLowBudget(1000, 701), true, 'under 30% remaining')
 assert.equal(isLowBudget(1000, 700), false, 'exactly 30% is not low')

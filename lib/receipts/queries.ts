@@ -252,7 +252,8 @@ export async function listReceivablePurchaseRequests(): Promise<
     supabase
       .from('goods_receipts')
       .select('purchase_request_id')
-      .not('purchase_request_id', 'is', null),
+      .not('purchase_request_id', 'is', null)
+      .in('status', ['draft', 'posted']),
   ])
 
   if (requestsResult.error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${requestsResult.error.message}`)

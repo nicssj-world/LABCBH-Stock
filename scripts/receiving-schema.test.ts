@@ -74,6 +74,15 @@ assert.match(
   'one receipt cannot list the same item and lot twice',
 )
 
+const receivingIntegrityNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_receiving_integrity.sql'),
+)
+assert.equal(receivingIntegrityNames.length, 1, 'exactly one receiving-integrity migration must exist')
+const receivingIntegritySql = readFileSync(join(migrationsDir, receivingIntegrityNames[0]), 'utf8')
+assert.match(receivingIntegritySql, /goods_receipts_active_purchase_request_key/i)
+assert.match(receivingIntegritySql, /create or replace function public\.create_goods_receipt/i)
+assert.match(receivingIntegritySql, /locked_request.*for update|for update[\s\S]*locked_request/i)
+
 // Posting is atomic, idempotent, and service-role only.
 const postFunction = sql.match(
   /create or replace function public\.post_goods_receipt[\s\S]*?\$function\$;/i,

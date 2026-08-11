@@ -11,6 +11,7 @@ import {
   type ContractOption,
 } from '@/components/pr/PurchaseMethodFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest } from '@/lib/pr/actions'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
@@ -99,7 +100,7 @@ export function PurchaseRequestForm({
   const router = useRouter()
   const [department, setDepartment] = useState(initialDepartment)
   const headName = initialHeadName
-  const [requestedDate, setRequestedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [requestedDate, setRequestedDate] = useState(() => bangkokIsoDate())
   const [note, setNote] = useState('')
   const [purpose, setPurpose] = useState<PurchasePurpose>('purchase_order')
   const [method, setMethod] = useState<PurchaseMethod>({ kind: 'off_plan' })

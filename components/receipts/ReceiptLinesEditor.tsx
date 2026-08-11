@@ -51,8 +51,10 @@ export function ReceiptLinesEditor({
   // A reagent can be split across lots (several lines share one inventoryItemId);
   // this flags every line in a group whose combined quantity exceeds what the
   // referenced PR actually requested for that item.
-  const overRequested = new Set(findOverRequestedItems(lines, requestedByItem))
+  const overRequested = new Set(findOverRequestedItems(lines, requestedByItem, hasPurchaseRequest))
   const isOverRequested = (line: ReceiptDraftLine) => overRequested.has(line.inventoryItemId)
+  const isUnrequested = (line: ReceiptDraftLine) =>
+    hasPurchaseRequest && !(line.inventoryItemId in requestedByItem)
 
   return (
     <div className="receipt-lines">
@@ -91,8 +93,8 @@ export function ReceiptLinesEditor({
               <li
                 key={line.key}
                 className={
-                  isDuplicate(line)
-                    ? 'receipt-line--duplicate'
+                    isDuplicate(line)
+                      ? 'receipt-line--duplicate'
                     : isOverRequested(line)
                       ? 'receipt-line--over-requested'
                       : undefined
@@ -132,7 +134,11 @@ export function ReceiptLinesEditor({
                       value={line.quantity}
                       onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
                     />
-                    {isOverRequested(line) && (
+                    {isUnrequested(line) ? (
+                      <small className="field-error">
+                        รายการนี้ไม่มีอยู่ในใบ PR ที่เลือก
+                      </small>
+                    ) : isOverRequested(line) && (
                       <small className="field-error">
                         เกินจำนวนที่ขอซื้อ (สั่ง {formatQuantity(requestedByItem[line.inventoryItemId], line.unit)})
                       </small>

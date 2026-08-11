@@ -268,6 +268,17 @@ async function main() {
   assert.match(expiryMigration, /create or replace function public\.expire_contract/, 'manual expiry must be an atomic database transition')
   assert.match(expiryMigration, /if target_contract\.status <> 'active'/, 'new expense writes must reject an expired contract under the row lock')
 
+  const expiryFixMigration = readFileSync(
+    join(process.cwd(), 'supabase/migrations/20260811100000_fix_expire_contract_updated_by.sql'),
+    'utf8',
+  )
+  assert.match(expiryFixMigration, /create or replace function public\.expire_contract/, 'expiry fix must replace the broken RPC')
+  assert.doesNotMatch(
+    expiryFixMigration,
+    /updated_by\s*=|updated_by\s*,/,
+    'manual expiry must not write the nonexistent contracts.updated_by column',
+  )
+
   console.log('contracts backend boundaries: ok')
 }
 

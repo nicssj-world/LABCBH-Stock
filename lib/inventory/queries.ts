@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { rankLotsForFifo } from '@/lib/requisitions/fifo'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -91,12 +92,7 @@ const ITEM_SELECT = `
 
 /** Hospital operations run on Bangkok dates, not the server's locale. */
 export function bangkokToday(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+  return bangkokIsoDate()
 }
 
 /**

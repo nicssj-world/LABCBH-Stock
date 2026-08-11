@@ -242,6 +242,8 @@ assert.match(dashboardValueCards, /remainingPercent\s*<\s*30/, 'the remaining-va
 const dashboardData = read('lib/dashboard/contracts.ts')
 assert.match(dashboardData, /quantity\s*-\s*allocatedQuantity/, 'remaining quantity must use the allocation ledger')
 assert.match(dashboardData, /remainingPercent\s*<\s*30/, 'watchlist threshold must be below 30%')
+assert.match(dashboardData, /lifecycleStatus\s*===\s*'active'/, 'dashboard watchlists must exclude ended or cancelled contracts')
+assert.match(dashboardData, /activeContracts:[\s\S]*effectiveContractStatus\(contract\.status, contract\.end_date\)/, 'active counts must use effective lifecycle status')
 assert.match(dashboardData, /createClient/, 'dashboard reads must use authenticated SSR Supabase')
 assert.doesNotMatch(dashboardData, /supabaseAdmin/, 'dashboard reads must stay under RLS')
 

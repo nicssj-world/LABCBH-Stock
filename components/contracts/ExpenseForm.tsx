@@ -4,6 +4,7 @@ import { useId, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { recordContractExpense } from '@/lib/contracts/budget-actions'
 import { expenseMonthOptions } from '@/lib/contracts/budget'
 
@@ -11,8 +12,7 @@ const monthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'numer
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
 
 function todayIso() {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return bangkokIsoDate()
 }
 
 interface ExpenseFormProps {
@@ -32,9 +32,9 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
   // does cover, so the common case needs no thought.
   const defaultMonth = useMemo(() => {
     if (months.length === 0) return ''
-    const today = new Date()
-    const previous = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const previousIso = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-01`
+    const [year, month] = bangkokIsoDate().split('-').map(Number)
+    const previous = new Date(Date.UTC(year, month - 2, 1))
+    const previousIso = `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, '0')}-01`
     return months.includes(previousIso) ? previousIso : months[months.length - 1]
   }, [months])
 

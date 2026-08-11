@@ -99,6 +99,11 @@ assert.deepEqual(
   'an item the PR never listed has no ceiling to exceed',
 )
 assert.deepEqual(
+  findOverRequestedItems([{ inventoryItemId: 'a', quantity: 1 }], {}, true),
+  ['a'],
+  'a receipt linked to a PR must reject an item the PR never listed',
+)
+assert.deepEqual(
   findOverRequestedItems(
     [{ inventoryItemId: 'a', quantity: 10 }, { inventoryItemId: 'b', quantity: 999 }],
     { a: 50 },
@@ -137,5 +142,14 @@ assert.match(
   receivingCeilingSql,
   /grant execute on function public\.create_goods_receipt[\s\S]*?to service_role/i,
 )
+
+const integritySql = read('_receiving_integrity.sql')
+assert.match(integritySql, /create unique index if not exists goods_receipts_active_purchase_request_key/i)
+assert.match(integritySql, /for update/i, 'receipt creation must lock the referenced PR before checking duplicates')
+assert.match(integritySql, /status is distinct from 'completed'/i)
+assert.match(integritySql, /purchase request already has an active goods receipt/i)
+assert.match(integritySql, /left join public\.purchase_request_items pr_item/i)
+assert.match(integritySql, /pr_item\.id is null/i)
+assert.match(integritySql, /purchase request belongs to a different department/i)
 
 console.log('receiving transaction contract: ok (static; live post/retry pass pending a database)')

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { isProjectedBelowMinimum } from '@/lib/inventory/balance'
 import { MINIMUM_STOCK_WARNING } from '@/lib/pr/presenter'
@@ -44,7 +45,7 @@ export function RequisitionForm({
   const router = useRouter()
   const [department, setDepartment] = useState(departments[0] ?? '')
   const [requesterName, setRequesterName] = useState(initialRequester)
-  const [desiredDate, setDesiredDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [desiredDate, setDesiredDate] = useState(() => bangkokIsoDate())
   const [note, setNote] = useState('')
   const [lines, setLines] = useState<DraftLine[]>([])
   const [error, setError] = useState<string | null>(null)

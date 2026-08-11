@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import type { ContractType } from '@/lib/contracts/types'
 import { formatQuantity, formatThaiDateTime } from '@/lib/inventory/presenter'
@@ -50,7 +51,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
   // Once a number is saved, the field locks — "แก้ไข" is a deliberate second
   // step before it can be typed over again.
   const [isEditingEphisPrNumber, setIsEditingEphisPrNumber] = useState(!request.ephisPrNumber)
-  const [sentToProcurementDate, setSentToProcurementDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [sentToProcurementDate, setSentToProcurementDate] = useState(() => bangkokIsoDate())
   const [isPending, startTransition] = useTransition()
 
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)

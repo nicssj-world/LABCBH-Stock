@@ -27,7 +27,12 @@ const { data: receipt, error: rErr } = await supabase
   .insert({
     fiscal_year: 2569,
     department: 'E2E laboratory',
-    received_date: new Date().toISOString().slice(0, 10),
+    received_date: new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()),
     receiver_name: 'E2E Receiver',
     received_by: stock.id,
     status: 'draft',

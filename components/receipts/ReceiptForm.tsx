@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import {
   ReceiptLinesEditor,
   type CatalogChoice,
@@ -28,7 +29,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
   const [poNumber, setPoNumber] = useState('')
   const [poFile, setPoFile] = useState<File | null>(null)
   const [department, setDepartment] = useState(departments[0] ?? '')
-  const [receivedDate, setReceivedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [receivedDate, setReceivedDate] = useState(() => bangkokIsoDate())
   const [receiverName, setReceiverName] = useState(initialReceiver)
   const [note, setNote] = useState('')
   const [lines, setLines] = useState<ReceiptDraftLine[]>([])
@@ -99,7 +100,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
 
   const hasDuplicates = detectDuplicateLots(lines).length > 0
   const hasIncompleteLot = lines.some((line) => !line.lotNumber.trim())
-  const hasOverRequestedLine = findOverRequestedItems(lines, requestedByItem).length > 0
+  const hasOverRequestedLine = findOverRequestedItems(lines, requestedByItem, Boolean(purchaseRequestId)).length > 0
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
