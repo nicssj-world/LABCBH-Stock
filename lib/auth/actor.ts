@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { decideProtectedRoute, deriveAppRoles } from '@/lib/auth/access'
 import { resolveAuthenticatedUser, unwrapActorQuery } from '@/lib/auth/resolution'
@@ -31,7 +32,7 @@ interface MembershipRow {
   active: boolean
 }
 
-export async function getActor(): Promise<Actor | null> {
+export const getActor = cache(async (): Promise<Actor | null> => {
   const supabase = await createClient()
   const authResult = await supabase.auth.getUser()
   const user = resolveAuthenticatedUser(authResult)
@@ -92,7 +93,7 @@ export async function getActor(): Promise<Actor | null> {
       memberships: (membershipData ?? []) as MembershipRow[],
     }),
   }
-}
+})
 
 export async function requireActor(): Promise<Actor> {
   const actor = await getActor()

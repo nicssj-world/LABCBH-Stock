@@ -70,7 +70,7 @@ export const contractReadRowSchema = z.object({
   contract_stage_history: z.array(contractStageHistoryReadRowSchema).nullable().default([]),
 })
 
-const CONTRACT_READ_SELECT = `
+const CONTRACT_SCALAR_READ_SELECT = `
   id,
   product,
   fiscal_year,
@@ -89,7 +89,9 @@ const CONTRACT_READ_SELECT = `
   archive_reason,
   total,
   responsible_user_ids,
-  file_url,
+  file_url`
+
+const CONTRACT_ITEMS_READ_SELECT = `
   contract_items (
     id,
     line_number,
@@ -100,8 +102,12 @@ const CONTRACT_READ_SELECT = `
     unit_price,
     line_total,
     contract_item_allocations (quantity, allocation_kind)
-  ),
-  contract_usage (amount),
+  )`
+
+const CONTRACT_USAGE_READ_SELECT = `
+  contract_usage (amount)`
+
+const CONTRACT_STAGE_HISTORY_READ_SELECT = `
   contract_stage_history (
     id,
     from_stage,
@@ -112,7 +118,21 @@ const CONTRACT_READ_SELECT = `
     source,
     actor_id,
     created_at
-  )
+  )`
+
+// The register only needs balances and summary fields. Stage history is kept
+// for the detail view, where it is actually rendered.
+const CONTRACT_LIST_READ_SELECT = `
+  ${CONTRACT_SCALAR_READ_SELECT},
+  ${CONTRACT_ITEMS_READ_SELECT},
+  ${CONTRACT_USAGE_READ_SELECT}
+`
+
+const CONTRACT_READ_SELECT = `
+  ${CONTRACT_SCALAR_READ_SELECT},
+  ${CONTRACT_ITEMS_READ_SELECT},
+  ${CONTRACT_USAGE_READ_SELECT},
+  ${CONTRACT_STAGE_HISTORY_READ_SELECT}
 `
 
 export interface ContractFilters {
@@ -244,7 +264,7 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
   const supabase = await createClient()
   let query = supabase
     .from('contracts')
-    .select(CONTRACT_READ_SELECT)
+    .select(CONTRACT_LIST_READ_SELECT)
     .order('fiscal_year', { ascending: false, nullsFirst: false })
     .order('id', { ascending: false })
 
