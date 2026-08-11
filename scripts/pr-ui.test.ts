@@ -103,6 +103,9 @@ assert.match(
   /\.data-table input\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
   'quantity/price inputs inside a data-table must render a visible border, not rely on the bare browser default',
 )
+assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%, 520px\)/, 'PR and PO identifiers should not stretch across the full review card')
+assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*background:\s*color-mix/, 'saved PR and PO identifiers should have a muted filled-state background')
+assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
 
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
@@ -141,7 +144,7 @@ assert.match(review, /วันที่ส่งพัสดุ/, 'the stock of
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
 assert.match(
   review,
-  /!contractType && \(\s*<label className="field-row">\s*เลขที่ใบสั่งซื้อ/,
+  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
@@ -149,6 +152,13 @@ assert.match(review, /ยืนยันโดย.*acknowledgedByName/, 'a compl
 assert.match(review, /กลับรายการโดย.*reversedByName/, 'a reversed PR must name who reversed it, distinct from who confirmed it')
 assert.match(review, /บันทึกเลขที่ใบสั่งซื้อโดย.*updatedByName/, 'recording a PO number must be attributed too')
 assert.match(review, /pr-review__meta/, 'audit lines live inside the officer action panel, not the requester-facing method detail')
+assert.match(review, /const \[isEditingPoNumber, setIsEditingPoNumber\] = useState\(!request\.poNumber\)/, 'a saved PO number starts locked')
+assert.match(review, /readOnly=\{!isEditingPoNumber\}/, 'a saved PO number must be read-only until edit is requested')
+assert.match(review, /if \(!isEditingPoNumber\) \{[\s\S]*?setIsEditingPoNumber\(true\)/, 'the PO action must unlock the field before editing')
+assert.match(review, /setIsEditingPoNumber\(false\)/, 'saving an edited PO number must lock the field again')
+assert.match(review, /แก้ไขเลขที่ใบสั่งซื้อ/, 'the locked PO action must offer an explicit edit label')
+assert.match(review, /pr-review__identifier-field/, 'PR and PO identifiers use the compact field treatment')
+assert.match(review, /pr-review__number-action/, 'identifier actions use the compact button treatment')
 
 const presenter = read('lib/pr/presenter.ts')
 assert.match(presenter, /ซื้อในแผนทั้งปี/)

@@ -79,6 +79,12 @@ assert.match(linesEditor, /ไม่มีอยู่ในใบ PR/, 'a linke
 
 // The "ใบ PR ที่เกี่ยวข้อง" picker only offers PRs from the department
 // currently receiving, so the list stays short as open PRs accumulate.
+assert.match(form, /const \[department, setDepartment\] = useState\(''\)/, 'the receiving department must be chosen explicitly')
+assert.match(form, /disabled=\{!department \|\| isPending\}/, 'the PR picker must wait for a department')
+assert.ok(
+  form.indexOf('หน่วยงานที่รับของ') < form.indexOf('ใบ PR ที่เกี่ยวข้อง'),
+  'the receiving department field must appear before the PR picker',
+)
 assert.match(
   form,
   /departmentPurchaseRequests = purchaseRequests\.filter\(\(request\) => request\.department === department\)/,

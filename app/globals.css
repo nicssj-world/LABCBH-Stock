@@ -2781,6 +2781,10 @@ input[type="number"] {
 .access-toggle__saved { color: var(--lab-green); font-weight: 700; }
 
 .pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
+.pr-review__identifier-field { width: min(100%, 520px); }
+.pr-review__identifier-field input { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.pr-review__identifier-field input:read-only { color: var(--lab-ink); background: color-mix(in srgb, var(--lab-surface-muted) 72%, var(--lab-border-strong)); border-color: var(--lab-border-strong); font-weight: 500; }
+.pr-review__number-action { justify-self: start; min-width: 220px; max-width: 100%; }
 .pr-review__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
 .pr-review__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .pr-review__actions-buttons { display: flex; flex-wrap: wrap; gap: 12px; }

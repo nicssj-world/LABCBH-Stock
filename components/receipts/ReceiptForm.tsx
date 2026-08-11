@@ -28,7 +28,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
   const [purchaseRequestId, setPurchaseRequestId] = useState('')
   const [poNumber, setPoNumber] = useState('')
   const [poFile, setPoFile] = useState<File | null>(null)
-  const [department, setDepartment] = useState(departments[0] ?? '')
+  const [department, setDepartment] = useState('')
   const [receivedDate, setReceivedDate] = useState(() => bangkokIsoDate())
   const [receiverName, setReceiverName] = useState(initialReceiver)
   const [note, setNote] = useState('')
@@ -67,11 +67,16 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
     setLines((current) => current.filter((line) => line.key !== key))
   }
 
-  // Selecting a PR pre-fills its PO number and requested lines. The officer
-  // only needs to complete LOT/Expired and adjust delivered quantities.
+  // The receiving department is selected first, so a PR can never be linked
+  // across departments. Selecting a PR then pre-fills its PO number and
+  // requested lines; the officer only needs to complete LOT/Expired and adjust
+  // delivered quantities.
+  const departmentPurchaseRequests = purchaseRequests.filter((request) => request.department === department)
+  const selectedRequest = departmentPurchaseRequests.find((request) => request.id === purchaseRequestId)
+
   const selectPurchaseRequest = (id: string) => {
-    setPurchaseRequestId(id)
-    const request = purchaseRequests.find((candidate) => candidate.id === id)
+    const request = departmentPurchaseRequests.find((candidate) => candidate.id === id)
+    setPurchaseRequestId(request?.id ?? '')
     setPoNumber(request?.poNumber ?? '')
     setLines(
       request?.items.map((item, index) =>
@@ -79,12 +84,6 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
       ) ?? [],
     )
   }
-
-  const selectedRequest = purchaseRequests.find((request) => request.id === purchaseRequestId)
-
-  // "ใบ PR ที่เกี่ยวข้อง" only offers PRs from the department currently
-  // receiving, so the list stays short as the number of open PRs grows.
-  const departmentPurchaseRequests = purchaseRequests.filter((request) => request.department === department)
 
   const changeDepartment = (nextDepartment: string) => {
     setDepartment(nextDepartment)
@@ -157,9 +156,21 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
         </div>
         <div className="form-grid">
           <label className="field-row">
+            หน่วยงานที่รับของ
+            <select required value={department} onChange={(event) => changeDepartment(event.target.value)} disabled={isPending}>
+              <option value="" disabled>เลือกหน่วยงานที่รับของก่อน</option>
+              {departments.map((department) => <option value={department} key={department}>{department}</option>)}
+            </select>
+            <small className="receipt-pr-hint">เลือกหน่วยงานก่อน เพื่อกรองใบ PR ที่เกี่ยวข้อง</small>
+          </label>
+          <label className="field-row">
             ใบ PR ที่เกี่ยวข้อง
-            <select value={purchaseRequestId} onChange={(event) => selectPurchaseRequest(event.target.value)}>
-              <option value="">ไม่อ้างอิงใบ PR</option>
+            <select
+              value={purchaseRequestId}
+              onChange={(event) => selectPurchaseRequest(event.target.value)}
+              disabled={!department || isPending}
+            >
+              <option value="">{department ? 'ไม่อ้างอิงใบ PR' : 'เลือกหน่วยงานก่อน'}</option>
               {departmentPurchaseRequests.map((request) => (
                 <option key={request.id} value={request.id}>
                   {request.documentNumber} · {request.items.length} รายการ
@@ -167,9 +178,11 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
               ))}
             </select>
             <small className="receipt-pr-hint">
-              {departmentPurchaseRequests.length === 0
-                ? 'หน่วยงานนี้ไม่มีใบ PR ที่รอรับของ'
-                : 'เลือกใบ PR แล้วระบบจะเติมรายการและจำนวนให้โดยอัตโนมัติ'}
+              {!department
+                ? 'กรุณาเลือกหน่วยงานที่รับของก่อน'
+                : departmentPurchaseRequests.length === 0
+                  ? 'หน่วยงานนี้ไม่มีใบ PR ที่รอรับของ'
+                  : 'เลือกใบ PR แล้วระบบจะเติม PO รายการ และจำนวนให้โดยอัตโนมัติ'}
             </small>
           </label>
           <label className="field-row">
@@ -180,14 +193,6 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
             <span>ไฟล์ PO</span>
             <PoFileDropzone file={poFile} onChange={setPoFile} disabled={isPending} />
           </div>
-          <label className="field-row">
-            หน่วยงานที่รับของ
-            <select required value={department} onChange={(event) => changeDepartment(event.target.value)}>
-              {departments.map((department) => (
-                <option value={department} key={department}>{department}</option>
-              ))}
-            </select>
-          </label>
           <label className="field-row">
             วันที่รับของ
             <ThaiDateInput required value={receivedDate} onChange={setReceivedDate} />

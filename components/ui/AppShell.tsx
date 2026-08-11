@@ -99,6 +99,20 @@ export function AppShell({ actor, children }: AppShellProps) {
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [mobileOpen])
 
+  useEffect(() => {
+    // Scrolling over a focused number input must scroll the page, not silently
+    // increment/decrement the value. Blurring preserves the native wheel
+    // scroll and still leaves keyboard entry and the stepper controls intact.
+    const blurNumberInputOnWheel = (event: WheelEvent) => {
+      const target = event.target
+      if (!(target instanceof HTMLInputElement) || target.type !== 'number') return
+      target.blur()
+    }
+
+    document.addEventListener('wheel', blurNumberInputOnWheel, { passive: true })
+    return () => document.removeEventListener('wheel', blurNumberInputOnWheel)
+  }, [])
+
   function toggleTheme() {
     const nextDark = !dark
     setDark(nextDark)
