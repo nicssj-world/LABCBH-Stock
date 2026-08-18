@@ -48,6 +48,16 @@ assert.doesNotMatch(
 )
 assert.match(detailPage, /ชื่อเรียกอื่นที่พบในข้อมูลเดิม/, 'aliases must stay visible for reconciliation')
 
+assert.match(detailPage, /StockAdjustmentDialog/, 'stock operators need a balance-adjustment control on every item detail')
+
+const adjustmentDialog = read('components/inventory/StockAdjustmentDialog.tsx')
+assert.match(adjustmentDialog, /^['"]use client['"]/m)
+assert.match(adjustmentDialog, /setStockBalance/, 'the dialog must submit a counted target balance')
+assert.match(adjustmentDialog, /targetQuantity/, 'the user enters the physical count rather than a signed delta')
+assert.match(adjustmentDialog, /inventoryLotId/, 'the dialog must submit the selected lot')
+assert.match(adjustmentDialog, /ThaiDateInput/, 'adjustments must carry an explicit business date')
+assert.doesNotMatch(adjustmentDialog, /createBrowserClient|supabase\.from/, 'the browser must never mutate Supabase directly')
+
 const table = read('components/inventory/InventoryTable.tsx')
 assert.match(table, /ต้องทำ PR/, 'items at or below minimum must show the Thai call to action')
 assert.match(table, /inventory-table--desktop/, 'desktop table variant must exist')
@@ -95,6 +105,7 @@ assert.match(actions, /^['"]use server['"]/m)
 assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock'/)
 assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock_months'/)
 assert.match(actions, /supabaseAdmin\.rpc\('record_stock_adjustment'/)
+assert.match(actions, /supabaseAdmin\.rpc\('set_stock_balance'/, 'counted balances must be written through the locking RPC')
 assert.match(actions, /assertStockOperator/, 'adjustments require an authorized stock operator')
 assert.match(
   actions,

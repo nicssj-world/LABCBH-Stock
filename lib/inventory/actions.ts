@@ -10,6 +10,7 @@ import {
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   setInventoryItemActiveInputSchema,
+  stockBalanceInputSchema,
   stockAdjustmentInputSchema,
   updateInventoryItemInputSchema,
 } from '@/lib/inventory/schema'
@@ -18,6 +19,7 @@ import type {
   InventoryMinimumStockSettingsInput,
   MinimumStockInput,
   SetInventoryItemActiveInput,
+  StockBalanceInput,
   StockAdjustmentInput,
   UpdateInventoryItemInput,
 } from '@/lib/inventory/types'
@@ -164,6 +166,28 @@ export async function recordStockAdjustment(itemId: string, input: StockAdjustme
     p_inventory_item_id: parsedItemId,
     p_actor_id: actor.id,
     p_quantity: parsed.quantity,
+    p_reason: parsed.reason,
+    p_inventory_lot_id: parsed.inventoryLotId,
+    p_occurred_on: parsed.occurredOn ?? null,
+  })
+
+  const movement = unwrapMutation('ปรับยอดคงคลัง', result)
+  revalidatePath('/inventory')
+  revalidatePath(`/inventory/${parsedItemId}`)
+  revalidatePath('/dashboard')
+  return movement
+}
+
+/** Set a counted balance; the RPC derives the signed adjustment under lock. */
+export async function setStockBalance(itemId: string, input: StockBalanceInput) {
+  const actor = await requireStockOperator()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+  const parsed = stockBalanceInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('set_stock_balance', {
+    p_inventory_item_id: parsedItemId,
+    p_actor_id: actor.id,
+    p_target_quantity: parsed.targetQuantity,
     p_reason: parsed.reason,
     p_inventory_lot_id: parsed.inventoryLotId,
     p_occurred_on: parsed.occurredOn ?? null,

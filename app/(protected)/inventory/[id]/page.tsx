@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
+import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
@@ -60,6 +61,13 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
           {!item.isActive && <StatusChip tone="danger">ปิดใช้งานแล้ว</StatusChip>}
           {canEdit && (
             <>
+              <StockAdjustmentDialog
+                itemId={item.id}
+                itemName={item.name}
+                unit={item.baseUnit}
+                onHand={item.onHand}
+                lots={item.lots}
+              />
               <Link className="lab-link-button lab-link-button--secondary" href={`/inventory/${item.id}/edit`}>
                 แก้ไขข้อมูล
               </Link>

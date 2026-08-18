@@ -17,6 +17,12 @@ const catalogMigrationNames = readdirSync(migrationsDir).filter((name) =>
 assert.equal(catalogMigrationNames.length, 1, 'the inventory catalog creation migration must exist exactly once')
 const catalogSql = readFileSync(join(migrationsDir, catalogMigrationNames[0]), 'utf8')
 
+const balanceMigrationNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_set_stock_balance.sql'),
+)
+assert.equal(balanceMigrationNames.length, 1, 'the counted-balance RPC migration must exist exactly once')
+const balanceSql = readFileSync(join(migrationsDir, balanceMigrationNames[0]), 'utf8')
+
 const TABLES = ['inventory_items', 'inventory_item_aliases', 'inventory_lots', 'stock_movements']
 
 for (const table of TABLES) {
@@ -130,6 +136,26 @@ for (const role of ['public', 'anon', 'authenticated']) {
   )
 }
 assert.match(sql, /grant execute on function public\.record_stock_adjustment[\s\S]*?to service_role/i)
+
+// A counted target is converted to a signed delta after the item/lot locks,
+// so a stale browser snapshot cannot overwrite a concurrent movement.
+assert.match(balanceSql, /create or replace function public\.set_stock_balance\s*\(/i)
+const balanceFunction = balanceSql.match(
+  /create or replace function public\.set_stock_balance[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(balanceFunction, 'set_stock_balance must exist')
+assert.match(balanceFunction, /p_target_quantity numeric/i)
+assert.match(balanceFunction, /for update/i)
+assert.match(balanceFunction, /current_balance/i)
+assert.match(balanceFunction, /p_target_quantity - current_balance/i)
+assert.match(balanceFunction, /must select a lot/i)
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    balanceSql,
+    new RegExp(`revoke execute on function public\\.set_stock_balance[\\s\\S]*?from ${role}`, 'i'),
+  )
+}
+assert.match(balanceSql, /grant execute on function public\.set_stock_balance[\s\S]*?to service_role/i)
 
 assert.match(sql, /create or replace function public\.set_inventory_minimum_stock\s*\(/i)
 assert.match(sql, /grant execute on function public\.set_inventory_minimum_stock[\s\S]*?to service_role/i)

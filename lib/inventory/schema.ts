@@ -81,6 +81,23 @@ export const stockAdjustmentInputSchema = z
   })
   .strict()
 
+/** The physical count to set; the database derives the signed ledger delta. */
+export const stockBalanceInputSchema = z
+  .object({
+    inventoryLotId: z.string().uuid().nullable(),
+    targetQuantity: z
+      .number()
+      .finite()
+      .min(0, 'จำนวนคงเหลือใหม่ต้องไม่ติดลบ')
+      .refine(
+        (value) => Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-8,
+        'จำนวนต้องมีทศนิยมไม่เกิน 3 ตำแหน่ง',
+      ),
+    reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลในการปรับยอด'),
+    occurredOn: isoDateSchema.nullable().optional(),
+  })
+  .strict()
+
 export const inventoryFiltersSchema = z
   .object({
     search: z.string().trim().max(200).optional(),

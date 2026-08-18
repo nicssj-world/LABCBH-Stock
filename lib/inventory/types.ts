@@ -6,6 +6,7 @@ import type {
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   setInventoryItemActiveInputSchema,
+  stockBalanceInputSchema,
   stockAdjustmentInputSchema,
   updateInventoryItemInputSchema,
 } from './schema'
@@ -16,6 +17,7 @@ export type SetInventoryItemActiveInput = z.infer<typeof setInventoryItemActiveI
 export type MinimumStockInput = z.infer<typeof minimumStockInputSchema>
 export type InventoryMinimumStockSettingsInput = z.infer<typeof inventoryMinimumStockSettingsInputSchema>
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>
+export type StockBalanceInput = z.infer<typeof stockBalanceInputSchema>
 export type InventoryFilters = z.infer<typeof inventoryFiltersSchema>
 
 export type AliasKind = 'name' | 'unit' | 'ls_code'
