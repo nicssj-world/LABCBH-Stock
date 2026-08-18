@@ -71,7 +71,7 @@ export const inventoryMinimumStockSettingsInputSchema = z
 
 export const stockAdjustmentInputSchema = z
   .object({
-    inventoryLotId: z.string().uuid().nullable(),
+    inventoryLotId: z.string().uuid('กรุณาเลือกล็อต'),
     quantity: z
       .number()
       .finite()
@@ -85,6 +85,8 @@ export const stockAdjustmentInputSchema = z
 export const stockBalanceInputSchema = z
   .object({
     inventoryLotId: z.string().uuid().nullable(),
+    lotNumber: z.string().trim().min(1, 'กรุณาระบุเลขล็อต').max(200, 'เลขล็อตยาวเกินไป'),
+    expiryDate: isoDateSchema,
     targetQuantity: z
       .number()
       .finite()

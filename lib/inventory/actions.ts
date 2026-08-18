@@ -190,6 +190,8 @@ export async function setStockBalance(itemId: string, input: StockBalanceInput) 
     p_target_quantity: parsed.targetQuantity,
     p_reason: parsed.reason,
     p_inventory_lot_id: parsed.inventoryLotId,
+    p_lot_number: parsed.lotNumber,
+    p_expiry_date: parsed.expiryDate,
     p_occurred_on: parsed.occurredOn ?? null,
   })
 

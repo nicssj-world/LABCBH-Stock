@@ -65,7 +65,6 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
                 itemId={item.id}
                 itemName={item.name}
                 unit={item.baseUnit}
-                onHand={item.onHand}
                 lots={item.lots}
               />
               <Link className="lab-link-button lab-link-button--secondary" href={`/inventory/${item.id}/edit`}>

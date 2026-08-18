@@ -23,6 +23,12 @@ const balanceMigrationNames = readdirSync(migrationsDir).filter((name) =>
 assert.equal(balanceMigrationNames.length, 1, 'the counted-balance RPC migration must exist exactly once')
 const balanceSql = readFileSync(join(migrationsDir, balanceMigrationNames[0]), 'utf8')
 
+const lotExpiryMigrationNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_require_lot_expiry_on_stock_balance.sql'),
+)
+assert.equal(lotExpiryMigrationNames.length, 1, 'the lot-and-expiry enforcement migration must exist exactly once')
+const lotExpirySql = readFileSync(join(migrationsDir, lotExpiryMigrationNames[0]), 'utf8')
+
 const TABLES = ['inventory_items', 'inventory_item_aliases', 'inventory_lots', 'stock_movements']
 
 for (const table of TABLES) {
@@ -156,6 +162,24 @@ for (const role of ['public', 'anon', 'authenticated']) {
   )
 }
 assert.match(balanceSql, /grant execute on function public\.set_stock_balance[\s\S]*?to service_role/i)
+
+// Every manual adjustment now carries a lot with an expiry date. A new lot and
+// its first ledger row are created in the same transaction when needed.
+assert.match(lotExpirySql, /create or replace function public\.record_stock_adjustment\s*\(/i)
+assert.match(lotExpirySql, /stock adjustment requires a lot/i)
+assert.match(lotExpirySql, /stock adjustment requires a lot expiry date/i)
+assert.match(lotExpirySql, /create or replace function public\.set_stock_balance\s*\(/i)
+const lotExpiryFunction = lotExpirySql.match(
+  /create or replace function public\.set_stock_balance[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(lotExpiryFunction, 'the lot-aware set_stock_balance must exist')
+assert.match(lotExpiryFunction, /p_lot_number text/i)
+assert.match(lotExpiryFunction, /p_expiry_date date/i)
+assert.match(lotExpiryFunction, /insert into public\.inventory_lots/i)
+assert.match(lotExpiryFunction, /returning \* into target_lot/i)
+assert.match(lotExpiryFunction, /target_lot\.id,\s*'manual_adjustment'/i)
+assert.match(lotExpirySql, /revoke execute on function public\.set_stock_balance\(uuid, uuid, numeric, text, uuid, date\) from service_role/i)
+assert.match(lotExpirySql, /grant execute on function public\.set_stock_balance\(uuid, uuid, numeric, text, uuid, text, date, date\) to service_role/i)
 
 assert.match(sql, /create or replace function public\.set_inventory_minimum_stock\s*\(/i)
 assert.match(sql, /grant execute on function public\.set_inventory_minimum_stock[\s\S]*?to service_role/i)

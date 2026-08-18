@@ -55,6 +55,9 @@ assert.match(adjustmentDialog, /^['"]use client['"]/m)
 assert.match(adjustmentDialog, /setStockBalance/, 'the dialog must submit a counted target balance')
 assert.match(adjustmentDialog, /targetQuantity/, 'the user enters the physical count rather than a signed delta')
 assert.match(adjustmentDialog, /inventoryLotId/, 'the dialog must submit the selected lot')
+assert.match(adjustmentDialog, /lotNumber/, 'every adjustment must carry a lot number')
+assert.match(adjustmentDialog, /expiryDate/, 'every adjustment must carry an expiry date')
+assert.match(adjustmentDialog, /NEW_LOT/, 'the dialog must support creating a lot when none exists')
 assert.match(adjustmentDialog, /ThaiDateInput/, 'adjustments must carry an explicit business date')
 assert.doesNotMatch(adjustmentDialog, /createBrowserClient|supabase\.from/, 'the browser must never mutate Supabase directly')
 
@@ -106,6 +109,8 @@ assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock'/)
 assert.match(actions, /supabaseAdmin\.rpc\('set_inventory_minimum_stock_months'/)
 assert.match(actions, /supabaseAdmin\.rpc\('record_stock_adjustment'/)
 assert.match(actions, /supabaseAdmin\.rpc\('set_stock_balance'/, 'counted balances must be written through the locking RPC')
+assert.match(actions, /p_lot_number/, 'the Server Action must pass the lot number to the RPC')
+assert.match(actions, /p_expiry_date/, 'the Server Action must pass the expiry date to the RPC')
 assert.match(actions, /assertStockOperator/, 'adjustments require an authorized stock operator')
 assert.match(
   actions,
