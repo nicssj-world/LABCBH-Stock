@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
-import { formatThaiDate } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import {
   PURCHASE_METHOD_LABELS,
   PURCHASE_REQUEST_STATUS_LABELS,
@@ -127,6 +127,31 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
                 </div>
               )}
             </dl>
+
+            <section className="list-summary-dialog__items" aria-labelledby={`${dialogId}-items-title`}>
+              <div className="list-summary-dialog__items-heading">
+                <h3 id={`${dialogId}-items-title`}>รายการน้ำยา</h3>
+                <span>{request.items.length} รายการ</span>
+              </div>
+              {request.items.length > 0 ? (
+                <ol className="list-summary-dialog__item-list">
+                  {request.items.map((item) => (
+                    <li key={item.id} className="list-summary-dialog__item">
+                      <div className="list-summary-dialog__item-identity">
+                        <strong>{item.name}</strong>
+                        <small>{item.lsCode}</small>
+                      </div>
+                      <div className="list-summary-dialog__item-value">
+                        <strong>{formatQuantity(item.requestedQuantity, item.unit)}</strong>
+                        <small>จำนวนที่ขอ</small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="list-summary-dialog__items-empty">ไม่มีรายการน้ำยาในใบนี้</p>
+              )}
+            </section>
           </div>
 
           <footer className="list-summary-dialog__footer">

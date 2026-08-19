@@ -103,6 +103,35 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 </div>
               )}
             </dl>
+
+            <section className="list-summary-dialog__items" aria-labelledby={`${dialogId}-items-title`}>
+              <div className="list-summary-dialog__items-heading">
+                <h3 id={`${dialogId}-items-title`}>รายการน้ำยา</h3>
+                <span>{requisition.items.length} รายการ</span>
+              </div>
+              {requisition.items.length > 0 ? (
+                <ol className="list-summary-dialog__item-list">
+                  {requisition.items.map((item) => (
+                    <li key={item.id} className="list-summary-dialog__item">
+                      <div className="list-summary-dialog__item-identity">
+                        <strong>{item.name}</strong>
+                        <small>{item.lsCode}</small>
+                      </div>
+                      <div className="list-summary-dialog__item-value">
+                        <strong>{formatQuantity(item.requestedQuantity, item.unit)}</strong>
+                        <small>
+                          {item.fulfilledQuantity === null
+                            ? 'จำนวนที่ขอ'
+                            : `จ่ายแล้ว ${formatQuantity(item.fulfilledQuantity, item.unit)}`}
+                        </small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="list-summary-dialog__items-empty">ไม่มีรายการน้ำยาในใบนี้</p>
+              )}
+            </section>
           </div>
 
           <footer className="list-summary-dialog__footer">

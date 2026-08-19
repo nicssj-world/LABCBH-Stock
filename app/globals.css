@@ -1720,6 +1720,25 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .list-summary-dialog__fact--wide { grid-column: 1 / -1; border-right: 0 !important; }
 .list-summary-dialog__facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .list-summary-dialog__facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 700; }
+.list-summary-dialog__items { overflow: hidden; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 12px; }
+.list-summary-dialog__items-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--lab-border); }
+.list-summary-dialog__items-heading h3 { margin: 0; color: var(--lab-ink); font-size: 12px; font-weight: 700; }
+.list-summary-dialog__items-heading span { color: var(--lab-muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.list-summary-dialog__item-list { max-height: min(34dvh, 300px); margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.list-summary-dialog__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--lab-border); }
+.list-summary-dialog__item:last-child { border-bottom: 0; }
+.list-summary-dialog__item-identity,
+.list-summary-dialog__item-value { min-width: 0; }
+.list-summary-dialog__item-identity strong,
+.list-summary-dialog__item-identity small,
+.list-summary-dialog__item-value strong,
+.list-summary-dialog__item-value small { display: block; }
+.list-summary-dialog__item-identity strong { overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; }
+.list-summary-dialog__item-identity small { margin-top: 3px; color: var(--lab-muted); font: 11px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.list-summary-dialog__item-value { align-self: center; text-align: right; white-space: nowrap; }
+.list-summary-dialog__item-value strong { color: var(--lab-navy-strong); font: 500 13px/1.35 var(--font-mono); }
+.list-summary-dialog__item-value small { margin-top: 3px; color: var(--lab-muted); font-size: 10px; font-weight: 600; }
+.list-summary-dialog__items-empty { margin: 0; padding: 16px; color: var(--lab-muted); font-size: 12px; }
 .list-summary-dialog__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 20px; }
 .contract-edit-dialog__body { max-height: calc(min(92dvh, 900px) - 92px); background: var(--lab-canvas); }
 .contract-edit-dialog__body .contract-form { gap: 16px; }

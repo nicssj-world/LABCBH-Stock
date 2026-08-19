@@ -47,6 +47,14 @@ for (const [path, patterns] of Object.entries(requiredSpecs)) {
 const vercelConfig = read('vercel.ts')
 assert.match(vercelConfig, /framework:\s*'nextjs'/)
 assert.match(vercelConfig, /fluid:\s*true/)
+// Functions must run beside the database. Both Supabase projects are in AWS
+// ap-southeast-2, and the unset default put the functions in iad1 — every
+// query crossed the Pacific twice, and a page makes at least two in sequence.
+assert.match(
+  vercelConfig,
+  /regions:\s*\['syd1'\]/,
+  'serverless functions must stay co-located with the ap-southeast-2 database',
+)
 
 // Vercel CLI does not inherit every project-specific Git ignore. Keep database
 // dumps and local import inputs out of the upload manifest explicitly.

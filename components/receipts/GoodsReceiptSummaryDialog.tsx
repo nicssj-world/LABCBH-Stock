@@ -99,6 +99,34 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
                 </div>
               )}
             </dl>
+
+            <section className="list-summary-dialog__items" aria-labelledby={`${dialogId}-items-title`}>
+              <div className="list-summary-dialog__items-heading">
+                <h3 id={`${dialogId}-items-title`}>รายการน้ำยา</h3>
+                <span>{receipt.items.length} รายการ</span>
+              </div>
+              {receipt.items.length > 0 ? (
+                <ol className="list-summary-dialog__item-list">
+                  {receipt.items.map((item) => (
+                    <li key={item.id} className="list-summary-dialog__item">
+                      <div className="list-summary-dialog__item-identity">
+                        <strong>{item.name}</strong>
+                        <small>
+                          {item.lsCode} · ล็อต {item.lotNumber}
+                          {item.expiryDate ? ` · หมดอายุ ${formatThaiDate(item.expiryDate)}` : ''}
+                        </small>
+                      </div>
+                      <div className="list-summary-dialog__item-value">
+                        <strong>{formatQuantity(item.quantity, item.unit)}</strong>
+                        <small>รับเข้า</small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="list-summary-dialog__items-empty">ไม่มีรายการน้ำยาในใบนี้</p>
+              )}
+            </section>
           </div>
 
           <footer className="list-summary-dialog__footer">

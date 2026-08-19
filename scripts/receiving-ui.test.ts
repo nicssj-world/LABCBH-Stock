@@ -32,6 +32,9 @@ assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the s
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{GOODS_RECEIPT_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /DetailIconLink/, 'the receipt popup detail route must use the shared icon link')
+assert.match(summaryDialog, /รายการน้ำยา/, 'the receipt popup must show its reagent section')
+assert.match(summaryDialog, /receipt\.items\.map/, 'the receipt popup must list every received reagent lot')
+assert.match(summaryDialog, /ล็อต \{item\.lotNumber\}/, 'the receipt popup must keep the lot identity with each reagent')
 
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)
