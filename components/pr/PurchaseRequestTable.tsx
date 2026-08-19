@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { PurchaseRequestSummaryDialog } from '@/components/pr/PurchaseRequestSummaryDialog'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import {
@@ -62,7 +62,13 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                   </StatusChip>
                 </td>
                 <td>
-                  <Link className="text-link" href={`/purchase-requests/${request.id}`}>ดูรายละเอียด</Link>
+                  <div className="detail-actions">
+                    <DetailIconLink
+                      href={`/purchase-requests/${request.id}`}
+                      label={`ดูรายละเอียดใบ PR ${request.documentNumber}`}
+                      title="ดูรายละเอียดใบ PR"
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -86,9 +92,13 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
               {PURCHASE_METHOD_LABELS[request.purchaseMethod]} · {formatThaiDate(request.requestedDate)}
               {request.purchaseMethod !== 'equipment_lease' && ` · ${request.items.length} รายการ`}
             </p>
-            <Link className="text-link task-card__action" href={`/purchase-requests/${request.id}`}>
-              ดูรายละเอียดใบ PR
-            </Link>
+            <div className="detail-actions task-card__action">
+              <DetailIconLink
+                href={`/purchase-requests/${request.id}`}
+                label={`ดูรายละเอียดใบ PR ${request.documentNumber}`}
+                title="ดูรายละเอียดใบ PR"
+              />
+            </div>
           </li>
         ))}
       </ul>

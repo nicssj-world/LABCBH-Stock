@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
@@ -137,7 +138,15 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                           {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}
                         </StatusChip>
                       </td>
-                      <td><Link className="text-link" href={`/receipts/${receipt.id}`}>ดูรายละเอียด</Link></td>
+                      <td>
+                        <div className="detail-actions">
+                          <DetailIconLink
+                            href={`/receipts/${receipt.id}`}
+                            label={`ดูรายละเอียดใบรับเข้า ${receipt.poNumber ?? receipt.purchaseRequestNumber ?? receipt.id}`}
+                            title="ดูรายละเอียดใบรับเข้า"
+                          />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

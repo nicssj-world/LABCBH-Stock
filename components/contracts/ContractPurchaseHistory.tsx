@@ -1,8 +1,8 @@
 'use client'
 
 import { useId, useRef, useState } from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import {
@@ -150,9 +150,12 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
             </div>
 
             <footer className="contract-summary-dialog__footer">
-              <Link className="lab-link-button lab-link-button--primary" href={`/purchase-requests/${selected.id}`} onClick={closeSummary}>
-                เปิดรายละเอียดเต็ม
-              </Link>
+              <DetailIconLink
+                href={`/purchase-requests/${selected.id}`}
+                label={`เปิดรายละเอียดเต็มใบ PR ${selected.documentNumber}`}
+                title="เปิดรายละเอียดเต็มใบ PR"
+                onClick={closeSummary}
+              />
               <Button variant="secondary" onClick={closeSummary}>ปิด</Button>
             </footer>
           </>

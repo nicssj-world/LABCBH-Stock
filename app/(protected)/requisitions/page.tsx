@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
@@ -142,7 +143,13 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                         </StatusChip>
                       </td>
                       <td>
-                        <Link className="text-link" href={`/requisitions/${requisition.id}`}>ดูรายละเอียด</Link>
+                        <div className="detail-actions">
+                          <DetailIconLink
+                            href={`/requisitions/${requisition.id}`}
+                            label={`ดูรายละเอียดใบเบิก ${requisition.documentNumber}`}
+                            title="ดูรายละเอียดใบเบิก"
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

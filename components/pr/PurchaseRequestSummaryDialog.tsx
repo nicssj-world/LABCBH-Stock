@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import {
@@ -129,9 +130,12 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
         </div>
 
         <footer className="list-summary-dialog__footer">
-          <Link className="lab-link-button lab-link-button--primary" href={`/purchase-requests/${request.id}`} onClick={closeDialog}>
-            เปิดรายละเอียดเต็ม
-          </Link>
+          <DetailIconLink
+            href={`/purchase-requests/${request.id}`}
+            label={`เปิดรายละเอียดเต็มใบ PR ${request.documentNumber}`}
+            title="เปิดรายละเอียดเต็มใบ PR"
+            onClick={closeDialog}
+          />
           <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
         </footer>
       </dialog>

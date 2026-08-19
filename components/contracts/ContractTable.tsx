@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { ContractItemsDisclosure } from '@/components/contracts/ContractItemsDisclosure'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ContractSummaryDialog } from '@/components/contracts/ContractSummaryDialog'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import type { PresentedContract } from '@/lib/contracts/presenter'
 
@@ -61,7 +61,15 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                 <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
                 <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td><ContractRemainingGauge percent={contract.remainingPercent} /></td>
-                <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
+                <td>
+                  <div className="detail-actions">
+                    <DetailIconLink
+                      href={`/contracts/${contract.id}`}
+                      label={`ดูรายละเอียดสัญญา ${contract.contractNumberLabel}`}
+                      title="ดูรายละเอียดสัญญา"
+                    />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -87,7 +95,13 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                 {contract.expiryNotice.label}
               </p>
             )}
-            <Link className="text-link task-card__action" href={`/contracts/${contract.id}`}>ดูรายละเอียดสัญญา</Link>
+            <div className="detail-actions task-card__action">
+              <DetailIconLink
+                href={`/contracts/${contract.id}`}
+                label={`ดูรายละเอียดสัญญา ${contract.contractNumberLabel}`}
+                title="ดูรายละเอียดสัญญา"
+              />
+            </div>
           </li>
         ))}
       </ul>

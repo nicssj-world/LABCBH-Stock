@@ -97,9 +97,37 @@
   --font-mono: "DM Mono", ui-monospace, monospace;
   --radius-control: 10px;
   --radius-panel: 14px;
-  --lab-shadow-panel: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .05);
-  --lab-shadow-float: 0 18px 44px rgba(15, 23, 42, .18);
-  --motion-fast: 180ms;
+  /* Type scale. Sizes already in use across the file, named so new work has a
+     step to land on instead of inventing 13.5px. */
+  --text-3xl: 26px;
+  --text-2xl: 21px;
+  --text-xl: 18px;
+  --text-lg: 15px;
+  --text-base: 14px;
+  --text-sm: 13px;
+  --text-xs: 12px;
+  --text-2xs: 11px;
+  --text-3xs: 10px;
+  /* The 8px rhythm this file's own Layout section promises. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  /* The Flat Bench Rule: a resting work surface carries no shadow, so the
+     panel token is none and every resting surface keeps its 1px border as the
+     only separation. --raised is for a hovered or genuinely lifted control,
+     --float for a dialog or menu that is actually stacked above the page. */
+  --lab-shadow-panel: none;
+  --lab-shadow-raised: 0 1px 2px rgba(15, 23, 42, .05), 0 2px 8px rgba(15, 23, 42, .04);
+  --lab-shadow-float: 0 16px 48px -12px rgba(15, 23, 42, .22), 0 4px 12px rgba(15, 23, 42, .08);
+  /* Neutral interaction tint. Hover is not a status, so it must not spend the
+     accent hue — see the Semantic Accent Rule. */
+  --lab-hover: color-mix(in srgb, var(--lab-ink) 4%, transparent);
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
 }
 
 [data-theme="dark"] {
@@ -130,8 +158,12 @@
   --cat-teal: #0d9488;
   --cat-violet: #8b5cf6;
   --cat-sky: #0284c7;
-  --lab-shadow-panel: 0 1px 2px rgba(0, 0, 0, .25), 0 12px 30px rgba(0, 0, 0, .2);
-  --lab-shadow-float: 0 18px 44px rgba(0, 0, 0, .46);
+  --lab-shadow-panel: none;
+  --lab-shadow-raised: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 8px rgba(0, 0, 0, .25);
+  --lab-shadow-float: 0 16px 48px -12px rgba(0, 0, 0, .6), 0 4px 12px rgba(0, 0, 0, .4);
+  /* Lifted off the surface rather than pressed into it, so the dark tint is
+     white at low alpha, not more black on an already dark ground. */
+  --lab-hover: color-mix(in srgb, #ffffff 6%, transparent);
 }
 
 * {
@@ -188,8 +220,42 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--lab-focus) 72%, transparent);
+  outline: 2px solid var(--lab-focus);
   outline-offset: 2px;
+}
+
+/*
+ * Surfaces the browser draws for us. Left at their defaults they belong to no
+ * design system and are the clearest tell that a page was assembled rather
+ * than built, so they are themed from the same tokens as everything else.
+ */
+::selection {
+  color: #ffffff;
+  background: color-mix(in srgb, var(--lab-primary) 85%, transparent);
+}
+
+:root {
+  scrollbar-color: var(--lab-border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-thumb {
+  background: var(--lab-border-strong);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover { background: var(--lab-muted); background-clip: content-box; }
+
+input,
+select,
+textarea {
+  caret-color: var(--lab-primary);
+  accent-color: var(--lab-primary);
 }
 
 .app-shell {
@@ -551,14 +617,15 @@ button {
 .status-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 5px 10px;
+  min-height: 26px;
+  padding: var(--space-1) 10px;
   border: 1px solid var(--lab-border-strong);
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: 8px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .status-chip--neutral { color: var(--lab-muted); background: var(--lab-surface-muted); }
@@ -583,8 +650,8 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
-  padding: 18px 20px;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--lab-border);
 }
 
@@ -664,16 +731,16 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 9px 17px;
+  padding: 10px var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   font-weight: 700;
   cursor: pointer;
-  transition: background-color var(--motion-fast) ease-out, border-color var(--motion-fast) ease-out, color var(--motion-fast) ease-out, box-shadow var(--motion-fast) ease-out;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
 }
 
 .lab-button--primary { color: #ffffff; background: var(--lab-navy); border-color: var(--lab-navy); }
-.lab-button--primary:hover:not(:disabled) { background: var(--lab-navy-strong); box-shadow: 0 6px 16px rgba(30, 95, 173, .2); }
+.lab-button--primary:hover:not(:disabled) { background: var(--lab-navy-strong); box-shadow: var(--lab-shadow-raised); }
 .lab-button--secondary { color: var(--lab-navy); background: var(--lab-surface); border-color: var(--lab-border-strong); }
 .lab-button--secondary:hover:not(:disabled) { background: var(--lab-surface-muted); }
 .lab-button--danger { color: #ffffff; background: var(--lab-red); border-color: var(--lab-red); }
@@ -1354,24 +1421,29 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .data-table th,
 .data-table td {
-  padding: 13px 15px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--lab-border);
   text-align: left;
   vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 
+/* The header is a label row, not a filled band: a single stronger rule
+   separates it, which keeps the eye on the data below it. */
 .data-table th {
   color: var(--lab-muted);
-  background: var(--lab-surface-muted);
-  font-size: 11px;
+  background: transparent;
+  border-bottom: 1px solid var(--lab-border-strong);
+  font-size: var(--text-2xs);
   font-weight: 700;
-  letter-spacing: .01em;
+  letter-spacing: .04em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .data-table tbody tr:last-child td { border-bottom: 0; }
-.data-table tbody tr { transition: background-color var(--motion-fast) ease-out; }
-.data-table tbody tr:hover { background: var(--lab-primary-soft); }
+.data-table tbody tr { transition: background-color var(--motion-fast) var(--ease-out); }
+.data-table tbody tr:hover { background: var(--lab-hover); }
 .data-table td strong,
 .data-table td small { display: block; }
 .data-table td small { margin-top: 3px; color: var(--lab-muted); font-size: 11px; }
@@ -1888,7 +1960,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .inventory-table--desktop { overflow-x: auto; }
 
-.inventory-actions {
+.inventory-actions,
+.detail-actions {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -1913,7 +1986,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   overflow-wrap: anywhere;
 }
 
-.inventory-action-icon {
+.inventory-action-icon,
+.detail-action-icon {
   display: inline-grid;
   place-items: center;
   width: 44px;
@@ -1926,12 +2000,14 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out;
 }
 
-.inventory-action-icon:hover {
+.inventory-action-icon:hover,
+.detail-action-icon:hover {
   color: var(--lab-primary-strong);
   background: var(--lab-primary-soft);
 }
 
-.inventory-action-icon:focus-visible {
+.inventory-action-icon:focus-visible,
+.detail-action-icon:focus-visible {
   outline: 2px solid var(--lab-primary);
   outline-offset: 2px;
 }
@@ -1942,7 +2018,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .inventory-action-icon--success:hover { color: var(--lab-green); background: var(--lab-green-soft); }
 .inventory-action-icon:disabled { cursor: not-allowed; opacity: .48; }
 
-.inventory-action-icon svg {
+.inventory-action-icon svg,
+.detail-action-icon svg {
   width: 18px;
   height: 18px;
 }
@@ -2811,7 +2888,22 @@ input[type="number"] {
   border-radius: var(--radius-control);
 }
 
-.requisition-line__identity { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+/*
+ * The remove control belongs on the row it removes. The minimum-stock warning
+ * below spans every column, so under auto-placement the button was pushed onto
+ * a row of its own, stretched across the full first track, and its label came
+ * to rest in the middle of the card looking unmoored. Placing it explicitly
+ * keeps it top-right whether or not the warning is showing.
+ */
+.requisition-line-list li > .lab-button {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+/* max-content, not a hard 88px: a long code wrapped mid-number and crowded the
+   name beside it. Short codes still line up on the same 88px step. */
+.requisition-line__identity { display: grid; grid-template-columns: minmax(88px, max-content) minmax(0, 1fr); gap: 12px; font-size: 13px; }
 .requisition-line__identity small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
 .requisition-line__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .requisition-line__readonly-note {
@@ -2951,6 +3043,8 @@ input[type="number"] {
   .item-picker__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .receipt-line-list li { grid-template-columns: 1fr; gap: 12px; }
   .requisition-line-list li { grid-template-columns: 1fr; gap: 12px; }
+  /* Single column here, so release the explicit desktop placement. */
+  .requisition-line-list li > .lab-button { grid-column: auto; grid-row: auto; justify-self: start; }
   .lot-picker li { grid-template-columns: minmax(0, 1fr) auto; }
   .lot-picker__quantity { grid-column: 1 / -1; }
   .filter-bench { grid-template-columns: repeat(3, minmax(0, 1fr)); }

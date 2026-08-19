@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { GOODS_RECEIPT_STATUS_LABELS, GOODS_RECEIPT_STATUS_TONES } from '@/lib/receipts/presenter'
@@ -102,9 +102,12 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
         </div>
 
         <footer className="list-summary-dialog__footer">
-          <Link className="lab-link-button lab-link-button--primary" href={`/receipts/${receipt.id}`} onClick={closeDialog}>
-            เปิดรายละเอียดเต็ม
-          </Link>
+          <DetailIconLink
+            href={`/receipts/${receipt.id}`}
+            label={`เปิดรายละเอียดเต็มใบรับเข้า ${title}`}
+            title="เปิดรายละเอียดเต็มใบรับเข้า"
+            onClick={closeDialog}
+          />
           <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
         </footer>
       </dialog>

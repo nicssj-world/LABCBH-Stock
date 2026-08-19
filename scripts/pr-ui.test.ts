@@ -100,7 +100,7 @@ assert.match(
 )
 assert.match(
   styles,
-  /\.data-table input\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
+  /\.data-table (?:input|:is\(td, th\) > input)\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
   'quantity/price inputs inside a data-table must render a visible border, not rely on the bare browser default',
 )
 assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%, 520px\)/, 'PR and PO identifiers should not stretch across the full review card')
@@ -194,7 +194,8 @@ assert.doesNotMatch(queries, /supabaseAdmin/, 'PR reads stay under RLS')
 const table = read('components/pr/PurchaseRequestTable.tsx')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\}/, 'the desktop row must open the mini summary popup, not a plain cell')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\} variant="card"/, 'the mobile card must open the same popup')
-assert.match(table, /ดูรายละเอียด/, 'the trailing detail link must remain alongside the new popup trigger')
+assert.match(table, /DetailIconLink/, 'the trailing detail action must use the shared icon link')
+assert.doesNotMatch(table, /<Link[^>]*>\s*ดูรายละเอียด/, 'the trailing detail action must not render a visible text label')
 
 const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)
@@ -203,6 +204,7 @@ assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showM
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{PURCHASE_REQUEST_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /createdContractId/, 'a PR that opened a contract must link to it from the popup')
+assert.match(summaryDialog, /DetailIconLink/, 'the popup detail route must use the shared icon link')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/purchase-requests/)

@@ -1,9 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useRef, useState, useTransition } from 'react'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { Button } from '@/components/ui/Button'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { contractFileUrl } from '@/lib/contracts/file-actions'
 import type { PresentedContract } from '@/lib/contracts/presenter'
@@ -160,9 +160,12 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
               </svg>
             </Button>
           )}
-          <Link className="lab-link-button lab-link-button--primary" href={`/contracts/${contract.id}`} onClick={closeDialog}>
-            เปิดรายละเอียดเต็ม
-          </Link>
+          <DetailIconLink
+            href={`/contracts/${contract.id}`}
+            label={`เปิดรายละเอียดเต็มสัญญา ${contract.contractNumberLabel}`}
+            title="เปิดรายละเอียดเต็มสัญญา"
+            onClick={closeDialog}
+          />
           <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
         </footer>
       </dialog>

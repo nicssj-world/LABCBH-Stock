@@ -12,6 +12,7 @@ assert.match(listPage, /AutoFilterBench/, 'receiving filters must update the lis
 assert.doesNotMatch(listPage, /แสดงผล/, 'receiving filters must not require an apply button')
 assert.doesNotMatch(listPage, /^['"]use client['"]/m)
 assert.match(listPage, /GoodsReceiptSummaryDialog receipt=\{receipt\}/, 'the list row must open the mini summary popup, not a plain PO cell')
+assert.match(listPage, /DetailIconLink/, 'the receipt detail action must use the shared icon link')
 assert.match(listPage, /GOODS_RECEIPT_STATUS_LABELS|GOODS_RECEIPT_STATUS_TONES/, 'the list page must use the shared receipts presenter, not a local status map')
 
 const receiptPresenter = read('lib/receipts/presenter.ts')
@@ -24,6 +25,7 @@ assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
 assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{GOODS_RECEIPT_STATUS_TONES/, 'status must never be a bare colored word')
+assert.match(summaryDialog, /DetailIconLink/, 'the receipt popup detail route must use the shared icon link')
 
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)

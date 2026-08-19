@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requisitions/presenter'
@@ -106,9 +106,12 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
         </div>
 
         <footer className="list-summary-dialog__footer">
-          <Link className="lab-link-button lab-link-button--primary" href={`/requisitions/${requisition.id}`} onClick={closeDialog}>
-            เปิดรายละเอียดเต็ม
-          </Link>
+          <DetailIconLink
+            href={`/requisitions/${requisition.id}`}
+            label={`เปิดรายละเอียดเต็มใบเบิก ${requisition.documentNumber}`}
+            title="เปิดรายละเอียดเต็มใบเบิก"
+            onClick={closeDialog}
+          />
           <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
         </footer>
       </dialog>
