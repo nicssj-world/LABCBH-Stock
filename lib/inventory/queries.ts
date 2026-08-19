@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { z } from 'zod'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { rankLotsForFifo } from '@/lib/requisitions/fifo'
@@ -119,19 +120,37 @@ function buildMonthlyIssues(
   return monthKeys.map((month) => issuesByMonth.get(month) ?? 0)
 }
 
-async function readBalancesAndIssues(supabase: Awaited<ReturnType<typeof createClient>>, itemIds: string[]) {
+/**
+ * Reads on-hand and the completed-month issue history.
+ *
+ * `itemIds` narrows both views; omitting it reads them whole. A list needs the
+ * whole thing anyway and cannot know the ids until its own query returns, so
+ * leaving the filter off is what lets the caller run this in parallel with the
+ * item query instead of waiting a second round-trip for it. Both views carry
+ * one row per item (per item-month over three months for issues), so reading
+ * them whole stays proportional to the catalogue, and on staging it measured
+ * faster than the filtered form — a 196-id `in` list alone is a ~7KB URL.
+ */
+async function readBalancesAndIssues(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itemIds?: string[],
+) {
   const today = bangkokToday()
   const monthKeys = completedMonthKeys(today)
 
-  const [balanceResult, issueResult] = await Promise.all([
-    supabase.from('inventory_item_balances').select('inventory_item_id, on_hand').in('inventory_item_id', itemIds),
-    supabase
-      .from('inventory_item_monthly_issues')
-      .select('inventory_item_id, issue_month, issued_quantity')
-      .in('inventory_item_id', itemIds)
-      .gte('issue_month', monthKeys[0])
-      .lte('issue_month', monthKeys[monthKeys.length - 1]),
-  ])
+  let balanceQuery = supabase.from('inventory_item_balances').select('inventory_item_id, on_hand')
+  let issueQuery = supabase
+    .from('inventory_item_monthly_issues')
+    .select('inventory_item_id, issue_month, issued_quantity')
+    .gte('issue_month', monthKeys[0])
+    .lte('issue_month', monthKeys[monthKeys.length - 1])
+
+  if (itemIds) {
+    balanceQuery = balanceQuery.in('inventory_item_id', itemIds)
+    issueQuery = issueQuery.in('inventory_item_id', itemIds)
+  }
+
+  const [balanceResult, issueResult] = await Promise.all([balanceQuery, issueQuery])
 
   if (balanceResult.error) throw new Error(`อ่านยอดคงเหลือไม่สำเร็จ: ${balanceResult.error.message}`)
   if (issueResult.error) throw new Error(`อ่านประวัติการเบิกจ่ายไม่สำเร็จ: ${issueResult.error.message}`)
@@ -180,8 +199,14 @@ function toItemRecord(
 
 const minimumStockSettingsRowSchema = z.object({ minimum_stock_months: numericSchema })
 
-/** One system-wide reserve-months value drives every item's suggested minimum. */
-export async function getInventoryMinimumStockMonths(): Promise<number> {
+/**
+ * One system-wide reserve-months value drives every item's suggested minimum.
+ *
+ * Cached per request the way requireActor() is: the inventory page reads this
+ * for its own header and listInventoryItems reads it again to resolve each
+ * item's minimum, which was two identical round-trips on every render.
+ */
+export const getInventoryMinimumStockMonths = cache(async (): Promise<number> => {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('inventory_minimum_stock_settings')
@@ -191,7 +216,7 @@ export async function getInventoryMinimumStockMonths(): Promise<number> {
 
   if (error) throw new Error(`อ่านค่าจำนวนเดือนสำรองไม่สำเร็จ: ${error.message}`)
   return data ? minimumStockSettingsRowSchema.parse(data).minimum_stock_months : DEFAULT_MINIMUM_STOCK_MONTHS
-}
+})
 
 export async function listInventoryItems(
   filters: InventoryFilters = {},
@@ -207,16 +232,17 @@ export async function listInventoryItems(
     query = query.or(`ls_code.ilike.%${search}%,name.ilike.%${search}%`)
   }
 
-  const { data, error } = await query
+  // All three run together. Feeding the item ids into the balance read would
+  // force it to wait for the item query to come back first, and that second
+  // serial round-trip was most of the delay behind every keystroke in the
+  // list's search box.
+  const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, minimumStockMonths] =
+    await Promise.all([query, readBalancesAndIssues(supabase), getInventoryMinimumStockMonths()])
+
   if (error) throw new Error(`อ่านรายการคลังไม่สำเร็จ: ${error.message}`)
 
   const rows = itemRowSchema.array().parse(data ?? [])
   if (rows.length === 0) return []
-
-  const [{ monthKeys, onHandByItem, issuesByItem }, minimumStockMonths] = await Promise.all([
-    readBalancesAndIssues(supabase, rows.map((row) => row.id)),
-    getInventoryMinimumStockMonths(),
-  ])
 
   return rows.map((row) =>
     toItemRecord(
