@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { EditIcon } from '@/components/inventory/InventoryDetailIcons'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { MinimumStockEditor } from '@/components/inventory/MinimumStockEditor'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -32,6 +33,7 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
               <th className="numeric-cell">ขั้นต่ำ</th>
               <th className="numeric-cell">ราคาต่อหน่วย</th>
               <th>สถานะ</th>
+              <th>หมายเหตุ</th>
               <th><span className="visually-hidden">เปิดรายละเอียด / แก้ไข</span></th>
             </tr>
           </thead>
@@ -65,11 +67,19 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
                   {!item.isActive && <StatusChip tone="danger">ปิดใช้งาน</StatusChip>}
                   {needsPurchaseRequest(item) && <small className="cell-callout">ต้องทำ PR</small>}
                 </td>
+                <td className="inventory-note-cell">{item.note ?? '—'}</td>
                 <td>
                   <Link className="text-link" href={`/inventory/${item.id}`}>ดูรายละเอียด</Link>
                   {canEdit && (
                     <>
-                      <Link className="text-link" href={`/inventory/${item.id}/edit`}>แก้ไข</Link>
+                      <Link
+                        className="inventory-action-icon"
+                        href={`/inventory/${item.id}/edit`}
+                        aria-label={`แก้ไขข้อมูล ${item.name}`}
+                        title="แก้ไขข้อมูลน้ำยา"
+                      >
+                        <EditIcon />
+                      </Link>
                       <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} compact />
                     </>
                   )}
@@ -94,6 +104,7 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
               คงเหลือ {formatQuantity(item.onHand, item.baseUnit)} · ขั้นต่ำ{' '}
               {formatQuantity(item.minimumStock, item.baseUnit)} · ราคาต่อหน่วย {formatBaht(item.defaultUnitPrice)}
             </p>
+            <p className="inventory-note-cell"><strong>หมายเหตุ:</strong> {item.note ?? '—'}</p>
             {!item.isActive && <p className="task-card__callout">ปิดใช้งาน</p>}
             {needsPurchaseRequest(item) && <p className="task-card__callout">ต้องทำ PR</p>}
             {canEdit && (
@@ -110,8 +121,13 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
             </Link>
             {canEdit && (
               <>
-                <Link className="text-link task-card__action" href={`/inventory/${item.id}/edit`}>
-                  แก้ไขข้อมูล
+                <Link
+                  className="inventory-action-icon task-card__action"
+                  href={`/inventory/${item.id}/edit`}
+                  aria-label={`แก้ไขข้อมูล ${item.name}`}
+                  title="แก้ไขข้อมูลน้ำยา"
+                >
+                  <EditIcon />
                 </Link>
                 <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} />
               </>

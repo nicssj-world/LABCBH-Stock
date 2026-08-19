@@ -58,6 +58,7 @@ export interface InventoryItemRecord {
   name: string
   baseUnit: string
   responsibleDepartment: string | null
+  note: string | null
   defaultUnitPrice: number | null
   minimumStockMonths: number
   minimumStockOverride: number | null
@@ -73,7 +74,6 @@ export interface InventoryItemRecord {
 }
 
 export interface InventoryItemDetail extends InventoryItemRecord {
-  note: string | null
   aliases: InventoryAliasRecord[]
   lots: InventoryLotRecord[]
   recentMovements: StockMovementRecord[]

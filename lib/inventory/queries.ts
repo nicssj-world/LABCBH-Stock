@@ -165,6 +165,7 @@ function toItemRecord(
     name: row.name,
     baseUnit: row.base_unit,
     responsibleDepartment: row.responsible_department,
+    note: row.note,
     defaultUnitPrice: row.default_unit_price,
     minimumStockMonths,
     minimumStockOverride: row.minimum_stock_override,

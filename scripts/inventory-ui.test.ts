@@ -41,6 +41,7 @@ const detailPage = read('app/(protected)/inventory/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 params must be awaited')
 assert.match(detailPage, /getInventoryItem\(/)
 assert.match(detailPage, /LotTable/)
+assert.match(detailPage, /item\.note/, 'the item note must be visible on the detail page')
 assert.doesNotMatch(
   detailPage,
   /MinimumStockEditor/,
@@ -69,6 +70,9 @@ assert.match(table, /คงเหลือ/)
 assert.match(table, /ขั้นต่ำ/)
 assert.match(table, /MinimumStockEditor/, 'the catalog row is where the per-item override now lives')
 assert.match(table, /canEdit/, 'the override trigger must be gated by edit permission')
+assert.match(table, /<th>หมายเหตุ<\/th>/, 'the catalog must show the item note after status')
+assert.match(table, /inventory-note-cell/, 'item notes must remain visible in both catalog layouts')
+assert.match(table, /inventory-action-icon/, 'the edit action must use an icon affordance')
 
 const lotTable = read('components/inventory/LotTable.tsx')
 assert.match(lotTable, /เลขที่ล็อต/)
@@ -124,6 +128,7 @@ assert.match(queries, /createClient/, 'catalog reads stay under RLS')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'reads must not escalate to the service role')
 assert.match(queries, /stock_movements/, 'balances come from the movement ledger')
 assert.match(queries, /getInventoryMinimumStockMonths/, 'the suggested minimum must read the shared setting')
+assert.match(queries, /note: row\.note/, 'the catalog record must carry the stored item note')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/inventory/, 'the shell must link to the inventory catalog')

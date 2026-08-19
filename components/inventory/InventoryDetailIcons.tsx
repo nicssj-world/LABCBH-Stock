@@ -47,3 +47,13 @@ export function PriceTagIcon() {
     </svg>
   )
 }
+
+export function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="m14.5 5.5 4 4" />
+      <path d="m4 20 3.7-.8L19.6 7.3a2.1 2.1 0 0 0-3-3L4.7 16.2 4 20Z" />
+      <path d="M13 7 17 11" />
+    </svg>
+  )
+}

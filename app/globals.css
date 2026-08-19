@@ -1875,6 +1875,40 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .inventory-table--desktop { overflow-x: auto; }
 
+.inventory-note-cell {
+  min-width: 180px;
+  max-width: 320px;
+  color: var(--lab-muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.inventory-action-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--lab-primary);
+  border-radius: var(--radius-control);
+  vertical-align: middle;
+  transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out;
+}
+
+.inventory-action-icon:hover {
+  color: var(--lab-primary-strong);
+  background: var(--lab-primary-soft);
+}
+
+.inventory-action-icon:focus-visible {
+  outline: 2px solid var(--lab-primary);
+  outline-offset: 2px;
+}
+
+.inventory-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
 .inventory-task-cards {
   display: none;
   margin: 0;
@@ -1890,6 +1924,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .inventory-task-cards li:last-child { border-bottom: 0; }
 .inventory-task-cards h3 { margin: 12px 0 4px; font-size: 16px; }
 .inventory-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.inventory-task-cards .inventory-note-cell { min-width: 0; max-width: none; margin-top: 8px; }
+.inventory-task-cards .inventory-note-cell strong { display: inline; color: var(--lab-ink); }
 
 /* The call to action is text, never colour alone, so it survives greyscale. */
 .cell-callout {
@@ -1918,6 +1954,25 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   font-weight: 600;
 }
 .inline-alert--info { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 32%, var(--lab-border)); }
+
+.inventory-detail__note {
+  display: grid;
+  gap: 3px;
+  max-width: 72ch;
+  margin: 10px 0 0;
+  color: var(--lab-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.inventory-detail__note strong {
+  color: var(--lab-ink);
+  font-size: 11px;
+}
+
+.inventory-detail__note span {
+  overflow-wrap: anywhere;
+}
 
 .inventory-detail-grid {
   display: grid;
