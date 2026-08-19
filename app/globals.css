@@ -2814,6 +2814,19 @@ input[type="number"] {
 .requisition-line__identity { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; font-size: 13px; }
 .requisition-line__identity small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
 .requisition-line__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.requisition-line__readonly-note {
+  color: var(--lab-muted) !important;
+  background: var(--lab-surface-muted) !important;
+  border-color: var(--lab-border) !important;
+  cursor: not-allowed;
+}
+
+.requisition-line__readonly-note:hover,
+.requisition-line__readonly-note:focus {
+  border-color: var(--lab-border) !important;
+  box-shadow: none !important;
+}
+
 .requisition-line__warning { grid-column: 1 / -1; margin: 0; color: var(--lab-amber); font-size: 12px; font-weight: 700; }
 
 .lot-picker { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }

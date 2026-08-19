@@ -26,6 +26,7 @@ assert.doesNotMatch(summaryDialog, /toDataURL|<img/, 'the popup must not render 
 assert.match(newPage, /RequisitionForm/)
 assert.match(newPage, /DEPARTMENTS/)
 assert.match(newPage, /departments=\{DEPARTMENTS\}/)
+assert.match(newPage, /note: item\.note/, 'the requisition catalog must carry each inventory note')
 
 const form = read('components/requisitions/RequisitionForm.tsx')
 assert.match(form, /departments: readonly string\[\]/)
@@ -33,6 +34,10 @@ assert.match(form, /<select required value=\{department\}/)
 assert.match(form, /\{departments\.map\(\(department\)/)
 assert.doesNotMatch(form, /<input type="text" required value=\{department\}/)
 assert.match(form, /CatalogItemCombobox/, 'requisition items must be searchable by typing')
+assert.match(form, /note: string \| null/, 'requisition catalog items must include the inventory note')
+assert.match(form, /note: item\.note \?\? ''/, 'a new requisition line must start with the inventory note')
+assert.match(form, /className="requisition-line__readonly-note"/, 'the line note must use the read-only style')
+assert.match(form, /readOnly/, 'the inventory note field must not be editable')
 const catalogCombobox = read('components/ui/CatalogItemCombobox.tsx')
 assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หรือชื่อรายการ/, 'requisition item search must provide a hint')
 

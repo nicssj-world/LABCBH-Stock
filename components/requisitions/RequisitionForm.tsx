@@ -16,6 +16,7 @@ export interface RequisitionCatalogItem {
   lsCode: string
   name: string
   unit: string
+  note: string | null
   onHand: number
   minimumStock: number
   responsibleDepartment: string | null
@@ -27,10 +28,10 @@ interface DraftLine {
   lsCode: string
   name: string
   unit: string
+  note: string
   onHand: number
   minimumStock: number
   requestedQuantity: number
-  note: string
 }
 
 export function RequisitionForm({
@@ -73,10 +74,10 @@ export function RequisitionForm({
         lsCode: item.lsCode,
         name: item.name,
         unit: item.unit,
+        note: item.note ?? '',
         onHand: item.onHand,
         minimumStock: item.minimumStock,
         requestedQuantity: 1,
-        note: '',
       },
     ])
   }
@@ -241,8 +242,11 @@ export function RequisitionForm({
                         <input
                           type="text"
                           maxLength={500}
+                          readOnly
+                          aria-readonly="true"
+                          className="requisition-line__readonly-note"
                           value={line.note}
-                          onChange={(event) => changeLine(line.key, { note: event.target.value })}
+                          placeholder="ไม่มีหมายเหตุ"
                         />
                       </label>
                     </div>
