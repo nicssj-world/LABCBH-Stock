@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ViewIcon } from '@/components/inventory/InventoryDetailIcons'
+import { OpenDetailIcon } from '@/components/inventory/InventoryDetailIcons'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -68,7 +68,7 @@ export function InventoryTable({
                       aria-label={`ดูรายละเอียด ${item.name}`}
                       title="ดูรายละเอียดน้ำยา"
                     >
-                      <ViewIcon />
+                      <OpenDetailIcon />
                     </Link>
                     {canEdit && (
                       <>
@@ -107,7 +107,7 @@ export function InventoryTable({
                 aria-label={`ดูรายละเอียด ${item.name}`}
                 title="ดูรายละเอียดน้ำยา"
               >
-                <ViewIcon />
+                <OpenDetailIcon />
               </Link>
               {canEdit && (
                 <>

@@ -139,6 +139,7 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
               href={`/requisitions/${requisition.id}`}
               label={`เปิดรายละเอียดเต็มใบเบิก ${requisition.documentNumber}`}
               title="เปิดรายละเอียดเต็มใบเบิก"
+              icon="open"
               onClick={closeDialog}
             />
             <Button variant="secondary" onClick={closeDialog}>ปิด</Button>

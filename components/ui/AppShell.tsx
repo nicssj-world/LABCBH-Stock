@@ -8,6 +8,7 @@ FORM: Enterprise healthcare dashboard, dense enough for operations and comfortab
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { LogoutButton } from '@/components/ui/LogoutButton'
@@ -134,7 +135,15 @@ export function AppShell({ actor, children }: AppShellProps) {
         />
         <aside className={`bench-rail${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
           <div className="bench-brand">
-            <span className="bench-brand__mark" aria-hidden="true">LC</span>
+            <Image
+              className="bench-brand__logo"
+              src="/images/cbh-lab-logo-v3.png"
+              alt="CBH Lab"
+              width={44}
+              height={44}
+              sizes="44px"
+              preload
+            />
             <span className="bench-brand__copy">
               <strong>LABCBH Stock</strong>
               <small>Laboratory Management</small>

@@ -159,6 +159,7 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
               href={`/purchase-requests/${request.id}`}
               label={`เปิดรายละเอียดเต็มใบ PR ${request.documentNumber}`}
               title="เปิดรายละเอียดเต็มใบ PR"
+              icon="open"
               onClick={closeDialog}
             />
             <Button variant="secondary" onClick={closeDialog}>ปิด</Button>

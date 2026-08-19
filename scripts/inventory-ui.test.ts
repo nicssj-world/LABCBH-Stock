@@ -78,7 +78,7 @@ assert.doesNotMatch(table, /ค่าที่ระบบแนะนำ|กำ
 assert.match(table, /<th>หมายเหตุ<\/th>/, 'the catalog must show the item note after status')
 assert.match(table, /inventory-note-cell/, 'item notes must remain visible in both catalog layouts')
 assert.match(table, /inventory-action-icon/, 'the edit action must use an icon affordance')
-assert.match(table, /ViewIcon/, 'the detail action must use an icon affordance')
+  assert.match(table, /OpenDetailIcon/, 'the detail action must use the open-detail icon affordance')
 assert.match(table, /<div className="inventory-actions">/, 'catalog actions must share an icon-only action group')
 assert.match(table, /InventoryItemEditDialog/, 'the catalog edit action must open an in-page dialog')
 assert.doesNotMatch(table, /href=\{`\/inventory\/\$\{item\.id\}\/edit`\}/, 'catalog edit must not navigate away')

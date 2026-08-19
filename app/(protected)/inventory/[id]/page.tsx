@@ -53,10 +53,10 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
           </p>
           <h1>{item.name}</h1>
           <p>{item.responsibleDepartment ?? 'ไม่ระบุหน่วยงานที่รับผิดชอบ'}</p>
-          <p className="inventory-detail__note">
+          <div className="inventory-detail__note" role="note">
             <strong>หมายเหตุ</strong>
-            <span>{item.note ?? '—'}</span>
-          </p>
+            <span>{item.note?.trim() || 'ไม่มีหมายเหตุ'}</span>
+          </div>
         </div>
         <div className="page-heading__cluster">
           <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>

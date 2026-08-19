@@ -9,6 +9,15 @@ export function ViewIcon() {
   )
 }
 
+export function OpenDetailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="M8 16 16 8" />
+      <path d="M10 8h6v6" />
+    </svg>
+  )
+}
+
 export function StockBoxIcon() {
   return (
     <svg viewBox="0 0 24 24" {...STROKE}>
