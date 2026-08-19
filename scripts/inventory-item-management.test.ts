@@ -105,7 +105,7 @@ const table = readFileSync(join(process.cwd(), 'components', 'inventory', 'Inven
 assert.match(table, /formatBaht/, 'price must be rendered using the shared formatter')
 assert.match(table, /ราคาต่อหน่วย/)
 assert.match(table, /InventoryItemActiveControl/)
-assert.match(table, /\/inventory\/\$\{item\.id\}\/edit/)
+assert.match(table, /InventoryItemEditDialog/, 'the catalog edit action must open an in-page dialog')
 
 const detailPage = readFileSync(join(process.cwd(), 'app', '(protected)', 'inventory', '[id]', 'page.tsx'), 'utf8')
 assert.match(detailPage, /formatBaht/, 'the detail page must show price too')

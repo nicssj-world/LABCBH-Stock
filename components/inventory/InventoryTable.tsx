@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { EditIcon } from '@/components/inventory/InventoryDetailIcons'
+import { ViewIcon } from '@/components/inventory/InventoryDetailIcons'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
+import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
 import { MinimumStockEditor } from '@/components/inventory/MinimumStockEditor'
 import { StatusChip } from '@/components/ui/StatusChip'
 import {
@@ -16,7 +17,15 @@ function needsPurchaseRequest(item: InventoryItemRecord) {
   return item.stockLevel !== 'healthy'
 }
 
-export function InventoryTable({ items, canEdit = false }: { items: InventoryItemRecord[]; canEdit?: boolean }) {
+export function InventoryTable({
+  items,
+  canEdit = false,
+  departments,
+}: {
+  items: InventoryItemRecord[]
+  canEdit?: boolean
+  departments: readonly string[]
+}) {
   if (items.length === 0) {
     return <p className="empty-state">ไม่พบรายการน้ำยาตามเงื่อนไขที่เลือก</p>
   }
@@ -34,7 +43,7 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
               <th className="numeric-cell">ราคาต่อหน่วย</th>
               <th>สถานะ</th>
               <th>หมายเหตุ</th>
-              <th><span className="visually-hidden">เปิดรายละเอียด / แก้ไข</span></th>
+              <th><span className="visually-hidden">การดำเนินการ</span></th>
             </tr>
           </thead>
           <tbody>
@@ -69,20 +78,22 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
                 </td>
                 <td className="inventory-note-cell">{item.note ?? '—'}</td>
                 <td>
-                  <Link className="text-link" href={`/inventory/${item.id}`}>ดูรายละเอียด</Link>
-                  {canEdit && (
-                    <>
-                      <Link
-                        className="inventory-action-icon"
-                        href={`/inventory/${item.id}/edit`}
-                        aria-label={`แก้ไขข้อมูล ${item.name}`}
-                        title="แก้ไขข้อมูลน้ำยา"
-                      >
-                        <EditIcon />
-                      </Link>
-                      <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} compact />
-                    </>
-                  )}
+                  <div className="inventory-actions">
+                    <Link
+                      className="inventory-action-icon"
+                      href={`/inventory/${item.id}`}
+                      aria-label={`ดูรายละเอียด ${item.name}`}
+                      title="ดูรายละเอียดน้ำยา"
+                    >
+                      <ViewIcon />
+                    </Link>
+                    {canEdit && (
+                      <>
+                        <InventoryItemEditDialog item={item} departments={departments} />
+                        <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} compact />
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -116,22 +127,22 @@ export function InventoryTable({ items, canEdit = false }: { items: InventoryIte
                 minimumStockOverride={item.minimumStockOverride}
               />
             )}
-            <Link className="text-link task-card__action" href={`/inventory/${item.id}`}>
-              ดูรายละเอียดน้ำยา
-            </Link>
-            {canEdit && (
-              <>
-                <Link
-                  className="inventory-action-icon task-card__action"
-                  href={`/inventory/${item.id}/edit`}
-                  aria-label={`แก้ไขข้อมูล ${item.name}`}
-                  title="แก้ไขข้อมูลน้ำยา"
-                >
-                  <EditIcon />
-                </Link>
-                <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} />
-              </>
-            )}
+            <div className="inventory-actions task-card__action">
+              <Link
+                className="inventory-action-icon"
+                href={`/inventory/${item.id}`}
+                aria-label={`ดูรายละเอียด ${item.name}`}
+                title="ดูรายละเอียดน้ำยา"
+              >
+                <ViewIcon />
+              </Link>
+              {canEdit && (
+                <>
+                  <InventoryItemEditDialog item={item} departments={departments} />
+                  <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} compact />
+                </>
+              )}
+            </div>
           </li>
         ))}
       </ul>

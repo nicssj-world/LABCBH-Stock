@@ -1875,6 +1875,23 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .inventory-table--desktop { overflow-x: auto; }
 
+.inventory-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.inventory-action-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inventory-action-control .field-error {
+  flex-basis: 100%;
+}
+
 .inventory-note-cell {
   min-width: 180px;
   max-width: 320px;
@@ -1890,7 +1907,9 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   height: 44px;
   color: var(--lab-primary);
   border-radius: var(--radius-control);
+  text-decoration: none;
   vertical-align: middle;
+  cursor: pointer;
   transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out;
 }
 
@@ -1903,6 +1922,12 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   outline: 2px solid var(--lab-primary);
   outline-offset: 2px;
 }
+
+.inventory-action-icon--danger { color: var(--lab-red); }
+.inventory-action-icon--danger:hover { color: var(--lab-red); background: var(--lab-red-soft); }
+.inventory-action-icon--success { color: var(--lab-green); }
+.inventory-action-icon--success:hover { color: var(--lab-green); background: var(--lab-green-soft); }
+.inventory-action-icon:disabled { cursor: not-allowed; opacity: .48; }
 
 .inventory-action-icon svg {
   width: 18px;
@@ -1926,6 +1951,34 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .inventory-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; }
 .inventory-task-cards .inventory-note-cell { min-width: 0; max-width: none; margin-top: 8px; }
 .inventory-task-cards .inventory-note-cell strong { display: inline; color: var(--lab-ink); }
+
+.inventory-edit-dialog {
+  width: min(820px, calc(100vw - 32px));
+}
+
+.inventory-edit-dialog__body {
+  max-height: calc(min(92dvh, 900px) - 92px);
+  padding: 0;
+}
+
+.inventory-edit-dialog__body .inventory-item-form {
+  gap: 0;
+}
+
+.inventory-edit-dialog__body .inventory-item-form > .bench-panel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.inventory-edit-dialog__body .form-action-bar {
+  bottom: 0;
+  margin: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+}
 
 /* The call to action is text, never colour alone, so it survives greyscale. */
 .cell-callout {

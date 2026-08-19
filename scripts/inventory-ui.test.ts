@@ -73,6 +73,19 @@ assert.match(table, /canEdit/, 'the override trigger must be gated by edit permi
 assert.match(table, /<th>หมายเหตุ<\/th>/, 'the catalog must show the item note after status')
 assert.match(table, /inventory-note-cell/, 'item notes must remain visible in both catalog layouts')
 assert.match(table, /inventory-action-icon/, 'the edit action must use an icon affordance')
+assert.match(table, /ViewIcon/, 'the detail action must use an icon affordance')
+assert.match(table, /<div className="inventory-actions">/, 'catalog actions must share an icon-only action group')
+assert.match(table, /InventoryItemEditDialog/, 'the catalog edit action must open an in-page dialog')
+assert.doesNotMatch(table, /href=\{`\/inventory\/\$\{item\.id\}\/edit`\}/, 'catalog edit must not navigate away')
+
+const activeControl = read('components/inventory/InventoryItemActiveControl.tsx')
+assert.match(activeControl, /PowerIcon/, 'active-state changes must use a power icon')
+assert.match(activeControl, /aria-label=/, 'icon-only active-state control must remain accessible')
+
+const editDialog = read('components/inventory/InventoryItemEditDialog.tsx')
+assert.match(editDialog, /<dialog/, 'inventory edit must render as a dialog')
+assert.match(editDialog, /InventoryItemForm/, 'the edit dialog must reuse the inventory form')
+assert.match(editDialog, /onSaved=\{close\}/, 'saving from the dialog must close it')
 
 const lotTable = read('components/inventory/LotTable.tsx')
 assert.match(lotTable, /เลขที่ล็อต/)

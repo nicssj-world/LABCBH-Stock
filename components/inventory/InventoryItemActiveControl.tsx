@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { PowerIcon } from '@/components/inventory/InventoryDetailIcons'
 import { Button } from '@/components/ui/Button'
 import { setInventoryItemActive } from '@/lib/inventory/actions'
 
 interface InventoryItemActiveControlProps {
   itemId: string
   isActive: boolean
-  /** Table-row footprint: a small text link instead of a full button. */
+  /** Table-row footprint: an icon-only action instead of a full button. */
   compact?: boolean
 }
 
@@ -33,12 +34,20 @@ export function InventoryItemActiveControl({ itemId, isActive, compact = false }
 
   if (compact) {
     return (
-      <>
-        <button type="button" className="text-link" onClick={toggle} disabled={isPending}>
-          {isPending ? 'กำลังบันทึก…' : label}
+      <span className="inventory-action-control">
+        <button
+          type="button"
+          className={`inventory-action-icon ${isActive ? 'inventory-action-icon--danger' : 'inventory-action-icon--success'}`}
+          onClick={toggle}
+          disabled={isPending}
+          aria-label={isPending ? `กำลัง${label}` : label}
+          aria-busy={isPending}
+          title={label}
+        >
+          <PowerIcon />
         </button>
         {error && <small className="field-error">{error}</small>}
-      </>
+      </span>
     )
   }
 

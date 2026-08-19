@@ -8,9 +8,17 @@ import type { InventoryItemDetail } from '@/lib/inventory/types'
 
 interface InventoryItemFormProps {
   mode?: 'create' | 'edit'
-  item?: InventoryItemDetail
+  item?: InventoryItemFormItem
   departments: readonly string[]
+  titleId?: string
+  onSaved?: () => void
+  onCancel?: () => void
 }
+
+type InventoryItemFormItem = Pick<
+  InventoryItemDetail,
+  'id' | 'lsCode' | 'name' | 'baseUnit' | 'responsibleDepartment' | 'defaultUnitPrice' | 'note'
+>
 
 interface FormState {
   lsCode: string
@@ -21,7 +29,7 @@ interface FormState {
   note: string
 }
 
-function initialState(item?: InventoryItemDetail): FormState {
+function initialState(item?: InventoryItemFormItem): FormState {
   return {
     lsCode: item?.lsCode ?? '',
     name: item?.name ?? '',
@@ -32,7 +40,14 @@ function initialState(item?: InventoryItemDetail): FormState {
   }
 }
 
-export function InventoryItemForm({ mode = 'create', item, departments }: InventoryItemFormProps) {
+export function InventoryItemForm({
+  mode = 'create',
+  item,
+  departments,
+  titleId = 'inventory-item-form-title',
+  onSaved,
+  onCancel,
+}: InventoryItemFormProps) {
   const router = useRouter()
   const [state, setState] = useState<FormState>(() => initialState(item))
   const [message, setMessage] = useState<string | null>(null)
@@ -61,7 +76,8 @@ export function InventoryItemForm({ mode = 'create', item, departments }: Invent
             defaultUnitPrice,
             note: state.note.trim() || null,
           })
-          router.push(`/inventory/${item.id}`)
+          onSaved?.()
+          if (!onSaved) router.push(`/inventory/${item.id}`)
           router.refresh()
           return
         }
@@ -93,11 +109,11 @@ export function InventoryItemForm({ mode = 'create', item, departments }: Invent
 
   return (
     <form className="inventory-item-form" onSubmit={submit} noValidate>
-      <section className="bench-panel form-panel" aria-labelledby="inventory-item-form-title">
+      <section className="bench-panel form-panel" aria-labelledby={titleId}>
         <div className="section-heading-row">
           <div>
             <p className="section-kicker">INVENTORY CATALOG</p>
-            <h2 id="inventory-item-form-title">ข้อมูลรายการน้ำยา</h2>
+            <h2 id={titleId}>ข้อมูลรายการน้ำยา</h2>
           </div>
           <span className="draft-state">{mode === 'edit' ? 'แก้ไขข้อมูลรายการ' : 'สร้างรายการใหม่เข้าคลัง'}</span>
         </div>
@@ -193,7 +209,13 @@ export function InventoryItemForm({ mode = 'create', item, departments }: Invent
         <div className="form-action-bar__buttons">
           <Button
             variant="secondary"
-            onClick={() => router.push(mode === 'edit' && item ? `/inventory/${item.id}` : '/inventory')}
+            onClick={() => {
+              if (onCancel) {
+                onCancel()
+                return
+              }
+              router.push(mode === 'edit' && item ? `/inventory/${item.id}` : '/inventory')
+            }}
             disabled={isPending}
           >
             ยกเลิก

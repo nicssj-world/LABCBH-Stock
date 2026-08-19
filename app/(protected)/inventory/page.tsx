@@ -10,6 +10,7 @@ import {
   listInventoryDepartments,
   listInventoryItems,
 } from '@/lib/inventory/queries'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import type { InventoryItemRecord } from '@/lib/inventory/types'
 
 interface InventoryPageProps {
@@ -43,6 +44,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
   const alertCount = items.filter((item) => item.stockLevel !== 'healthy').length
   const visibleItems = onlyAlerts ? items.filter((item) => item.stockLevel !== 'healthy') : items
+  const departmentOptions = [...new Set([...DEPARTMENTS, ...departments])].sort((left, right) => left.localeCompare(right, 'th'))
 
   const activeParams = new URLSearchParams()
   if (search) activeParams.set('search', search)
@@ -125,7 +127,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
             <p>{visibleItems.length} รายการ</p>
           </div>
-          <InventoryTable items={visibleItems} canEdit={canOperateStock(actor)} />
+          <InventoryTable
+            items={visibleItems}
+            canEdit={canOperateStock(actor)}
+            departments={departmentOptions}
+          />
         </section>
       )}
     </div>

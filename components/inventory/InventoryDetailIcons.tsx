@@ -1,5 +1,14 @@
 const STROKE = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
+export function ViewIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </svg>
+  )
+}
+
 export function StockBoxIcon() {
   return (
     <svg viewBox="0 0 24 24" {...STROKE}>
@@ -54,6 +63,15 @@ export function EditIcon() {
       <path d="m14.5 5.5 4 4" />
       <path d="m4 20 3.7-.8L19.6 7.3a2.1 2.1 0 0 0-3-3L4.7 16.2 4 20Z" />
       <path d="M13 7 17 11" />
+    </svg>
+  )
+}
+
+export function PowerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="M12 3v9" />
+      <path d="M6.1 5.8a8 8 0 1 0 11.8 0" />
     </svg>
   )
 }
