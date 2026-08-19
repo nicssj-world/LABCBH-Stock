@@ -3282,6 +3282,44 @@ input[type="number"] {
 .print-signature__date { margin-top: 8px !important; }
 
 /*
+Route progress — a slim bar across the top for as long as a navigation is in
+flight. React withholds the skeleton below when a transition looks like it
+will resolve quickly, which left opening a record (500-800ms) with no feedback
+at all. Sits under the skip link so a keyboard user's first stop stays on top.
+*/
+.route-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 999;
+  height: 3px;
+  background: var(--lab-surface-muted);
+  overflow: hidden;
+}
+
+.route-progress__bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--lab-primary);
+  transform: scaleX(0.04);
+  transform-origin: 0 50%;
+  animation: route-progress-advance 12s cubic-bezier(.16, 1, .3, 1) forwards;
+}
+
+/* Never reaches the end: the bar completes by being removed on arrival, so it
+   cannot claim the page is ready before it is. */
+@keyframes route-progress-advance {
+  0% { transform: scaleX(0.04); }
+  30% { transform: scaleX(0.55); }
+  100% { transform: scaleX(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-progress__bar { animation: none; transform: scaleX(0.5); }
+}
+
+/*
 Route skeleton — the placeholder app/(protected)/loading.tsx shows while a
 dynamic page reads its data. Every protected route is server-rendered on
 demand, so without a boundary here a navigation leaves the previous page

@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { LogoutButton } from '@/components/ui/LogoutButton'
+import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
 
 type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
@@ -121,110 +122,112 @@ export function AppShell({ actor, children }: AppShellProps) {
   }
 
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
-      <button
-        className={`bench-rail-overlay${mobileOpen ? ' is-open' : ''}`}
-        type="button"
-        aria-label="ปิดเมนูหลัก"
-        tabIndex={mobileOpen ? 0 : -1}
-        onClick={() => setMobileOpen(false)}
-      />
-      <aside className={`bench-rail${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
-        <div className="bench-brand">
-          <span className="bench-brand__mark" aria-hidden="true">LC</span>
-          <span className="bench-brand__copy">
-            <strong>LABCBH Stock</strong>
-            <small>Laboratory Management</small>
-          </span>
-        </div>
-        <p className="bench-nav__section">งานคลังและสัญญา</p>
-        <nav className="bench-nav">
-          {visibleNavigation.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="bench-nav__link"
-              aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
-              aria-label={collapsed ? item.label : undefined}
-              title={collapsed ? item.label : undefined}
-              onClick={() => setMobileOpen(false)}
-            >
-              <span className="bench-nav__icon" data-nav-tone={item.tone}>
-                <BenchIcon name={item.icon} />
-              </span>
-              <span className="bench-nav__label">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="bench-rail__footer">
-          <span className="bench-rail__signal" aria-hidden="true" />
-          <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
-        </div>
-      </aside>
-      <div className="workbench">
-        <header className="workbench-header">
-          <div className="workbench-header__context">
-            <button
-              className="utility-button sidebar-toggle"
-              type="button"
-              aria-label={collapsed ? 'ขยายเมนูหลัก' : 'ย่อเมนูหลัก'}
-              aria-expanded={!collapsed}
-              title={collapsed ? 'ขยาย side menu' : 'ย่อ side menu'}
-              onClick={() => setCollapsed((value) => !value)}
-            >
-              <UtilityIcon name="menu" />
-            </button>
-            <button
-              className="utility-button menu-button"
-              type="button"
-              aria-label="เปิดเมนูหลัก"
-              aria-expanded={mobileOpen}
-              onClick={() => setMobileOpen((open) => !open)}
-            >
-              <UtilityIcon name="menu" />
-            </button>
-            <div>
-              <p className="workbench-header__eyebrow">LABCBH STOCK</p>
-              <p className="workbench-header__hospital">{currentItem?.label ?? 'ระบบคลังกลาง'}</p>
-            </div>
+    <RouteProgress>
+      <div className="app-shell">
+        <a className="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
+        <button
+          className={`bench-rail-overlay${mobileOpen ? ' is-open' : ''}`}
+          type="button"
+          aria-label="ปิดเมนูหลัก"
+          tabIndex={mobileOpen ? 0 : -1}
+          onClick={() => setMobileOpen(false)}
+        />
+        <aside className={`bench-rail${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-open' : ''}`} aria-label="เมนูหลัก">
+          <div className="bench-brand">
+            <span className="bench-brand__mark" aria-hidden="true">LC</span>
+            <span className="bench-brand__copy">
+              <strong>LABCBH Stock</strong>
+              <small>Laboratory Management</small>
+            </span>
           </div>
-          <div className="workbench-header__actions">
-            <button
-              className="utility-button utility-button--theme"
-              type="button"
-              aria-label="เปลี่ยนธีม"
-              aria-pressed={dark}
-              title={dark ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
-              onClick={toggleTheme}
-            >
-              <UtilityIcon name="contrast" />
-            </button>
-            <a className="portal-return" href={PORTAL_DASHBOARD_URL} title="กลับไป Lab Management Portal">
-              <UtilityIcon name="portal" />
-              <span>Lab Management</span>
-            </a>
-            <div className="actor-badge" aria-label={`ผู้ใช้งาน ${actorLabel}`}>
-              {actor.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className="actor-badge__avatar" src={actor.avatarUrl} alt={`รูปโปรไฟล์ของ ${actorLabel}`} />
-              ) : (
-                <span className="actor-badge__initial" aria-hidden="true">
-                  {actorLabel.slice(0, 1).toUpperCase()}
+          <p className="bench-nav__section">งานคลังและสัญญา</p>
+          <nav className="bench-nav">
+            {visibleNavigation.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="bench-nav__link"
+                aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+                aria-label={collapsed ? item.label : undefined}
+                title={collapsed ? item.label : undefined}
+                onClick={() => setMobileOpen(false)}
+              >
+                <span className="bench-nav__icon" data-nav-tone={item.tone}>
+                  <BenchIcon name={item.icon} />
                 </span>
-              )}
-              <span>
-                <strong>{actorLabel}</strong>
-                <small>{actor.profileRole ?? 'LABCBH Stock'}</small>
-              </span>
-            </div>
-            <LogoutButton />
+                <span className="bench-nav__label">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="bench-rail__footer">
+            <span className="bench-rail__signal" aria-hidden="true" />
+            <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
           </div>
-        </header>
-        <main id="main-content" className="workbench-main" tabIndex={-1}>
-          {children}
-        </main>
+        </aside>
+        <div className="workbench">
+          <header className="workbench-header">
+            <div className="workbench-header__context">
+              <button
+                className="utility-button sidebar-toggle"
+                type="button"
+                aria-label={collapsed ? 'ขยายเมนูหลัก' : 'ย่อเมนูหลัก'}
+                aria-expanded={!collapsed}
+                title={collapsed ? 'ขยาย side menu' : 'ย่อ side menu'}
+                onClick={() => setCollapsed((value) => !value)}
+              >
+                <UtilityIcon name="menu" />
+              </button>
+              <button
+                className="utility-button menu-button"
+                type="button"
+                aria-label="เปิดเมนูหลัก"
+                aria-expanded={mobileOpen}
+                onClick={() => setMobileOpen((open) => !open)}
+              >
+                <UtilityIcon name="menu" />
+              </button>
+              <div>
+                <p className="workbench-header__eyebrow">LABCBH STOCK</p>
+                <p className="workbench-header__hospital">{currentItem?.label ?? 'ระบบคลังกลาง'}</p>
+              </div>
+            </div>
+            <div className="workbench-header__actions">
+              <button
+                className="utility-button utility-button--theme"
+                type="button"
+                aria-label="เปลี่ยนธีม"
+                aria-pressed={dark}
+                title={dark ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
+                onClick={toggleTheme}
+              >
+                <UtilityIcon name="contrast" />
+              </button>
+              <a className="portal-return" href={PORTAL_DASHBOARD_URL} title="กลับไป Lab Management Portal">
+                <UtilityIcon name="portal" />
+                <span>Lab Management</span>
+              </a>
+              <div className="actor-badge" aria-label={`ผู้ใช้งาน ${actorLabel}`}>
+                {actor.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="actor-badge__avatar" src={actor.avatarUrl} alt={`รูปโปรไฟล์ของ ${actorLabel}`} />
+                ) : (
+                  <span className="actor-badge__initial" aria-hidden="true">
+                    {actorLabel.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <span>
+                  <strong>{actorLabel}</strong>
+                  <small>{actor.profileRole ?? 'LABCBH Stock'}</small>
+                </span>
+              </div>
+              <LogoutButton />
+            </div>
+          </header>
+          <main id="main-content" className="workbench-main" tabIndex={-1}>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </RouteProgress>
   )
 }

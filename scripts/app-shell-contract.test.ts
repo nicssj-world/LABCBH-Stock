@@ -31,6 +31,39 @@ assert.match(shell, /target\.blur\(\)/, 'the wheel guard must release numeric in
 assert.match(css, /\.app-shell:has\(\.bench-rail\.is-collapsed\)/, 'the shell must reserve a compact desktop column for the collapsed sidebar')
 assert.match(css, /\.bench-rail\.is-collapsed\s*\{/, 'collapsed sidebar styling must be explicitly defined')
 assert.match(css, /\.bench-rail\.is-collapsed \.(?:bench-brand__copy|bench-nav__section|bench-rail__footer-copy)/, 'collapsed sidebar must hide text while retaining its navigation icons')
+// Navigation feedback. The route skeleton cannot cover this alone: React
+// withholds a Suspense fallback when a transition looks like it will resolve
+// quickly, which left opening a record (measured at 500-800ms) showing the
+// previous page with no sign the click had registered.
+const routeProgress = readFileSync('components/ui/RouteProgress.tsx', 'utf8')
+assert.match(shell, /<RouteProgress>/, 'every protected route must sit inside the navigation progress boundary')
+assert.match(
+  routeProgress,
+  /document\.addEventListener\('click', onDocumentClick, true\)/,
+  'the bar must observe navigation in the capture phase, before a handler can stop propagation',
+)
+assert.match(
+  routeProgress,
+  /anchor\.origin !== window\.location\.origin/,
+  'a link off this origin is the browser\'s navigation, not the router\'s',
+)
+assert.match(
+  routeProgress,
+  /GIVE_UP_AFTER_MS/,
+  'a navigation that never arrives must not leave the bar on screen forever',
+)
+assert.match(
+  readFileSync('components/ui/AutoFilterBench.tsx', 'utf8'),
+  /startNavigationProgress\(\)/,
+  'filtering re-reads the list on the server, and no anchor click exists for the bar to observe',
+)
+assert.match(css, /\.route-progress \{/, 'the progress bar needs explicit styling in the design system')
+assert.match(
+  css,
+  /@media \(prefers-reduced-motion: reduce\) \{\s*\.route-progress__bar \{ animation: none/,
+  'the advancing bar must stand still for a reader who asked for reduced motion',
+)
+
 assert.match(css, /--lab-navy:/)
 assert.match(css, /Noto Sans Thai/)
 assert.doesNotMatch(css, /linear-gradient/)

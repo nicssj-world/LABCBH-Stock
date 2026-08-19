@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition, type ChangeEvent, type FormEvent } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useNavigationProgress } from '@/components/ui/RouteProgress'
 
 export interface AutoFilterOption {
   value: string
@@ -46,11 +47,16 @@ export function AutoFilterBench({ fields, ariaLabel, className = '' }: AutoFilte
   const currentSearch = searchField ? searchParams.get(searchField.name) ?? '' : ''
   const [search, setSearch] = useState(initialSearch)
   const [isPending, startTransition] = useTransition()
+  const startNavigationProgress = useNavigationProgress()
 
   const replaceFilters = useCallback((nextParams: URLSearchParams) => {
     const query = nextParams.toString()
+    // The results are re-read on the server, so this is a real wait even
+    // though the page never changes. The status text alone left the stale
+    // table looking like the answer.
+    startNavigationProgress()
     startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }))
-  }, [pathname, router])
+  }, [pathname, router, startNavigationProgress])
 
   const setFilter = useCallback((name: string, value: string) => {
     const nextParams = new URLSearchParams(searchParams.toString())
