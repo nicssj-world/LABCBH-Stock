@@ -47,6 +47,11 @@ assert.doesNotMatch(
   /MinimumStockEditor/,
   'per-item minimum editing moved to the catalog table, not the detail page',
 )
+assert.doesNotMatch(
+  detailPage,
+  /ค่าที่ระบบแนะนำ|ผู้ดูแลกำหนดเอง/,
+  'minimum-stock source labels must not clutter the detail page',
+)
 assert.match(detailPage, /ชื่อเรียกอื่นที่พบในข้อมูลเดิม/, 'aliases must stay visible for reconciliation')
 
 assert.match(detailPage, /StockAdjustmentDialog/, 'stock operators need a balance-adjustment control on every item detail')
@@ -63,13 +68,13 @@ assert.match(adjustmentDialog, /ThaiDateInput/, 'adjustments must carry an expli
 assert.doesNotMatch(adjustmentDialog, /createBrowserClient|supabase\.from/, 'the browser must never mutate Supabase directly')
 
 const table = read('components/inventory/InventoryTable.tsx')
-assert.match(table, /ต้องทำ PR/, 'items at or below minimum must show the Thai call to action')
+assert.doesNotMatch(table, /ต้องทำ PR/, 'per-item purchase-request callouts must not clutter the catalog')
 assert.match(table, /inventory-table--desktop/, 'desktop table variant must exist')
 assert.match(table, /inventory-task-cards/, 'mobile task-card variant must exist')
 assert.match(table, /คงเหลือ/)
 assert.match(table, /ขั้นต่ำ/)
-assert.match(table, /MinimumStockEditor/, 'the catalog row is where the per-item override now lives')
-assert.match(table, /canEdit/, 'the override trigger must be gated by edit permission')
+assert.doesNotMatch(table, /MinimumStockEditor/, 'per-item minimum editing must be removed from the catalog')
+assert.doesNotMatch(table, /ค่าที่ระบบแนะนำ|กำหนดเอง/, 'minimum-stock source labels must not clutter the catalog')
 assert.match(table, /<th>หมายเหตุ<\/th>/, 'the catalog must show the item note after status')
 assert.match(table, /inventory-note-cell/, 'item notes must remain visible in both catalog layouts')
 assert.match(table, /inventory-action-icon/, 'the edit action must use an icon affordance')
@@ -81,6 +86,8 @@ assert.doesNotMatch(table, /href=\{`\/inventory\/\$\{item\.id\}\/edit`\}/, 'cata
 const activeControl = read('components/inventory/InventoryItemActiveControl.tsx')
 assert.match(activeControl, /PowerIcon/, 'active-state changes must use a power icon')
 assert.match(activeControl, /aria-label=/, 'icon-only active-state control must remain accessible')
+assert.match(activeControl, /currentIsActive/, 'the active control must reflect the saved state immediately')
+assert.match(activeControl, /role="alert"/, 'active-state errors must be visible to assistive technology')
 
 const editDialog = read('components/inventory/InventoryItemEditDialog.tsx')
 assert.match(editDialog, /<dialog/, 'inventory edit must render as a dialog')
@@ -99,21 +106,6 @@ assert.match(presenter, /หมดอายุแล้ว/)
 assert.match(presenter, /ใกล้หมดอายุ/)
 assert.match(presenter, /ต่ำกว่าขั้นต่ำ/)
 assert.match(presenter, /หมดคลัง/)
-
-const editor = read('components/inventory/MinimumStockEditor.tsx')
-assert.match(editor, /^['"]use client['"]/m, 'only the interactive editor is a client boundary')
-assert.match(editor, /setMinimumStock/, 'the editor must call a typed Server Action')
-assert.match(editor, /ค่าที่ระบบแนะนำ/, 'the suggested minimum must stay visible next to the override')
-assert.doesNotMatch(
-  editor,
-  /min="0\.5"[\s\S]{0,40}max="60"/,
-  'the per-item reserve-months input must be gone now that it is a system-wide setting',
-)
-assert.doesNotMatch(
-  editor,
-  /createBrowserClient|supabase\.from/,
-  'the browser must never mutate Supabase directly',
-)
 
 const settingsControl = read('components/inventory/InventoryMinimumStockSettings.tsx')
 assert.match(settingsControl, /^['"]use client['"]/m)

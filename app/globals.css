@@ -1391,7 +1391,14 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
 .pr-line-cell--center { text-align: center !important; font-variant-numeric: tabular-nums; }
 
-.data-table input {
+/*
+ * Narrow numeric entry sitting directly in a table cell. Scoped to the cell
+ * itself, not to any descendant of .data-table: a row can also contain a
+ * <dialog>, and a plain `.data-table input` reached inside it and shrank every
+ * field of the form it hosts to 96px, right-aligned. Same specificity as
+ * `.form-grid input` but later in the file, so it silently won.
+ */
+.data-table :is(td, th) > input {
   width: 96px;
   min-height: 44px;
   padding: 8px 10px;
@@ -1403,8 +1410,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   font: inherit;
   font-variant-numeric: tabular-nums;
 }
-.data-table input:hover { border-color: var(--lab-blue); }
-.data-table input:focus { border-color: var(--lab-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-primary) 16%, transparent); }
+.data-table :is(td, th) > input:hover { border-color: var(--lab-blue); }
+.data-table :is(td, th) > input:focus { border-color: var(--lab-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-primary) 16%, transparent); }
 .identifier { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 .remaining-gauge { display: grid; gap: 5px; min-width: 112px; }
@@ -1547,6 +1554,12 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .form-action-bar .form-notice { margin: 0; }
 .form-notice { color: var(--lab-green); font-size: 12px; font-weight: 600; }
 .form-field-note { color: var(--lab-muted); font-size: 11px; font-weight: 500; line-height: 1.45; }
+/*
+ * The marker rides inside the label's text span, never as a bare sibling of it:
+ * `.form-grid label` is a grid, so a loose "*" becomes its own grid item and
+ * drops to a line of its own under the label.
+ */
+.field-required { color: var(--lab-red); }
 
 .inventory-item-form { display: grid; gap: 18px; }
 .inventory-item-form .inline-alert { margin: 0; }
@@ -1965,15 +1978,26 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   gap: 0;
 }
 
+/*
+ * One 24px gutter down the dialog. The panel's own padding is dropped and the
+ * grid carries it instead, so the fields line up with the header title rather
+ * than sitting 18px further in on the panel's padding stacked over the grid's.
+ */
 .inventory-edit-dialog__body .inventory-item-form > .bench-panel {
+  padding: 0;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
+.inventory-edit-dialog__body .bench-panel > .form-grid {
+  padding: 20px 24px 24px;
+}
+
 .inventory-edit-dialog__body .form-action-bar {
   bottom: 0;
   margin: 0;
+  padding: 12px 24px;
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
@@ -2075,30 +2099,6 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .alias-list li:last-child { padding-bottom: 0; border-bottom: 0; }
 .alias-list small { color: var(--lab-muted); font-size: 11px; }
-
-.minimum-stock-editor {
-  display: grid;
-  gap: 14px;
-}
-
-.inventory-override-trigger {
-  display: block;
-  min-height: 0;
-  margin-top: 2px;
-  font-size: 11px;
-}
-
-.minimum-stock-editor__suggestion {
-  margin: 0;
-  padding: 12px 14px;
-  background: var(--lab-surface-muted);
-  border: 1px solid var(--lab-border);
-  border-radius: var(--radius-control);
-  font-size: 12px;
-}
-
-.minimum-stock-editor__suggestion strong { margin-left: 6px; font-family: var(--font-mono); font-size: 15px; }
-.minimum-stock-editor__suggestion small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
 
 .minimum-stock-settings { display: grid; gap: 12px; }
 .minimum-stock-settings > small { display: block; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }

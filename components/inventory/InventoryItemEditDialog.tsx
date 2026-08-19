@@ -51,6 +51,7 @@ export function InventoryItemEditDialog({ item, departments }: InventoryItemEdit
             item={item}
             departments={departments}
             titleId={`inventory-edit-form-title-${item.id}`}
+            showSectionHeading={false}
             onSaved={close}
             onCancel={close}
           />

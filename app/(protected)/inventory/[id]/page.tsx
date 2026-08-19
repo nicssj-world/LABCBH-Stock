@@ -95,7 +95,6 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             <span className="executive-strip__icon" aria-hidden="true"><ThresholdIcon /></span>
           </div>
           <strong>{formatQuantity(item.minimumStock, item.baseUnit)}</strong>
-          <small>{item.minimumStockOverride === null ? 'ค่าที่ระบบแนะนำ' : 'ผู้ดูแลกำหนดเอง'}</small>
         </div>
         <div className="executive-strip__card">
           <div className="executive-strip__head">
