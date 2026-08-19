@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { PurchaseRequestTable } from '@/components/pr/PurchaseRequestTable'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { requireActor } from '@/lib/auth/actor'
 import { canRequestPurchase } from '@/lib/pr/authorization'
@@ -9,6 +10,7 @@ import { listPurchaseRequests } from '@/lib/pr/queries'
 import { PURCHASE_REQUEST_STATUSES } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
 import { DEPARTMENTS } from '@/lib/organization/departments'
+import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
 interface PurchaseRequestsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -23,6 +25,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   const statusValue = first(params.status)
   const status = PURCHASE_REQUEST_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const page = parsePage(first(params.page))
 
   let requests: PurchaseRequestRecord[] = []
   let error: string | null = null
@@ -34,6 +37,16 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   }
 
   const pendingCount = requests.filter((request) => request.status === 'pending').length
+  const paginatedRequests = paginate(requests, page, LIST_PAGE_SIZE)
+  const buildPageHref = (nextPage: number) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (nextPage > 1) nextParams.set('page', String(nextPage))
+    const query = nextParams.toString()
+    return query ? `/purchase-requests?${query}` : '/purchase-requests'
+  }
 
   return (
     <div className="route-stack">
@@ -103,7 +116,16 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
             </div>
             <p>{requests.length} ใบ</p>
           </div>
-          <PurchaseRequestTable requests={requests} />
+          <PurchaseRequestTable requests={paginatedRequests.items} />
+          <ListPagination
+            currentPage={paginatedRequests.currentPage}
+            pageCount={paginatedRequests.pageCount}
+            totalCount={paginatedRequests.totalCount}
+            startIndex={paginatedRequests.startIndex}
+            pageSize={LIST_PAGE_SIZE}
+            itemLabel="ใบ PR"
+            buildHref={buildPageHref}
+          />
         </section>
       )}
     </div>

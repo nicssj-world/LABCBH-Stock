@@ -246,6 +246,8 @@ assert.doesNotMatch(dashboardPage, /minimum stock/i, 'stock-ledger alert stays o
 const dashboardValueCards = read('components/dashboard/ContractValueCards.tsx')
 assert.match(dashboardValueCards, /มูลค่าคงเหลือในสัญญา/, 'dashboard must show remaining contract value')
 assert.match(dashboardValueCards, /remainingPercent\s*<\s*30/, 'the remaining-value card must flag risk below 30%, matching the watchlist threshold')
+assert.match(dashboardValueCards, /role="group"/, 'the dashboard scope switcher changes content but is not a tab panel')
+assert.match(dashboardValueCards, /aria-pressed/, 'the dashboard scope switcher must expose its pressed state')
 
 const dashboardData = read('lib/dashboard/contracts.ts')
 assert.match(dashboardData, /quantity\s*-\s*allocatedQuantity/, 'remaining quantity must use the allocation ledger')

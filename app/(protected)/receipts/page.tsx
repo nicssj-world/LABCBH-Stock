@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
@@ -11,6 +12,7 @@ import { GOODS_RECEIPT_STATUS_LABELS, GOODS_RECEIPT_STATUS_TONES } from '@/lib/r
 import { listGoodsReceipts } from '@/lib/receipts/queries'
 import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
 import type { GoodsReceiptRecord } from '@/lib/receipts/types'
+import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
 interface ReceiptsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -25,6 +27,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   const statusValue = first(params.status)
   const status = GOODS_RECEIPT_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const page = parsePage(first(params.page))
 
   let receipts: GoodsReceiptRecord[] = []
   let error: string | null = null
@@ -36,6 +39,16 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   }
 
   const draftCount = receipts.filter((receipt) => receipt.status === 'draft').length
+  const paginatedReceipts = paginate(receipts, page, LIST_PAGE_SIZE)
+  const buildPageHref = (nextPage: number) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (nextPage > 1) nextParams.set('page', String(nextPage))
+    const query = nextParams.toString()
+    return query ? `/receipts?${query}` : '/receipts'
+  }
 
   return (
     <div className="route-stack">
@@ -123,7 +136,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                   </tr>
                 </thead>
                 <tbody>
-                  {receipts.map((receipt) => (
+                  {paginatedReceipts.items.map((receipt) => (
                     <tr key={receipt.id}>
                       <td>
                         <GoodsReceiptSummaryDialog receipt={receipt} />
@@ -149,10 +162,19 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+              </tbody>
+            </table>
             </div>
           )}
+          <ListPagination
+            currentPage={paginatedReceipts.currentPage}
+            pageCount={paginatedReceipts.pageCount}
+            totalCount={paginatedReceipts.totalCount}
+            startIndex={paginatedReceipts.startIndex}
+            pageSize={LIST_PAGE_SIZE}
+            itemLabel="ใบรับเข้า"
+            buildHref={buildPageHref}
+          />
         </section>
       )}
     </div>

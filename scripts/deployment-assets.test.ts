@@ -35,7 +35,8 @@ const requiredSpecs: Record<string, RegExp[]> = {
   'tests/e2e/pr.spec.ts': [/manager/, /stock/, /concurr/i],
   'tests/e2e/receiving.spec.ts': [/manager/, /stock/, /post/i],
   'tests/e2e/requisitions.spec.ts': [/manager/, /stock/, /FIFO/, /concurr/i, /A4/],
-  'tests/e2e/dashboard.spec.ts': [/admin/, /watchlist/i, /settings/],
+  'tests/e2e/dashboard.spec.ts': [/admin/, /watchlist/i, /settings/, /Dashboard บริหารสัญญา/],
+  'tests/e2e/contract-budget.spec.ts': [/admin/, /stock/, /budget/i, /overspend/i],
 }
 
 for (const [path, patterns] of Object.entries(requiredSpecs)) {
@@ -88,6 +89,11 @@ for (const checkpoint of [
   'LABCBH_STOCK_URL',
 ]) {
   assert.match(cutover, new RegExp(checkpoint, 'i'), `cutover runbook must include ${checkpoint}`)
+}
+
+const observability = read('docs/runbooks/observability.md')
+for (const checkpoint of ['test:e2e:strict', 'preflight:lots', 'read-only', 'PITR']) {
+  assert.match(observability, new RegExp(checkpoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), `observability runbook must include ${checkpoint}`)
 }
 
 const rollback = read('docs/runbooks/rollback.md')

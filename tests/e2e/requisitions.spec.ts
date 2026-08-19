@@ -13,7 +13,12 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
     await loginAs(manager, 'manager')
     await manager.goto('/requisitions/new')
     await expect(manager.getByRole('heading', { name: 'สร้างใบเบิก' })).toBeVisible()
-    await manager.getByLabel('เพิ่มน้ำยาเข้าใบเบิก').selectOption({ index: 1 })
+    await manager.getByLabel('หน่วยงานผู้ขอเบิก').selectOption({ label: 'งานอณูชีววิทยา' })
+    const itemSelect = manager.getByLabel('เลือกน้ำยาจากรายการ')
+    const stockedOption = itemSelect.locator('option').filter({ hasText: 'LHLAB75' }).first()
+    const stockedValue = await stockedOption.getAttribute('value')
+    expect(stockedValue).toBeTruthy()
+    await itemSelect.selectOption(stockedValue!)
     await manager.getByRole('button', { name: 'ส่งใบเบิก' }).click()
     await expect(manager).toHaveURL(/\/requisitions\/[0-9a-f-]{36}$/)
     const url = new URL(manager.url()).pathname

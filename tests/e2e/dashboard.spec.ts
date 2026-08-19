@@ -9,8 +9,8 @@ test.describe('admin dashboard and settings smoke', () => {
 
   test('@smoke shows live watchlist and gives admin 9495 every workflow surface', async ({ page }) => {
     await loginAs(page, 'admin')
-    await expect(page.getByRole('heading', { name: 'ภาพรวมบริหารสัญญา' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'รายการที่ต้องเฝ้าระวัง' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dashboard บริหารสัญญา' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'รายการตามสัญญาคงเหลือต่ำ' })).toBeVisible()
     for (const [path, heading] of [
       ['/contracts/new', 'เพิ่มสัญญา'],
       ['/purchase-requests/new', 'สร้างใบขอซื้อ'],

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, presentContract } from '@/lib/contracts/presenter'
@@ -8,6 +9,7 @@ import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import { bangkokIsoDate } from '@/lib/date/thai'
+import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
 interface ContractsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -26,6 +28,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const search = first(params.search)?.trim() ?? ''
   const showEnded = first(params.showEnded) === '1'
   const showOlder = first(params.showOlder) === '1'
+  const page = parsePage(first(params.page))
   // Ended contracts and the watchlist are separate views. If an older URL
   // contains both flags, ended contracts must win because contractNeedsWatch
   // intentionally excludes them.
@@ -48,6 +51,8 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
       archivedError = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาที่ถูกลบไม่สำเร็จ'
     }
     const presentedArchived = archivedContracts.map(presentContract)
+    const paginatedArchived = paginate(presentedArchived, page, LIST_PAGE_SIZE)
+    const buildArchivedPageHref = (nextPage: number) => `/contracts?showArchived=1${nextPage > 1 ? `&page=${nextPage}` : ''}`
 
     return (
       <div className="route-stack">
@@ -83,7 +88,16 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
               </div>
               <p>{presentedArchived.length} สัญญา</p>
             </div>
-            <ContractTable contracts={presentedArchived} />
+            <ContractTable contracts={paginatedArchived.items} />
+            <ListPagination
+              currentPage={paginatedArchived.currentPage}
+              pageCount={paginatedArchived.pageCount}
+              totalCount={paginatedArchived.totalCount}
+              startIndex={paginatedArchived.startIndex}
+              pageSize={LIST_PAGE_SIZE}
+              itemLabel="สัญญา"
+              buildHref={buildArchivedPageHref}
+            />
           </section>
         )}
       </div>
@@ -119,8 +133,9 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
       : statusVisibleContracts.filter((contract) => (
         contract.fiscalYear === null || contract.fiscalYear >= oldestDefaultFiscalYear
       ))
+  const paginatedContracts = paginate(visibleContracts, page, LIST_PAGE_SIZE)
   const grouped = new Map<string, ReturnType<typeof presentContract>[]>()
-  for (const contract of visibleContracts) {
+  for (const contract of paginatedContracts.items) {
     const key = contract.fiscalYear ? String(contract.fiscalYear) : 'unknown'
     grouped.set(key, [...(grouped.get(key) ?? []), contract])
   }
@@ -143,6 +158,12 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   else {
     endedToggleParams.set('showEnded', '1')
     endedToggleParams.delete('watchlist')
+  }
+  const buildPageHref = (nextPage: number) => {
+    const nextParams = new URLSearchParams(activeParams)
+    if (nextPage > 1) nextParams.set('page', String(nextPage))
+    const query = nextParams.toString()
+    return query ? `/contracts?${query}` : '/contracts'
   }
   const endedContractsHref = toggleHref(endedToggleParams)
   const olderToggleParams = new URLSearchParams(activeParams)
@@ -217,18 +238,29 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
           <p>{showWatchlist ? 'ไม่มีสัญญาที่ใกล้สิ้นสุดหรือคงเหลือน้อยกว่า 30% ตามตัวกรองอื่นที่เลือกไว้' : showEnded ? 'ลองล้างตัวกรอง หรือเพิ่มสัญญาใหม่เพื่อเริ่มต้นทะเบียน' : !showOlder && !fiscalYear && olderContracts.length > 0 ? 'เลือกแสดงปีเก่าทั้งหมด หากต้องการตรวจสอบสัญญาย้อนหลัง' : 'เลือกแสดงสัญญาที่สิ้นสุดแล้ว หากต้องการตรวจสอบข้อมูลย้อนหลัง'}</p>
         </section>
       ) : (
-        Array.from(grouped.entries()).map(([year, yearContracts]) => (
-          <section className="bench-panel contract-year-group" key={year} aria-labelledby={`fiscal-year-${year}`}>
-            <div className="bench-panel__header">
-              <div>
-                <p className="section-kicker">FISCAL GROUP</p>
-                <h2 id={`fiscal-year-${year}`}>{year === 'unknown' ? 'ไม่ระบุปี' : `ปีงบประมาณ ${year}`}</h2>
+        <>
+          {Array.from(grouped.entries()).map(([year, yearContracts]) => (
+            <section className="bench-panel contract-year-group" key={year} aria-labelledby={`fiscal-year-${year}`}>
+              <div className="bench-panel__header">
+                <div>
+                  <p className="section-kicker">FISCAL GROUP</p>
+                  <h2 id={`fiscal-year-${year}`}>{year === 'unknown' ? 'ไม่ระบุปี' : `ปีงบประมาณ ${year}`}</h2>
+                </div>
+                <p>{yearContracts.length} สัญญาในหน้านี้</p>
               </div>
-              <p>{yearContracts.length} สัญญา</p>
-            </div>
-            <ContractTable contracts={yearContracts} />
-          </section>
-        ))
+              <ContractTable contracts={yearContracts} />
+            </section>
+          ))}
+          <ListPagination
+            currentPage={paginatedContracts.currentPage}
+            pageCount={paginatedContracts.pageCount}
+            totalCount={paginatedContracts.totalCount}
+            startIndex={paginatedContracts.startIndex}
+            pageSize={LIST_PAGE_SIZE}
+            itemLabel="สัญญา"
+            buildHref={buildPageHref}
+          />
+        </>
       )}
     </div>
   )

@@ -41,39 +41,38 @@ test.describe('equipment lease budget', () => {
     const admin = await adminContext.newPage()
     await loginAs(admin, 'admin')
     await admin.goto(url)
+    await admin.getByRole('button', { name: 'กำหนดผู้รับผิดชอบ' }).click()
     // Must be the same identity the stock fixture logs in as, or the grant
     // lands on someone else and the next assertion fails for the wrong reason.
     const stockIdentifier = process.env.E2E_STOCK_IDENTIFIER ?? ''
     await admin.getByLabel('ค้นหาผู้รับผิดชอบ').fill(stockIdentifier)
     await admin.getByRole('checkbox').first().check()
     await admin.getByRole('button', { name: 'บันทึกผู้รับผิดชอบ' }).click()
-    // A cold Preview function can commit the RPC before its refreshed RSC
-    // payload returns. Wait for the user-visible completion state, not a fixed
-    // network delay.
-    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible({
-      timeout: remoteMutationTimeout,
-    })
+    // Saving closes the dialog after the RPC commits. The refreshed contract
+    // page is the user-visible completion state.
+    await expect(admin.getByRole('dialog')).toBeHidden({ timeout: remoteMutationTimeout })
 
     // Now the same non-editor can record.
     await stock.reload()
+    await stock.getByRole('button', { name: /บันทึกค่าใช้จ่าย/ }).first().click()
     const amountField = stock.getByLabel('จำนวนเงิน (บาท)')
     await expect(amountField).toBeVisible()
     await amountField.fill('1000')
-    await stock.getByRole('button', { name: 'บันทึกค่าใช้จ่าย' }).click()
+    await stock.getByRole('button', { name: 'บันทึกค่าใช้จ่าย', exact: true }).click()
     await expect(stock.getByText('1,000.00').first()).toBeVisible()
 
     // The ceiling is enforced by the database, not the form, so an amount past
     // the remaining balance comes back with the balance the database saw.
+    await stock.getByRole('button', { name: /บันทึกค่าใช้จ่าย/ }).first().click()
     await amountField.fill('99999999')
     await expect(stock.getByText(/จำนวนเงินเกินงบคงเหลือ|จำนวนเงินเกินมูลค่าคงเหลือ/)).toBeVisible()
 
     // Revoking the assignment takes the ability away again.
     await admin.reload()
+    await admin.getByRole('button', { name: 'กำหนดผู้รับผิดชอบ' }).click()
     await admin.getByRole('button', { name: 'นำออก' }).first().click()
     await admin.getByRole('button', { name: 'บันทึกผู้รับผิดชอบ' }).click()
-    await expect(admin.getByText('บันทึกผู้รับผิดชอบแล้ว')).toBeVisible({
-      timeout: remoteMutationTimeout,
-    })
+    await expect(admin.getByRole('dialog')).toBeHidden({ timeout: remoteMutationTimeout })
 
     await stock.reload()
     await expect(stock.getByRole('button', { name: 'บันทึกค่าใช้จ่าย' })).toHaveCount(0)

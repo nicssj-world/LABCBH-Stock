@@ -9,7 +9,7 @@ test.describe('manager contract workflow', () => {
   test('@smoke creates a contract and requires เลขที่สัญญา only at contract_started', async ({ page }) => {
     test.setTimeout(90_000)
     await loginAs(page, 'manager')
-    const activeBefore = Number((await page.getByText('สัญญาใช้งานอยู่').locator('..').locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
+    const activeBefore = Number((await page.locator('.executive-strip__card').filter({ hasText: 'สัญญาใช้งานอยู่' }).locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
     await page.goto('/contracts/new')
 
     const token = Date.now().toString()
@@ -42,10 +42,11 @@ test.describe('manager contract workflow', () => {
       }
     }
 
-    await expect(page.getByText('สัญญาเริ่มใช้งานแล้ว ไม่มีขั้นตอนถัดไป')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'ดำเนินการขั้นถัดไป' })).toHaveCount(0)
+    await expect(page.getByText(`E2E-${token}`, { exact: true }).first()).toBeVisible()
     await page.goto('/dashboard')
-    const activeAfter = Number((await page.getByText('สัญญาใช้งานอยู่').locator('..').locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
+    const activeAfter = Number((await page.locator('.executive-strip__card').filter({ hasText: 'สัญญาใช้งานอยู่' }).locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
     expect(activeAfter).toBe(activeBefore + 1)
-    await expect(page.getByRole('heading', { name: 'รายการที่ต้องเฝ้าระวัง' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'รายการตามสัญญาคงเหลือต่ำ' })).toBeVisible()
   })
 })

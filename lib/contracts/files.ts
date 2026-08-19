@@ -14,7 +14,8 @@ export const CONTRACT_FILE_TYPES = [
  */
 export function contractFilePath(contractId: number, filename: string): string {
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.{2,}/g, '_')
-  return `contracts/${contractId}/${Date.now()}-${safe}`
+  const uniqueId = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `contracts/${contractId}/${Date.now()}-${uniqueId}-${safe}`
 }
 
 /**

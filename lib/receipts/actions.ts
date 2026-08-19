@@ -94,7 +94,7 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from(PO_IMAGE_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, { upsert: false, contentType: file.type })
 
   if (uploadError) throw new Error(`อัปโหลดไฟล์ PO ไม่สำเร็จ: ${uploadError.message}`)
 
@@ -104,7 +104,21 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
     p_po_image_path: path,
   })
 
-  unwrapMutation('บันทึกไฟล์ PO', result)
+  if (result.error) {
+    const { error: cleanupError } = await supabaseAdmin.storage
+      .from(PO_IMAGE_BUCKET)
+      .remove([path])
+
+    if (cleanupError) {
+      console.error(`ล้างไฟล์ PO ที่บันทึกไม่สำเร็จไม่ได้: ${cleanupError.message}`, { path })
+    }
+
+    throw new Error(`บันทึกไฟล์ PO ไม่สำเร็จ: ${result.error.message}`)
+  }
+
+  // The previous object is deliberately retained. Replacing evidence updates
+  // the pointer without destructively deleting a document that may be useful
+  // during an audit; a future retention job can manage unreferenced objects.
   revalidateReceipt(parsedId)
   return { path }
 }

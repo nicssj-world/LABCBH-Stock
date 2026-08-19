@@ -68,11 +68,25 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
   const isContractStarted = contract.procurementStage === 'contract_started'
   const isStartedSupplyContract = mode === 'supply' && isContractStarted
+  const openingBalanceHistoryPromise = isStartedSupplyContract
+    ? listContractOpeningBalanceHistory(contract.id)
+        .then((history) => ({ history, error: null as string | null }))
+        .catch((error) => {
+          console.error(`listContractOpeningBalanceHistory failed for contract ${contract.id}`, error)
+          return {
+            history: [] as Awaited<ReturnType<typeof listContractOpeningBalanceHistory>>,
+            error: 'ไม่สามารถโหลดประวัติยอดใช้ก่อนเข้าระบบได้ กรุณาลองใหม่อีกครั้ง',
+          }
+        })
+    : Promise.resolve({
+        history: [] as Awaited<ReturnType<typeof listContractOpeningBalanceHistory>>,
+        error: null as string | null,
+      })
 
   // What each of these reads needs — the contract's mode and stage — is known
   // by now, so they overlap on the wire instead of queueing. A started supply
   // contract used to pay for all four one after another.
-  const [responsibleCandidates, purchaseHistory, openingBalanceHistory, editCatalog] =
+  const [responsibleCandidates, purchaseHistory, openingBalanceResult, editCatalog] =
     await Promise.all([
       mode === 'budget' && responsibleCandidatesSettled
         ? responsibleCandidatesSettled.then((settled) =>
@@ -83,18 +97,15 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       // hasn't started yet cannot have been purchased against.
       isStartedSupplyContract ? listContractPurchaseHistory(contract.id) : [],
       // Supplementary display only — a failure here (e.g. a transient DB
-      // error) must not take down the whole contract page, so it degrades to
-      // an empty history instead of throwing during Server Component render.
-      isStartedSupplyContract
-        ? listContractOpeningBalanceHistory(contract.id).catch((error) => {
-            console.error(`listContractOpeningBalanceHistory failed for contract ${contract.id}`, error)
-            return []
-          })
-        : [],
+      // error) must not take down the whole contract page. Keep the failure
+      // visible so an empty array is not mistaken for "no history".
+      openingBalanceHistoryPromise,
       // A lease has no line items, so the edit dialog's catalog lookup is only
       // needed for editors of a supply contract.
       canEdit && mode !== 'budget' ? listInventoryCatalog() : [],
     ])
+  const openingBalanceHistory = openingBalanceResult.history
+  const openingBalanceHistoryError = openingBalanceResult.error
   const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
   // is the sum of its lines.
@@ -300,16 +311,23 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         </section>
       )}
 
-      {isContractStarted && openingBalanceHistory.length > 0 && (
+      {isContractStarted && (openingBalanceHistoryError || openingBalanceHistory.length > 0) && (
         <section className="bench-panel" aria-labelledby="contract-opening-balance-history-title">
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">OPENING BALANCE</p>
               <h2 id="contract-opening-balance-history-title">ประวัติยอดใช้ก่อนเข้าระบบ</h2>
             </div>
-            <p>{openingBalanceHistory.length} ครั้ง</p>
+          <p>{openingBalanceHistoryError ? 'โหลดไม่สำเร็จ' : `${openingBalanceHistory.length} ครั้ง`}</p>
           </div>
-          <ContractOpeningBalanceHistory entries={openingBalanceHistory} />
+          {openingBalanceHistoryError ? (
+            <p className="inline-alert" role="alert">
+              {openingBalanceHistoryError}{' '}
+              <Link className="text-link" href={`/contracts/${contract.id}?retry=opening-balance`}>ลองโหลดอีกครั้ง</Link>
+            </p>
+          ) : (
+            <ContractOpeningBalanceHistory entries={openingBalanceHistory} />
+          )}
         </section>
       )}
 

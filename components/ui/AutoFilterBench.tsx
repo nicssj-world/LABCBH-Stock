@@ -60,6 +60,7 @@ export function AutoFilterBench({ fields, ariaLabel, className = '' }: AutoFilte
 
   const setFilter = useCallback((name: string, value: string) => {
     const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete('page')
     if (value.trim()) nextParams.set(name, value)
     else nextParams.delete(name)
     replaceFilters(nextParams)
@@ -87,6 +88,7 @@ export function AutoFilterBench({ fields, ariaLabel, className = '' }: AutoFilte
   const clearFilters = () => {
     setSearch('')
     const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete('page')
     fields.forEach((field) => nextParams.delete(field.name))
     replaceFilters(nextParams)
   }

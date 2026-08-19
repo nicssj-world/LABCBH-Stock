@@ -121,6 +121,8 @@ assert.match(
 // surface somewhere — otherwise forcing an admin to type it is pointless.
 assert.match(detailPage, /listContractOpeningBalanceHistory/, 'the detail page must read back the opening-balance history it collects')
 assert.match(detailPage, /ContractOpeningBalanceHistory/, 'the detail page must render the opening-balance history')
+assert.match(detailPage, /openingBalanceHistoryError/, 'a failed supplementary history read must remain visible instead of looking empty')
+assert.match(detailPage, /role="alert"/, 'a failed supplementary history read must be announced as an error')
 assert.match(queries, /export async function listContractOpeningBalanceHistory/)
 assert.match(
   queries,

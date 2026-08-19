@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireActor } from '@/lib/auth/actor'
+import { assertContractEditor } from '@/lib/contracts/authorization'
 import {
   CONTRACT_FILE_BUCKET,
   CONTRACT_FILE_TYPES,
@@ -16,11 +17,15 @@ function unwrap(operation: string, result: { error: { message: string } | null }
 
 /**
  * Shared by the no-JS `uploadContractFile` action and the progress-tracking
- * upload route: validation, the storage write, and the RPC that authorises
- * and records it. Kept here (not in files.ts) so files.ts stays free of the
- * supabaseAdmin import and testable from plain node/tsx without a build.
+ * upload route. The actor is resolved here, before any Storage write, so this
+ * helper remains safe even when the route and Server Action evolve separately.
+ * Kept here (not in files.ts) so files.ts stays free of the supabaseAdmin
+ * import and testable from plain node/tsx without a build.
  */
-export async function storeContractFile(actorId: string, contractId: number, file: File) {
+export async function storeContractFile(contractId: number, file: File) {
+  const actor = await requireActor()
+  assertContractEditor(actor)
+
   if (file.size === 0) {
     throw new Error('กรุณาเลือกไฟล์สัญญา')
   }
@@ -35,30 +40,37 @@ export async function storeContractFile(actorId: string, contractId: number, fil
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from(CONTRACT_FILE_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type })
+    .upload(path, file, { upsert: false, contentType: file.type })
 
   if (uploadError) throw new Error(`อัปโหลดไฟล์สัญญาไม่สำเร็จ: ${uploadError.message}`)
 
-  // Authorisation lives in the RPC so the storage write is never the only gate.
   const result = await supabaseAdmin.rpc('set_contract_file', {
-    p_actor_id: actorId,
+    p_actor_id: actor.id,
     p_contract_id: contractId,
     p_file_url: path,
   })
-  unwrap('บันทึกไฟล์สัญญา', result)
+  if (result.error) {
+    const { error: cleanupError } = await supabaseAdmin.storage
+      .from(CONTRACT_FILE_BUCKET)
+      .remove([path])
+
+    if (cleanupError) {
+      console.error(`ล้างไฟล์สัญญาที่บันทึกไม่สำเร็จไม่ได้: ${cleanupError.message}`, { path })
+    }
+
+    throw new Error(`บันทึกไฟล์สัญญาไม่สำเร็จ: ${result.error.message}`)
+  }
 
   return { path }
 }
 
 export async function uploadContractFile(contractId: number, formData: FormData) {
-  const actor = await requireActor()
-
   const file = formData.get('file')
   if (!(file instanceof File)) {
     throw new Error('กรุณาเลือกไฟล์สัญญา')
   }
 
-  const { path } = await storeContractFile(actor.id, contractId, file)
+  const { path } = await storeContractFile(contractId, file)
 
   revalidatePath(`/contracts/${contractId}`)
   return { path }

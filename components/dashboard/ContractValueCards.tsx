@@ -67,13 +67,12 @@ export function ContractValueCards({
 
   return (
     <div className="executive-strip__value-cluster">
-      <div className="executive-strip__scope-toggle" role="tablist" aria-label="ขอบเขตมูลค่าสัญญา">
+      <div className="executive-strip__scope-toggle" role="group" aria-label="ขอบเขตมูลค่าสัญญา">
         {SCOPE_OPTIONS.map((option) => (
           <button
             key={option.key}
             type="button"
-            role="tab"
-            aria-selected={scope === option.key}
+            aria-pressed={scope === option.key}
             onClick={() => setScope(option.key)}
           >
             {option.label}

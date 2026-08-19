@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
@@ -11,6 +12,7 @@ import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requi
 import { listRequisitions } from '@/lib/requisitions/queries'
 import { REQUISITION_STATUSES } from '@/lib/requisitions/schema'
 import type { RequisitionRecord } from '@/lib/requisitions/types'
+import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
 interface RequisitionsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -25,6 +27,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   const statusValue = first(params.status)
   const status = REQUISITION_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const page = parsePage(first(params.page))
 
   let requisitions: RequisitionRecord[] = []
   let error: string | null = null
@@ -36,6 +39,16 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   }
 
   const waitingCount = requisitions.filter((requisition) => requisition.status === 'waiting').length
+  const paginatedRequisitions = paginate(requisitions, page, LIST_PAGE_SIZE)
+  const buildPageHref = (nextPage: number) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (nextPage > 1) nextParams.set('page', String(nextPage))
+    const query = nextParams.toString()
+    return query ? `/requisitions?${query}` : '/requisitions'
+  }
 
   return (
     <div className="route-stack">
@@ -123,7 +136,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                   </tr>
                 </thead>
                 <tbody>
-                  {requisitions.map((requisition) => (
+                  {paginatedRequisitions.items.map((requisition) => (
                     <tr key={requisition.id}>
                       <td className="identifier"><RequisitionSummaryDialog requisition={requisition} /></td>
                       <td>{formatThaiDate(requisition.desiredDate)}</td>
@@ -153,10 +166,19 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+              </tbody>
+            </table>
             </div>
           )}
+          <ListPagination
+            currentPage={paginatedRequisitions.currentPage}
+            pageCount={paginatedRequisitions.pageCount}
+            totalCount={paginatedRequisitions.totalCount}
+            startIndex={paginatedRequisitions.startIndex}
+            pageSize={LIST_PAGE_SIZE}
+            itemLabel="ใบเบิก"
+            buildHref={buildPageHref}
+          />
         </section>
       )}
     </div>
