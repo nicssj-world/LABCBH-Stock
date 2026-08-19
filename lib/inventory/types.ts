@@ -52,6 +52,19 @@ export interface StockMovementRecord {
   createdAt: string
 }
 
+/**
+ * The identifying fields of an active catalogue item, for the pickers that
+ * only ever offer a choice — contract lines, receipt lines. Deliberately
+ * separate from InventoryItemRecord: resolving on-hand and a suggested
+ * minimum costs three further reads that a picker never displays.
+ */
+export interface InventoryCatalogEntry {
+  id: string
+  lsCode: string
+  name: string
+  baseUnit: string
+}
+
 export interface InventoryItemRecord {
   id: string
   lsCode: string

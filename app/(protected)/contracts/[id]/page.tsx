@@ -22,7 +22,7 @@ import { canRecordContractExpense } from '@/lib/contracts/authorization'
 import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract, listContractOpeningBalanceHistory } from '@/lib/contracts/queries'
-import { listInventoryItems } from '@/lib/inventory/queries'
+import { listInventoryCatalog } from '@/lib/inventory/queries'
 import { listContractPurchaseHistory } from '@/lib/pr/queries'
 
 interface ContractDetailPageProps {
@@ -40,11 +40,22 @@ const displayDate = (value: string | null) => value
   : 'ไม่ระบุ'
 
 export default async function ContractDetailPage({ params }: ContractDetailPageProps) {
-  const actor = await requireActor()
-  const { id } = await params
+  const [actor, { id }] = await Promise.all([requireActor(), params])
   const contractId = Number(id)
   if (!Number.isInteger(contractId) || contractId <= 0) notFound()
   const isAdmin = hasAppRole(actor, 'admin')
+
+  // The candidate list depends on the actor alone, so it is read alongside the
+  // contract instead of waiting behind it. Settling it into a result rather
+  // than holding a bare promise matters: notFound() below can leave this
+  // unawaited, and a bare rejection would then surface as an unhandled one.
+  const responsibleCandidatesSettled = isAdmin
+    ? fetchResponsibleCandidates().then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      )
+    : null
+
   // Only an admin can even see that an archived contract exists, since
   // archiving is meant for mistaken/duplicate records; anyone else hitting
   // the id of one gets the same not-found as before.
@@ -55,27 +66,35 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const canManageStageHistory = canOperateStock(actor)
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
-  const responsibleCandidates = mode === 'budget' && isAdmin
-    ? await fetchResponsibleCandidates()
-    : []
   const isContractStarted = contract.procurementStage === 'contract_started'
-  // A lease never uses the "ซื้อในสัญญา" PR method, and a contract that hasn't
-  // started yet cannot have been purchased against.
-  const purchaseHistory = mode === 'supply' && isContractStarted
-    ? await listContractPurchaseHistory(contract.id)
-    : []
-  // Supplementary display only — a failure here (e.g. a transient DB error)
-  // must not take down the whole contract page, so it degrades to an empty
-  // history instead of throwing during Server Component render.
-  const openingBalanceHistory = mode === 'supply' && isContractStarted
-    ? await listContractOpeningBalanceHistory(contract.id).catch((error) => {
-        console.error(`listContractOpeningBalanceHistory failed for contract ${contract.id}`, error)
-        return []
-      })
-    : []
-  // A lease has no line items, so the edit dialog's catalog lookup is only
-  // needed for editors of a supply contract.
-  const editCatalog = canEdit && mode !== 'budget' ? await listInventoryItems({}) : []
+  const isStartedSupplyContract = mode === 'supply' && isContractStarted
+
+  // What each of these reads needs — the contract's mode and stage — is known
+  // by now, so they overlap on the wire instead of queueing. A started supply
+  // contract used to pay for all four one after another.
+  const [responsibleCandidates, purchaseHistory, openingBalanceHistory, editCatalog] =
+    await Promise.all([
+      mode === 'budget' && responsibleCandidatesSettled
+        ? responsibleCandidatesSettled.then((settled) =>
+            'error' in settled ? Promise.reject(settled.error) : settled.value,
+          )
+        : [],
+      // A lease never uses the "ซื้อในสัญญา" PR method, and a contract that
+      // hasn't started yet cannot have been purchased against.
+      isStartedSupplyContract ? listContractPurchaseHistory(contract.id) : [],
+      // Supplementary display only — a failure here (e.g. a transient DB
+      // error) must not take down the whole contract page, so it degrades to
+      // an empty history instead of throwing during Server Component render.
+      isStartedSupplyContract
+        ? listContractOpeningBalanceHistory(contract.id).catch((error) => {
+            console.error(`listContractOpeningBalanceHistory failed for contract ${contract.id}`, error)
+            return []
+          })
+        : [],
+      // A lease has no line items, so the edit dialog's catalog lookup is only
+      // needed for editors of a supply contract.
+      canEdit && mode !== 'budget' ? listInventoryCatalog() : [],
+    ])
   const hasNextAction = canEdit && contract.procurementStage && !isContractStarted
   // A lease carries its value on the contract itself; a supply contract's value
   // is the sum of its lines.

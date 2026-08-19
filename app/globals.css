@@ -3281,6 +3281,57 @@ input[type="number"] {
 .print-signature__hint { color: #444444; }
 .print-signature__date { margin-top: 8px !important; }
 
+/*
+Route skeleton — the placeholder app/(protected)/loading.tsx shows while a
+dynamic page reads its data. Every protected route is server-rendered on
+demand, so without a boundary here a navigation leaves the previous page
+frozen on screen with nothing to say the click was received.
+*/
+.route-skeleton {
+  display: grid;
+  gap: 22px;
+}
+
+.route-skeleton__panel {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-panel);
+}
+
+.route-skeleton__line {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--lab-surface-muted);
+  animation: route-skeleton-breathe 1.4s ease-in-out infinite;
+}
+
+.route-skeleton__line--title { height: 22px; width: 42%; }
+.route-skeleton__line--kicker { height: 9px; width: 22%; }
+.route-skeleton__line--short { width: 62%; }
+.route-skeleton__line--tail { width: 34%; }
+
+.route-skeleton__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+/* Staggered so the panel reads as one loading surface rather than a flicker. */
+.route-skeleton__panel .route-skeleton__line:nth-child(2) { animation-delay: 120ms; }
+.route-skeleton__panel .route-skeleton__line:nth-child(3) { animation-delay: 240ms; }
+
+@keyframes route-skeleton-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-skeleton__line { animation: none; }
+}
+
 @page {
   size: A4;
   margin: 12mm;

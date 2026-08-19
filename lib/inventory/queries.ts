@@ -17,6 +17,7 @@ import {
   roundQuantity,
 } from './balance'
 import type {
+  InventoryCatalogEntry,
   InventoryFilters,
   InventoryItemDetail,
   InventoryItemRecord,
@@ -218,6 +219,39 @@ export const getInventoryMinimumStockMonths = cache(async (): Promise<number> =>
   return data ? minimumStockSettingsRowSchema.parse(data).minimum_stock_months : DEFAULT_MINIMUM_STOCK_MONTHS
 })
 
+const catalogRowSchema = itemRowSchema.pick({
+  id: true,
+  ls_code: true,
+  name: true,
+  base_unit: true,
+})
+
+/**
+ * The active catalogue, for a picker that only needs to identify an item.
+ *
+ * listInventoryItems() answers the same question but also resolves on-hand,
+ * three months of issue history and the reserve-months setting — four round
+ * trips and roughly twice the payload — none of which a picker renders. Same
+ * items in the same order, so a caller can move between the two freely.
+ */
+export async function listInventoryCatalog(): Promise<InventoryCatalogEntry[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('id, ls_code, name, base_unit')
+    .eq('is_active', true)
+    .order('ls_code')
+
+  if (error) throw new Error(`อ่านรายการคลังไม่สำเร็จ: ${error.message}`)
+
+  return catalogRowSchema.array().parse(data ?? []).map((row) => ({
+    id: row.id,
+    lsCode: row.ls_code,
+    name: row.name,
+    baseUnit: row.base_unit,
+  }))
+}
+
 export async function listInventoryItems(
   filters: InventoryFilters = {},
 ): Promise<InventoryItemRecord[]> {
@@ -287,12 +321,17 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   const row = itemRowSchema.parse(data)
   const today = bangkokToday()
 
-  const [balancesAndIssues, lotResult, aliasResult, movementResult, minimumStockMonths] = await Promise.all([
+  const [balancesAndIssues, lotResult, lotBalances, aliasResult, movementResult, minimumStockMonths] = await Promise.all([
     readBalancesAndIssues(supabase, [row.id]),
     supabase
       .from('inventory_lots')
       .select('id, lot_number, expiry_date, received_date, original_quantity, storage_location')
       .eq('inventory_item_id', row.id),
+    // Reads by item rather than by the lot ids the query above returns, which
+    // is what lets it run here instead of waiting a further round trip for
+    // them. The view carries inventory_item_id, and this page always wants
+    // every lot of the item, so the two forms select the same rows.
+    readLotBalances(supabase, row.id),
     supabase
       .from('inventory_item_aliases')
       .select('id, alias_kind, alias_value, source')
@@ -314,7 +353,6 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   }
 
   const lotRows = lotRowSchema.array().parse(lotResult.data ?? [])
-  const lotBalances = await readLotBalances(supabase, lotRows.map((lot) => lot.id))
 
   // Shown in the same order fulfilment will actually issue them, using the one
   // ranking function so this preview cannot drift from the real thing.
@@ -369,14 +407,12 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
 
 async function readLotBalances(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  lotIds: string[],
+  itemId: string,
 ): Promise<Map<string, number>> {
-  if (lotIds.length === 0) return new Map()
-
   const { data, error } = await supabase
     .from('inventory_lot_balances')
     .select('inventory_lot_id, balance')
-    .in('inventory_lot_id', lotIds)
+    .eq('inventory_item_id', itemId)
 
   if (error) throw new Error(`อ่านยอดคงเหลือรายล็อตไม่สำเร็จ: ${error.message}`)
 

@@ -215,7 +215,13 @@ assert.match(table, /DetailIconLink/, 'the contract detail action must use the s
 assert.match(itemDisclosure, /<details/, 'contract items must use a native show/hide disclosure')
 assert.match(itemDisclosure, /รายการสินค้า/, 'the item disclosure needs a clear Thai label')
 assert.match(summaryDialog, /^['"]use client['"]/m, 'the quick summary dialog must own its client interaction boundary')
-assert.match(summaryDialog, /showModal()/, 'the contract name must open the native modal dialog')
+// Deferred rather than always mounted: the register renders one of these per
+// row and renders every row twice, for the table and the card layout. Always
+// building the body put 393 dialogs and 2.5MB of HTML on the inventory list
+// alone. The native modal contract is unchanged, and lives in the shared hook.
+assert.match(summaryDialog, /useDeferredDialog\(\)/, 'the contract name must open the native modal dialog')
+assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay behind the isRendered gate')
+assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /aria-haspopup="dialog"/, 'the summary trigger must announce its dialog relationship')
 assert.match(summaryDialog, /ข้อมูลสัญญาแบบย่อ/, 'the dialog must identify itself as a concise contract summary')
 assert.match(summaryDialog, /เปิดรายละเอียดเต็ม/, 'the summary must offer a route to the complete contract page')

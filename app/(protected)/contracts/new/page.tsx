@@ -3,13 +3,13 @@ import { redirect } from 'next/navigation'
 import { ContractForm } from '@/components/contracts/ContractForm'
 import { hasAppRole, isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { listInventoryItems } from '@/lib/inventory/queries'
+import { listInventoryCatalog } from '@/lib/inventory/queries'
 
 export default async function NewContractPage() {
   const actor = await requireActor()
   if (!hasAppRole(actor, 'admin', 'head')) redirect('/access-denied')
 
-  const inventoryItems = await listInventoryItems({})
+  const inventoryItems = await listInventoryCatalog()
 
   return (
     <div className="route-stack">

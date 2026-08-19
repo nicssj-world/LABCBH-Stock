@@ -200,7 +200,13 @@ assert.doesNotMatch(table, /<Link[^>]*>\s*ดูรายละเอียด/,
 const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)
 assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
-assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
+// Deferred rather than always mounted: the register renders one of these per
+// row and renders every row twice, for the table and the card layout. Always
+// building the body put 393 dialogs and 2.5MB of HTML on the inventory list
+// alone. The native modal contract is unchanged, and lives in the shared hook.
+assert.match(summaryDialog, /useDeferredDialog\(\)/, 'the trigger must open it through the shared deferred-dialog hook')
+assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay behind the isRendered gate')
+assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{PURCHASE_REQUEST_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /createdContractId/, 'a PR that opened a contract must link to it from the popup')

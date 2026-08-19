@@ -19,10 +19,14 @@ export default async function EditInventoryItemPage({ params }: EditInventoryIte
   const actor = await requireActor()
   if (!canOperateStock(actor)) redirect('/access-denied')
 
-  const item = await getInventoryItem(id)
+  // The department list is the same for every item, so it is read alongside
+  // the item rather than after it.
+  const [item, existingDepartments] = await Promise.all([
+    getInventoryItem(id),
+    listInventoryDepartments(),
+  ])
   if (!item) notFound()
 
-  const existingDepartments = await listInventoryDepartments()
   const departments = [...new Set([...DEPARTMENTS, ...existingDepartments])].sort((left, right) => left.localeCompare(right, 'th'))
 
   return (

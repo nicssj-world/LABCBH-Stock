@@ -22,8 +22,26 @@ assert.match(queries, /allocatedQuantity/, 'contract reads must preserve the all
 assert.match(detailPage, /ContractPurchaseHistory/, 'a started supply contract must show its purchase history')
 assert.match(
   detailPage,
-  /mode === 'supply' && isContractStarted\s*\?\s*await listContractPurchaseHistory/,
+  /const isStartedSupplyContract = mode === 'supply' && isContractStarted/,
+  'the condition guarding the contract-only reads must stay derived in one place',
+)
+assert.match(
+  detailPage,
+  /isStartedSupplyContract \? listContractPurchaseHistory\(contract\.id\) : \[\]/,
   'purchase history must only be fetched for a started supply contract — a lease never uses the contract PR method',
+)
+// These reads are independent of each other once the contract's mode and stage
+// are known. Awaiting them one at a time cost a separate round trip each, so
+// the gate above has to keep working from inside a single Promise.all.
+assert.match(
+  detailPage,
+  /await Promise\.all\(\[/,
+  'the reads that follow the contract must overlap rather than queue',
+)
+assert.doesNotMatch(
+  detailPage,
+  /\?\s*await listContractPurchaseHistory/,
+  'purchase history must not go back to being awaited on its own',
 )
 assert.match(detailPage, /ประวัติการซื้อ/)
 

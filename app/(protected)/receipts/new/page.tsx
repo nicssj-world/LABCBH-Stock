@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { ReceiptForm } from '@/components/receipts/ReceiptForm'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { listInventoryItems } from '@/lib/inventory/queries'
+import { listInventoryCatalog } from '@/lib/inventory/queries'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { listReceivablePurchaseRequests } from '@/lib/receipts/queries'
 
@@ -12,7 +12,7 @@ export default async function NewReceiptPage() {
   if (!canOperateStock(actor)) redirect('/receipts')
 
   const [inventoryItems, purchaseRequests] = await Promise.all([
-    listInventoryItems({}),
+    listInventoryCatalog(),
     listReceivablePurchaseRequests(),
   ])
 

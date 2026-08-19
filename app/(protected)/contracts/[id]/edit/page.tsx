@@ -4,7 +4,7 @@ import { ContractForm } from '@/components/contracts/ContractForm'
 import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { getContract } from '@/lib/contracts/queries'
-import { listInventoryItems } from '@/lib/inventory/queries'
+import { listInventoryCatalog } from '@/lib/inventory/queries'
 
 interface EditContractPageProps {
   params: Promise<{ id: string }>
@@ -18,7 +18,7 @@ export default async function EditContractPage({ params }: EditContractPageProps
   if (!Number.isInteger(contractId) || contractId <= 0) notFound()
   const [contract, inventoryItems] = await Promise.all([
     getContract(contractId),
-    listInventoryItems({}),
+    listInventoryCatalog(),
   ])
   if (!contract) notFound()
 

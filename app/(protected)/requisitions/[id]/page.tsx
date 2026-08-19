@@ -37,15 +37,21 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
   if (!requisition) notFound()
 
   const canFulfil = canOperateStock(actor) && requisition.status === 'waiting'
+  const itemIds = requisition.items.map((item) => item.inventoryItemId)
   const lotsByItem: Record<string, SelectableLot[]> = {}
 
-  if (canFulfil) {
-    const lots = await listSelectableLots(requisition.items.map((item) => item.inventoryItemId))
+  // Both reads are answered by the same list of item ids, so the lot picker no
+  // longer makes the on-hand figures wait a second round trip behind it.
+  const [lots, onHandByItem] = await Promise.all([
+    canFulfil ? listSelectableLots(itemIds) : null,
+    listOnHand(itemIds),
+  ])
+
+  if (lots) {
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots
   }
 
   const totalRequested = requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0)
-  const onHandByItem = await listOnHand(requisition.items.map((item) => item.inventoryItemId))
 
   return (
     <div className="route-stack">
