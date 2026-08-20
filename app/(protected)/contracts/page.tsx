@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ContractFilters } from '@/components/contracts/ContractFilters'
 import { ContractTable } from '@/components/contracts/ContractTable'
 import { ListPagination } from '@/components/ui/ListPagination'
-import { hasAppRole } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, presentContract } from '@/lib/contracts/presenter'
 import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
@@ -20,6 +20,7 @@ const first = (value: string | string[] | undefined) => Array.isArray(value) ? v
 export default async function ContractsPage({ searchParams }: ContractsPageProps) {
   const actor = await requireActor()
   const isAdmin = hasAppRole(actor, 'admin')
+  const canCreateContract = canOperateStock(actor)
   const params = await searchParams
   const fiscalYearValue = first(params.fiscalYear)
   const contractTypeValue = first(params.contractType)
@@ -207,7 +208,9 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
               สัญญาที่ถูกลบ
             </Link>
           )}
-          <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>
+          {canCreateContract && (
+            <Link className="lab-link-button lab-link-button--primary" href="/contracts/new">เพิ่มสัญญา</Link>
+          )}
         </div>
       </header>
 

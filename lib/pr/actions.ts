@@ -33,9 +33,15 @@ function unwrapMutation(
 
 function revalidatePurchaseRequest(id?: string) {
   revalidatePath('/purchase-requests')
+  revalidatePath('/purchase-requests/new')
   if (id) revalidatePath(`/purchase-requests/${id}`)
   revalidatePath('/dashboard')
   revalidatePath('/contracts')
+  // A manually entered PR line may have created a new catalogue row in the
+  // same transaction. Keep every downstream picker/list in sync immediately.
+  revalidatePath('/inventory')
+  revalidatePath('/receipts/new')
+  revalidatePath('/requisitions/new')
 }
 
 /** The Thai fiscal year rolls on 1 October. */

@@ -2601,6 +2601,25 @@ input[type="number"] {
 .item-picker-search .field-row { max-width: 420px; }
 .item-picker__truncated { margin: 0; color: var(--lab-muted); font-size: 11px; font-weight: 600; }
 .item-picker__added:disabled { color: var(--lab-green); background: var(--lab-green-soft); border-color: var(--lab-green); opacity: 1; }
+.item-picker__manual {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 0;
+  padding: 16px;
+  background: var(--lab-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-primary) 24%, var(--lab-border));
+  border-radius: var(--radius-control);
+}
+.item-picker__manual legend { padding: 0 6px; color: var(--lab-navy-strong); font-size: 13px; font-weight: 700; }
+.item-picker__manual-note { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.5; }
+.item-picker__manual-fields { display: grid; grid-template-columns: minmax(130px, .85fr) minmax(220px, 1.6fr) minmax(110px, .75fr) auto; align-items: end; gap: 12px; }
+.item-picker__manual-fields label { display: grid; gap: 6px; color: var(--lab-ink); font-size: 12px; font-weight: 700; }
+.item-picker__manual-fields input { width: 100%; min-height: 44px; padding: 8px 10px; color: var(--lab-ink); background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: var(--radius-control); font: inherit; }
+.item-picker__manual-fields input:focus { outline: 0; border-color: var(--lab-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lab-primary) 16%, transparent); }
+.item-picker__manual-fields button { min-height: 44px; white-space: nowrap; }
+.item-picker__manual .field-error { margin: 0; }
+.pr-line-cell--manual > input { width: min(100%, 220px); text-align: left; font-variant-numeric: normal; }
+.pr-line-cell--manual:first-child > input { width: min(100%, 150px); font-family: var(--font-mono); }
 
 .item-picker {
   display: grid;
@@ -3082,6 +3101,7 @@ input[type="number"] {
   .executive-strip--even-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .item-picker li { grid-template-columns: 1fr; gap: 12px; }
   .item-picker__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .item-picker__manual-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .receipt-line-list li { grid-template-columns: 1fr; gap: 12px; }
   .requisition-line-list li { grid-template-columns: 1fr; gap: 12px; }
   /* Single column here, so release the explicit desktop placement. */
@@ -3153,6 +3173,7 @@ input[type="number"] {
   .method-options { grid-template-columns: 1fr; }
   .item-picker__facts { grid-template-columns: 1fr; }
   .item-picker li { padding: 12px; }
+  .item-picker__manual-fields { grid-template-columns: 1fr; }
   .receipt-line__fields { grid-template-columns: 1fr; }
   .requisition-line__fields { grid-template-columns: 1fr; }
   .lot-picker li { grid-template-columns: 1fr; }

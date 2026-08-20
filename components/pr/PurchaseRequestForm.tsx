@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { ContractItemPicker, type PickerOption } from '@/components/pr/ContractItemPicker'
+import { ContractItemPicker, type ManualItemInput, type PickerOption } from '@/components/pr/ContractItemPicker'
 import {
   PurchaseMethodFields,
   emptyMethod,
@@ -12,6 +12,7 @@ import {
 } from '@/components/pr/PurchaseMethodFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
+import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest } from '@/lib/pr/actions'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
@@ -47,7 +48,7 @@ export interface PurchaseRequestFormProps {
 
 interface DraftLine {
   key: string
-  inventoryItemId: string
+  inventoryItemId: string | null
   contractItemId: string | null
   lsCode: string
   name: string
@@ -178,6 +179,32 @@ export function PurchaseRequestForm({
     setLines((current) => [...current, draftLineFor(option)])
   }
 
+  const addManualLine = (item: ManualItemInput): string | null => {
+    const normalizedLsCode = normalizeLsCode(item.lsCode)
+    if (lines.some((line) => normalizeLsCode(line.lsCode) === normalizedLsCode)) {
+      return 'รหัสน้ำยานี้ถูกเพิ่มในใบ PR แล้ว กรุณาเลือกรายการเดิมหรือใช้รหัสอื่น'
+    }
+
+    setLines((current) => [
+      ...current,
+      {
+        key: `new-${crypto.randomUUID()}`,
+        inventoryItemId: null,
+        contractItemId: null,
+        lsCode: item.lsCode,
+        name: item.name,
+        unit: item.unit,
+        unitPrice: 0,
+        requestedQuantity: 1,
+        contractRemaining: null,
+        contractedQuantity: null,
+        averageMonthlyUsage: 0,
+      },
+    ])
+    setError(null)
+    return null
+  }
+
   const updateLine = (key: string, patch: Partial<DraftLine>) => {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)))
   }
@@ -263,6 +290,8 @@ export function PurchaseRequestForm({
             .filter((line) => line.requestedQuantity > 0)
             .map((line) => ({
               inventoryItemId: line.inventoryItemId,
+              lsCode: line.lsCode,
+              name: line.name,
               contractItemId: line.contractItemId,
               requestedQuantity: line.requestedQuantity,
               unit: line.unit,
@@ -341,6 +370,7 @@ export function PurchaseRequestForm({
             options={options}
             selectedIds={lines.map((line) => line.key)}
             onAdd={addLine}
+            onAddManual={addManualLine}
           />
         </section>
       )}
@@ -378,7 +408,7 @@ export function PurchaseRequestForm({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>รหัสพัสดุ</th>
+                  <th>รหัสน้ำยา (LS)</th>
                   <th>ชื่อน้ำยา</th>
                   <th className="pr-line-cell--center">คงเหลือในสัญญา</th>
                   <th className="pr-line-cell--center">อัตราใช้/เดือน</th>
@@ -394,8 +424,28 @@ export function PurchaseRequestForm({
                   const overLimit = isOverContractLimit(line)
                   return (
                   <tr key={line.key}>
-                    <td className="identifier">{line.lsCode}</td>
-                    <td>{line.name}</td>
+                    <td className={line.inventoryItemId === null ? 'pr-line-cell--manual' : 'identifier'}>
+                      {line.inventoryItemId === null ? (
+                        <input
+                          type="text"
+                          required
+                          aria-label={`รหัสน้ำยา (LS) ของรายการที่ ${line.key}`}
+                          value={line.lsCode}
+                          onChange={(event) => updateLine(line.key, { lsCode: event.target.value })}
+                        />
+                      ) : line.lsCode}
+                    </td>
+                    <td className={line.inventoryItemId === null ? 'pr-line-cell--manual' : undefined}>
+                      {line.inventoryItemId === null ? (
+                        <input
+                          type="text"
+                          required
+                          aria-label={`ชื่อน้ำยาของรายการที่ ${line.key}`}
+                          value={line.name}
+                          onChange={(event) => updateLine(line.key, { name: event.target.value })}
+                        />
+                      ) : line.name}
+                    </td>
                     <td className="pr-line-cell--center identifier">
                       {line.contractRemaining === null ? (
                         'ไม่ตัดยอดสัญญา'
@@ -436,11 +486,21 @@ export function PurchaseRequestForm({
                         </small>
                       )}
                     </td>
-                    <td className="pr-line-cell--center">{line.unit}</td>
+                    <td className="pr-line-cell--center">
+                      {line.inventoryItemId === null ? (
+                        <input
+                          type="text"
+                          required
+                          aria-label={`หน่วยนับของรายการที่ ${line.key}`}
+                          value={line.unit}
+                          onChange={(event) => updateLine(line.key, { unit: event.target.value })}
+                        />
+                      ) : line.unit}
+                    </td>
                     <td className="pr-line-cell--center">
                       <input
                         type="number"
-                        min="0"
+                        min={method.kind === 'specific_contract' || method.kind === 'e_bidding' ? '0.01' : '0'}
                         step="0.01"
                         required
                         readOnly={line.contractItemId !== null}
