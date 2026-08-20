@@ -1871,6 +1871,15 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .stage-timeline__edit-form textarea { width: 100%; padding: 8px 9px; color: var(--lab-ink); background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: 6px; font: inherit; }
 .stage-timeline__edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* Position within the six stages, carried by length rather than by hue: the
+   register's colour vocabulary is reserved for urgency. Segment colours match
+   .stage-timeline__marker so the register and the detail page agree. */
+.stage-progress { display: grid; gap: 6px; justify-items: start; }
+.stage-progress__track { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; width: 100%; max-width: 132px; }
+.stage-progress__track > span { height: 4px; border-radius: 999px; background: var(--lab-border-strong); }
+.stage-progress__track > span[data-state="complete"] { background: var(--lab-teal); }
+.stage-progress__track > span[data-state="current"] { background: var(--lab-navy); }
+
 .decision-control,
 .completion-note { margin: 18px; }
 .decision-control > .lab-button { width: 100%; }

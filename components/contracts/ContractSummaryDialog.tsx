@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
+import { StageProgress } from '@/components/contracts/StageProgress'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -115,7 +116,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
               </div>
               <div>
                 <dt>ขั้นตอนจัดซื้อ</dt>
-                <dd><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></dd>
+                <dd><StageProgress stage={contract.procurementStage} label={contract.procurementStageLabel} /></dd>
               </div>
               <div>
                 <dt>ช่วงสัญญา</dt>

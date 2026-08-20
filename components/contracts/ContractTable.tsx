@@ -1,6 +1,7 @@
 import { ContractItemsDisclosure } from '@/components/contracts/ContractItemsDisclosure'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ContractSummaryDialog } from '@/components/contracts/ContractSummaryDialog'
+import { StageProgress } from '@/components/contracts/StageProgress'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import type { PresentedContract } from '@/lib/contracts/presenter'
@@ -58,7 +59,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                   {contract.contractType !== 'equipment_lease' && <ContractItemsDisclosure items={contract.items} />}
                 </td>
                 <td>{contract.contractTypeLabel}</td>
-                <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
+                <td><StageProgress stage={contract.procurementStage} label={contract.procurementStageLabel} /></td>
                 <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td><ContractRemainingGauge percent={contract.remainingPercent} /></td>
                 <td>
