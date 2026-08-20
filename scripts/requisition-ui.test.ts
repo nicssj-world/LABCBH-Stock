@@ -39,20 +39,39 @@ assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หร
 // The item picker only offers what the requesting department is responsible
 // for, so the list stays short as the catalog grows; items with no assigned
 // department stay reachable from any department. If nothing matches at all
-// (a department whose items were never tagged), fall back to the full catalog
+// (a department whose items were never tagged), fall back to every in-stock item
 // rather than leaving the picker silently empty.
+
+// Zero-on-hand items never reach the picker: the store cannot fill a line
+// with no lot behind it, so offering one only produces a requisition that
+// fails at fulfillment.
 assert.match(
   form,
-  /scopedCatalog = catalog\.filter\(\s*\(item\) => item\.responsibleDepartment === null \|\| item\.responsibleDepartment === department,?\s*\)/,
+  /inStockCatalog = catalog\.filter\(\(item\) => item\.onHand > 0\)/,
+  'the picker must only offer items that still have stock',
+)
+
+assert.match(
+  form,
+  /scopedCatalog = inStockCatalog.filter\(\s*\(item\) => item\.responsibleDepartment === null \|\| item\.responsibleDepartment === department,?\s*\)/,
   'the item picker must be scoped to the requesting department',
 )
 assert.match(
   form,
-  /departmentCatalog = scopedCatalog\.length > 0 \? scopedCatalog : catalog/,
-  'an empty department match must fall back to the full catalog, not an empty picker',
+  /departmentCatalog = scopedCatalog\.length > 0 \? scopedCatalog : inStockCatalog/,
+  'an empty department match must fall back to every in-stock item, not an empty picker',
 )
 assert.match(form, /departmentCatalog\.map/, 'the picker options must come from the department-filtered catalog')
-assert.match(form, /ยังไม่มีรายการน้ำยาในคลัง/)
+assert.match(form, /ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง/)
+
+// The requester picks straight from the dropdown, so the option itself must
+// carry the total on hand. Lot detail belongs to the officer choosing FIFO
+// lots at fulfillment, not to the person asking for a quantity.
+assert.match(
+  form,
+  /\{item\.lsCode\} · \{item\.name\} · คงเหลือ \{formatQuantity\(item\.onHand, item\.unit\)\}/,
+  'the dropdown option must show the total on-hand quantity',
+)
 assert.match(form, /showingUnfilteredCatalog/, 'the fallback to the unfiltered catalog must be explained to the requester')
 
 // A real <select> lets the requester browse every eligible item at once,

@@ -51,18 +51,22 @@ export function RequisitionForm({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // Only what the store can actually hand over belongs in the picker: an item
+  // sitting at zero on hand would create a line no FIFO lot could fill.
+  const inStockCatalog = catalog.filter((item) => item.onHand > 0)
+
   // Narrows the item picker to what this department is responsible for, so the
   // list stays short as the catalog grows. Items with no department assigned
   // belong to no one in particular, so every department can still reach them.
   // If nothing matches — a department whose items were never tagged, or a
   // legacy responsibleDepartment value that doesn't match this department's
-  // exact name — fall back to the full catalog rather than leaving the picker
+  // exact name — fall back to every in-stock item rather than leaving the picker
   // silently empty.
-  const scopedCatalog = catalog.filter(
+  const scopedCatalog = inStockCatalog.filter(
     (item) => item.responsibleDepartment === null || item.responsibleDepartment === department,
   )
-  const departmentCatalog = scopedCatalog.length > 0 ? scopedCatalog : catalog
-  const showingUnfilteredCatalog = scopedCatalog.length === 0 && catalog.length > 0
+  const departmentCatalog = scopedCatalog.length > 0 ? scopedCatalog : inStockCatalog
+  const showingUnfilteredCatalog = scopedCatalog.length === 0 && inStockCatalog.length > 0
 
   const addLine = (item: RequisitionCatalogItem) => {
     setLines((current) => [
@@ -170,7 +174,7 @@ export function RequisitionForm({
               <option value="" disabled>เลือกน้ำยา…</option>
               {departmentCatalog.map((item) => (
                 <option key={item.inventoryItemId} value={item.inventoryItemId}>
-                  {item.lsCode} · {item.name}
+                  {item.lsCode} · {item.name} · คงเหลือ {formatQuantity(item.onHand, item.unit)}
                 </option>
               ))}
             </select>
@@ -191,7 +195,7 @@ export function RequisitionForm({
             }}
           />
           {departmentCatalog.length === 0 && (
-            <p className="empty-state">ยังไม่มีรายการน้ำยาในคลัง</p>
+            <p className="empty-state">ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง</p>
           )}
           {showingUnfilteredCatalog && (
             <p className="form-field-note" role="status">
