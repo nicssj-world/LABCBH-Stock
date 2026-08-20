@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { runLoginAttempt } from '@/lib/auth/login'
@@ -40,7 +41,15 @@ export default function LoginPage() {
       <section className="login-form-panel" aria-labelledby="login-title">
         <div className="login-form-panel__inner">
           <div className="login-brand">
-            <span className="login-brand__mark" aria-hidden="true">LC</span>
+            <Image
+              className="login-brand__logo"
+              src="/images/cbh-lab-logo-v3.png"
+              alt="CBH Lab"
+              width={44}
+              height={44}
+              sizes="44px"
+              preload
+            />
             <span>
               <strong>LABCBH Stock</strong>
               <small>Laboratory Control Bench</small>

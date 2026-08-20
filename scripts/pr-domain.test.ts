@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { canManagePurchaseRequest } from '../lib/pr/authorization'
+import type { Actor, LabStockRole } from '../lib/auth/actor'
 import {
   PURCHASE_METHODS,
   PURCHASE_METHODS_BY_PURPOSE,
@@ -14,6 +16,32 @@ import {
   purchaseMethodSchema,
   purchaseRequestInputSchema,
 } from '../lib/pr/schema'
+
+const actor = (id: string, appRoles: LabStockRole[]): Actor => ({
+  id,
+  ephisId: null,
+  name: null,
+  profileRole: null,
+  appRoles,
+})
+
+const owner = actor('owner-id', ['head'])
+assert.equal(canManagePurchaseRequest(owner, owner.id), true, 'the PR owner can edit or cancel their own PR')
+assert.equal(
+  canManagePurchaseRequest(actor('other-head-id', ['head']), owner.id),
+  false,
+  'a different head cannot edit or cancel another requester\'s PR',
+)
+assert.equal(
+  canManagePurchaseRequest(actor('stock-id', ['stock_officer']), owner.id),
+  true,
+  'a stock officer can edit or cancel any pending PR',
+)
+assert.equal(
+  canManagePurchaseRequest(actor('admin-id', ['admin']), owner.id),
+  true,
+  'an admin can edit or cancel any pending PR',
+)
 
 const contractDraft = {
   fiscalYear: 2569,

@@ -1,7 +1,8 @@
-import Link from 'next/link'
 import { ContractItemsDisclosure } from '@/components/contracts/ContractItemsDisclosure'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import { ContractSummaryDialog } from '@/components/contracts/ContractSummaryDialog'
+import { StageProgress } from '@/components/contracts/StageProgress'
+import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import type { PresentedContract } from '@/lib/contracts/presenter'
 
@@ -34,8 +35,8 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
               <th>เลขที่สัญญา</th>
               <th>ชื่อสัญญา</th>
               <th>ประเภท</th>
-              <th>ขั้นตอนจัดซื้อ</th>
-              <th>สถานะสัญญา</th>
+              <th className="contract-register-table__cell--center">ขั้นตอนจัดซื้อ</th>
+              <th className="contract-register-table__cell--center">สถานะสัญญา</th>
               <th>คงเหลือ</th>
               <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
             </tr>
@@ -58,10 +59,18 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                   {contract.contractType !== 'equipment_lease' && <ContractItemsDisclosure items={contract.items} />}
                 </td>
                 <td>{contract.contractTypeLabel}</td>
-                <td><StatusChip tone="info">{contract.procurementStageLabel}</StatusChip></td>
-                <td><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
+                <td className="contract-register-table__cell--center"><StageProgress stage={contract.procurementStage} label={contract.procurementStageLabel} /></td>
+                <td className="contract-register-table__cell--center"><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td><ContractRemainingGauge percent={contract.remainingPercent} /></td>
-                <td><Link className="text-link" href={`/contracts/${contract.id}`}>ดูรายละเอียด</Link></td>
+                <td>
+                  <div className="detail-actions">
+                    <DetailIconLink
+                      href={`/contracts/${contract.id}`}
+                      label={`ดูรายละเอียดสัญญา ${contract.contractNumberLabel}`}
+                      title="ดูรายละเอียดสัญญา"
+                    />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -87,7 +96,13 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                 {contract.expiryNotice.label}
               </p>
             )}
-            <Link className="text-link task-card__action" href={`/contracts/${contract.id}`}>ดูรายละเอียดสัญญา</Link>
+            <div className="detail-actions task-card__action">
+              <DetailIconLink
+                href={`/contracts/${contract.id}`}
+                label={`ดูรายละเอียดสัญญา ${contract.contractNumberLabel}`}
+                title="ดูรายละเอียดสัญญา"
+              />
+            </div>
           </li>
         ))}
       </ul>

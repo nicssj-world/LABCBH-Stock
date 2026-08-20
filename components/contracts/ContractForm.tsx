@@ -36,6 +36,7 @@ interface FormState {
   department: (typeof CONTRACT_DEPARTMENTS)[number]
   displayName: string
   vendor: string
+  total: number | null
   endDate: string
   sentToProcurementDate: string
   startImmediately: boolean
@@ -53,12 +54,14 @@ function todayIso() {
 }
 
 function initialState(contract?: ContractRecord): FormState {
+  const contractType = contract?.contractType ?? 'equipment_lease'
   return {
     fiscalYear: contract?.fiscalYear ?? currentThaiFiscalYear(),
-    contractType: contract?.contractType ?? 'equipment_lease',
+    contractType,
     department: contract?.department ?? CONTRACT_DEPARTMENTS[0],
     displayName: contract?.displayName ?? contract?.product ?? '',
     vendor: contract?.vendor ?? '',
+    total: contractType === 'equipment_lease' ? contract?.total ?? null : null,
     endDate: contract?.endDate ?? '',
     sentToProcurementDate: todayIso(),
     startImmediately: false,
@@ -143,6 +146,7 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
       displayName: state.displayName,
       vendor: state.vendor.trim() || null,
       endDate: state.endDate || null,
+      ...(tracking === 'budget' ? { total: state.total } : {}),
     }
     // A lease submits no items even if the editor was populated before the
     // type was switched, so a stale draft cannot fail validation invisibly.
@@ -297,6 +301,21 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
             สัญญาประเภทนี้ไม่มีรายการน้ำยา บันทึกค่าใช้จ่ายรายเดือนได้ที่หน้ารายละเอียดสัญญา
             หลังบันทึกสัญญาแล้ว
           </p>
+          <div className="form-grid">
+            <label className="form-grid__wide">
+              มูลค่าสัญญา
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={state.total ?? ''}
+                onChange={(event) => patchState('total', event.target.value === '' ? null : Number(event.target.value))}
+                aria-invalid={Boolean(errors.total)}
+              />
+              {errors.total && <small className="field-error">{errors.total}</small>}
+            </label>
+          </div>
         </section>
       ) : (
         <ContractItemsEditor

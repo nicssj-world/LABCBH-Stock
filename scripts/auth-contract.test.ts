@@ -2,11 +2,26 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 const actor = readFileSync('lib/auth/actor.ts', 'utf8')
+const resolution = readFileSync('lib/auth/resolution.ts', 'utf8')
 const admin = readFileSync('lib/supabase/admin.ts', 'utf8')
 const accessDenied = readFileSync('app/(auth)/access-denied/page.tsx', 'utf8')
 const login = readFileSync('app/(auth)/login/page.tsx', 'utf8')
-assert.match(actor, /auth\.getUser\(\)/)
-assert.match(actor, /lab_stock_memberships/)
+// The session is authenticated by verifying its JWT signature against the
+// cached JWKS, not by asking the Auth service over the network on every
+// request. getUser() cost a measured 150-180ms before any page could start
+// reading its own data, so a reintroduction of it here is a regression.
+assert.match(resolution, /auth\.getClaims\(\)/)
+assert.match(actor, /resolveAuthenticatedSubject\(await readAuthClaims\(supabase\)\)/)
+assert.doesNotMatch(actor, /auth\.getUser\(\)/)
+// Verification must stay cryptographic. getSession() returns whatever is in
+// the cookie without checking its signature, and must never stand in for this.
+assert.doesNotMatch(resolution, /auth\.getSession\(\)/)
+assert.doesNotMatch(actor, /auth\.getSession\(\)/)
+// Roles still come from lab_stock_memberships, now embedded in the profile
+// read. The !profile_id disambiguator is load-bearing: the table also
+// references profiles through granted_by and updated_by, and PostgREST
+// rejects an embed it cannot attribute to one foreign key.
+assert.match(actor, /lab_stock_memberships!profile_id\(role,active\)/)
 assert.match(actor, /\.maybeSingle\(\)/)
 assert.match(actor, /decideProtectedRoute\(actor\)/)
 assert.match(actor, /redirect\('\/access-denied'\)/)

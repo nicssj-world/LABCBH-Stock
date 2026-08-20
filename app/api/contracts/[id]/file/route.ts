@@ -1,6 +1,6 @@
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
-import { requireActor } from '@/lib/auth/actor'
+import { ContractAuthorizationError } from '@/lib/contracts/authorization'
 import { storeContractFile } from '@/lib/contracts/file-actions'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,6 @@ export const dynamic = 'force-dynamic'
  * client no hook into the request as it streams.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const actor = await requireActor()
   const { id } = await params
   const contractId = Number(id)
   if (!Number.isInteger(contractId) || contractId <= 0) {
@@ -25,11 +24,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const { path } = await storeContractFile(actor.id, contractId, file)
+    const { path } = await storeContractFile(contractId, file)
     revalidatePath(`/contracts/${contractId}`)
     return NextResponse.json({ path })
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : 'อัปโหลดไฟล์สัญญาไม่สำเร็จ'
-    return NextResponse.json({ error: message }, { status: 400 })
+    const status = caught instanceof ContractAuthorizationError ? 403 : 400
+    return NextResponse.json({ error: message }, { status })
   }
 }

@@ -7,7 +7,9 @@ assert.equal(CONTRACT_FILE_BUCKET, 'lab-stock-contracts')
 
 // Paths are namespaced per contract so one contract cannot overwrite another's.
 const path = contractFilePath(19, 'สัญญา 150/69.pdf')
+const secondPath = contractFilePath(19, 'สัญญา 150/69.pdf')
 assert.ok(path.startsWith('contracts/19/'), path)
+assert.notEqual(path, secondPath, 'replacing a contract document must create a new object before the pointer changes')
 // Slashes and spaces in the original name must not create directories, or a
 // crafted filename could write outside the folder the storage policy keys on.
 assert.ok(!path.slice('contracts/19/'.length).includes('/'), 'filename must be flattened')
@@ -23,6 +25,24 @@ assert.equal(isContractFilePathAllowed(path, 19), true)
 assert.equal(isContractFilePathAllowed(path, 20), false, 'another contract must not claim it')
 assert.equal(isContractFilePathAllowed('contracts/19/../20/x.pdf', 19), false)
 assert.equal(isContractFilePathAllowed('other/19/x.pdf', 19), false)
+
+// Both entry points share one helper, and that helper must resolve and check
+// the current session before it can write to the service-role Storage client.
+const actionsSource = readFileSync(join(process.cwd(), 'lib', 'contracts', 'file-actions.ts'), 'utf8')
+assert.match(actionsSource, /const actor = await requireActor\(\)/)
+assert.match(actionsSource, /assertContractEditor\(actor\)/)
+assert.ok(
+  actionsSource.indexOf('assertContractEditor(actor)') < actionsSource.indexOf('.upload(path'),
+  'contract upload authorization must happen before Storage writes',
+)
+assert.match(actionsSource, /\.remove\(\[path\]\)/, 'a failed RPC must clean up the newly uploaded object')
+
+const uploadRouteSource = readFileSync(
+  join(process.cwd(), 'app', 'api', 'contracts', '[id]', 'file', 'route.ts'),
+  'utf8',
+)
+assert.match(uploadRouteSource, /ContractAuthorizationError/)
+assert.match(uploadRouteSource, /status\s*=\s*.*403/)
 
 // ── storage policies ────────────────────────────────────────────────────────
 // The bucket was created with none, which denied everything by default and so
@@ -41,9 +61,10 @@ for (const policy of [
 ]) {
   assert.match(sql, new RegExp(`create policy ${policy}`, 'i'), `missing ${policy}`)
 }
-// An upsert needs UPDATE as well as INSERT, or replacing a document fails once
-// the object exists.
+// Legacy UPDATE remains in the storage policy for backwards compatibility;
+// new application uploads use unique paths and never overwrite an old object.
 assert.match(sql, /for update/i)
+assert.match(actionsSource, /\.upload\(path, file, \{ upsert: false/)
 // Writing is limited to contract editors; reading follows the contract record.
 assert.match(sql, /membership\.role in \('admin', 'head'\)/i)
 

@@ -6,6 +6,8 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
   globalIgnores([
+    // Locally installed skill/agent vendor trees, not project source.
+    '.claude/**',
     '.next/**',
     '.vercel/**',
     'out/**',

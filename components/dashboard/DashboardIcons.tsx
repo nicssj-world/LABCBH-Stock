@@ -37,3 +37,23 @@ export function WalletIcon() {
     </svg>
   )
 }
+
+export function PurchaseRequestIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M6.5 3.5h7l4 4v13h-11z" />
+      <path d="M13.5 3.5v4h4M9.5 11h5M12 9.5v3" />
+      <path d="M9.5 15.5h6" />
+    </svg>
+  )
+}
+
+export function RequisitionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M8.5 4.5h7A2.5 2.5 0 0 1 18 7v13H6V7a2.5 2.5 0 0 1 2.5-2.5Z" />
+      <path d="M9.5 4.5v-1h5v1M9 9.5h6M9 12.5h3" />
+      <path d="M14 17h5M16.5 14.5v5" />
+    </svg>
+  )
+}

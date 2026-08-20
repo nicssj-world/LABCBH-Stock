@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
-import { assertPurchaseRequester } from '@/lib/pr/authorization'
+import {
+  assertPurchaseRequestManager,
+  assertPurchaseRequester,
+} from '@/lib/pr/authorization'
 import {
   ephisPrNumberSchema,
   purchaseOrderNumberSchema,
@@ -18,6 +21,7 @@ import type {
   PurchaseRequestInput,
   PurchaseRequestReversalInput,
 } from '@/lib/pr/types'
+import { getPurchaseRequest } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 
@@ -33,9 +37,15 @@ function unwrapMutation(
 
 function revalidatePurchaseRequest(id?: string) {
   revalidatePath('/purchase-requests')
+  revalidatePath('/purchase-requests/new')
   if (id) revalidatePath(`/purchase-requests/${id}`)
   revalidatePath('/dashboard')
   revalidatePath('/contracts')
+  // A manually entered PR line may have created a new catalogue row in the
+  // same transaction. Keep every downstream picker/list in sync immediately.
+  revalidatePath('/inventory')
+  revalidatePath('/receipts/new')
+  revalidatePath('/requisitions/new')
 }
 
 /** The Thai fiscal year rolls on 1 October. */
@@ -64,6 +74,56 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
   const created = unwrapMutation('สร้างใบ PR', result)
   revalidatePurchaseRequest()
   return created
+}
+
+/**
+ * A submitted PR can only be changed while it is still pending. The RPC locks
+ * the row and repeats every contract/item check so an old browser cannot
+ * rewrite a PR after a stock officer has already acted on it.
+ */
+export async function updatePurchaseRequest(
+  purchaseRequestId: string,
+  input: PurchaseRequestInput,
+) {
+  const actor = await requireActor()
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const parsed = purchaseRequestInputSchema.parse(input)
+  const existing = await getPurchaseRequest(parsedId)
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการแก้ไข')
+  assertPurchaseRequestManager(actor, existing.requesterId)
+  const { items, ...request } = parsed
+
+  const result = await supabaseAdmin.rpc('update_purchase_request', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+    p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+    p_items: items.map(omitNullishProperties),
+  })
+
+  const updated = unwrapMutation('แก้ไขใบ PR', result)
+  revalidatePurchaseRequest(parsedId)
+  return updated
+}
+
+/**
+ * "ลบ" ในหน้าจอ PR คือการยกเลิกแบบเก็บประวัติไว้ ไม่ลบแถวหรือรายการสินค้า
+ * จริง เพื่อให้เลขเอกสารและการตรวจสอบย้อนหลังยังเชื่อถือได้
+ */
+export async function cancelPurchaseRequest(purchaseRequestId: string) {
+  const actor = await requireActor()
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const existing = await getPurchaseRequest(parsedId)
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการลบ')
+  assertPurchaseRequestManager(actor, existing.requesterId)
+
+  const result = await supabaseAdmin.rpc('cancel_purchase_request', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+  })
+
+  const cancelled = unwrapMutation('ลบใบ PR', result)
+  revalidatePurchaseRequest(parsedId)
+  return cancelled
 }
 
 /**

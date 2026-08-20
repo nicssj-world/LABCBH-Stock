@@ -18,3 +18,18 @@ export function assertPurchaseRequester(actor: Actor): void {
     throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์สร้างใบ PR')
   }
 }
+
+/**
+ * A pending PR can be corrected by its requester, or by the roles that
+ * operate the stock workflow. Heads retain create access, but cannot edit or
+ * cancel another person's PR unless they are also its requester.
+ */
+export function canManagePurchaseRequest(actor: Actor, requesterId: string | null): boolean {
+  return requesterId === actor.id || hasAppRole(actor, 'admin', 'stock_officer')
+}
+
+export function assertPurchaseRequestManager(actor: Actor, requesterId: string | null): void {
+  if (!canManagePurchaseRequest(actor, requesterId)) {
+    throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือลบใบ PR นี้')
+  }
+}

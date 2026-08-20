@@ -12,6 +12,7 @@ assert.match(listPage, /AutoFilterBench/, 'receiving filters must update the lis
 assert.doesNotMatch(listPage, /แสดงผล/, 'receiving filters must not require an apply button')
 assert.doesNotMatch(listPage, /^['"]use client['"]/m)
 assert.match(listPage, /GoodsReceiptSummaryDialog receipt=\{receipt\}/, 'the list row must open the mini summary popup, not a plain PO cell')
+assert.match(listPage, /DetailIconLink/, 'the receipt detail action must use the shared icon link')
 assert.match(listPage, /GOODS_RECEIPT_STATUS_LABELS|GOODS_RECEIPT_STATUS_TONES/, 'the list page must use the shared receipts presenter, not a local status map')
 
 const receiptPresenter = read('lib/receipts/presenter.ts')
@@ -21,9 +22,19 @@ assert.match(receiptPresenter, /GOODS_RECEIPT_STATUS_TONES/)
 const summaryDialog = read('components/receipts/GoodsReceiptSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)
 assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
-assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
+// Deferred rather than always mounted: the register renders one of these per
+// row and renders every row twice, for the table and the card layout. Always
+// building the body put 393 dialogs and 2.5MB of HTML on the inventory list
+// alone. The native modal contract is unchanged, and lives in the shared hook.
+assert.match(summaryDialog, /useDeferredDialog\(\)/, 'the trigger must open it through the shared deferred-dialog hook')
+assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay behind the isRendered gate')
+assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{GOODS_RECEIPT_STATUS_TONES/, 'status must never be a bare colored word')
+assert.match(summaryDialog, /DetailIconLink/, 'the receipt popup detail route must use the shared icon link')
+assert.match(summaryDialog, /รายการน้ำยา/, 'the receipt popup must show its reagent section')
+assert.match(summaryDialog, /receipt\.items\.map/, 'the receipt popup must list every received reagent lot')
+assert.match(summaryDialog, /ล็อต \{item\.lotNumber\}/, 'the receipt popup must keep the lot identity with each reagent')
 
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)

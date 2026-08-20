@@ -53,6 +53,10 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
           </p>
           <h1>{item.name}</h1>
           <p>{item.responsibleDepartment ?? 'ไม่ระบุหน่วยงานที่รับผิดชอบ'}</p>
+          <div className="inventory-detail__note" role="note">
+            <strong>หมายเหตุ</strong>
+            <span>{item.note?.trim() || 'ไม่มีหมายเหตุ'}</span>
+          </div>
         </div>
         <div className="page-heading__cluster">
           <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
@@ -91,7 +95,6 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             <span className="executive-strip__icon" aria-hidden="true"><ThresholdIcon /></span>
           </div>
           <strong>{formatQuantity(item.minimumStock, item.baseUnit)}</strong>
-          <small>{item.minimumStockOverride === null ? 'ค่าที่ระบบแนะนำ' : 'ผู้ดูแลกำหนดเอง'}</small>
         </div>
         <div className="executive-strip__card">
           <div className="executive-strip__head">

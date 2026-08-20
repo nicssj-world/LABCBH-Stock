@@ -2,14 +2,44 @@ import { StageHistoryEntryEditor } from '@/components/contracts/StageHistoryEntr
 import { StatusChip } from '@/components/ui/StatusChip'
 import { PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
-import type { ContractRecord } from '@/lib/contracts/types'
+import type { ProcurementStage } from '@/lib/contracts/stages'
 
 const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
   dateStyle: 'medium',
   timeZone: 'Asia/Bangkok',
 })
 
-export function StageTimeline({ contract, canManageStageHistory = false }: { contract: ContractRecord; canManageStageHistory?: boolean }) {
+/**
+ * Structural rather than tied to ContractRecord: the Out Lab register keeps its
+ * own tables and its own uuid ids, but walks the identical six stages. Widening
+ * the prop was cheaper and safer than a second copy of the timeline that would
+ * drift the first time a stage label changed.
+ *
+ * `canManageStageHistory` stays contract-only — StageHistoryEntryEditor writes
+ * through the contract stage-correction RPCs, which do not know this register.
+ */
+export interface StageTimelineContract {
+  procurementStage: ProcurementStage | null
+  stageHistory: Array<{
+    id: string
+    toStage: ProcurementStage
+    effectiveDate: string
+    source: string
+    note: string | null
+    correctionReason?: string | null
+  }>
+}
+
+export function StageTimeline({
+  contract,
+  canManageStageHistory = false,
+  stageHistoryEditorContractId,
+}: {
+  contract: StageTimelineContract
+  canManageStageHistory?: boolean
+  /** Contract-register id. Omitted by callers with no correction workflow. */
+  stageHistoryEditorContractId?: number
+}) {
   const currentIndex = contract.procurementStage
     ? PROCUREMENT_STAGES.indexOf(contract.procurementStage)
     : -1
@@ -37,8 +67,12 @@ export function StageTimeline({ contract, canManageStageHistory = false }: { con
             </div>
             <div className="stage-timeline__actions">
               {state === 'current' && <StatusChip tone="info">ขั้นตอนปัจจุบัน</StatusChip>}
-              {canManageStageHistory && (history || index <= currentIndex) && (
-                <StageHistoryEntryEditor contractId={contract.id} stage={stage} history={history ?? null} />
+              {canManageStageHistory && stageHistoryEditorContractId !== undefined && (history || index <= currentIndex) && (
+                <StageHistoryEntryEditor
+                  contractId={stageHistoryEditorContractId}
+                  stage={stage}
+                  history={history ?? null}
+                />
               )}
             </div>
           </li>

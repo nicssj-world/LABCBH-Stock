@@ -29,6 +29,7 @@ export default async function NewRequisitionPage() {
           lsCode: item.lsCode,
           name: item.name,
           unit: item.baseUnit,
+          note: item.note,
           onHand: item.onHand,
           minimumStock: item.minimumStock,
           responsibleDepartment: item.responsibleDepartment,

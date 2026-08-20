@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { ContractType } from '@/lib/contracts/types'
+import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { isoDateSchema } from '@/lib/validation/date'
 
 export const PURCHASE_METHODS = [
@@ -116,10 +117,9 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('equipment_lease'),
     // Only a lease carries a ceiling: it has no line items to sum a total
-    // from, unlike specific_contract/e_bidding. Required here — unlike the
-    // direct "เพิ่มสัญญา" form, which still allows an unknown ("ไม่ระบุ")
-    // ceiling — because a lease requested through a PR is expected to already
-    // have a quoted figure to open against.
+    // from, unlike specific_contract/e_bidding. The direct "เพิ่มสัญญา"
+    // form requires the same explicit ceiling so every lease starts with a
+    // usable budget.
     contractDraft: contractDraftWithOptionalVendorSchema.extend({
       total: z.number({ required_error: 'กรุณาระบุมูลค่าสัญญา' }).finite().positive('มูลค่าสัญญาต้องมากกว่า 0'),
     }),
@@ -165,13 +165,36 @@ export function formatPurchaseRequestNumber(fiscalYear: number, sequence: number
 
 export const purchaseRequestLineSchema = z
   .object({
-    inventoryItemId: z.string().uuid(),
+    // Null means the requester typed a new catalogue line. The create RPC
+    // creates the inventory row before it inserts the PR line, in the same
+    // transaction.
+    inventoryItemId: z.string().uuid().nullable(),
+    lsCode: z.string().trim().max(100, 'รหัสน้ำยายาวเกินไป').nullable().optional(),
+    name: z.string().trim().max(240, 'ชื่อน้ำยาต้องไม่เกิน 240 ตัวอักษร').nullable().optional(),
     contractItemId: z.string().uuid().nullable(),
     requestedQuantity: z.number().finite().positive('จำนวนที่ขอซื้อต้องมากกว่า 0'),
     unit: z.string().trim().min(1, 'กรุณาระบุหน่วย'),
     unitPrice: z.number().finite().nonnegative('ราคาต่อหน่วยต้องไม่ติดลบ'),
   })
   .strict()
+  .superRefine((value, context) => {
+    if (value.inventoryItemId !== null) return
+
+    if (!value.lsCode) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lsCode'],
+        message: 'รายการใหม่ต้องระบุรหัสน้ำยา (LS)',
+      })
+    }
+    if (!value.name) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['name'],
+        message: 'รายการใหม่ต้องระบุชื่อน้ำยา',
+      })
+    }
+  })
 
 export const purchaseRequestInputSchema = z
   .object({
@@ -249,12 +272,26 @@ export const purchaseRequestInputSchema = z
       })
     }
 
-    const inventoryItemIds = value.items.map((item) => item.inventoryItemId)
+    const inventoryItemIds = value.items
+      .map((item) => item.inventoryItemId)
+      .filter((id): id is string => id !== null)
     if (new Set(inventoryItemIds).size !== inventoryItemIds.length) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['items'],
         message: 'น้ำยารายการเดียวกันซ้ำกันภายในใบ PR เดียวกัน',
+      })
+    }
+
+    const manualLsCodes = value.items
+      .filter((item) => item.inventoryItemId === null)
+      .map((item) => normalizeLsCode(item.lsCode ?? ''))
+      .filter(Boolean)
+    if (new Set(manualLsCodes).size !== manualLsCodes.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'รหัสน้ำยารายการใหม่ซ้ำกันภายในใบ PR เดียวกัน',
       })
     }
   })

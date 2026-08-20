@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition, type FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
@@ -14,7 +13,6 @@ function todayIso() {
 }
 
 export function StageAdvanceControl({ contractId, currentStage }: { contractId: number; currentStage: ProcurementStage }) {
-  const router = useRouter()
   const nextStage = allowedNextStages(currentStage)[0]
   const [open, setOpen] = useState(false)
   const [effectiveDate, setEffectiveDate] = useState(todayIso())
@@ -38,7 +36,9 @@ export function StageAdvanceControl({ contractId, currentStage }: { contractId: 
           note: note.trim() || null,
         })
         setOpen(false)
-        router.refresh()
+        // The RPC is the source of truth. A full document reload avoids leaving
+        // the stage card and next-action control on the pre-mutation RSC tree.
+        window.location.reload()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'เปลี่ยนขั้นตอนไม่สำเร็จ กรุณาลองใหม่')
       }

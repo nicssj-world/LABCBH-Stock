@@ -1,6 +1,6 @@
 # Running the E2E smoke suite against Staging
 
-The five Playwright `@smoke` specs skip silently unless fixtures are supplied. This
+The six Playwright `@smoke` spec files (seven smoke tests) skip silently unless fixtures are supplied. This
 is how to make them actually run. Target the **LABCBH Stock Staging** project
 (`stogulcfwsvunydmwrex`) — never the production Lab_management Project.
 
@@ -57,6 +57,15 @@ E2E_RECEIPT_DRAFT_URL=http://127.0.0.1:3000/receipts/<seeded-id> \
 E2E_REQUISITION_WAITING_URL=http://127.0.0.1:3000/requisitions/<waiting-id> \
 E2E_LEASE_CONTRACT_URL=http://127.0.0.1:3000/contracts/<seeded-lease-id> \
 npx playwright test --workers=1
+```
+
+For the release-style run, use the guarded command below after exporting the
+same variables. It refuses to start when fixture credentials, isolated URLs,
+or explicit mutation consent are missing; the ordinary `npm run test:e2e`
+command remains useful for local UI checks because unavailable fixtures skip.
+
+```bash
+npm run test:e2e:strict
 ```
 
 `--workers=1` is required. In parallel the receiving spec posts the same draft

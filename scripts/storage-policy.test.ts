@@ -14,8 +14,8 @@ assert.match(sql, /'lab-stock-po'/)
 assert.match(sql, /public\s*\)?\s*[,)]?[\s\S]{0,80}false/i)
 assert.doesNotMatch(sql, /'lab-stock-po'[^;]*public[^;]*true/i)
 
-// Upserting an image needs INSERT, SELECT, and UPDATE policies; without UPDATE a
-// re-upload of the same path fails halfway.
+// Existing policies retain UPDATE for backwards compatibility with old object
+// paths, while new uploads use unique paths and never overwrite evidence.
 for (const action of ['insert', 'select', 'update']) {
   assert.match(
     sql,
@@ -32,15 +32,25 @@ assert.doesNotMatch(
 )
 
 // Paths are namespaced so one receipt cannot write into another's folder.
-assert.equal(
-  buildPoImagePath({ fiscalYear: 2569, receiptId: 'a1b2c3d4-0000-4000-8000-000000000000', fileName: 'po.jpg' }),
-  'po/2569/a1b2c3d4-0000-4000-8000-000000000000/po.jpg',
-)
-assert.equal(
-  buildPoImagePath({ fiscalYear: 2569, receiptId: 'a1b2c3d4-0000-4000-8000-000000000000', fileName: '../../escape.jpg' }),
-  'po/2569/a1b2c3d4-0000-4000-8000-000000000000/escape.jpg',
-  'traversal segments are stripped, never honoured',
-)
+const firstPoPath = buildPoImagePath({
+  fiscalYear: 2569,
+  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  fileName: 'po.jpg',
+})
+const secondPoPath = buildPoImagePath({
+  fiscalYear: 2569,
+  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  fileName: 'po.jpg',
+})
+assert.match(firstPoPath, /^po\/2569\/a1b2c3d4-0000-4000-8000-000000000000\/.+-po\.jpg$/)
+assert.notEqual(firstPoPath, secondPoPath, 'each replacement must use a new object path')
+const traversalPoPath = buildPoImagePath({
+  fiscalYear: 2569,
+  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  fileName: '../../escape.jpg',
+})
+assert.match(traversalPoPath, /^po\/2569\/a1b2c3d4-0000-4000-8000-000000000000\/.+-escape\.jpg$/)
+assert.doesNotMatch(traversalPoPath, /\.\./, 'traversal segments are stripped, never honoured')
 
 const receiptId = 'a1b2c3d4-0000-4000-8000-000000000000'
 assert.equal(isPoImagePathAllowed('po/2569/a1b2c3d4-0000-4000-8000-000000000000/po.jpg', 2569, receiptId), true)

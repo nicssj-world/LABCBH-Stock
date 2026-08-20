@@ -152,7 +152,10 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     sequenceNumber: row.sequence_number,
     documentNumber: row.document_number,
     requesterId: row.requester_id,
-    requesterName: row.requester?.name ?? null,
+    // The requester profile can be hidden by the shared profiles RLS policy
+    // for users who are allowed to read the PR but not every profile. Keep the
+    // immutable name snapshot on the PR as the display fallback.
+    requesterName: row.requester?.name?.trim() || row.head_name.trim() || null,
     department: row.department,
     headName: row.head_name,
     requestedDate: row.requested_date,

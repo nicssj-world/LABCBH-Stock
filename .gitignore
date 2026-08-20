@@ -14,3 +14,9 @@ playwright-report/
 supabase/.temp/
 # Pre-cutover production dumps. Real patient-adjacent operational data.
 .backups/
+
+# Locally installed design skills (ui-ux-pro-max, impeccable) and their hook config.
+# Vendor trees, ~7MB. Reinstall from the upstream repos rather than committing them.
+.claude/skills/
+.claude/agents/
+.claude/settings.local.json

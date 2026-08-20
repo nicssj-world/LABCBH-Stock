@@ -1,95 +1,16 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import {
-  PurchaseRequestForm,
-  type CatalogOption,
-  type ContractLineOption,
-} from '@/components/pr/PurchaseRequestForm'
+import { PurchaseRequestForm } from '@/components/pr/PurchaseRequestForm'
 import { requireActor } from '@/lib/auth/actor'
-import { effectiveContractStatus } from '@/lib/contracts/presenter'
-import { listContracts } from '@/lib/contracts/queries'
-import { listInventoryItems } from '@/lib/inventory/queries'
-import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
-import { listContractItemOptions, listNextContractPurchaseSequences } from '@/lib/pr/queries'
+import { loadPurchaseRequestFormOptions } from '@/lib/pr/form-options'
 
 export default async function NewPurchaseRequestPage() {
   const actor = await requireActor()
   if (!canRequestPurchase(actor)) redirect('/purchase-requests')
 
-  const [inventoryItems, contractItems, allContracts] = await Promise.all([
-    listInventoryItems({}),
-    listContractItemOptions(),
-    listContracts({}),
-  ])
-
-  // "ซื้อในสัญญา" only orders against a contract that is currently active,
-  // has already started, is not an equipment lease (which has no line items
-  // to draw down), and has not already ended. The Server Action/RPC repeats
-  // this check because this page can stay open while a contract is cancelled.
-  const startedContracts = allContracts.filter(
-    (contract) =>
-      contract.procurementStage === 'contract_started' &&
-      contract.contractType !== 'equipment_lease' &&
-      effectiveContractStatus(contract.status, contract.endDate) === 'active',
-  )
-  // "ซื้อเจาะจงระหว่างรอสัญญา" references a contract still working through the
-  // procurement stages — it exists to identify which arrangement is being
-  // waited on, and never draws down a balance.
-  const awaitingContracts = allContracts.filter(
-    (contract) =>
-      contract.procurementStage !== 'contract_started' &&
-      effectiveContractStatus(contract.status, contract.endDate) === 'pending',
-  )
-
-  const contracts = startedContracts.map((contract) => ({
-    id: contract.id,
-    department: contract.department ?? '',
-    label: `${contract.displayName?.trim() || contract.product}${
-      contract.contractNumber ? ` · ${contract.contractNumber}` : ''
-    }`,
-  }))
-  const nextPurchaseSequenceByContract = await listNextContractPurchaseSequences(contracts.map((contract) => contract.id))
-
-  const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
-
-  const catalog: CatalogOption[] = inventoryItems.map((item) => ({
-    inventoryItemId: item.id,
-    lsCode: item.lsCode,
-    name: item.name,
-    unit: item.baseUnit,
-    defaultUnitPrice: item.defaultUnitPrice ?? 0,
-    onHand: item.onHand,
-    averageMonthlyUsage:
-      item.monthlyIssues.reduce((sum, value) => sum + value, 0) /
-      Math.max(item.monthlyIssues.length, 1),
-    belowMinimum: item.stockLevel !== 'healthy',
-  }))
-
-  // Contract lines carry their own LS code; matching to the catalogue is what
-  // lets the picker show live on-hand next to contracted balance.
-  const contractLines: ContractLineOption[] = contractItems.flatMap((option) => {
-    const inventoryItem = inventoryByLsCode.get(normalizeLsCode(option.lsCode))
-    if (!inventoryItem) return []
-
-    return [{
-      inventoryItemId: inventoryItem.id,
-      contractItemId: option.id,
-      contractId: option.contractId,
-      contractRemaining: option.remainingQuantity,
-      contractedQuantity: option.contractedQuantity,
-      lsCode: option.lsCode,
-      name: option.name,
-      unit: option.unit,
-      defaultUnitPrice: option.unitPrice,
-      onHand: inventoryItem.onHand,
-      averageMonthlyUsage:
-        inventoryItem.monthlyIssues.reduce((sum, value) => sum + value, 0) /
-        Math.max(inventoryItem.monthlyIssues.length, 1),
-      belowMinimum: inventoryItem.stockLevel !== 'healthy',
-    }]
-  })
+  const { contracts, awaitingContracts, contractLines, catalog } = await loadPurchaseRequestFormOptions()
 
   return (
     <div className="route-stack">
@@ -106,17 +27,8 @@ export default async function NewPurchaseRequestPage() {
         department={DEPARTMENTS[0]}
         departments={DEPARTMENTS}
         headName={actor.name ?? ''}
-        contracts={contracts.map((contract) => ({
-          ...contract,
-          nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
-        }))}
-        awaitingContracts={awaitingContracts.map((contract) => ({
-          id: contract.id,
-          department: contract.department ?? '',
-          label: `${contract.displayName?.trim() || contract.product}${
-            contract.contractNumber ? ` · ${contract.contractNumber}` : ''
-          }`,
-        }))}
+        contracts={contracts}
+        awaitingContracts={awaitingContracts}
         contractLines={contractLines}
         catalog={catalog}
       />

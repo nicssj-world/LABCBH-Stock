@@ -43,7 +43,19 @@ const detailPage = read(contractRoutes[2])
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 detail params must be awaited')
 assert.match(detailPage, /StageTimeline/, 'detail must show six-step history')
 assert.match(detailPage, /StageAdvanceControl/, 'detail must expose confirmed stage advance')
-assert.match(detailPage, /StageTimeline contract=\{contract\} canManageStageHistory=\{canManageStageHistory\}/, 'the history timeline receives the restricted edit capability')
+assert.match(
+  detailPage.replace(/\s+/g, ' '),
+  /StageTimeline contract=\{contract\} canManageStageHistory=\{canManageStageHistory\}/,
+  'the history timeline receives the restricted edit capability',
+)
+// StageTimeline is shared with the Out Lab register, which has uuid ids and no
+// correction workflow, so the contract id the stage-history editor writes
+// through is passed explicitly rather than read off the record.
+assert.match(
+  detailPage.replace(/\s+/g, ' '),
+  /stageHistoryEditorContractId=\{contract\.id\}/,
+  'the stage-history editor needs the contract-register id',
+)
 assert.match(detailPage, /canManageStageHistory/, 'stage history editing must be limited to stock officers and admins')
 assert.match(detailPage, /contract\.procurementStage\s*===\s*['"]contract_started['"]/, 'started contracts must use a dedicated completed state')
 assert.match(detailPage, /isContractStarted\s*\?\s*\(/, 'started contracts must branch to collapsed history')
@@ -179,6 +191,9 @@ assert.match(expiryDialog, /เหตุผลที่สิ้นสุดส�
 
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')
+assert.match(form, /total: number \| null/, 'lease forms must keep an explicit contract ceiling in state')
+assert.match(form, /value=\{state\.total \?\? ''\}/, 'lease forms must render the current contract ceiling')
+assert.match(form, /errors\.total/, 'lease ceiling validation must be shown beside its input')
 assert.match(form, /state\.startImmediately\s*&&\s*item\.openingUsedQuantity\s*!=\s*null/, 'start-immediately contracts must only send a numeric opening balance when entered')
 assert.doesNotMatch(form, /openingUsedQuantity:\s*item\.openingUsedQuantity\s*\?\?\s*null/, 'start-immediately contracts must not serialize an untouched opening balance as null')
 assert.match(form, /localStorage/, 'form must autosave a local draft')
@@ -211,17 +226,29 @@ assert.match(remainingGauge, /คงเหลือ/, 'the remaining gauge must 
 assert.match(remainingGauge, /remaining-gauge__fill/, 'the remaining gauge must have a dedicated visual track and fill')
 assert.match(remainingGauge, /width < 30[\s\S]*tone: 'danger'/, 'remaining below 30% must use the danger tone')
 assert.match(table, /ContractItemsDisclosure/, 'non-lease contracts must expose their item list from the register')
+assert.match(table, /DetailIconLink/, 'the contract detail action must use the shared icon link')
 assert.match(itemDisclosure, /<details/, 'contract items must use a native show/hide disclosure')
 assert.match(itemDisclosure, /รายการสินค้า/, 'the item disclosure needs a clear Thai label')
 assert.match(summaryDialog, /^['"]use client['"]/m, 'the quick summary dialog must own its client interaction boundary')
-assert.match(summaryDialog, /showModal()/, 'the contract name must open the native modal dialog')
+// Deferred rather than always mounted: the register renders one of these per
+// row and renders every row twice, for the table and the card layout. Always
+// building the body put 393 dialogs and 2.5MB of HTML on the inventory list
+// alone. The native modal contract is unchanged, and lives in the shared hook.
+assert.match(summaryDialog, /useDeferredDialog\(\)/, 'the contract name must open the native modal dialog')
+assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay behind the isRendered gate')
+assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /aria-haspopup="dialog"/, 'the summary trigger must announce its dialog relationship')
 assert.match(summaryDialog, /ข้อมูลสัญญาแบบย่อ/, 'the dialog must identify itself as a concise contract summary')
 assert.match(summaryDialog, /เปิดรายละเอียดเต็ม/, 'the summary must offer a route to the complete contract page')
+assert.match(summaryDialog, /DetailIconLink/, 'the contract popup detail route must use the shared icon link')
+assert.match(summaryDialog, /contractMode\(contract\.contractType \?\? 'e_bidding'\)/, 'the popup must use the contract mode when resolving its value')
+assert.match(summaryDialog, /มูลค่าสัญญา/, 'the contract popup must label the contract value')
+assert.match(summaryDialog, /formatBaht\(contractValue\)/, 'the contract popup must format the contract value as baht')
+assert.match(globalStyles, /\.contract-summary-dialog__fact--value/, 'the contract value must have a visible summary treatment')
 assert.match(contractQueries, /contract_usage \(amount\)/, 'lease gauges must read actual contract usage entries')
 assert.match(contractQueries, /contract_item_allocations \(quantity, allocation_kind\)/, 'supply gauges must read the allocation ledger and distinguish opening-balance rows')
 assert.match(contractQueries, /contractRemainingPercent/, 'register balances must come from the shared contract-balance calculation')
-assert.match(table, /<th>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
+assert.match(table, /<th[^>]*>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
 assert.match(table, /\{contract\.contractStatusLabel\}/, 'the red status chip must say expired or cancelled, not the procurement stage')
 assert.match(table, /\{contract\.procurementStageLabel\}/, 'the procurement stage must remain visible separately from status')
 assert.match(table, /contract-renewal-hint/, 'the register must surface an imminent renewal deadline as supporting contract metadata')
@@ -238,6 +265,8 @@ assert.doesNotMatch(dashboardPage, /minimum stock/i, 'stock-ledger alert stays o
 const dashboardValueCards = read('components/dashboard/ContractValueCards.tsx')
 assert.match(dashboardValueCards, /มูลค่าคงเหลือในสัญญา/, 'dashboard must show remaining contract value')
 assert.match(dashboardValueCards, /remainingPercent\s*<\s*30/, 'the remaining-value card must flag risk below 30%, matching the watchlist threshold')
+assert.match(dashboardValueCards, /role="group"/, 'the dashboard scope switcher changes content but is not a tab panel')
+assert.match(dashboardValueCards, /aria-pressed/, 'the dashboard scope switcher must expose its pressed state')
 
 const dashboardData = read('lib/dashboard/contracts.ts')
 assert.match(dashboardData, /quantity\s*-\s*allocatedQuantity/, 'remaining quantity must use the allocation ledger')

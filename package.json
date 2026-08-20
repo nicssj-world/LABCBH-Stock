@@ -11,22 +11,27 @@
     "typecheck": "tsc --noEmit",
     "test:rpc-boundaries": "tsx scripts/rpc-payload-nullability.test.ts",
     "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/design-refresh.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts",
+    "test:notifications": "tsx scripts/notifications.test.ts",
     "test:contracts": "tsx scripts/contracts-domain.test.ts && tsx scripts/contracts-schema.test.ts && tsx scripts/contracts-backend.test.ts && tsx scripts/contracts-create-rpc.test.ts && tsx scripts/contracts-department.test.ts && tsx scripts/contracts-department-stock-poct.test.ts && tsx scripts/contract-start-immediately.test.ts && tsx scripts/contract-opening-balance.test.ts && tsx scripts/contracts-register-balance-ui.test.ts && tsx scripts/contract-detail-ui.test.ts && tsx scripts/contracts-ui.test.ts",
     "test:contract-budget": "tsx scripts/contract-balance-domain.test.ts && tsx scripts/contract-budget-domain.test.ts && tsx scripts/contract-budget-schema.test.ts && tsx scripts/contract-budget-transaction.test.ts && tsx scripts/contract-files.test.ts",
-    "test:inventory": "tsx scripts/inventory-domain.test.ts && tsx scripts/inventory-schema.test.ts && tsx scripts/inventory-minimum-stock-settings-schema.test.ts && tsx scripts/inventory-item-management.test.ts && tsx scripts/inventory-ui.test.ts",
-    "test:pr": "tsx scripts/pr-domain.test.ts && tsx scripts/pr-schema.test.ts && tsx scripts/pr-ephis-number-schema.test.ts && tsx scripts/pr-transaction.test.ts && tsx scripts/pr-ui.test.ts",
-    "test:receiving": "tsx scripts/receiving-schema.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/receiving-transaction.test.ts && tsx scripts/receiving-ui.test.ts",
+    "test:out-lab": "tsx scripts/out-lab-domain.test.ts && tsx scripts/out-lab-fiscal.test.ts && tsx scripts/out-lab-schema.test.ts && tsx scripts/out-lab-transaction.test.ts && tsx scripts/out-lab-ui.test.ts",
+  "test:inventory": "tsx scripts/inventory-domain.test.ts && tsx scripts/inventory-schema.test.ts && tsx scripts/inventory-minimum-stock-settings-schema.test.ts && tsx scripts/inventory-item-management.test.ts && tsx scripts/inventory-ui.test.ts",
+    "test:pr": "tsx scripts/pr-domain.test.ts && tsx scripts/pr-manual-catalog.test.ts && tsx scripts/pr-schema.test.ts && tsx scripts/pr-ephis-number-schema.test.ts && tsx scripts/pr-transaction.test.ts && tsx scripts/pr-ui.test.ts",
+    "test:receiving": "tsx scripts/receiving-schema.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/receiving-transaction.test.ts && tsx scripts/lot-normalization.test.ts && tsx scripts/receiving-ui.test.ts",
     "test:requisitions": "tsx scripts/fifo-domain.test.ts && tsx scripts/requisition-schema.test.ts && tsx scripts/requisition-transaction.test.ts && tsx scripts/requisition-print.test.ts && tsx scripts/requisition-signature.test.ts && tsx scripts/requisition-ui.test.ts",
     "test:dates": "tsx scripts/date-ui.test.ts",
+    "test:pagination": "tsx scripts/pagination.test.ts",
     "test:access": "tsx scripts/access-policy.test.ts && tsx scripts/access-ui.test.ts && tsx scripts/membership-defaults.test.ts && tsx scripts/membership-role-retirement.test.ts",
     "test:import": "tsx scripts/import-normalization.test.ts && tsx scripts/import-idempotency.test.ts && tsx scripts/import-reconciliation.test.ts",
     "test:security": "tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/storage-policy.test.ts && tsx scripts/access-policy.test.ts && tsx scripts/kpi-view-security.test.ts",
     "test:deployment": "tsx scripts/deployment-assets.test.ts && tsx scripts/backup-storage.test.ts && tsx scripts/filter-pg-dump.test.ts && tsx scripts/contract-file-env.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:strict": "node scripts/e2e-preflight.mjs && playwright test --workers=1",
     "e2e:staging-passwords": "node scripts/staging-set-test-passwords.mjs",
     "e2e:staging-seed-receipt": "node scripts/staging-seed-receipt-draft.mjs",
     "e2e:staging-seed-lease": "node scripts/staging-seed-lease-contract.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:contracts && npm run test:contract-budget && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:e2e && npm run build"
+    "preflight:lots": "node scripts/lot-normalization-preflight.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:notifications && npm run test:contracts && npm run test:contract-budget && npm run test:out-lab && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:pagination && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:e2e && npm run build"
   },
   "engines": {
     "node": ">=22"
@@ -43,7 +48,6 @@
     "next": "16.2.12",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "3.8.1",
     "zod": "3.25.76"
   },
   "devDependencies": {

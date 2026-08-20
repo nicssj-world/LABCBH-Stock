@@ -26,7 +26,11 @@ export function buildPoImagePath({
   fileName: string
 }): string {
   const safeName = fileName.split(/[\\/]/).pop()?.replace(/^\.+/, '') || 'po-image'
-  return `po/${fiscalYear}/${receiptId}/${safeName}`
+  // Each upload gets a new object. The database pointer is updated only after
+  // the upload succeeds, so a failed pointer update can remove this new object
+  // without risking the previous PO evidence.
+  const uniqueId = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `po/${fiscalYear}/${receiptId}/${uniqueId}-${safeName}`
 }
 
 export function isPoImagePathAllowed(

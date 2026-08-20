@@ -17,18 +17,22 @@ const newPage = read('app/(protected)/purchase-requests/new/page.tsx')
 assert.match(newPage, /PurchaseRequestForm/)
 assert.match(newPage, /DEPARTMENTS/)
 assert.match(newPage, /departments=\{DEPARTMENTS\}/)
-assert.match(newPage, /listNextContractPurchaseSequences/)
-assert.match(newPage, /awaitingContracts/, 'awaiting_contract offers contracts still moving through the procurement stages')
-assert.match(newPage, /effectiveContractStatus/, 'an ended contract must not appear as choosable for ordinary drawdown')
-assert.match(newPage, /effectiveContractStatus\(contract\.status, contract\.endDate\) === 'active'/, 'only an active contract can be ordered against')
-assert.match(newPage, /effectiveContractStatus\(contract\.status, contract\.endDate\) === 'pending'/, 'only a pending contract can be referenced while awaiting procurement')
-assert.match(newPage, /procurementStage === 'contract_started'/, 'only a started contract can be ordered against')
-assert.match(newPage, /contractType !== 'equipment_lease'/, 'a lease has no line items to draw down')
 assert.match(newPage, /assertPurchaseRequester|canRequestPurchase/, 'only heads and admins may draft a PR')
+
+const formOptions = read('lib/pr/form-options.ts')
+assert.match(formOptions, /listNextContractPurchaseSequences/)
+assert.match(formOptions, /awaitingContracts/, 'awaiting_contract offers contracts still moving through the procurement stages')
+assert.match(formOptions, /effectiveContractStatus/, 'an ended contract must not appear as choosable for ordinary drawdown')
+assert.match(formOptions, /effectiveContractStatus\(contract\.status, contract\.endDate\) === 'active'/, 'only an active contract can be ordered against')
+assert.match(formOptions, /effectiveContractStatus\(contract\.status, contract\.endDate\) === 'pending'/, 'only a pending contract can be referenced while awaiting procurement')
+assert.match(formOptions, /procurementStage === 'contract_started'/, 'only a started contract can be ordered against')
+assert.match(formOptions, /contractType !== 'equipment_lease'/, 'a lease has no line items to draw down')
 
 const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</)
 assert.match(detailPage, /PrReviewPanel/)
+assert.match(detailPage, /PurchaseRequestLifecycleControls/, 'pending PRs expose edit and cancel controls')
+assert.match(detailPage, /canManagePurchaseRequest\(actor, request\.requesterId\) && request\.status === 'pending'/)
 assert.match(detailPage, /canOperateStock/, 'only stock officers and admins confirm')
 assert.match(detailPage, /contract-detail-heading__top/, 'the PR header reuses the same identity/status layout as the contract detail page')
 assert.match(detailPage, /contract-detail-heading__value/, 'มูลค่ารวม must be the primary summary metric, not just another fact in the list')
@@ -37,9 +41,20 @@ assert.match(detailPage, /contract-facts--split-with-value/, 'the last fact colu
 assert.match(detailPage, /bench-panel--decision/, 'the stock officer panel must read as an outstanding decision while a PR is pending')
 assert.match(detailPage, /request\.status === 'pending' \? 'bench-panel bench-panel--decision' : 'bench-panel'/, 'the decision tone must clear once the PR is no longer pending, not stay on a closed record')
 
+const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
+assert.match(editPage, /params:\s*Promise</)
+assert.match(editPage, /request\.status !== 'pending'/, 'the edit route must refuse confirmed or cancelled PRs')
+assert.match(editPage, /canManagePurchaseRequest\(actor, request\.requesterId\)/)
+assert.match(editPage, /purchaseMethodSchema\.safeParse/, 'stored method details must be validated before filling the form')
+assert.match(editPage, /initialValues/)
+assert.match(editPage, /mode="edit"/)
+
 const form = read('components/pr/PurchaseRequestForm.tsx')
 assert.match(form, /^['"]use client['"]/m)
 assert.match(form, /createPurchaseRequest/)
+assert.match(form, /updatePurchaseRequest/)
+assert.match(form, /initialValues/)
+assert.match(form, /mode === 'edit'/)
 assert.match(form, /PurchaseMethodFields/)
 assert.match(form, /ContractItemPicker/)
 assert.match(form, /departments: readonly string\[\]/)
@@ -100,12 +115,20 @@ assert.match(
 )
 assert.match(
   styles,
-  /\.data-table input\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
+  /\.data-table (?:input|:is\(td, th\) > input)\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
   'quantity/price inputs inside a data-table must render a visible border, not rely on the bare browser default',
+)
+assert.match(
+  styles,
+  /\.data-table td\.pr-line-cell--name\.pr-line-cell--manual > input\s*\{[\s\S]*?width:\s*100%/,
+  'a manually added reagent name must use the full name column instead of inheriting the narrow numeric input width',
 )
 assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%, 520px\)/, 'PR and PO identifiers should not stretch across the full review card')
 assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*background:\s*color-mix/, 'saved PR and PO identifiers should have a muted filled-state background')
 assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
+
+assert.match(styles, /\.pr-register-table\s*\{[\s\S]*?table-layout:\s*fixed/, 'PR register columns must stay aligned even when row content widths differ')
+assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*15%/, 'the PR status column needs a stable width for different chip labels')
 
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
@@ -175,11 +198,15 @@ assert.match(presenter, /ต่ำกว่าขั้นต่ำ|ควรท
 const actions = read('lib/pr/actions.ts')
 assert.match(actions, /^['"]use server['"]/m)
 assert.match(actions, /supabaseAdmin\.rpc\('create_purchase_request'/)
+assert.match(actions, /supabaseAdmin\.rpc\('update_purchase_request'/)
+assert.match(actions, /supabaseAdmin\.rpc\('cancel_purchase_request'/)
 assert.match(actions, /supabaseAdmin\.rpc\('confirm_purchase_request'/)
 assert.match(actions, /p_sent_to_procurement_date/, 'confirming a contract-opening PR must carry its ส่งพัสดุ date')
 assert.match(actions, /supabaseAdmin\.rpc\('reverse_purchase_request'/)
 assert.match(actions, /supabaseAdmin\.rpc\('set_purchase_order_number'/)
 assert.match(actions, /assertPurchaseRequester/)
+assert.match(actions, /assertPurchaseRequestManager/)
+assert.match(actions, /getPurchaseRequest/)
 assert.match(actions, /assertStockOperator/)
 
 const queries = read('lib/pr/queries.ts')
@@ -190,19 +217,43 @@ assert.match(queries, /filters\.department/, 'purchase-request queries apply the
 assert.match(queries, /listNextContractPurchaseSequences/)
 assert.match(queries, /created_contract_id/, 'a confirmed PR must link forward to the contract it opened')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'PR reads stay under RLS')
+assert.match(
+  queries,
+  /requesterName: row\.requester\?\.name\?\.trim\(\) \|\| row\.head_name\.trim\(\) \|\| null/,
+  'the requester display must fall back to the PR name snapshot when profile RLS hides the relation',
+)
 
 const table = read('components/pr/PurchaseRequestTable.tsx')
+assert.match(table, /className="data-table pr-register-table"/, 'the PR register must use its fixed column layout')
+assert.match(table, /<colgroup>[\s\S]*?pr-register-table__document[\s\S]*?pr-register-table__action[\s\S]*?<\/colgroup>/, 'the desktop PR register must define one shared width for every column')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\}/, 'the desktop row must open the mini summary popup, not a plain cell')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\} variant="card"/, 'the mobile card must open the same popup')
-assert.match(table, /ดูรายละเอียด/, 'the trailing detail link must remain alongside the new popup trigger')
+assert.match(table, /DetailIconLink/, 'the trailing detail action must use the shared icon link')
+assert.doesNotMatch(table, /<Link[^>]*>\s*ดูรายละเอียด/, 'the trailing detail action must not render a visible text label')
 
 const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)
 assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
-assert.match(summaryDialog, /showModal\(\)/, 'the trigger must open it via showModal')
+// Deferred rather than always mounted: the register renders one of these per
+// row and renders every row twice, for the table and the card layout. Always
+// building the body put 393 dialogs and 2.5MB of HTML on the inventory list
+// alone. The native modal contract is unchanged, and lives in the shared hook.
+assert.match(summaryDialog, /useDeferredDialog\(\)/, 'the trigger must open it through the shared deferred-dialog hook')
+assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay behind the isRendered gate')
+assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{PURCHASE_REQUEST_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /createdContractId/, 'a PR that opened a contract must link to it from the popup')
+assert.match(summaryDialog, /DetailIconLink/, 'the popup detail route must use the shared icon link')
+assert.match(summaryDialog, /รายการน้ำยา/, 'the PR popup must show its reagent section')
+assert.match(summaryDialog, /request\.items\.map/, 'the PR popup must list every reagent line')
+assert.match(summaryDialog, /formatQuantity\(item\.requestedQuantity, item\.unit\)/, 'the PR popup must show each requested quantity')
+
+const lifecycleControls = read('components/pr/PurchaseRequestLifecycleControls.tsx')
+assert.match(lifecycleControls, /cancelPurchaseRequest/)
+assert.match(lifecycleControls, /ยืนยันการลบใบ PR/)
+assert.match(lifecycleControls, /เก็บประวัติไว้/, 'deleting a PR keeps an audit trail')
+assert.match(lifecycleControls, /router\.push\('\/purchase-requests'\)/)
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/purchase-requests/)

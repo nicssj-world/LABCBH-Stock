@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { InventoryMinimumStockSettings } from '@/components/inventory/InventoryMinimumStockSettings'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
@@ -10,7 +11,9 @@ import {
   listInventoryDepartments,
   listInventoryItems,
 } from '@/lib/inventory/queries'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import type { InventoryItemRecord } from '@/lib/inventory/types'
+import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
 interface InventoryPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -25,6 +28,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const department = first(params.department)?.trim() ?? ''
   const includeInactive = first(params.includeInactive) === '1'
   const onlyAlerts = first(params.onlyAlerts) === '1'
+  const page = parsePage(first(params.page))
 
   let items: InventoryItemRecord[] = []
   let departments: string[] = []
@@ -43,6 +47,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
   const alertCount = items.filter((item) => item.stockLevel !== 'healthy').length
   const visibleItems = onlyAlerts ? items.filter((item) => item.stockLevel !== 'healthy') : items
+  const paginatedItems = paginate(visibleItems, page, LIST_PAGE_SIZE)
+  const departmentOptions = [...new Set([...DEPARTMENTS, ...departments])].sort((left, right) => left.localeCompare(right, 'th'))
 
   const activeParams = new URLSearchParams()
   if (search) activeParams.set('search', search)
@@ -61,6 +67,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   if (includeInactive) inactiveToggleParams.delete('includeInactive')
   else inactiveToggleParams.set('includeInactive', '1')
   const inactiveHref = toggleHref(inactiveToggleParams)
+  const buildPageHref = (nextPage: number) => {
+    const nextParams = new URLSearchParams(activeParams)
+    if (nextPage > 1) nextParams.set('page', String(nextPage))
+    const query = nextParams.toString()
+    return query ? `/inventory?${query}` : '/inventory'
+  }
 
   return (
     <div className="route-stack">
@@ -125,7 +137,20 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
             <p>{visibleItems.length} รายการ</p>
           </div>
-          <InventoryTable items={visibleItems} canEdit={canOperateStock(actor)} />
+          <InventoryTable
+            items={paginatedItems.items}
+            canEdit={canOperateStock(actor)}
+            departments={departmentOptions}
+          />
+          <ListPagination
+            currentPage={paginatedItems.currentPage}
+            pageCount={paginatedItems.pageCount}
+            totalCount={paginatedItems.totalCount}
+            startIndex={paginatedItems.startIndex}
+            pageSize={LIST_PAGE_SIZE}
+            itemLabel="รายการ"
+            buildHref={buildPageHref}
+          />
         </section>
       )}
     </div>

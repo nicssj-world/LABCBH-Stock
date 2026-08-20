@@ -131,7 +131,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
               aria-valuenow={uploadProgress}
               aria-label="ความคืบหน้าการอัปโหลดไฟล์สัญญา"
             >
-              <span style={{ width: `${uploadProgress}%` }} />
+              <span style={{ transform: `scaleX(${uploadProgress / 100})` }} />
             </span>
           )}
         </p>

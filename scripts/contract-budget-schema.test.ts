@@ -66,4 +66,15 @@ assert.equal(
   'both create and update must reject items on a lease',
 )
 
+const totalFixNames = readdirSync(migrationsDir).filter((n) =>
+  n.endsWith('_contract_lease_total.sql'),
+)
+assert.equal(totalFixNames.length, 1, 'exactly one lease-total fix migration must exist')
+const totalFixSql = readFileSync(join(migrationsDir, totalFixNames[0]), 'utf8')
+assert.match(totalFixSql, /alter function public\.update_contract\([\s\S]*rename to update_contract_without_total/i)
+assert.match(totalFixSql, /create or replace function public\.update_contract/i)
+assert.match(totalFixSql, /contract total is required for an equipment lease/i)
+assert.match(totalFixSql, /set total = parsed_total/i)
+assert.match(totalFixSql, /public\.update_contract_without_total/i)
+
 console.log('contract budget schema tests passed')
