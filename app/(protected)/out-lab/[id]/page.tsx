@@ -150,7 +150,7 @@ export default async function OutLabDetailPage({ params }: OutLabDetailPageProps
           <div><dt>ปีงบประมาณ</dt><dd className="identifier">{record.fiscalYear}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{contract.departmentLabel}</dd></div>
           <div><dt>ประเภทสัญญา</dt><dd>{OUT_LAB_CONTRACT_TYPE_LABEL}</dd></div>
-          <div><dt>จังหวะลงข้อมูล</dt><dd>{contract.cadenceLabel}</dd></div>
+          <div><dt>งวดลงข้อมูล</dt><dd>{contract.cadenceLabel}</dd></div>
           <div className="contract-facts__period">
             <dt>ระยะเวลา{isPlan ? 'ตามปีงบประมาณ' : 'สัญญา'}</dt>
             <dd>

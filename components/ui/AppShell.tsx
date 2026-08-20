@@ -31,11 +31,11 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'overview', tone: 'blue' },
   { href: '/contracts', label: 'สัญญา', icon: 'contract', tone: 'violet' },
-  { href: '/out-lab', label: 'Out Lab', icon: 'outlab', tone: 'teal' },
   { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr', tone: 'cyan' },
   { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },
   { href: '/requisitions', label: 'เบิกจ่าย', icon: 'issue', tone: 'rose' },
   { href: '/inventory', label: 'คงคลัง', icon: 'inventory', tone: 'green' },
+  { href: '/out-lab', label: 'Out Lab', icon: 'outlab', tone: 'teal' },
 ]
 
 // The route itself remains the final authorization boundary. Showing this

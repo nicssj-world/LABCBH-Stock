@@ -73,7 +73,7 @@ function refinePeriodForKind(
 
 const outLabContractFields = {
   kind: z.enum(OUT_LAB_KINDS, { errorMap: () => ({ message: 'กรุณาเลือกรูปแบบงบของสัญญา' }) }),
-  entryCadence: z.enum(OUT_LAB_CADENCES, { errorMap: () => ({ message: 'กรุณาเลือกจังหวะการลงข้อมูล' }) }),
+  entryCadence: z.enum(OUT_LAB_CADENCES, { errorMap: () => ({ message: 'กรุณาเลือกงวดการลงข้อมูล' }) }),
   fiscalYear: z.number().int().min(2500).max(3000),
   displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
   vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),

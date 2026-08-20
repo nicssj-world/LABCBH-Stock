@@ -106,9 +106,9 @@ export function OutLabFilters({
         </select>
       </label>
       <label>
-        จังหวะลงข้อมูล
+        งวดลงข้อมูล
         <select name="cadence" value={entryCadence} onChange={handleSelectChange}>
-          <option value="">ทุกจังหวะ</option>
+          <option value="">ทุกงวด</option>
           {cadences.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
         </select>
       </label>

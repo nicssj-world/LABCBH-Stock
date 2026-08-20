@@ -179,7 +179,7 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
             )}
           </label>
           <label>
-            จังหวะการลงข้อมูล
+            งวดการลงข้อมูล
             <select
               value={state.entryCadence}
               onChange={(event) => patch('entryCadence', event.target.value as FormState['entryCadence'])}
