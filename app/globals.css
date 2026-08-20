@@ -3149,6 +3149,9 @@ input[type="number"] {
 .pr-review__meta { display: grid; gap: 2px; text-align: right; }
 .pr-review__meta .pr-review__intro { font-size: 11px; }
 .pr-review__closed { display: grid; gap: 4px; }
+.pr-lifecycle-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pr-lifecycle-controls .lab-link-button,
+.pr-lifecycle-controls .lab-button { min-height: 38px; padding: 8px 13px; font-size: 12px; }
 
 @media (max-width: 1180px) {
   .inventory-detail-grid { grid-template-columns: 1fr; }
@@ -3262,7 +3265,8 @@ input[type="number"] {
   .pr-review__meta { text-align: left; }
   .contract-detail-heading__top { align-items: flex-start; flex-direction: column; padding: 12px 16px 16px; }
   .contract-detail-heading__status { justify-content: flex-start; width: 100%; }
-  .contract-detail-heading__status .lab-link-button { width: 100%; margin-top: 4px; }
+  .contract-detail-heading__status .pr-lifecycle-controls { width: 100%; margin-top: 4px; }
+  .contract-detail-heading__status .pr-lifecycle-controls > * { flex: 1; }
   .app-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
   .contract-summary-dialog__facts { grid-template-columns: 1fr; }
   .contract-summary-dialog__facts > div,

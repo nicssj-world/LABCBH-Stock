@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
@@ -11,6 +12,7 @@ import {
   PURCHASE_REQUEST_STATUS_TONES,
   formatBaht,
 } from '@/lib/pr/presenter'
+import { canRequestPurchase } from '@/lib/pr/authorization'
 import { getPurchaseRequest } from '@/lib/pr/queries'
 
 interface PurchaseRequestDetailPageProps {
@@ -45,6 +47,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   if (!request) notFound()
 
   const canReview = canOperateStock(actor)
+  const canEdit = canRequestPurchase(actor) && request.status === 'pending'
   // contractDraft is a nested object with its own rendering below; the flat
   // key/value list here would otherwise print it as "[object Object]".
   const methodDetails = Object.entries(request.methodDetails).filter(
@@ -71,6 +74,12 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               {PURCHASE_REQUEST_STATUS_LABELS[request.status]}
             </StatusChip>
             <StatusChip tone="neutral">{PURCHASE_METHOD_LABELS[request.purchaseMethod]}</StatusChip>
+            {canEdit && (
+              <PurchaseRequestLifecycleControls
+                requestId={request.id}
+                documentNumber={request.documentNumber}
+              />
+            )}
           </div>
         </div>
 

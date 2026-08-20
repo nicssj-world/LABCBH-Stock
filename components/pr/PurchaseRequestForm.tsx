@@ -14,7 +14,7 @@ import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
-import { createPurchaseRequest } from '@/lib/pr/actions'
+import { createPurchaseRequest, updatePurchaseRequest } from '@/lib/pr/actions'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
 import { PURCHASE_METHODS_BY_PURPOSE, calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
 
@@ -36,6 +36,27 @@ export interface ContractLineOption extends CatalogOption {
   contractedQuantity: number
 }
 
+export interface PurchaseRequestFormInitialItem {
+  inventoryItemId: string
+  contractItemId: string | null
+  lsCode: string
+  name: string
+  unit: string
+  requestedQuantity: number
+  unitPrice: number
+  contractRemaining: number | null
+  monthlyUsageSnapshot: number
+}
+
+export interface PurchaseRequestFormInitialValues {
+  requestId: string
+  requestedDate: string
+  note: string | null
+  purpose: PurchasePurpose
+  method: PurchaseMethod
+  items: PurchaseRequestFormInitialItem[]
+}
+
 export interface PurchaseRequestFormProps {
   department: string
   departments: readonly string[]
@@ -44,6 +65,8 @@ export interface PurchaseRequestFormProps {
   awaitingContracts: AwaitingContractOption[]
   contractLines: ContractLineOption[]
   catalog: CatalogOption[]
+  mode?: 'create' | 'edit'
+  initialValues?: PurchaseRequestFormInitialValues
 }
 
 interface DraftLine {
@@ -97,15 +120,38 @@ export function PurchaseRequestForm({
   awaitingContracts,
   contractLines,
   catalog,
+  mode = 'create',
+  initialValues,
 }: PurchaseRequestFormProps) {
   const router = useRouter()
   const [department, setDepartment] = useState(initialDepartment)
   const headName = initialHeadName
-  const [requestedDate, setRequestedDate] = useState(() => bangkokIsoDate())
-  const [note, setNote] = useState('')
-  const [purpose, setPurpose] = useState<PurchasePurpose>('purchase_order')
-  const [method, setMethod] = useState<PurchaseMethod>({ kind: 'off_plan' })
-  const [lines, setLines] = useState<DraftLine[]>([])
+  const isEditMode = mode === 'edit' && Boolean(initialValues?.requestId)
+  const [requestedDate, setRequestedDate] = useState(() => initialValues?.requestedDate ?? bangkokIsoDate())
+  const [note, setNote] = useState(initialValues?.note ?? '')
+  const [purpose, setPurpose] = useState<PurchasePurpose>(initialValues?.purpose ?? 'purchase_order')
+  const [method, setMethod] = useState<PurchaseMethod>(() => initialValues?.method ?? { kind: 'off_plan' })
+  const [lines, setLines] = useState<DraftLine[]>(() =>
+    initialValues?.items.map((item) => {
+      const contractLine = item.contractItemId
+        ? contractLines.find((option) => option.contractItemId === item.contractItemId)
+        : undefined
+
+      return {
+        key: item.contractItemId ?? item.inventoryItemId,
+        inventoryItemId: item.inventoryItemId,
+        contractItemId: item.contractItemId,
+        lsCode: item.lsCode,
+        name: item.name,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        requestedQuantity: item.requestedQuantity,
+        contractRemaining: item.contractRemaining,
+        contractedQuantity: contractLine?.contractedQuantity ?? null,
+        averageMonthlyUsage: item.monthlyUsageSnapshot,
+      }
+    }) ?? [],
+  )
   const [clearAnnouncement, setClearAnnouncement] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -280,7 +326,7 @@ export function PurchaseRequestForm({
 
     startTransition(async () => {
       try {
-        const created = await createPurchaseRequest({
+        const input = {
           department,
           headName,
           requestedDate,
@@ -297,11 +343,14 @@ export function PurchaseRequestForm({
               unit: line.unit,
               unitPrice: line.unitPrice,
             })),
-        })
-        router.push(`/purchase-requests/${created.id}`)
+        }
+        const saved = isEditMode && initialValues
+          ? await updatePurchaseRequest(initialValues.requestId, input)
+          : await createPurchaseRequest(input)
+        router.push(`/purchase-requests/${saved.id}`)
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'สร้างใบ PR ไม่สำเร็จ กรุณาลองใหม่')
+        setError(caught instanceof Error ? caught.message : `${isEditMode ? 'แก้ไข' : 'สร้าง'}ใบ PR ไม่สำเร็จ กรุณาลองใหม่`)
       }
     })
   }
@@ -536,7 +585,9 @@ export function PurchaseRequestForm({
 
       <div className="form-action-bar">
         <p>
-          {purpose === 'new_contract'
+          {isEditMode
+            ? 'แก้ไขได้เฉพาะใบ PR ที่ยังรอเจ้าหน้าที่คลังยืนยัน'
+            : purpose === 'new_contract'
             ? 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที'
             : 'ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น'}
           {!isLease && lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
@@ -544,11 +595,15 @@ export function PurchaseRequestForm({
           {hasOverLimitLine && ' · มีรายการที่ขอเกินยอดคงเหลือในสัญญา กรุณาแก้ไขก่อนส่ง'}
         </p>
         <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => router.push('/purchase-requests')} disabled={isPending}>
+          <Button
+            variant="secondary"
+            onClick={() => router.push(isEditMode && initialValues ? `/purchase-requests/${initialValues.requestId}` : '/purchase-requests')}
+            disabled={isPending}
+          >
             ยกเลิก
           </Button>
           <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasOverLimitLine}>
-            {isPending ? 'กำลังส่ง…' : 'ส่งใบ PR'}
+            {isPending ? (isEditMode ? 'กำลังบันทึก…' : 'กำลังส่ง…') : isEditMode ? 'บันทึกการแก้ไข' : 'ส่งใบ PR'}
           </Button>
         </div>
       </div>

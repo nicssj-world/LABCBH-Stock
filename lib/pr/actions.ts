@@ -73,6 +73,52 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
 }
 
 /**
+ * A submitted PR can only be changed while it is still pending. The RPC locks
+ * the row and repeats every contract/item check so an old browser cannot
+ * rewrite a PR after a stock officer has already acted on it.
+ */
+export async function updatePurchaseRequest(
+  purchaseRequestId: string,
+  input: PurchaseRequestInput,
+) {
+  const actor = await requireActor()
+  assertPurchaseRequester(actor)
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const parsed = purchaseRequestInputSchema.parse(input)
+  const { items, ...request } = parsed
+
+  const result = await supabaseAdmin.rpc('update_purchase_request', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+    p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+    p_items: items.map(omitNullishProperties),
+  })
+
+  const updated = unwrapMutation('แก้ไขใบ PR', result)
+  revalidatePurchaseRequest(parsedId)
+  return updated
+}
+
+/**
+ * "ลบ" ในหน้าจอ PR คือการยกเลิกแบบเก็บประวัติไว้ ไม่ลบแถวหรือรายการสินค้า
+ * จริง เพื่อให้เลขเอกสารและการตรวจสอบย้อนหลังยังเชื่อถือได้
+ */
+export async function cancelPurchaseRequest(purchaseRequestId: string) {
+  const actor = await requireActor()
+  assertPurchaseRequester(actor)
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+
+  const result = await supabaseAdmin.rpc('cancel_purchase_request', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+  })
+
+  const cancelled = unwrapMutation('ลบใบ PR', result)
+  revalidatePurchaseRequest(parsedId)
+  return cancelled
+}
+
+/**
  * `sentToProcurementDate` is required only when confirming a PR whose method
  * opens a new contract (specific_contract/e_bidding) — it becomes that
  * contract's stage-1 (ส่งพัสดุ) date. An ordinary drawdown PR must not send one;

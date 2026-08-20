@@ -348,6 +348,45 @@ assert.match(integrityCreatePr, /resolved_contract_id is distinct from parsed_co
 assert.match(integritySql, /create or replace function public\.validate_contract_item_allocation/i)
 assert.match(integritySql, /validate_purchase_request_contract\(\s*expected_contract_id/i)
 
+// Editing replaces only an unconfirmed PR's lines, while cancellation keeps
+// the document and its history instead of physically deleting it.
+const editCancelNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_pr_edit_cancel.sql'),
+)
+assert.equal(editCancelNames.length, 1, 'exactly one PR edit/cancel migration must exist')
+const editCancelSql = readFileSync(join(migrationsDir, editCancelNames[0]), 'utf8')
+const updatePr = editCancelSql.match(
+  /create or replace function public\.update_purchase_request[\s\S]*?\$function\$;/i,
+ )?.[0]
+assert.ok(updatePr, 'update_purchase_request must exist')
+assert.match(updatePr, /for update/i)
+assert.match(updatePr, /status <> 'pending'/i)
+assert.match(updatePr, /delete from public\.purchase_request_items/i)
+assert.match(updatePr, /insert into public\.purchase_request_items/i)
+
+const cancelPr = editCancelSql.match(
+  /create or replace function public\.cancel_purchase_request[\s\S]*?\$function\$;/i,
+ )?.[0]
+assert.ok(cancelPr, 'cancel_purchase_request must exist')
+assert.match(cancelPr, /for update/i)
+assert.match(cancelPr, /status <> 'pending'/i)
+assert.match(cancelPr, /status = 'cancelled'/i)
+
+for (const fn of ['update_purchase_request', 'cancel_purchase_request']) {
+  for (const role of ['public', 'anon', 'authenticated']) {
+    assert.match(
+      editCancelSql,
+      new RegExp(`revoke execute on function public\\.${fn}\\([^)]*\\) from ${role}`, 'i'),
+      `${fn} must be revoked from ${role}`,
+    )
+  }
+  assert.match(
+    editCancelSql,
+    new RegExp(`grant execute on function public\\.${fn}\\([^)]*\\) to service_role`, 'i'),
+    `${fn} must be granted to service_role`,
+  )
+}
+
 console.log(
-  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]}, ${priceLockNames[0]}, ${integrityNames[0]})`,
+  `purchase request schema: ok (${migrationNames[0]}, ${originationNames[0]}, ${leaseNames[0]}, ${methodCheckNames[0]}, ${priceLockNames[0]}, ${integrityNames[0]}, ${editCancelNames[0]})`,
 )
