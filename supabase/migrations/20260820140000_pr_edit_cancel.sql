@@ -4,6 +4,46 @@
 -- be reversed through the existing audited workflow instead.
 begin;
 
+create or replace function public.assert_purchase_request_manager(
+  p_actor_id uuid,
+  p_requester_id uuid
+)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+begin
+  if not exists (
+    select 1
+    from public.profiles profile
+    where profile.id = p_actor_id
+      and profile.status = 'active'
+      and profile.deleted_at is null
+      and (
+        profile.id = p_requester_id
+        or profile.ephis_id = '9495'
+        or exists (
+          select 1
+          from public.lab_stock_memberships membership
+          where membership.profile_id = profile.id
+            and membership.active
+            and membership.role in ('admin', 'stock_officer')
+        )
+      )
+  ) then
+    raise exception using
+      errcode = '42501',
+      message = 'actor is not allowed to edit or cancel this purchase request';
+  end if;
+end
+$function$;
+
+revoke execute on function public.assert_purchase_request_manager(uuid, uuid) from public;
+revoke execute on function public.assert_purchase_request_manager(uuid, uuid) from anon;
+revoke execute on function public.assert_purchase_request_manager(uuid, uuid) from authenticated;
+grant execute on function public.assert_purchase_request_manager(uuid, uuid) to service_role;
+
 create or replace function public.update_purchase_request(
   p_pr_id uuid,
   p_actor_id uuid,
@@ -40,8 +80,6 @@ declare
   manual_name text;
   manual_unit text;
 begin
-  perform public.assert_contract_editor_actor(p_actor_id);
-
   select *
   into locked_request
   from public.purchase_requests request
@@ -57,6 +95,8 @@ begin
       errcode = '55000',
       message = 'only a pending purchase request can be edited';
   end if;
+
+  perform public.assert_purchase_request_manager(p_actor_id, locked_request.requester_id);
 
   if p_request is null or jsonb_typeof(p_request) <> 'object' then
     raise exception using errcode = '22023', message = 'purchase request payload must be an object';
@@ -379,8 +419,6 @@ declare
   locked_request public.purchase_requests%rowtype;
   cancelled_request public.purchase_requests%rowtype;
 begin
-  perform public.assert_contract_editor_actor(p_actor_id);
-
   select *
   into locked_request
   from public.purchase_requests request
@@ -396,6 +434,8 @@ begin
       errcode = '55000',
       message = 'only a pending purchase request can be cancelled';
   end if;
+
+  perform public.assert_purchase_request_manager(p_actor_id, locked_request.requester_id);
 
   update public.purchase_requests
   set status = 'cancelled',

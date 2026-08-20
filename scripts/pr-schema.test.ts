@@ -355,12 +355,20 @@ const editCancelNames = readdirSync(migrationsDir).filter((name) =>
 )
 assert.equal(editCancelNames.length, 1, 'exactly one PR edit/cancel migration must exist')
 const editCancelSql = readFileSync(join(migrationsDir, editCancelNames[0]), 'utf8')
+const managerFunction = editCancelSql.match(
+  /create or replace function public\.assert_purchase_request_manager[\s\S]*?\$function\$;/i,
+ )?.[0]
+assert.ok(managerFunction, 'assert_purchase_request_manager must exist')
+assert.match(managerFunction, /profile\.id = p_requester_id/i)
+assert.match(managerFunction, /membership\.role in \('admin', 'stock_officer'\)/i)
 const updatePr = editCancelSql.match(
   /create or replace function public\.update_purchase_request[\s\S]*?\$function\$;/i,
  )?.[0]
 assert.ok(updatePr, 'update_purchase_request must exist')
 assert.match(updatePr, /for update/i)
 assert.match(updatePr, /status <> 'pending'/i)
+assert.match(updatePr, /assert_purchase_request_manager\(p_actor_id, locked_request\.requester_id\)/i)
+assert.doesNotMatch(updatePr, /assert_contract_editor_actor/i)
 assert.match(updatePr, /delete from public\.purchase_request_items/i)
 assert.match(updatePr, /insert into public\.purchase_request_items/i)
 
@@ -372,7 +380,7 @@ assert.match(cancelPr, /for update/i)
 assert.match(cancelPr, /status <> 'pending'/i)
 assert.match(cancelPr, /status = 'cancelled'/i)
 
-for (const fn of ['update_purchase_request', 'cancel_purchase_request']) {
+for (const fn of ['assert_purchase_request_manager', 'update_purchase_request', 'cancel_purchase_request']) {
   for (const role of ['public', 'anon', 'authenticated']) {
     assert.match(
       editCancelSql,

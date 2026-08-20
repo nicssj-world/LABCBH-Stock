@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
-import { assertPurchaseRequester } from '@/lib/pr/authorization'
+import {
+  assertPurchaseRequestManager,
+  assertPurchaseRequester,
+} from '@/lib/pr/authorization'
 import {
   ephisPrNumberSchema,
   purchaseOrderNumberSchema,
@@ -18,6 +21,7 @@ import type {
   PurchaseRequestInput,
   PurchaseRequestReversalInput,
 } from '@/lib/pr/types'
+import { getPurchaseRequest } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 
@@ -82,9 +86,11 @@ export async function updatePurchaseRequest(
   input: PurchaseRequestInput,
 ) {
   const actor = await requireActor()
-  assertPurchaseRequester(actor)
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
   const parsed = purchaseRequestInputSchema.parse(input)
+  const existing = await getPurchaseRequest(parsedId)
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการแก้ไข')
+  assertPurchaseRequestManager(actor, existing.requesterId)
   const { items, ...request } = parsed
 
   const result = await supabaseAdmin.rpc('update_purchase_request', {
@@ -105,8 +111,10 @@ export async function updatePurchaseRequest(
  */
 export async function cancelPurchaseRequest(purchaseRequestId: string) {
   const actor = await requireActor()
-  assertPurchaseRequester(actor)
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const existing = await getPurchaseRequest(parsedId)
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการลบ')
+  assertPurchaseRequestManager(actor, existing.requesterId)
 
   const result = await supabaseAdmin.rpc('cancel_purchase_request', {
     p_pr_id: parsedId,

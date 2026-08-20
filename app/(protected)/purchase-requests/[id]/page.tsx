@@ -12,7 +12,7 @@ import {
   PURCHASE_REQUEST_STATUS_TONES,
   formatBaht,
 } from '@/lib/pr/presenter'
-import { canRequestPurchase } from '@/lib/pr/authorization'
+import { canManagePurchaseRequest } from '@/lib/pr/authorization'
 import { getPurchaseRequest } from '@/lib/pr/queries'
 
 interface PurchaseRequestDetailPageProps {
@@ -47,7 +47,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   if (!request) notFound()
 
   const canReview = canOperateStock(actor)
-  const canEdit = canRequestPurchase(actor) && request.status === 'pending'
+  const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
   // contractDraft is a nested object with its own rendering below; the flat
   // key/value list here would otherwise print it as "[object Object]".
   const methodDetails = Object.entries(request.methodDetails).filter(

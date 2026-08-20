@@ -6,7 +6,7 @@ import {
 } from '@/components/pr/PurchaseRequestForm'
 import { requireActor } from '@/lib/auth/actor'
 import { DEPARTMENTS } from '@/lib/organization/departments'
-import { canRequestPurchase } from '@/lib/pr/authorization'
+import { canManagePurchaseRequest } from '@/lib/pr/authorization'
 import { loadPurchaseRequestFormOptions } from '@/lib/pr/form-options'
 import { purchaseMethodPurpose, purchaseMethodSchema } from '@/lib/pr/schema'
 import { getPurchaseRequest } from '@/lib/pr/queries'
@@ -19,13 +19,13 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 export default async function PurchaseRequestEditPage({ params }: PurchaseRequestEditPageProps) {
   const actor = await requireActor()
-  if (!canRequestPurchase(actor)) redirect('/purchase-requests')
 
   const { id } = await params
   if (!UUID_PATTERN.test(id)) notFound()
 
   const request = await getPurchaseRequest(id)
   if (!request) notFound()
+  if (!canManagePurchaseRequest(actor, request.requesterId)) redirect('/purchase-requests')
   if (request.status !== 'pending') redirect(`/purchase-requests/${request.id}`)
 
   const parsedMethod = purchaseMethodSchema.safeParse({
