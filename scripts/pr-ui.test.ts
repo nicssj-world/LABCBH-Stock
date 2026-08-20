@@ -190,6 +190,11 @@ assert.match(queries, /filters\.department/, 'purchase-request queries apply the
 assert.match(queries, /listNextContractPurchaseSequences/)
 assert.match(queries, /created_contract_id/, 'a confirmed PR must link forward to the contract it opened')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'PR reads stay under RLS')
+assert.match(
+  queries,
+  /requesterName: row\.requester\?\.name\?\.trim\(\) \|\| row\.head_name\.trim\(\) \|\| null/,
+  'the requester display must fall back to the PR name snapshot when profile RLS hides the relation',
+)
 
 const table = read('components/pr/PurchaseRequestTable.tsx')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\}/, 'the desktop row must open the mini summary popup, not a plain cell')

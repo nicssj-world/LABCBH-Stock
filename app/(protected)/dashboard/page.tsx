@@ -1,7 +1,12 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { ContractValueCards } from '@/components/dashboard/ContractValueCards'
-import { ContractStackIcon, PendingClockIcon } from '@/components/dashboard/DashboardIcons'
+import {
+  ContractStackIcon,
+  PendingClockIcon,
+  PurchaseRequestIcon,
+  RequisitionIcon,
+} from '@/components/dashboard/DashboardIcons'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { getExecutiveDashboard, type ExecutiveDashboard } from '@/lib/dashboard/contracts'
 
@@ -224,7 +229,19 @@ export default async function DashboardPage() {
           <h1>Dashboard บริหารสัญญา</h1>
           <p>สถานะงานจัดซื้อ มูลค่าคงเหลือ และรายการน้ำยาที่ต้องติดตามจากข้อมูลธุรกรรมจริง</p>
         </div>
-        <StatusChip tone={error ? 'danger' : 'info'}>{error ? 'ข้อมูลขัดข้อง' : 'ข้อมูลปัจจุบัน'}</StatusChip>
+        <div className="dashboard-heading-tools">
+          {error && <StatusChip tone="danger">ข้อมูลขัดข้อง</StatusChip>}
+          <nav className="dashboard-quick-actions" aria-label="ทางลัดงานหลัก">
+            <Link className="lab-link-button lab-link-button--secondary dashboard-quick-action" href="/purchase-requests/new">
+              <span className="dashboard-quick-action__icon" aria-hidden="true"><PurchaseRequestIcon /></span>
+              <span>สร้างใบ PR</span>
+            </Link>
+            <Link className="lab-link-button lab-link-button--primary dashboard-quick-action" href="/requisitions/new">
+              <span className="dashboard-quick-action__icon" aria-hidden="true"><RequisitionIcon /></span>
+              <span>สร้างใบเบิก</span>
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {error || !data ? (
