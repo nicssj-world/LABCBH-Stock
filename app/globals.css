@@ -2649,7 +2649,7 @@ input[type="number"] {
 .item-picker__manual-fields button { min-height: 44px; white-space: nowrap; }
 .item-picker__manual .field-error { margin: 0; }
 .pr-line-cell--name { min-width: 240px; }
-.pr-line-cell--manual > input { width: 100%; text-align: left; font-variant-numeric: normal; }
+.data-table td.pr-line-cell--name.pr-line-cell--manual > input { width: 100%; text-align: left; font-variant-numeric: normal; }
 .pr-line-cell--manual:first-child > input { width: min(100%, 150px); font-family: var(--font-mono); }
 
 .item-picker {

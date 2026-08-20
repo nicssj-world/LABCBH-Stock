@@ -103,6 +103,11 @@ assert.match(
   /\.data-table (?:input|:is\(td, th\) > input)\s*\{[\s\S]*?border:\s*1px solid var\(--lab-border-strong\);[\s\S]*?\}/,
   'quantity/price inputs inside a data-table must render a visible border, not rely on the bare browser default',
 )
+assert.match(
+  styles,
+  /\.data-table td\.pr-line-cell--name\.pr-line-cell--manual > input\s*\{[\s\S]*?width:\s*100%/,
+  'a manually added reagent name must use the full name column instead of inheriting the narrow numeric input width',
+)
 assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%, 520px\)/, 'PR and PO identifiers should not stretch across the full review card')
 assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*background:\s*color-mix/, 'saved PR and PO identifiers should have a muted filled-state background')
 assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
