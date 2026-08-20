@@ -435,7 +435,7 @@ export function PurchaseRequestForm({
                         />
                       ) : line.lsCode}
                     </td>
-                    <td className={line.inventoryItemId === null ? 'pr-line-cell--manual' : undefined}>
+                    <td className={`pr-line-cell--name${line.inventoryItemId === null ? ' pr-line-cell--manual' : ''}`}>
                       {line.inventoryItemId === null ? (
                         <input
                           type="text"

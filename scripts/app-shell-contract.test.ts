@@ -18,7 +18,7 @@ assert.match(shell, /<span>Lab Management<\/span>/, 'the portal return action mu
 assert.match(shell, /actor\.avatarUrl/, 'the shell must use the shared portal display photo when available')
 assert.match(shell, /actor-badge__avatar/, 'the display photo needs a dedicated avatar treatment')
 assert.match(shell, /aria-pressed=\{dark\}/, 'the theme control must expose its active state')
-assert.match(shell, /<UtilityIcon name="contrast" \/>/, 'the theme control must use a neutral appearance icon instead of a moon')
+assert.match(shell, /<UtilityIcon name="appearance" dark=\{dark\} \/>/, 'the theme control must show the current appearance mode with a shared SVG icon')
 assert.doesNotMatch(shell, /name === 'moon'/, 'the theme control must not render a moon icon')
 assert.match(shell, /const \[collapsed, setCollapsed\] = useState\(false\)/, 'the desktop sidebar must keep an explicit collapsed state')
 assert.match(shell, /bench-rail\$\{collapsed \? ' is-collapsed' : ''\}/, 'the sidebar must expose its collapsed state to styling')

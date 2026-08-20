@@ -10,10 +10,12 @@ FORM: Enterprise healthcare dashboard, dense enough for operations and comfortab
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState, type ReactNode } from 'react'
+import { startTransition, useEffect, useState, type ReactNode } from 'react'
 import { LogoutButton } from '@/components/ui/LogoutButton'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
+import { EMPTY_NOTIFICATION_SNAPSHOT, type NotificationSnapshot } from '@/lib/notifications/types'
 
 type BenchIconName = 'overview' | 'contract' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
 type NavTone = 'blue' | 'violet' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
@@ -59,11 +61,15 @@ function BenchIcon({ name }: { name: BenchIconName }) {
   )
 }
 
-function UtilityIcon({ name }: { name: 'menu' | 'contrast' | 'portal' }) {
+function UtilityIcon({ name, dark }: { name: 'menu' | 'appearance' | 'portal'; dark?: boolean }) {
   return (
     <svg className="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
       {name === 'menu' && <><path d="M4 7h16M4 12h16M4 17h16" /></>}
-      {name === 'contrast' && <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 0 0 16V4Z" /></>}
+      {name === 'appearance' && (dark ? (
+        <path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" />
+      ) : (
+        <><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" /></>
+      ))}
       {name === 'portal' && <><path d="M14 4h5v5M19 4l-8 8" /><path d="M19 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" /></>}
     </svg>
   )
@@ -72,16 +78,22 @@ function UtilityIcon({ name }: { name: 'menu' | 'contrast' | 'portal' }) {
 export interface AppShellProps {
   actor: Actor
   children: ReactNode
+  notificationSnapshot?: NotificationSnapshot
 }
 
-export function AppShell({ actor, children }: AppShellProps) {
+export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFICATION_SNAPSHOT }: AppShellProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [dark, setDark] = useState(false)
+  const [notificationState, setNotificationState] = useState(notificationSnapshot)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
   const visibleNavigation = [...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])]
   const currentItem = visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+
+  useEffect(() => {
+    startTransition(() => setNotificationState(notificationSnapshot))
+  }, [notificationSnapshot])
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -152,20 +164,36 @@ export function AppShell({ actor, children }: AppShellProps) {
           <p className="bench-nav__section">งานคลังและสัญญา</p>
           <nav className="bench-nav">
             {visibleNavigation.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="bench-nav__link"
-                aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
-                aria-label={collapsed ? item.label : undefined}
-                title={collapsed ? item.label : undefined}
-                onClick={() => setMobileOpen(false)}
-              >
-                <span className="bench-nav__icon" data-nav-tone={item.tone}>
-                  <BenchIcon name={item.icon} />
-                </span>
-                <span className="bench-nav__label">{item.label}</span>
-              </Link>
+              (() => {
+                const count = item.href === '/purchase-requests'
+                  ? notificationState.pendingPurchaseRequests
+                  : item.href === '/requisitions'
+                    ? notificationState.waitingRequisitions
+                    : 0
+                const countLabel = count > 0 ? ` มี ${count} รายการรอดำเนินการ` : ''
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="bench-nav__link"
+                    aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+                    aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
+                    title={collapsed ? item.label : undefined}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className="bench-nav__icon" data-nav-tone={item.tone}>
+                      <BenchIcon name={item.icon} />
+                    </span>
+                    <span className="bench-nav__label">{item.label}</span>
+                    {count > 0 && (
+                      <span className="bench-nav__count" aria-label={countLabel.trim()}>
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })()
             ))}
           </nav>
           <div className="bench-rail__footer">
@@ -201,6 +229,11 @@ export function AppShell({ actor, children }: AppShellProps) {
               </div>
             </div>
             <div className="workbench-header__actions">
+              <NotificationCenter
+                actorId={actor.id}
+                snapshot={notificationState}
+                onSnapshotChange={setNotificationState}
+              />
               <button
                 className="utility-button utility-button--theme"
                 type="button"
@@ -209,7 +242,7 @@ export function AppShell({ actor, children }: AppShellProps) {
                 title={dark ? 'ใช้ธีมสว่าง' : 'ใช้ธีมมืด'}
                 onClick={toggleTheme}
               >
-                <UtilityIcon name="contrast" />
+                <UtilityIcon name="appearance" dark={dark} />
               </button>
               <a className="portal-return" href={PORTAL_DASHBOARD_URL} title="กลับไป Lab Management Portal">
                 <UtilityIcon name="portal" />
