@@ -125,7 +125,11 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         </div>
         <p>บันทึกตามวันที่มีผลของแต่ละขั้นตอน</p>
       </div>
-      <StageTimeline contract={contract} canManageStageHistory={canManageStageHistory} />
+      <StageTimeline
+        contract={contract}
+        canManageStageHistory={canManageStageHistory}
+        stageHistoryEditorContractId={contract.id}
+      />
     </section>
   )
 

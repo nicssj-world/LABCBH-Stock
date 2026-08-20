@@ -82,6 +82,40 @@ function refineItemsForContractType(
   }
 }
 
+const contractTotalInputSchema = z
+  .number()
+  .finite()
+  .positive('มูลค่าสัญญาต้องมากกว่า 0')
+  .nullable()
+  .optional()
+
+/** Lease ceilings are entered directly; supply totals remain derived from lines. */
+function refineTotalForContractType(
+  value: { contractType: ContractTypeValue; total?: number | null },
+  ctx: z.RefinementCtx,
+): void {
+  const hasTotal = Object.prototype.hasOwnProperty.call(value, 'total')
+
+  if (value.contractType === 'equipment_lease') {
+    if (value.total == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['total'],
+        message: 'กรุณาระบุมูลค่าสัญญา',
+      })
+    }
+    return
+  }
+
+  if (hasTotal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['total'],
+      message: 'มูลค่าสัญญาระบุได้เฉพาะสัญญาเช่าเครื่อง',
+    })
+  }
+}
+
 /**
  * A per-line opening balance only means something on the admin fast path: a
  * contract that never fabricates procurement stages already has a contract
@@ -112,6 +146,7 @@ export const createContractInputSchema = z
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
+    total: contractTotalInputSchema,
     sentToProcurementDate: isoDateSchema,
     // Only set on the admin-only "already started" fast path: creates the
     // contract directly at contract_started instead of sent_to_procurement.
@@ -120,6 +155,7 @@ export const createContractInputSchema = z
   })
   .strict()
   .superRefine(refineItemsForContractType)
+  .superRefine(refineTotalForContractType)
   .superRefine(refineOpeningBalanceRequiresContractNumber)
 
 export const updateContractInputSchema = z
@@ -130,11 +166,13 @@ export const updateContractInputSchema = z
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
     endDate: isoDateSchema.nullable(),
+    total: contractTotalInputSchema,
     expectedUpdatedAt: z.string().datetime({ offset: true }).nullable(),
     items: z.array(contractItemUpdateInputSchema),
   })
   .strict()
   .superRefine(refineItemsForContractType)
+  .superRefine(refineTotalForContractType)
 
 export const contractExpenseInputSchema = z
   .object({

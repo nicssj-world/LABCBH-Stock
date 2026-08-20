@@ -43,7 +43,19 @@ const detailPage = read(contractRoutes[2])
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 detail params must be awaited')
 assert.match(detailPage, /StageTimeline/, 'detail must show six-step history')
 assert.match(detailPage, /StageAdvanceControl/, 'detail must expose confirmed stage advance')
-assert.match(detailPage, /StageTimeline contract=\{contract\} canManageStageHistory=\{canManageStageHistory\}/, 'the history timeline receives the restricted edit capability')
+assert.match(
+  detailPage.replace(/\s+/g, ' '),
+  /StageTimeline contract=\{contract\} canManageStageHistory=\{canManageStageHistory\}/,
+  'the history timeline receives the restricted edit capability',
+)
+// StageTimeline is shared with the Out Lab register, which has uuid ids and no
+// correction workflow, so the contract id the stage-history editor writes
+// through is passed explicitly rather than read off the record.
+assert.match(
+  detailPage.replace(/\s+/g, ' '),
+  /stageHistoryEditorContractId=\{contract\.id\}/,
+  'the stage-history editor needs the contract-register id',
+)
 assert.match(detailPage, /canManageStageHistory/, 'stage history editing must be limited to stock officers and admins')
 assert.match(detailPage, /contract\.procurementStage\s*===\s*['"]contract_started['"]/, 'started contracts must use a dedicated completed state')
 assert.match(detailPage, /isContractStarted\s*\?\s*\(/, 'started contracts must branch to collapsed history')
@@ -179,6 +191,9 @@ assert.match(expiryDialog, /เหตุผลที่สิ้นสุดส�
 
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')
+assert.match(form, /total: number \| null/, 'lease forms must keep an explicit contract ceiling in state')
+assert.match(form, /value=\{state\.total \?\? ''\}/, 'lease forms must render the current contract ceiling')
+assert.match(form, /errors\.total/, 'lease ceiling validation must be shown beside its input')
 assert.match(form, /state\.startImmediately\s*&&\s*item\.openingUsedQuantity\s*!=\s*null/, 'start-immediately contracts must only send a numeric opening balance when entered')
 assert.doesNotMatch(form, /openingUsedQuantity:\s*item\.openingUsedQuantity\s*\?\?\s*null/, 'start-immediately contracts must not serialize an untouched opening balance as null')
 assert.match(form, /localStorage/, 'form must autosave a local draft')

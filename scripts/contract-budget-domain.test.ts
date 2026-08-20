@@ -149,10 +149,16 @@ const leaseBase = {
   vendor: 'Firmer',
   endDate: '2027-06-30',
   sentToProcurementDate: '2026-07-01',
+  total: 1_200_000,
 }
 
 // A lease has no line items, and demanding one made it impossible to create.
 assert.doesNotThrow(() => createContractInputSchema.parse({ ...leaseBase, items: [] }))
+assert.throws(
+  () => createContractInputSchema.parse({ ...leaseBase, total: null, items: [] }),
+  /กรุณาระบุมูลค่าสัญญา/,
+  'a lease must carry its explicit ceiling',
+)
 assert.throws(
   () => createContractInputSchema.parse({ ...leaseBase, contractType: 'e_bidding', items: [] }),
   /ต้องมีรายการน้ำยาอย่างน้อย 1 รายการ/,

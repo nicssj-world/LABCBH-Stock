@@ -117,10 +117,9 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('equipment_lease'),
     // Only a lease carries a ceiling: it has no line items to sum a total
-    // from, unlike specific_contract/e_bidding. Required here — unlike the
-    // direct "เพิ่มสัญญา" form, which still allows an unknown ("ไม่ระบุ")
-    // ceiling — because a lease requested through a PR is expected to already
-    // have a quoted figure to open against.
+    // from, unlike specific_contract/e_bidding. The direct "เพิ่มสัญญา"
+    // form requires the same explicit ceiling so every lease starts with a
+    // usable budget.
     contractDraft: contractDraftWithOptionalVendorSchema.extend({
       total: z.number({ required_error: 'กรุณาระบุมูลค่าสัญญา' }).finite().positive('มูลค่าสัญญาต้องมากกว่า 0'),
     }),
