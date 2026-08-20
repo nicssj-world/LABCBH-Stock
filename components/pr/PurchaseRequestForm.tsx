@@ -16,7 +16,7 @@ import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest, updatePurchaseRequest } from '@/lib/pr/actions'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
-import { PURCHASE_METHODS_BY_PURPOSE, calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
+import { calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
 
 export interface CatalogOption {
   inventoryItemId: string
@@ -101,7 +101,10 @@ function isLowContractBalance(line: DraftLine): boolean {
 }
 
 /** Whether switching to `next` invalidates lines already picked under `current`. */
-function invalidatesLines(current: PurchaseMethod, next: PurchaseMethod): boolean {
+function invalidatesLines(current: PurchaseMethod | null, next: PurchaseMethod): boolean {
+  // Nothing was chosen yet, so there is nothing selected under the old method
+  // that could be stale — but the caller still needs the picker rebuilt.
+  if (current === null) return true
   if (current.kind !== next.kind) return true
   // Only "contract" ties the eligible item list to which contract is picked;
   // every other kind's own-field edits (plan sequence, contract draft text,
@@ -129,8 +132,11 @@ export function PurchaseRequestForm({
   const isEditMode = mode === 'edit' && Boolean(initialValues?.requestId)
   const [requestedDate, setRequestedDate] = useState(() => initialValues?.requestedDate ?? bangkokIsoDate())
   const [note, setNote] = useState(initialValues?.note ?? '')
-  const [purpose, setPurpose] = useState<PurchasePurpose>(initialValues?.purpose ?? 'purchase_order')
-  const [method, setMethod] = useState<PurchaseMethod>(() => initialValues?.method ?? { kind: 'off_plan' })
+  // Both start unchosen on a new request: a purchase method is a statement
+  // about how public money is being spent, so it has to be picked on purpose.
+  // Editing an existing request restores what it already says.
+  const [purpose, setPurpose] = useState<PurchasePurpose | null>(initialValues?.purpose ?? null)
+  const [method, setMethod] = useState<PurchaseMethod | null>(() => initialValues?.method ?? null)
   const [lines, setLines] = useState<DraftLine[]>(() =>
     initialValues?.items.map((item) => {
       const contractLine = item.contractItemId
@@ -171,7 +177,9 @@ export function PurchaseRequestForm({
   // every other method — including opening a new contract — picks straight
   // from the full catalogue, since specific_contract/e_bidding items become a
   // brand-new contract's lines rather than drawing down an existing one.
-  const optionsFor = (candidate: PurchaseMethod): PickerOption[] => {
+  const optionsFor = (candidate: PurchaseMethod | null): PickerOption[] => {
+    if (candidate === null) return []
+
     if (candidate.kind === 'contract') {
       return contractLines
         .filter((line) => line.contractId === candidate.contractId && line.contractRemaining > 0)
@@ -282,8 +290,11 @@ export function PurchaseRequestForm({
 
   const changePurpose = (nextPurpose: PurchasePurpose) => {
     setPurpose(nextPurpose)
-    const firstKind = PURCHASE_METHODS_BY_PURPOSE[nextPurpose][0]
-    changeMethod(emptyMethod(firstKind, departmentContracts, departmentAwaitingContracts), 'เปลี่ยนจุดประสงค์')
+    // Deliberately does not pre-pick a method: the two purposes offer different
+    // methods, and auto-selecting one of them is the behaviour being removed.
+    setMethod(null)
+    setClearAnnouncement(lines.length > 0 ? `ล้างรายการที่เลือกไว้ ${lines.length} รายการ เพราะเปลี่ยนจุดประสงค์` : null)
+    setLines([])
   }
 
   const changeDepartment = (nextDepartment: string) => {
@@ -295,10 +306,10 @@ export function PurchaseRequestForm({
     // department; fall back to whatever that department actually offers
     // (which may be nothing — PurchaseMethodFields shows that as an
     // empty state rather than leaving a stale, invisible selection).
-    if (method.kind === 'contract' && !nextContracts.some((contract) => contract.id === method.contractId)) {
+    if (method?.kind === 'contract' && !nextContracts.some((contract) => contract.id === method.contractId)) {
       changeMethod(emptyMethod('contract', nextContracts, nextAwaitingContracts), 'เปลี่ยนหน่วยงานผู้ขอ')
     } else if (
-      method.kind === 'awaiting_contract' &&
+      method?.kind === 'awaiting_contract' &&
       !nextAwaitingContracts.some((contract) => contract.id === method.contractId)
     ) {
       changeMethod(emptyMethod('awaiting_contract', nextContracts, nextAwaitingContracts), 'เปลี่ยนหน่วยงานผู้ขอ')
@@ -307,9 +318,10 @@ export function PurchaseRequestForm({
 
   // A lease originates a contract with zero line items — it never picks from
   // the reagent catalogue or draws down a contract balance.
-  const isLease = method.kind === 'equipment_lease'
+  const isLease = method?.kind === 'equipment_lease'
 
   const methodSelectionMissing =
+    method === null ||
     (method.kind === 'contract' && (departmentContracts.length === 0 || method.contractId === 0)) ||
     (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0)
 
@@ -323,6 +335,11 @@ export function PurchaseRequestForm({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+
+    if (method === null) {
+      setError('กรุณาเลือกจุดประสงค์และวิธีจัดซื้อก่อนส่งใบ PR')
+      return
+    }
 
     startTransition(async () => {
       try {
@@ -406,7 +423,7 @@ export function PurchaseRequestForm({
         />
       </section>
 
-      {method.kind !== 'contract' && !isLease && (
+      {method !== null && method.kind !== 'contract' && !isLease && (
         <section className="bench-panel" aria-labelledby="pr-picker-title">
           <div className="bench-panel__header">
             <div>
@@ -448,7 +465,7 @@ export function PurchaseRequestForm({
 
         {lines.length === 0 ? (
           <p className="empty-state">
-            {method.kind === 'contract'
+            {method?.kind === 'contract'
               ? 'กรุณาเลือกสัญญาก่อน ระบบจะเติมรายการในสัญญาให้อัตโนมัติ'
               : 'ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน'}
           </p>
@@ -549,7 +566,7 @@ export function PurchaseRequestForm({
                     <td className="pr-line-cell--center">
                       <input
                         type="number"
-                        min={method.kind === 'specific_contract' || method.kind === 'e_bidding' ? '0.01' : '0'}
+                        min={method?.kind === 'specific_contract' || method?.kind === 'e_bidding' ? '0.01' : '0'}
                         step="0.01"
                         required
                         readOnly={line.contractItemId !== null}
@@ -591,7 +608,8 @@ export function PurchaseRequestForm({
             ? 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที'
             : 'ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น'}
           {!isLease && lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
-          {methodSelectionMissing && ' · ยังส่งไม่ได้จนกว่าจะมีสัญญาให้เลือกตามเงื่อนไขด้านบน'}
+          {method === null && ' · เลือกจุดประสงค์และวิธีจัดซื้อก่อนจึงจะส่งได้'}
+          {method !== null && methodSelectionMissing && ' · ยังส่งไม่ได้จนกว่าจะมีสัญญาให้เลือกตามเงื่อนไขด้านบน'}
           {hasOverLimitLine && ' · มีรายการที่ขอเกินยอดคงเหลือในสัญญา กรุณาแก้ไขก่อนส่ง'}
         </p>
         <div className="form-action-bar__buttons">

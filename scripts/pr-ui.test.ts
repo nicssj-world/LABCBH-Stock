@@ -74,12 +74,12 @@ assert.match(
 assert.match(form, /optionsFor\(next\)/, 'selecting a contract must auto-fill its remaining lines, not just clear the picker')
 assert.match(
   form,
-  /method\.kind !== 'contract' && !isLease && \([\s\S]*?SELECT ITEMS/,
+  /method !== null && method\.kind !== 'contract' && !isLease && \([\s\S]*?SELECT ITEMS/,
   'the item picker must hide once a contract auto-fills the request lines, and for a lease which has no reagent lines at all',
 )
 assert.match(
   form,
-  /method\.kind === 'contract'\s*\?\s*'กรุณาเลือกสัญญาก่อน/,
+  /method\?\.kind === 'contract'\s*\?\s*'กรุณาเลือกสัญญาก่อน/,
   'the empty request-lines state must point at picking a contract, since the item picker is no longer visible to explain itself',
 )
 assert.match(form, /จุดประสงค์และวิธีจัดซื้อ/)
@@ -90,10 +90,45 @@ assert.match(
   /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasOverLimitLine\}/,
   'submit must stay blocked while any line exceeds its contract remaining, but a lease with zero lines must still be submittable',
 )
-assert.match(form, /const isLease = method\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')
+assert.match(form, /const isLease = method\?\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')
 assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
 assert.match(form, /changeDepartment/, 'changing the requesting department must re-filter its contract lists')
 assert.match(form, /changePurpose/)
+
+assert.match(
+  form,
+  /useState<PurchasePurpose \| null>\(initialValues\?\.purpose \?\? null\)/,
+  'a new request must not arrive with a purpose already chosen',
+)
+assert.match(
+  form,
+  /useState<PurchaseMethod \| null>\(\(\) => initialValues\?\.method \?\? null\)/,
+  'a new request must not arrive with a purchase method already chosen',
+)
+assert.doesNotMatch(
+  form,
+  /\?\? \{ kind: 'off_plan' \}/,
+  'ซื้อนอกแผน is the exceptional method and must never be the silent default',
+)
+assert.match(
+  form,
+  /methodSelectionMissing =\s*method === null \|\|/,
+  'submit stays blocked until a method is actually picked',
+)
+assert.match(
+  form,
+  /if \(method === null\) \{[\s\S]{0,160}return/,
+  'submitting by keyboard without a method must be refused, not sent as null',
+)
+
+// Changing purpose used to jump to the first method of the new group, which
+// re-introduced the same silent pick one level up.
+assert.match(
+  form,
+  /setPurpose\(nextPurpose\)[\s\S]{0,240}setMethod\(null\)/,
+  'switching purpose must clear the method rather than auto-pick the first one',
+)
+
 assert.match(form, /aria-live="polite"/, 'clearing picked lines on a method/department change must be announced')
 assert.match(form, /methodSelectionMissing/, 'the form must know when there is nothing to select and disable submit')
 
@@ -133,7 +168,14 @@ assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*15%/, 'the P
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
 assert.match(methodFields, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork has its own labels')
-assert.match(methodFields, /PURCHASE_METHODS_BY_PURPOSE\[purpose\]/, 'only the current purpose\'s methods are offered')
+// Without a purpose there is no method list to show, so the panel has to say
+// what to do instead of rendering an empty radio group.
+assert.match(
+  methodFields,
+  /purpose === null && \([\s\S]{0,200}เลือกจุดประสงค์ด้านบนก่อน/,
+  'an unchosen purpose must explain itself rather than show nothing',
+)
+assert.match(methodFields, /purpose === null \? \[\] : PURCHASE_METHODS_BY_PURPOSE\[purpose\]/, 'only the current purpose\'s methods are offered')
 assert.match(methodFields, /planSequence/)
 assert.match(methodFields, /purchaseSequence/)
 assert.match(methodFields, /readOnly/)

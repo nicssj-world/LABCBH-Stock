@@ -28,8 +28,10 @@ export interface AwaitingContractOption {
 }
 
 export interface PurchaseMethodFieldsProps {
-  purpose: PurchasePurpose
-  method: PurchaseMethod
+  /** null until the requester picks one — nothing is chosen on their behalf. */
+  purpose: PurchasePurpose | null
+  /** null until a method is picked, which is also what blocks submission. */
+  method: PurchaseMethod | null
   /** Contracts already at "เริ่มสัญญา", pre-filtered to non-lease and non-expired. */
   contracts: ContractOption[]
   /** Contracts still working through the procurement stages. */
@@ -121,7 +123,7 @@ export function PurchaseMethodFields({
   onPurposeChange,
   onChange,
 }: PurchaseMethodFieldsProps) {
-  const methodKinds = PURCHASE_METHODS_BY_PURPOSE[purpose]
+  const methodKinds = purpose === null ? [] : PURCHASE_METHODS_BY_PURPOSE[purpose]
 
   return (
     <div className="method-stack">
@@ -150,6 +152,10 @@ export function PurchaseMethodFields({
       <fieldset className="method-fieldset">
         <legend>วิธีจัดซื้อ</legend>
 
+        {purpose === null && (
+          <p className="empty-state">เลือกจุดประสงค์ด้านบนก่อน แล้ววิธีจัดซื้อที่เลือกได้จะแสดงขึ้นมา</p>
+        )}
+
         <div className="method-options" role="radiogroup" aria-label="วิธีจัดซื้อ">
           {methodKinds.map((kind) => (
             <label key={kind} className="method-option">
@@ -157,7 +163,7 @@ export function PurchaseMethodFields({
                 type="radio"
                 name="purchaseMethod"
                 value={kind}
-                checked={method.kind === kind}
+                checked={method?.kind === kind}
                 onChange={() => onChange(emptyMethod(kind, contracts, awaitingContracts))}
               />
               <span>{PURCHASE_METHOD_LABELS[kind]}</span>
@@ -165,133 +171,137 @@ export function PurchaseMethodFields({
           ))}
         </div>
 
-        {method.kind === 'annual_plan' && (
-          <div className="method-detail-grid">
-            <label className="field-row">
-              ปีงบประมาณของแผน
-              <input
-                type="number"
-                min="2500"
-                max="3000"
-                required
-                value={method.fiscalYear}
-                onChange={(event) => onChange({ ...method, fiscalYear: Number(event.target.value) })}
-              />
-            </label>
-            <label className="field-row">
-              ลำดับในแผนจัดซื้อ
-              <input
-                type="text"
-                required
-                value={method.planSequence}
-                onChange={(event) => onChange({ ...method, planSequence: event.target.value })}
-              />
-            </label>
-          </div>
-        )}
-
-        {method.kind === 'contract' && (
-          contracts.length === 0 ? (
-            <p className="empty-state">
-              หน่วยงานนี้ยังไม่มีสัญญาที่เริ่มใช้แล้ว — เลือกวิธีจัดซื้ออื่น หรือเปลี่ยนหน่วยงานผู้ขอ
-            </p>
-          ) : (
-            <div className="method-detail-grid">
-              <label className="field-row">
-                สัญญา
-                <select
-                  required
-                  value={method.contractId}
-                  onChange={(event) => {
-                    const contractId = Number(event.target.value)
-                    const contract = contracts.find((option) => option.id === contractId)
-                    onChange({ ...method, contractId, purchaseSequence: contract?.nextPurchaseSequence ?? 1 })
-                  }}
-                >
-                  <option value={0} disabled>เลือกสัญญา</option>
-                  {contracts.map((contract) => (
-                    <option key={contract.id} value={contract.id}>{contract.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field-row">
-                ครั้งที่ซื้อ
-                <input type="text" inputMode="numeric" required readOnly value={method.purchaseSequence} />
-                <small>กำหนดอัตโนมัติจากสัญญาที่เลือก</small>
-              </label>
-            </div>
-          )
-        )}
-
-        {method.kind === 'awaiting_contract' && (
-          awaitingContracts.length === 0 ? (
-            <p className="empty-state">
-              หน่วยงานนี้ยังไม่มีสัญญาที่อยู่ระหว่างดำเนินการ — เลือกวิธีจัดซื้ออื่น หรือเปลี่ยนหน่วยงานผู้ขอ
-            </p>
-          ) : (
-            <label className="field-row">
-              สัญญาที่รอดำเนินการ
-              <select
-                required
-                value={method.contractId}
-                onChange={(event) => onChange({ ...method, contractId: Number(event.target.value) })}
-              >
-                {awaitingContracts.map((contract) => (
-                  <option key={contract.id} value={contract.id}>{contract.label}</option>
-                ))}
-              </select>
-            </label>
-          )
-        )}
-
-        {(method.kind === 'specific_contract' || method.kind === 'e_bidding' || method.kind === 'equipment_lease') && (
+        {method !== null && (
           <>
-            <label className="field-row">
-              ชื่อสัญญา
-              <input
-                type="text"
-                required
-                value={method.contractDraft.displayName}
-                onChange={(event) => onChange(patchContractDraft(method, { displayName: event.target.value }))}
-              />
-            </label>
+            {method.kind === 'annual_plan' && (
+              <div className="method-detail-grid">
+                <label className="field-row">
+                  ปีงบประมาณของแผน
+                  <input
+                    type="number"
+                    min="2500"
+                    max="3000"
+                    required
+                    value={method.fiscalYear}
+                    onChange={(event) => onChange({ ...method, fiscalYear: Number(event.target.value) })}
+                  />
+                </label>
+                <label className="field-row">
+                  ลำดับในแผนจัดซื้อ
+                  <input
+                    type="text"
+                    required
+                    value={method.planSequence}
+                    onChange={(event) => onChange({ ...method, planSequence: event.target.value })}
+                  />
+                </label>
+              </div>
+            )}
 
-            <div className="method-detail-grid">
-              <label className="field-row">
-                ปีงบประมาณ
-                <input
-                  type="number"
-                  min="2500"
-                  max="3000"
-                  required
-                  value={method.contractDraft.fiscalYear}
-                  onChange={(event) => onChange(patchContractDraft(method, { fiscalYear: Number(event.target.value) }))}
-                />
-              </label>
-              <label className="field-row">
-                ประเภทสัญญา
-                <input type="text" readOnly value={CONTRACT_TYPE_LABELS[contractTypeForMethod(method.kind)!]} />
-                <small>กำหนดจากวิธีจัดซื้อที่เลือกไว้</small>
-              </label>
-              <label className="field-row">
-                คู่สัญญา
-                <input
-                  type="text"
-                  required={method.kind === 'specific_contract'}
-                  value={method.contractDraft.vendor ?? ''}
-                  onChange={(event) => onChange(patchContractDraft(method, { vendor: event.target.value }))}
-                />
-                {method.kind !== 'specific_contract' && <small>ยังไม่ทราบได้ เว้นว่างไว้ก่อนได้</small>}
-              </label>
-              <label className="field-row">
-                วันที่ส่งเจ้าหน้าที่คลัง
-                <ThaiDateInput
-                  required
-                  value={method.contractDraft.sentToStockOfficerDate}
-                  onChange={(isoDate) => onChange(patchContractDraft(method, { sentToStockOfficerDate: isoDate }))}
-                />
-              </label>
-            </div>
+            {method.kind === 'contract' && (
+              contracts.length === 0 ? (
+                <p className="empty-state">
+                  หน่วยงานนี้ยังไม่มีสัญญาที่เริ่มใช้แล้ว — เลือกวิธีจัดซื้ออื่น หรือเปลี่ยนหน่วยงานผู้ขอ
+                </p>
+              ) : (
+                <div className="method-detail-grid">
+                  <label className="field-row">
+                    สัญญา
+                    <select
+                      required
+                      value={method.contractId}
+                      onChange={(event) => {
+                        const contractId = Number(event.target.value)
+                        const contract = contracts.find((option) => option.id === contractId)
+                        onChange({ ...method, contractId, purchaseSequence: contract?.nextPurchaseSequence ?? 1 })
+                      }}
+                    >
+                      <option value={0} disabled>เลือกสัญญา</option>
+                      {contracts.map((contract) => (
+                        <option key={contract.id} value={contract.id}>{contract.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field-row">
+                    ครั้งที่ซื้อ
+                    <input type="text" inputMode="numeric" required readOnly value={method.purchaseSequence} />
+                    <small>กำหนดอัตโนมัติจากสัญญาที่เลือก</small>
+                  </label>
+                </div>
+              )
+            )}
+
+            {method.kind === 'awaiting_contract' && (
+              awaitingContracts.length === 0 ? (
+                <p className="empty-state">
+                  หน่วยงานนี้ยังไม่มีสัญญาที่อยู่ระหว่างดำเนินการ — เลือกวิธีจัดซื้ออื่น หรือเปลี่ยนหน่วยงานผู้ขอ
+                </p>
+              ) : (
+                <label className="field-row">
+                  สัญญาที่รอดำเนินการ
+                  <select
+                    required
+                    value={method.contractId}
+                    onChange={(event) => onChange({ ...method, contractId: Number(event.target.value) })}
+                  >
+                    {awaitingContracts.map((contract) => (
+                      <option key={contract.id} value={contract.id}>{contract.label}</option>
+                    ))}
+                  </select>
+                </label>
+              )
+            )}
+
+            {(method.kind === 'specific_contract' || method.kind === 'e_bidding' || method.kind === 'equipment_lease') && (
+              <>
+                <label className="field-row">
+                  ชื่อสัญญา
+                  <input
+                    type="text"
+                    required
+                    value={method.contractDraft.displayName}
+                    onChange={(event) => onChange(patchContractDraft(method, { displayName: event.target.value }))}
+                  />
+                </label>
+
+                <div className="method-detail-grid">
+                  <label className="field-row">
+                    ปีงบประมาณ
+                    <input
+                      type="number"
+                      min="2500"
+                      max="3000"
+                      required
+                      value={method.contractDraft.fiscalYear}
+                      onChange={(event) => onChange(patchContractDraft(method, { fiscalYear: Number(event.target.value) }))}
+                    />
+                  </label>
+                  <label className="field-row">
+                    ประเภทสัญญา
+                    <input type="text" readOnly value={CONTRACT_TYPE_LABELS[contractTypeForMethod(method.kind)!]} />
+                    <small>กำหนดจากวิธีจัดซื้อที่เลือกไว้</small>
+                  </label>
+                  <label className="field-row">
+                    คู่สัญญา
+                    <input
+                      type="text"
+                      required={method.kind === 'specific_contract'}
+                      value={method.contractDraft.vendor ?? ''}
+                      onChange={(event) => onChange(patchContractDraft(method, { vendor: event.target.value }))}
+                    />
+                    {method.kind !== 'specific_contract' && <small>ยังไม่ทราบได้ เว้นว่างไว้ก่อนได้</small>}
+                  </label>
+                  <label className="field-row">
+                    วันที่ส่งเจ้าหน้าที่คลัง
+                    <ThaiDateInput
+                      required
+                      value={method.contractDraft.sentToStockOfficerDate}
+                      onChange={(isoDate) => onChange(patchContractDraft(method, { sentToStockOfficerDate: isoDate }))}
+                    />
+                  </label>
+                </div>
+              </>
+            )}
           </>
         )}
       </fieldset>
