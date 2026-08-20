@@ -1490,6 +1490,13 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-register-table__remaining { width: 13%; }
 .contract-register-table__action { width: 10%; }
 .contract-register-table td:last-child { white-space: nowrap; }
+/* Column alignment cannot ride on the <col> classes above — a col element
+   only carries width, background, border and visibility to its cells. The
+   .data-table prefix is what makes this win: `.data-table th, .data-table td`
+   sets text-align left at a higher specificity than a lone class would beat. */
+.data-table th.contract-register-table__cell--center,
+.data-table td.contract-register-table__cell--center { text-align: center; }
+.contract-register-table__cell--center .stage-progress { justify-items: center; }
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
 .pr-line-cell--center { text-align: center !important; font-variant-numeric: tabular-nums; }
 

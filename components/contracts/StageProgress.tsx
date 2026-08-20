@@ -12,6 +12,10 @@ import type { ProcurementStage } from '@/lib/contracts/stages'
  * Segment colours match StageTimeline on the detail page: completed stages
  * teal, the current one navy. Someone who has seen one reads the other without
  * relearning it.
+ *
+ * The track answers "how far along is the procurement" and so is dropped once
+ * the contract has started: there is nothing left to be along, and a full track
+ * next to ใช้งานอยู่ would be one more thing to read for no answer.
  */
 export function StageProgress({
   stage,
@@ -21,11 +25,12 @@ export function StageProgress({
   label: string
 }) {
   const currentIndex = stage ? PROCUREMENT_STAGES.indexOf(stage) : -1
+  const inProgress = currentIndex >= 0 && currentIndex < PROCUREMENT_STAGES.length - 1
 
   return (
     <div className="stage-progress">
       <StatusChip tone="info">{label}</StatusChip>
-      {currentIndex >= 0 && (
+      {inProgress && (
         <>
           {/* Counting dots is not a reading task; the position is announced instead. */}
           <span className="stage-progress__track" aria-hidden="true">

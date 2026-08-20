@@ -244,7 +244,7 @@ assert.match(summaryDialog, /DetailIconLink/, 'the contract popup detail route m
 assert.match(contractQueries, /contract_usage \(amount\)/, 'lease gauges must read actual contract usage entries')
 assert.match(contractQueries, /contract_item_allocations \(quantity, allocation_kind\)/, 'supply gauges must read the allocation ledger and distinguish opening-balance rows')
 assert.match(contractQueries, /contractRemainingPercent/, 'register balances must come from the shared contract-balance calculation')
-assert.match(table, /<th>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
+assert.match(table, /<th[^>]*>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')
 assert.match(table, /\{contract\.contractStatusLabel\}/, 'the red status chip must say expired or cancelled, not the procurement stage')
 assert.match(table, /\{contract\.procurementStageLabel\}/, 'the procurement stage must remain visible separately from status')
 assert.match(table, /contract-renewal-hint/, 'the register must surface an imminent renewal deadline as supporting contract metadata')
