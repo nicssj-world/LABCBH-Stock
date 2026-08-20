@@ -1497,6 +1497,20 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .data-table th.contract-register-table__cell--center,
 .data-table td.contract-register-table__cell--center { text-align: center; }
 .contract-register-table__cell--center .stage-progress { justify-items: center; }
+.pr-register-table {
+  min-width: 1080px;
+  table-layout: fixed;
+}
+.pr-register-table__document { width: 14%; }
+.pr-register-table__ephis { width: 12%; }
+.pr-register-table__date { width: 10%; }
+.pr-register-table__method { width: 12%; }
+.pr-register-table__requester { width: 18%; }
+.pr-register-table__value { width: 11%; }
+.pr-register-table__status { width: 15%; }
+.pr-register-table__action { width: 8%; }
+.pr-register-table td:nth-child(7),
+.pr-register-table td:last-child { white-space: nowrap; }
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
 .pr-line-cell--center { text-align: center !important; font-variant-numeric: tabular-nums; }
 
@@ -1733,6 +1747,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-summary-dialog__fact--wide { grid-column: 1 / -1; border-right: 0 !important; }
 .contract-summary-dialog__facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .contract-summary-dialog__facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 700; }
+.contract-summary-dialog__fact--value { background: var(--lab-primary-soft); }
+.contract-summary-dialog__fact--value dd { color: var(--lab-navy-strong); font-size: 16px; }
 .contract-summary-dialog__balance { padding: 16px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
 .contract-summary-dialog__balance .remaining-gauge { min-width: 0; }
 .contract-summary-dialog__items { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.5; }

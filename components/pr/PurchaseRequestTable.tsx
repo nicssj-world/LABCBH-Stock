@@ -26,7 +26,17 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
   return (
     <>
       <div className="pr-table--desktop">
-        <table className="data-table">
+        <table className="data-table pr-register-table">
+          <colgroup>
+            <col className="pr-register-table__document" />
+            <col className="pr-register-table__ephis" />
+            <col className="pr-register-table__date" />
+            <col className="pr-register-table__method" />
+            <col className="pr-register-table__requester" />
+            <col className="pr-register-table__value" />
+            <col className="pr-register-table__status" />
+            <col className="pr-register-table__action" />
+          </colgroup>
           <thead>
             <tr>
               <th>เลขที่ใบ PR</th>

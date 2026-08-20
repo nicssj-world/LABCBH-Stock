@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
+import { contractMode } from '@/lib/contracts/budget'
 import { contractFileUrl } from '@/lib/contracts/file-actions'
 import type { PresentedContract } from '@/lib/contracts/presenter'
-import { formatThaiDate } from '@/lib/inventory/presenter'
+import { formatBaht, formatThaiDate } from '@/lib/inventory/presenter'
 
 function statusTone(contract: PresentedContract) {
   if (contract.effectiveStatus === 'active') return 'success' as const
@@ -35,6 +36,9 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [isPreviewPending, startPreviewTransition] = useTransition()
+  const contractValue = contractMode(contract.contractType ?? 'e_bidding') === 'budget'
+    ? contract.total
+    : contract.items.reduce((sum, item) => sum + item.lineTotal, 0)
 
   const openFilePreview = () => {
     if (!contract.fileUrl) return
@@ -125,6 +129,10 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
               <div className="contract-summary-dialog__fact--wide">
                 <dt>หน่วยงาน</dt>
                 <dd>{contract.department || 'ไม่ระบุหน่วยงาน'}</dd>
+              </div>
+              <div className="contract-summary-dialog__fact--wide contract-summary-dialog__fact--value">
+                <dt>มูลค่าสัญญา</dt>
+                <dd className="identifier">{formatBaht(contractValue)}</dd>
               </div>
             </dl>
 

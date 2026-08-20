@@ -127,6 +127,9 @@ assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%,
 assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*background:\s*color-mix/, 'saved PR and PO identifiers should have a muted filled-state background')
 assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
 
+assert.match(styles, /\.pr-register-table\s*\{[\s\S]*?table-layout:\s*fixed/, 'PR register columns must stay aligned even when row content widths differ')
+assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*15%/, 'the PR status column needs a stable width for different chip labels')
+
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
 assert.match(methodFields, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork has its own labels')
@@ -221,6 +224,8 @@ assert.match(
 )
 
 const table = read('components/pr/PurchaseRequestTable.tsx')
+assert.match(table, /className="data-table pr-register-table"/, 'the PR register must use its fixed column layout')
+assert.match(table, /<colgroup>[\s\S]*?pr-register-table__document[\s\S]*?pr-register-table__action[\s\S]*?<\/colgroup>/, 'the desktop PR register must define one shared width for every column')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\}/, 'the desktop row must open the mini summary popup, not a plain cell')
 assert.match(table, /PurchaseRequestSummaryDialog request=\{request\} variant="card"/, 'the mobile card must open the same popup')
 assert.match(table, /DetailIconLink/, 'the trailing detail action must use the shared icon link')
