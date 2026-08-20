@@ -20,15 +20,6 @@ export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>
 export type StockBalanceInput = z.infer<typeof stockBalanceInputSchema>
 export type InventoryFilters = z.infer<typeof inventoryFiltersSchema>
 
-export type AliasKind = 'name' | 'unit' | 'ls_code'
-
-export interface InventoryAliasRecord {
-  id: string
-  aliasKind: AliasKind
-  aliasValue: string
-  source: string
-}
-
 export interface InventoryLotRecord {
   id: string
   lotNumber: string
@@ -83,11 +74,14 @@ export interface InventoryItemRecord {
   /** The override when set, otherwise the suggested value. */
   minimumStock: number
   stockLevel: StockLevel
+  /** False for a catalogue row that has never been received or issued. */
+  hasMovements: boolean
+  /** True while a draft or pending purchase request already covers this item. */
+  hasOpenRequest: boolean
   monthlyIssues: number[]
 }
 
 export interface InventoryItemDetail extends InventoryItemRecord {
-  aliases: InventoryAliasRecord[]
   lots: InventoryLotRecord[]
   recentMovements: StockMovementRecord[]
 }

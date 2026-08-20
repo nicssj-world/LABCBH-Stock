@@ -43,6 +43,15 @@ const balanceRowSchema = z.object({
   on_hand: numericSchema,
 })
 
+const movementPresenceRowSchema = z.object({
+  inventory_item_id: z.string().uuid(),
+  has_movements: z.boolean(),
+})
+
+const openRequestRowSchema = z.object({
+  inventory_item_id: z.string().uuid(),
+})
+
 const monthlyIssueRowSchema = z.object({
   inventory_item_id: z.string().uuid(),
   issue_month: z.string(),
@@ -61,13 +70,6 @@ const lotRowSchema = z.object({
 const lotBalanceRowSchema = z.object({
   inventory_lot_id: z.string().uuid(),
   balance: numericSchema,
-})
-
-const aliasRowSchema = z.object({
-  id: z.string().uuid(),
-  alias_kind: z.enum(['name', 'unit', 'ls_code']),
-  alias_value: z.string(),
-  source: z.string(),
 })
 
 const movementRowSchema = z.object({
@@ -175,6 +177,8 @@ function toItemRecord(
   onHand: number,
   monthlyIssues: number[],
   minimumStockMonths: number,
+  hasMovements = false,
+  hasOpenRequest = false,
 ): InventoryItemRecord {
   const suggestedMinimum = calculateSuggestedMinimum(monthlyIssues, minimumStockMonths)
   const minimumStock = resolveMinimumStock(row.minimum_stock_override, suggestedMinimum)
@@ -194,7 +198,49 @@ function toItemRecord(
     suggestedMinimum,
     minimumStock,
     stockLevel: classifyStockLevel({ onHand, minimum: minimumStock }),
+    hasMovements,
+    hasOpenRequest,
     monthlyIssues,
+  }
+}
+
+/**
+ * Which items have ledger history, and which are already covered by an open
+ * purchase request. Both feed classifyStockAlert; neither changes an item's
+ * stockLevel, only whether it belongs on the restock worklist.
+ */
+async function readAlertScope(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itemIds?: string[],
+): Promise<{ moved: Set<string>; requested: Set<string> }> {
+  let presenceQuery = supabase
+    .from('inventory_item_movement_presence')
+    .select('inventory_item_id, has_movements')
+  let requestQuery = supabase
+    .from('inventory_item_open_requests')
+    .select('inventory_item_id')
+
+  if (itemIds) {
+    presenceQuery = presenceQuery.in('inventory_item_id', itemIds)
+    requestQuery = requestQuery.in('inventory_item_id', itemIds)
+  }
+
+  const [presenceResult, requestResult] = await Promise.all([presenceQuery, requestQuery])
+
+  if (presenceResult.error) throw new Error(`อ่านประวัติการเคลื่อนไหวไม่สำเร็จ: ${presenceResult.error.message}`)
+  if (requestResult.error) throw new Error(`อ่านใบขอซื้อที่ค้างอยู่ไม่สำเร็จ: ${requestResult.error.message}`)
+
+  return {
+    moved: new Set(
+      movementPresenceRowSchema
+        .array()
+        .parse(presenceResult.data ?? [])
+        .filter((r) => r.has_movements)
+        .map((r) => r.inventory_item_id),
+    ),
+    requested: new Set(
+      openRequestRowSchema.array().parse(requestResult.data ?? []).map((r) => r.inventory_item_id),
+    ),
   }
 }
 
@@ -270,8 +316,13 @@ export async function listInventoryItems(
   // force it to wait for the item query to come back first, and that second
   // serial round-trip was most of the delay behind every keystroke in the
   // list's search box.
-  const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, minimumStockMonths] =
-    await Promise.all([query, readBalancesAndIssues(supabase), getInventoryMinimumStockMonths()])
+  const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, alertScope, minimumStockMonths] =
+    await Promise.all([
+      query,
+      readBalancesAndIssues(supabase),
+      readAlertScope(supabase),
+      getInventoryMinimumStockMonths(),
+    ])
 
   if (error) throw new Error(`อ่านรายการคลังไม่สำเร็จ: ${error.message}`)
 
@@ -284,6 +335,8 @@ export async function listInventoryItems(
       onHandByItem.get(row.id) ?? 0,
       buildMonthlyIssues(monthKeys, issuesByItem.get(row.id) ?? new Map()),
       minimumStockMonths,
+      alertScope.moved.has(row.id),
+      alertScope.requested.has(row.id),
     ),
   )
 }
@@ -321,7 +374,7 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   const row = itemRowSchema.parse(data)
   const today = bangkokToday()
 
-  const [balancesAndIssues, lotResult, lotBalances, aliasResult, movementResult, minimumStockMonths] = await Promise.all([
+  const [balancesAndIssues, lotResult, lotBalances, movementResult, minimumStockMonths] = await Promise.all([
     readBalancesAndIssues(supabase, [row.id]),
     supabase
       .from('inventory_lots')
@@ -333,10 +386,6 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
     // every lot of the item, so the two forms select the same rows.
     readLotBalances(supabase, row.id),
     supabase
-      .from('inventory_item_aliases')
-      .select('id, alias_kind, alias_value, source')
-      .eq('inventory_item_id', row.id),
-    supabase
       .from('stock_movements')
       .select('id, movement_type, quantity, occurred_on, note, created_at, inventory_lots (lot_number)')
       .eq('inventory_item_id', row.id)
@@ -347,7 +396,6 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
   ])
 
   if (lotResult.error) throw new Error(`อ่านข้อมูลล็อตไม่สำเร็จ: ${lotResult.error.message}`)
-  if (aliasResult.error) throw new Error(`อ่านชื่อเรียกอื่นไม่สำเร็จ: ${aliasResult.error.message}`)
   if (movementResult.error) {
     throw new Error(`อ่านความเคลื่อนไหวคลังไม่สำเร็จ: ${movementResult.error.message}`)
   }
@@ -381,15 +429,6 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
     ),
     note: row.note,
     lots,
-    aliases: aliasRowSchema
-      .array()
-      .parse(aliasResult.data ?? [])
-      .map((alias) => ({
-        id: alias.id,
-        aliasKind: alias.alias_kind,
-        aliasValue: alias.alias_value,
-        source: alias.source,
-      })),
     recentMovements: movementRowSchema
       .array()
       .parse(movementResult.data ?? [])

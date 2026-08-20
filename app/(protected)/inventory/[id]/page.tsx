@@ -80,7 +80,7 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
         </div>
       </header>
 
-      <section className="executive-strip executive-strip--even-5" aria-label="ยอดคงเหลือ เกณฑ์ขั้นต่ำ และราคาต่อหน่วย">
+      <section className="executive-strip executive-strip--even-5" aria-label="ยอดคงเหลือ จุดสั่งซื้อ และราคาต่อหน่วย">
         <div className={`executive-strip__card${item.stockLevel !== 'healthy' ? ' executive-strip__cell--risk' : ''}`}>
           <div className="executive-strip__head">
             <span>คงเหลือทั้งหมด</span>
@@ -91,10 +91,11 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
         </div>
         <div className="executive-strip__card">
           <div className="executive-strip__head">
-            <span>ขั้นต่ำที่ใช้จริง</span>
+            <span>จุดสั่งซื้อ</span>
             <span className="executive-strip__icon" aria-hidden="true"><ThresholdIcon /></span>
           </div>
           <strong>{formatQuantity(item.minimumStock, item.baseUnit)}</strong>
+          <small>ถึงจุดนี้หรือต่ำกว่า ควรทำ PR</small>
         </div>
         <div className="executive-strip__card">
           <div className="executive-strip__head">
@@ -130,7 +131,7 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
 
       {item.stockLevel !== 'healthy' && (
         <p className="inline-alert" role="status">
-          ยอดคงเหลืออยู่ที่หรือต่ำกว่าเกณฑ์ขั้นต่ำแล้ว ต้องทำ PR เพื่อเติมสต๊อก
+          ยอดคงเหลืออยู่ที่หรือต่ำกว่าจุดสั่งซื้อแล้ว ต้องทำ PR เพื่อเติมสต๊อก
         </p>
       )}
 
@@ -161,29 +162,6 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             </div>
           ))}
         </dl>
-      </section>
-
-      <section className="bench-panel" aria-labelledby="aliases-title">
-        <div className="bench-panel__header">
-          <div>
-            <p className="section-kicker">RECONCILIATION</p>
-            <h2 id="aliases-title">ชื่อเรียกอื่นที่พบในข้อมูลเดิม</h2>
-          </div>
-          <p>เก็บไว้เพื่อจับคู่กับ Google Sheet เดิมโดยไม่แก้ข้อมูลหลัก</p>
-        </div>
-        {item.aliases.length === 0 ? (
-          <p className="empty-state">ยังไม่พบชื่อเรียกอื่นสำหรับรายการนี้</p>
-        ) : (
-          <ul className="alias-list">
-            {item.aliases.map((alias) => (
-              <li key={alias.id}>
-                <span className="identifier">{alias.aliasKind}</span>
-                <strong>{alias.aliasValue}</strong>
-                <small>{alias.source}</small>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       <section className="bench-panel" aria-labelledby="movement-title">

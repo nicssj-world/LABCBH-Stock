@@ -82,6 +82,39 @@ export function classifyStockLevel({
   return onHand <= minimum ? 'below_minimum' : 'healthy'
 }
 
+/**
+ * What the restock worklist should say about an item, or null when it does not
+ * belong on the list at all. Deliberately narrower than classifyStockLevel,
+ * which describes the item's state; this answers whether anyone should act.
+ *
+ * Two exclusions, both measured against production on 2026-08-21, where the
+ * unfiltered count was 117 of 172 active items:
+ *
+ *   - An item with no ledger history at all is a catalogue row carried over
+ *     from the old Google Sheet, not a stock-out. 115 of those 117 were this.
+ *     An explicit minimum override overrides the exclusion: somebody stating a
+ *     reserve level for an item is stating they intend to stock it.
+ *   - An item already covered by a draft or pending purchase request has had
+ *     the action taken. Counting it again means the number cannot fall when
+ *     the work is done, only when the goods arrive.
+ */
+export function classifyStockAlert({
+  stockLevel,
+  hasMovements,
+  hasOpenRequest,
+  minimumStockOverride,
+}: {
+  stockLevel: StockLevel
+  hasMovements: boolean
+  hasOpenRequest: boolean
+  minimumStockOverride: number | null
+}): Exclude<StockLevel, 'healthy'> | null {
+  if (stockLevel === 'healthy') return null
+  if (hasOpenRequest) return null
+  if (!hasMovements && !(minimumStockOverride !== null && minimumStockOverride > 0)) return null
+  return stockLevel
+}
+
 export function isProjectedBelowMinimum({
   onHand,
   minimum,

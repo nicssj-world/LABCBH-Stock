@@ -4,6 +4,7 @@ import {
   MOVEMENT_TYPES,
   calculateSuggestedMinimum,
   classifyLotExpiry,
+  classifyStockAlert,
   classifyStockLevel,
   isMovementQuantityValid,
   isProjectedBelowMinimum,
@@ -62,6 +63,51 @@ assert.equal(classifyStockLevel({ onHand: 11, minimum: 10 }), 'healthy')
 assert.equal(classifyStockLevel({ onHand: 0, minimum: 0 }), 'depleted')
 assert.equal(classifyStockLevel({ onHand: 5, minimum: 0 }), 'healthy', 'no minimum means no breach')
 
+
+// classifyStockAlert is narrower than classifyStockLevel on purpose: the level
+// describes the item, the alert decides whether it belongs on anyone's list.
+// Measured on production 2026-08-21, the old rule counted 117 of 172 active
+// items and 115 of those had never had a single movement.
+const stocked = { hasMovements: true, hasOpenRequest: false, minimumStockOverride: null }
+
+assert.equal(classifyStockAlert({ stockLevel: 'healthy', ...stocked }), null)
+assert.equal(classifyStockAlert({ stockLevel: 'depleted', ...stocked }), 'depleted')
+assert.equal(classifyStockAlert({ stockLevel: 'below_minimum', ...stocked }), 'below_minimum')
+
+// A catalogue row imported from the old Sheet and never received is not a
+// stock-out; it is a name in a list.
+assert.equal(
+  classifyStockAlert({ stockLevel: 'depleted', hasMovements: false, hasOpenRequest: false, minimumStockOverride: null }),
+  null,
+  'an item with no ledger history at all must not be counted as needing a PR',
+)
+
+// Unless somebody stated a reserve level for it — that is an explicit
+// statement of intent to stock the item, even before its first receipt.
+assert.equal(
+  classifyStockAlert({ stockLevel: 'depleted', hasMovements: false, hasOpenRequest: false, minimumStockOverride: 20 }),
+  'depleted',
+  'an explicit reserve level means the item is meant to be stocked',
+)
+assert.equal(
+  classifyStockAlert({ stockLevel: 'depleted', hasMovements: false, hasOpenRequest: false, minimumStockOverride: 0 }),
+  null,
+  'a deliberate zero reserve is a statement that the item is not stocked',
+)
+
+// The old count never looked at purchase requests, so raising one left the
+// number unchanged — it could only fall when goods arrived. A worklist that
+// cannot be cleared by doing the work it names is not a worklist.
+assert.equal(
+  classifyStockAlert({ stockLevel: 'depleted', hasMovements: true, hasOpenRequest: true, minimumStockOverride: null }),
+  null,
+  'an item already covered by a draft or pending PR has had its action taken',
+)
+assert.equal(
+  classifyStockAlert({ stockLevel: 'below_minimum', hasMovements: true, hasOpenRequest: true, minimumStockOverride: 5 }),
+  null,
+  'an open request outranks even an explicit reserve level',
+)
 assert.equal(isProjectedBelowMinimum({ onHand: 20, minimum: 10, issueQuantity: 5 }), false)
 assert.equal(isProjectedBelowMinimum({ onHand: 20, minimum: 10, issueQuantity: 10 }), true)
 assert.equal(isProjectedBelowMinimum({ onHand: 20, minimum: 10, issueQuantity: 15 }), true)

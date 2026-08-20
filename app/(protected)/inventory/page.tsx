@@ -4,6 +4,7 @@ import { InventoryTable } from '@/components/inventory/InventoryTable'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { classifyStockAlert } from '@/lib/inventory/balance'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import {
@@ -45,8 +46,21 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     error = caught instanceof Error ? caught.message : 'อ่านข้อมูลคลังไม่สำเร็จ'
   }
 
-  const alertCount = items.filter((item) => item.stockLevel !== 'healthy').length
-  const visibleItems = onlyAlerts ? items.filter((item) => item.stockLevel !== 'healthy') : items
+  // The count and the filter must read the same rule, or the button shows a
+  // different set from the number that sent the requester to it.
+  const alertOf = (item: InventoryItemRecord) =>
+    classifyStockAlert({
+      stockLevel: item.stockLevel,
+      hasMovements: item.hasMovements,
+      hasOpenRequest: item.hasOpenRequest,
+      minimumStockOverride: item.minimumStockOverride,
+    })
+
+  const alertItems = items.filter((item) => alertOf(item) !== null)
+  const depletedCount = alertItems.filter((item) => alertOf(item) === 'depleted').length
+  const belowMinimumCount = alertItems.filter((item) => alertOf(item) === 'below_minimum').length
+  const alertCount = alertItems.length
+  const visibleItems = onlyAlerts ? alertItems : items
   const paginatedItems = paginate(visibleItems, page, LIST_PAGE_SIZE)
   const departmentOptions = [...new Set([...DEPARTMENTS, ...departments])].sort((left, right) => left.localeCompare(right, 'th'))
 
@@ -83,9 +97,18 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           <p>ยอดคงเหลือคำนวณจากบัญชีเคลื่อนไหวจริง ไม่ใช่ค่าที่บันทึกทับได้</p>
         </div>
         <div className="page-heading__cluster">
-          <StatusChip tone={alertCount ? 'danger' : 'success'}>
-            {alertCount ? `${alertCount} รายการต้องทำ PR` : 'ยอดคงเหลือเพียงพอทุกรายการ'}
-          </StatusChip>
+          {alertCount === 0 ? (
+            <StatusChip tone="success">ไม่มีรายการที่ต้องทำ PR</StatusChip>
+          ) : (
+            <>
+              {depletedCount > 0 && (
+                <StatusChip tone="danger">{depletedCount} รายการหมดคลัง</StatusChip>
+              )}
+              {belowMinimumCount > 0 && (
+                <StatusChip tone="attention">{belowMinimumCount} รายการใกล้หมด</StatusChip>
+              )}
+            </>
+          )}
           {alertCount > 0 && (
             <Link className="lab-link-button lab-link-button--secondary" href={alertsHref}>
               {onlyAlerts ? 'แสดงทุกรายการ' : 'เฉพาะรายการที่ต้องทำ PR'}

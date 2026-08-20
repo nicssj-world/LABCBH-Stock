@@ -37,6 +37,30 @@ assert.match(createActions, /createInventoryItem/)
 assert.match(createActions, /supabaseAdmin\.rpc\('create_inventory_item'/)
 assert.match(createActions, /assertStockOperator/, 'catalog creation must require an authorized stock operator')
 
+
+// The restock chip used to read "N รายการต้องทำ PR" off stockLevel !== healthy.
+// On production that was 117 of 172 active items, 115 of them catalogue rows
+// that had never moved; on staging, 198 of 198 were of that kind. It also
+// merged "nothing left" with "running low", and never looked at whether a PR
+// already existed, so the number could not fall when the work was done.
+assert.match(listPage, /classifyStockAlert/, 'the count must use the alert rule, not the raw stock level')
+assert.doesNotMatch(
+  listPage,
+  /alertCount = items\.filter\(\(item\) => item\.stockLevel !== 'healthy'\)/,
+  'counting every non-healthy row is what made the number unreadable',
+)
+
+// Two states, two chips: they call for different responses.
+assert.match(listPage, /{depletedCount} รายการหมดคลัง/, 'an item with nothing left gets its own count')
+assert.match(listPage, /{belowMinimumCount} รายการใกล้หมด/, 'an item running low gets its own count')
+
+// The filter and the count have to agree, or the button opens a different set
+// from the number that sent the requester to it.
+assert.match(
+  listPage,
+  /const visibleItems = onlyAlerts \? alertItems : items/,
+  'the alert filter must reuse the same list the count was taken from',
+)
 const detailPage = read('app/(protected)/inventory/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 params must be awaited')
 assert.match(detailPage, /getInventoryItem\(/)
@@ -52,7 +76,14 @@ assert.doesNotMatch(
   /ค่าที่ระบบแนะนำ|ผู้ดูแลกำหนดเอง/,
   'minimum-stock source labels must not clutter the detail page',
 )
-assert.match(detailPage, /ชื่อเรียกอื่นที่พบในข้อมูลเดิม/, 'aliases must stay visible for reconciliation')
+// The alias panel existed to match rows against the old Google Sheet during the
+// import. The Sheet is no longer a source, so the panel is dead weight on the
+// page and its query is a round trip nobody reads.
+assert.doesNotMatch(
+  detailPage,
+  /ชื่อเรียกอื่นที่พบในข้อมูลเดิม|alias-list/,
+  'the Sheet reconciliation aliases panel is retired',
+)
 
 
 // An item name is user data of any length — the longest titles in the app are
@@ -77,6 +108,26 @@ assert.match(
   /\.inventory-detail__heading h1 \{\s*max-width: none;/,
   'the cap is lifted by a scoped rule, not by restructuring the header',
 )
+
+// The card is named for what the number triggers, not for how it was derived.
+// "ขั้นต่ำที่ใช้จริง" contrasted the effective minimum with the suggested one,
+// a value this page never displays — so the qualifier pointed at nothing the
+// reader could see. It is also the one card in the strip that had no
+// explanatory sub-line, which is where that nuance belongs.
+assert.match(detailPage, /<span>จุดสั่งซื้อ<\/span>/, 'the threshold card is named by what it triggers')
+assert.doesNotMatch(
+  detailPage,
+  /ขั้นต่ำที่ใช้จริง/,
+  'the old label compared the number to a value the page never shows',
+)
+assert.match(
+  detailPage,
+  /ถึงจุดนี้หรือต่ำกว่า ควรทำ PR/,
+  'the threshold card needs the sub-line every other card in the strip has',
+)
+// The section label and the below-minimum banner must not keep calling the
+// same number something else.
+assert.doesNotMatch(detailPage, /เกณฑ์ขั้นต่ำ/, 'one number, one name across the page')
 assert.match(detailPage, /StockAdjustmentDialog/, 'stock operators need a balance-adjustment control on every item detail')
 
 const adjustmentDialog = read('components/inventory/StockAdjustmentDialog.tsx')

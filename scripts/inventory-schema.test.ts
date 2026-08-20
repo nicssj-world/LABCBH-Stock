@@ -232,4 +232,44 @@ assert.match(sql, /original_quantity numeric\(15,3\) not null check \(original_q
 assert.match(sql, /storage_location text/i)
 assert.match(sql, /unique \(inventory_item_id, lot_number\)/i)
 
+
+// The restock alert stopped counting every non-healthy row and started
+// counting rows somebody can act on. Two read-only views supply the facts it
+// was missing; both must stay security_invoker and select-only, like the
+// balance views beside them.
+const alertScopeNames = readdirSync(migrationsDir).filter((n) => n.endsWith('_inventory_alert_scope.sql'))
+assert.equal(alertScopeNames.length, 1, 'exactly one inventory alert-scope migration must exist')
+const alertScopeSql = readFileSync(join(migrationsDir, alertScopeNames[0]), 'utf8')
+
+assert.match(
+  alertScopeSql,
+  /create or replace view public\.inventory_item_movement_presence\s*with \(security_invoker = true\)/i,
+  "movement presence must not bypass the caller's row security",
+)
+assert.match(
+  alertScopeSql,
+  /create or replace view public\.inventory_item_open_requests\s*with \(security_invoker = true\)/i,
+  "open-request lookup must not bypass the caller's row security",
+)
+
+// Only draft and pending mean a request is still coming; completed,
+// cancelled and reversed all mean it is not.
+assert.match(
+  alertScopeSql,
+  /where request\.status in \('draft', 'pending'\)/i,
+  'a completed, cancelled or reversed request must not suppress the alert',
+)
+
+// Views only. This migration must not touch a write path.
+assert.doesNotMatch(
+  alertScopeSql,
+  /create (or replace )?function|alter table|drop table/i,
+  'narrowing a count must not change how anything is written',
+)
+for (const view of ['inventory_item_movement_presence', 'inventory_item_open_requests']) {
+  assert.match(
+    alertScopeSql,
+    new RegExp(`revoke all on public\.${view} from anon, authenticated`, 'i'),
+  )
+}
 console.log(`inventory schema: ok (${migrationNames[0]})`)

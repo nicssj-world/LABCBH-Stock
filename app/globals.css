@@ -2269,27 +2269,6 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .issue-history dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
 .issue-history dd { margin: 4px 0 0; font-size: 16px; }
 
-.alias-list {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 8px 22px 18px;
-  list-style: none;
-}
-
-.alias-list li {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--lab-border);
-  font-size: 13px;
-}
-
-.alias-list li:last-child { padding-bottom: 0; border-bottom: 0; }
-.alias-list small { color: var(--lab-muted); font-size: 11px; }
-
 .minimum-stock-settings { display: grid; gap: 12px; }
 .minimum-stock-settings > small { display: block; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }
 .minimum-stock-settings > .lab-button { justify-self: end; margin-top: 2px; }
@@ -3225,8 +3204,6 @@ input[type="number"] {
   .issue-history { grid-template-columns: 1fr; }
   .issue-history > div { padding-left: 0; padding-right: 0; border-right: 0; border-bottom: 1px solid var(--lab-border); }
   .issue-history > div:last-child { border-bottom: 0; }
-  .alias-list li { grid-template-columns: 1fr auto; }
-  .alias-list li .identifier { grid-column: 1 / -1; }
   .form-grid { grid-template-columns: 1fr; }
   .form-grid__wide { grid-column: auto; }
   .item-edit-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
