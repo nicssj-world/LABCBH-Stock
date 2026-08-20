@@ -116,13 +116,14 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('equipment_lease'),
-    // Only a lease carries a ceiling: it has no line items to sum a total
-    // from, unlike specific_contract/e_bidding. The direct "เพิ่มสัญญา"
-    // form requires the same explicit ceiling so every lease starts with a
-    // usable budget.
-    contractDraft: contractDraftWithOptionalVendorSchema.extend({
-      total: z.number({ required_error: 'กรุณาระบุมูลค่าสัญญา' }).finite().positive('มูลค่าสัญญาต้องมากกว่า 0'),
-    }),
+    // A lease does carry a ceiling, but not yet. When this request is written
+    // procurement has not run, so any figure here is an estimate negotiation
+    // can still move, and recording it would put a number in the register
+    // nobody can defend. advance_contract_stage collects the real one at
+    // contract_started, alongside the contract number. The direct "เพิ่มสัญญา"
+    // form is the exception — it records a contract that already exists
+    // outside this workflow, so it still asks up front.
+    contractDraft: contractDraftWithOptionalVendorSchema,
   }),
 ])
 

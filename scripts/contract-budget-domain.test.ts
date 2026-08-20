@@ -10,7 +10,12 @@ import {
   monthsLeft,
   normalizeUsageMonth,
 } from '../lib/contracts/budget'
-import { contractExpenseInputSchema, createContractInputSchema } from '../lib/contracts/schema'
+import {
+  contractExpenseInputSchema,
+  createContractInputSchema,
+  stageAdvanceSchema,
+  updateContractInputSchema,
+} from '../lib/contracts/schema'
 import {
   assertContractExpenseRecorder,
   canRecordContractExpense,
@@ -172,6 +177,76 @@ assert.throws(
     }),
   /สัญญาเช่าเครื่องไม่มีรายการน้ำยา/,
   'a lease must not smuggle in line items',
+)
+
+
+// Editing is looser than creating on purpose. A lease opened from a purchase
+// request has no ceiling for the whole of procurement, and rejecting that here
+// would leave it uneditable — including the very fields someone opens the form
+// to correct. update_contract still refuses to clear a started lease's ceiling,
+// a rule that needs the contract's stage and so cannot live in a zod schema.
+const leaseUpdateBase = {
+  fiscalYear: 2569,
+  contractType: 'equipment_lease' as const,
+  department: 'งานเคมีคลินิก' as const,
+  displayName: 'เช่าเครื่อง CBC',
+  vendor: 'Firmer',
+  endDate: '2027-06-30',
+  expectedUpdatedAt: null,
+  items: [],
+}
+assert.doesNotThrow(
+  () => updateContractInputSchema.parse({ ...leaseUpdateBase, total: null }),
+  'a lease still working through procurement has no ceiling yet and must stay editable',
+)
+assert.doesNotThrow(() => updateContractInputSchema.parse({ ...leaseUpdateBase, total: 1_200_000 }))
+assert.throws(
+  () => updateContractInputSchema.parse(leaseUpdateBase),
+  /กรุณาระบุมูลค่าสัญญา/,
+  'the key must still be stated explicitly, so update_contract never has to guess between unset and unchanged',
+)
+
+// ── the ceiling moves to contract_started ───────────────────────────────────
+// Mirrors advance_contract_stage. Without a ceiling, the over-budget guard in
+// record_contract_expense passes every entry silently, so a lease must not be
+// able to start without one.
+const advanceBase = {
+  from: 'winner_announced' as const,
+  to: 'contract_started' as const,
+  effectiveDate: '2026-08-21',
+  contractNumber: '57/69',
+}
+assert.doesNotThrow(() =>
+  stageAdvanceSchema.parse({ ...advanceBase, contractType: 'equipment_lease', total: 1_200_000 }),
+)
+assert.throws(
+  () => stageAdvanceSchema.parse({ ...advanceBase, contractType: 'equipment_lease' }),
+  /ต้องระบุมูลค่าสัญญาเมื่อเริ่มสัญญาเช่าเครื่อง/,
+  'a lease cannot start without a ceiling',
+)
+assert.throws(
+  () => stageAdvanceSchema.parse({ ...advanceBase, contractType: 'equipment_lease', total: 0 }),
+  /มูลค่าสัญญาต้องมากกว่า 0/,
+)
+assert.doesNotThrow(
+  () => stageAdvanceSchema.parse({ ...advanceBase, contractType: 'e_bidding' }),
+  'a supply contract derives its total from line items and is asked for nothing here',
+)
+assert.throws(
+  () => stageAdvanceSchema.parse({ ...advanceBase, contractType: 'e_bidding', total: 500 }),
+  /มูลค่าสัญญาระบุได้เฉพาะสัญญาเช่าเครื่อง/,
+)
+assert.throws(
+  () =>
+    stageAdvanceSchema.parse({
+      from: 'plan_published',
+      to: 'tender_announced',
+      effectiveDate: '2026-08-21',
+      contractType: 'equipment_lease',
+      total: 1_200_000,
+    }),
+  /มูลค่าสัญญาจะกำหนดได้เมื่อเริ่มสัญญาเท่านั้น/,
+  'the ceiling belongs to the signing step, not to any earlier stage',
 )
 
 assert.throws(

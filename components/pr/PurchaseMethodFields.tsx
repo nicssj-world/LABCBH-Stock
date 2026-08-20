@@ -74,15 +74,6 @@ export function emptyMethod(
       return { kind }
     case 'specific_contract':
     case 'e_bidding':
-      return {
-        kind,
-        contractDraft: {
-          fiscalYear: currentThaiFiscalYear(),
-          displayName: '',
-          vendor: null,
-          sentToStockOfficerDate: todayIso(),
-        },
-      }
     case 'equipment_lease':
       return {
         kind,
@@ -91,11 +82,6 @@ export function emptyMethod(
           displayName: '',
           vendor: null,
           sentToStockOfficerDate: todayIso(),
-          // 0 fails the schema's positive() check, same as how a fresh
-          // contract line defaults to an invalid value until the requester
-          // types a real one — it forces an edit rather than silently
-          // submitting an unset ceiling.
-          total: 0,
         },
       }
   }
@@ -107,12 +93,11 @@ type ContractOriginationMethod = Extract<
 >
 
 /**
- * Patches the shared contractDraft fields (name/fiscal year/vendor/date)
- * without losing the lease variant's extra `total` field. A plain
- * `{ ...method, contractDraft: { ...method.contractDraft, ... } }` doesn't
- * type-check here: with `method` narrowed to a 3-member union, TS can't
- * re-correlate which contractDraft shape goes with which `kind` after a
- * spread, even though each individual branch below is sound. Switching on
+ * Patches the shared contractDraft fields (name/fiscal year/vendor/date).
+ * A plain `{ ...method, contractDraft: { ...method.contractDraft, ... } }`
+ * doesn't type-check here: with `method` narrowed to a 3-member union, TS
+ * can't re-correlate which contractDraft shape goes with which `kind` after
+ * a spread, even though each individual branch below is sound. Switching on
  * `method.kind` narrows to exactly one member per branch instead.
  */
 function patchContractDraft(
@@ -306,27 +291,6 @@ export function PurchaseMethodFields({
                   onChange={(isoDate) => onChange(patchContractDraft(method, { sentToStockOfficerDate: isoDate }))}
                 />
               </label>
-              {method.kind === 'equipment_lease' && (
-                <label className="field-row">
-                  มูลค่าสัญญา
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    value={method.contractDraft.total || ''}
-                    onChange={(event) =>
-                      onChange({
-                        ...method,
-                        contractDraft: {
-                          ...method.contractDraft,
-                          total: event.target.value === '' ? 0 : Number(event.target.value),
-                        },
-                      })
-                    }
-                  />
-                </label>
-              )}
             </div>
           </>
         )}

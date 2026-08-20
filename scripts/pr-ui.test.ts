@@ -141,7 +141,18 @@ assert.match(methodFields, /contractId: 0,[\s\S]*?purchaseSequence: 1/, 'a contr
 assert.match(methodFields, /<option value=\{0\} disabled>เลือกสัญญา<\/option>/, 'the contract dropdown must show an explicit placeholder, not silently pre-pick one')
 assert.match(methodFields, /awaitingContracts/)
 assert.match(methodFields, /method\.kind === 'e_bidding'/)
-assert.match(methodFields, /method\.kind === 'equipment_lease'/, 'a lease method gets its own ceiling field')
+// The lease ceiling moved to the stage-advance step. Leaving the field here
+// would collect a pre-negotiation estimate that the schema now refuses.
+assert.doesNotMatch(
+  methodFields,
+  /มูลค่าสัญญา/,
+  'a lease PR must not ask for a ceiling — it is settled at contract_started',
+)
+assert.doesNotMatch(
+  methodFields,
+  /total:/,
+  'no ceiling belongs in the contract draft any more, not even as a default',
+)
 assert.match(methodFields, /contractDraft/, 'specific_contract/e_bidding draft a new contract inline')
 assert.match(methodFields, /contractTypeForMethod/, 'the auto-filled contract type is shown, not asked for')
 assert.match(

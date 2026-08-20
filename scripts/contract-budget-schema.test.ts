@@ -77,4 +77,65 @@ assert.match(totalFixSql, /contract total is required for an equipment lease/i)
 assert.match(totalFixSql, /set total = parsed_total/i)
 assert.match(totalFixSql, /public\.update_contract_without_total/i)
 
+
+// A lease PR no longer states a ceiling, so the requirement has to be enforced
+// where the contract becomes real. Without it, record_contract_expense's guard
+// (`total is not null and committed + p_amount > total`) passes every entry on a
+// started lease — the failure would be silent, not loud.
+const startNames = readdirSync(migrationsDir).filter((n) =>
+  n.endsWith('_lease_total_at_contract_start.sql'),
+)
+assert.equal(startNames.length, 1, 'exactly one lease-total-at-start migration must exist')
+const startSql = readFileSync(join(migrationsDir, startNames[0]), 'utf8')
+
+assert.match(
+  startSql,
+  /alter function public\.advance_contract_stage\([\s\S]*rename to advance_contract_stage_without_total/i,
+  'the long transition body is wrapped, not rewritten',
+)
+assert.match(
+  startSql,
+  /p_total numeric default null/i,
+  'advance_contract_stage must accept the ceiling',
+)
+
+// The lock has to be taken before the ceiling is read, or two officers could
+// each see a null total and both decide the other would supply it.
+const lockIndex = startSql.search(/where contract\.id = p_contract_id[\s\S]{0,80}?for update/i)
+const guardIndex = startSql.search(/ต้องระบุมูลค่าสัญญาเมื่อเริ่มสัญญาเช่าเครื่อง/)
+assert.ok(lockIndex > -1, 'the wrapper must lock the contract row')
+assert.ok(guardIndex > -1, 'the wrapper must refuse to start a lease with no ceiling')
+assert.ok(
+  lockIndex < guardIndex,
+  'the row lock must be taken before the ceiling is checked, not after',
+)
+
+assert.match(
+  startSql,
+  /if p_to_stage = 'contract_started' and target_contract\.contract_type = 'equipment_lease' then/i,
+  'only a lease starting up needs a ceiling',
+)
+assert.match(
+  startSql,
+  /resolved_total := coalesce\(parsed_total, target_contract\.total\)/i,
+  'a ceiling already recorded by the direct form satisfies the requirement',
+)
+
+// Relaxing update_contract is what keeps a mid-procurement lease editable at
+// all; the started case must still refuse to have its ceiling cleared.
+assert.match(
+  startSql,
+  /if target_contract\.procurement_stage = 'contract_started' then\s*raise exception[\s\S]{0,120}ต้องมีมูลค่าสัญญา/i,
+  'a started lease must not be allowed to lose its ceiling',
+)
+assert.match(startSql, /clears_total/i, 'update_contract must distinguish an absent ceiling from a cleared one')
+
+// Both wrappers stay service-role only, like every other write path here.
+for (const grant of [
+  /grant execute on function public\.advance_contract_stage\(bigint, uuid, text, date, text, numeric, text\)\s*to service_role/i,
+  /revoke execute on function public\.advance_contract_stage_without_total\([^)]*\)\s*from public, anon, authenticated/i,
+]) {
+  assert.match(startSql, grant)
+}
+
 console.log('contract budget schema tests passed')

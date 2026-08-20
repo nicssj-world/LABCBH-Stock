@@ -91,6 +91,13 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
   // items editor would collect input the schema and the database both reject.
   const tracking = contractMode(state.contractType)
 
+  // Creating always records a ceiling: this form is the out-of-workflow path
+  // for a contract that already exists on paper, so the figure is known. A
+  // lease opened from a purchase request reaches this form mid-procurement
+  // with no ceiling yet and must be allowed to stay that way until it starts —
+  // update_contract refuses to clear one that already has.
+  const requiresTotal = mode === 'create' || contract?.procurementStage === 'contract_started'
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       try {
@@ -309,10 +316,16 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
                 min="0.01"
                 step="0.01"
                 inputMode="decimal"
+                required={requiresTotal}
                 value={state.total ?? ''}
                 onChange={(event) => patchState('total', event.target.value === '' ? null : Number(event.target.value))}
                 aria-invalid={Boolean(errors.total)}
               />
+              {!requiresTotal && (
+                <small className="form-field-note">
+                  ระบุมูลค่าได้เมื่อเริ่มสัญญา หรือกรอกไว้ล่วงหน้าก็ได้
+                </small>
+              )}
               {errors.total && <small className="field-error">{errors.total}</small>}
             </label>
           </div>

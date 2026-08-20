@@ -89,6 +89,40 @@ const contractTotalInputSchema = z
   .nullable()
   .optional()
 
+/**
+ * Editing is deliberately more permissive than creating. A lease opened from a
+ * purchase request has no ceiling until it reaches contract_started, and
+ * refusing to parse one here would leave it uneditable for the whole of
+ * procurement. Whether a started lease may have its ceiling cleared is a
+ * question about the contract's stage, which only the locked row inside
+ * update_contract can answer — so that rule lives there, not here.
+ */
+function refineTotalForContractTypeOnUpdate(
+  value: { contractType: ContractTypeValue; total?: number | null },
+  ctx: z.RefinementCtx,
+): void {
+  const hasTotal = Object.prototype.hasOwnProperty.call(value, 'total')
+
+  if (value.contractType === 'equipment_lease') {
+    if (!hasTotal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['total'],
+        message: 'กรุณาระบุมูลค่าสัญญา',
+      })
+    }
+    return
+  }
+
+  if (hasTotal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['total'],
+      message: 'มูลค่าสัญญาระบุได้เฉพาะสัญญาเช่าเครื่อง',
+    })
+  }
+}
+
 /** Lease ceilings are entered directly; supply totals remain derived from lines. */
 function refineTotalForContractType(
   value: { contractType: ContractTypeValue; total?: number | null },
@@ -172,7 +206,7 @@ export const updateContractInputSchema = z
   })
   .strict()
   .superRefine(refineItemsForContractType)
-  .superRefine(refineTotalForContractType)
+  .superRefine(refineTotalForContractTypeOnUpdate)
 
 export const contractExpenseInputSchema = z
   .object({
@@ -225,6 +259,13 @@ export const stageAdvanceSchema = z
     to: z.enum(PROCUREMENT_STAGES),
     effectiveDate: isoDateSchema,
     contractNumber: z.string().trim().min(1).nullable().optional(),
+    // Like `from`, an optimistic client assertion used only to decide whether
+    // to ask for a ceiling. advance_contract_stage reads the real type from
+    // the locked row and enforces the rule there.
+    contractType: z.enum(CONTRACT_TYPES).optional(),
+    // A lease's ceiling is settled at contract_started, not when the contract
+    // is opened: procurement can still negotiate the price down before then.
+    total: z.number().finite().positive('มูลค่าสัญญาต้องมากกว่า 0').nullable().optional(),
     note: z.string().trim().max(1000).nullable().optional(),
   })
   .strict()
@@ -250,6 +291,37 @@ export const stageAdvanceSchema = z
         code: z.ZodIssueCode.custom,
         path: ['contractNumber'],
         message: 'เลขที่สัญญาจะกำหนดได้เมื่อเริ่มสัญญาเท่านั้น',
+      })
+    }
+
+    // Mirrors advance_contract_stage: without a ceiling the over-budget guard
+    // in record_contract_expense silently passes every entry, so a lease must
+    // not be allowed to start without one.
+    if (
+      value.to === 'contract_started'
+      && value.contractType === 'equipment_lease'
+      && value.total == null
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['total'],
+        message: 'ต้องระบุมูลค่าสัญญาเมื่อเริ่มสัญญาเช่าเครื่อง',
+      })
+    }
+
+    if (value.contractType != null && value.contractType !== 'equipment_lease' && value.total != null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['total'],
+        message: 'มูลค่าสัญญาระบุได้เฉพาะสัญญาเช่าเครื่อง',
+      })
+    }
+
+    if (value.to !== 'contract_started' && value.total != null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['total'],
+        message: 'มูลค่าสัญญาจะกำหนดได้เมื่อเริ่มสัญญาเท่านั้น',
       })
     }
   })

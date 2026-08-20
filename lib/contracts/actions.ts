@@ -173,14 +173,16 @@ export async function advanceContractStage(contractId: number, input: StageAdvan
   const parsedContractId = z.number().int().positive().parse(contractId)
   const parsed = stageAdvanceSchema.parse(input)
 
-  // `from` is an optimistic client assertion only. The locked database row in
-  // advance_contract_stage remains the source of truth for the transition.
+  // `from` and `contractType` are optimistic client assertions only. The
+  // locked database row in advance_contract_stage remains the source of truth
+  // for the transition, and for whether a ceiling is required.
   const result = await supabaseAdmin.rpc('advance_contract_stage', {
     p_contract_id: parsedContractId,
     p_actor_id: actor.id,
     p_to_stage: parsed.to,
     p_effective_date: parsed.effectiveDate,
     p_contract_number: parsed.contractNumber ?? null,
+    p_total: parsed.total ?? null,
     p_note: parsed.note ?? null,
   })
 

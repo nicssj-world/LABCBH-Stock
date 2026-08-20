@@ -232,7 +232,12 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
                 <h2 id="next-action-title">ดำเนินการขั้นถัดไป</h2>
               </div>
             </div>
-            <StageAdvanceControl contractId={contract.id} currentStage={contract.procurementStage} />
+            <StageAdvanceControl
+              contractId={contract.id}
+              currentStage={contract.procurementStage}
+              contractType={contract.contractType}
+              total={contract.total}
+            />
           </aside>
         )}
       </div>

@@ -60,6 +60,34 @@ assert.match(detailPage, /canManageStageHistory/, 'stage history editing must be
 assert.match(detailPage, /contract\.procurementStage\s*===\s*['"]contract_started['"]/, 'started contracts must use a dedicated completed state')
 assert.match(detailPage, /isContractStarted\s*\?\s*\(/, 'started contracts must branch to collapsed history')
 assert.match(detailPage, /!isContractStarted\s*&&[\s\S]*StageAdvanceControl/, 'started contracts must not render the next action')
+
+// The lease ceiling is settled when the contract is signed, so the control that
+// records the contract number records the ceiling beside it. It needs the type
+// and the existing figure to know whether to ask and what to prefill.
+assert.match(
+  detailPage.replace(/s+/g, ' '),
+  /StageAdvanceControl[^/]*contractType={contract.contractType}[^/]*total={contract.total}/,
+  'the stage-advance control must receive the contract type and current ceiling',
+)
+
+const stageAdvance = read('components/contracts/StageAdvanceControl.tsx')
+assert.match(
+  stageAdvance,
+  /nextStage === 'contract_started' && contractType === 'equipment_lease'/,
+  'only a lease starting up is asked for a ceiling',
+)
+assert.match(stageAdvance, /มูลค่าสัญญา/, 'the ceiling field must be labelled in Thai like the rest of the form')
+assert.match(
+  stageAdvance,
+  /useState\(total === null \? '' : String\(total\)\)/,
+  'an existing ceiling is prefilled for confirmation rather than retyped from blank',
+)
+assert.match(
+  stageAdvance,
+  /total: asksForTotal \? Number\(leaseTotal\) : null/,
+  'the ceiling is only sent on the step that may carry one',
+)
+
 assert.match(detailPage, /className="route-stack contract-detail-page"/, 'contract detail must use its focused control-sheet surface')
 assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must keep navigation, state, and edit action together')
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
