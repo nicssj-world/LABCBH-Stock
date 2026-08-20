@@ -54,6 +54,29 @@ assert.doesNotMatch(
 )
 assert.match(detailPage, /ชื่อเรียกอื่นที่พบในข้อมูลเดิม/, 'aliases must stay visible for reconciliation')
 
+
+// An item name is user data of any length — the longest titles in the app are
+// here. .page-heading h1 otherwise caps the measure at 22ch, a unit calibrated
+// on the width of "0" and so meaningless for Thai, which wrapped these names
+// mid-title while half the row sat empty.
+assert.match(
+  detailPage,
+  /className="page-heading page-heading--actions inventory-detail__heading"/,
+  'a long item name must be free of the 22ch measure cap',
+)
+// Deliberately NOT page-heading--stack: that lifts the cap too, but by turning
+// the header into a column, which drops the status chips and the edit control below
+// the title instead of leaving them on the note's row.
+assert.doesNotMatch(
+  detailPage,
+  /page-heading--stack/,
+  'the action cluster must stay on the row, not move under the title',
+)
+assert.match(
+  read('app/globals.css'),
+  /\.inventory-detail__heading h1 \{\s*max-width: none;/,
+  'the cap is lifted by a scoped rule, not by restructuring the header',
+)
 assert.match(detailPage, /StockAdjustmentDialog/, 'stock operators need a balance-adjustment control on every item detail')
 
 const adjustmentDialog = read('components/inventory/StockAdjustmentDialog.tsx')

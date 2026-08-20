@@ -45,7 +45,7 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
 
   return (
     <div className="route-stack">
-      <header className="page-heading page-heading--actions">
+      <header className="page-heading page-heading--actions inventory-detail__heading">
         <div>
           <Link className="back-link" href="/inventory">← คลังน้ำยา</Link>
           <p className="inventory-detail__code">

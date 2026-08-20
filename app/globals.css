@@ -2209,6 +2209,15 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
   .list-pagination__controls { justify-content: space-between; }
 }
 
+/* An item name is user data of any length — the longest titles in the app are
+   here. The 22ch measure on .page-heading h1 is calibrated on the width of "0",
+   so it means nothing for Thai and was wrapping ordinary names mid-title while
+   half the row sat empty. Only the cap is lifted: the action cluster keeps its
+   place on the row, bottom-aligned with the note. */
+.inventory-detail__heading h1 {
+  max-width: none;
+}
+
 .inventory-detail__note {
   display: grid;
   gap: 4px;
