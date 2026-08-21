@@ -40,6 +40,8 @@ export interface RequisitionRecord {
   fiscalYear: number
   sequenceNumber: number
   documentNumber: string
+  /** The profile that created the requisition — the owner for edit/cancel. */
+  requesterId: string | null
   requesterName: string
   department: string
   desiredDate: string

@@ -9,7 +9,8 @@ import { bangkokIsoDate } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { isProjectedBelowMinimum } from '@/lib/inventory/balance'
 import { MINIMUM_STOCK_WARNING } from '@/lib/pr/presenter'
-import { createRequisition } from '@/lib/requisitions/actions'
+import { OUT_OF_STOCK_WARNING } from '@/lib/requisitions/presenter'
+import { createRequisition, updateRequisition } from '@/lib/requisitions/actions'
 
 export interface RequisitionCatalogItem {
   inventoryItemId: string
@@ -20,6 +21,22 @@ export interface RequisitionCatalogItem {
   onHand: number
   minimumStock: number
   responsibleDepartment: string | null
+}
+
+export interface RequisitionFormInitialValues {
+  requisitionId: string
+  department: string
+  requesterName: string
+  desiredDate: string
+  note: string | null
+  items: {
+    inventoryItemId: string
+    lsCode: string
+    name: string
+    unit: string
+    note: string | null
+    requestedQuantity: number
+  }[]
 }
 
 interface DraftLine {
@@ -38,17 +55,41 @@ export function RequisitionForm({
   catalog,
   departments,
   requesterName: initialRequester,
+  mode = 'create',
+  initialValues,
 }: {
   catalog: RequisitionCatalogItem[]
   departments: readonly string[]
   requesterName: string
+  mode?: 'create' | 'edit'
+  initialValues?: RequisitionFormInitialValues
 }) {
   const router = useRouter()
-  const [department, setDepartment] = useState(departments[0] ?? '')
-  const [requesterName, setRequesterName] = useState(initialRequester)
-  const [desiredDate, setDesiredDate] = useState(() => bangkokIsoDate())
-  const [note, setNote] = useState('')
-  const [lines, setLines] = useState<DraftLine[]>([])
+  const isEditing = mode === 'edit' && initialValues !== undefined
+  const [department, setDepartment] = useState(initialValues?.department ?? departments[0] ?? '')
+  const [requesterName, setRequesterName] = useState(initialValues?.requesterName ?? initialRequester)
+  const [desiredDate, setDesiredDate] = useState(() => initialValues?.desiredDate ?? bangkokIsoDate())
+  const [note, setNote] = useState(initialValues?.note ?? '')
+  const [lines, setLines] = useState<DraftLine[]>(() =>
+    (initialValues?.items ?? []).map((item, index) => {
+      // The picker below only offers items with stock on hand. An existing
+      // line whose item has since gone to zero is therefore missing from it,
+      // and must be carried over from the saved requisition instead —
+      // rebuilding lines from the picker alone would silently drop it.
+      const stocked = catalog.find((entry) => entry.inventoryItemId === item.inventoryItemId)
+      return {
+        key: `${item.inventoryItemId}-${index}`,
+        inventoryItemId: item.inventoryItemId,
+        lsCode: item.lsCode,
+        name: item.name,
+        unit: item.unit,
+        note: item.note ?? '',
+        onHand: stocked?.onHand ?? 0,
+        minimumStock: stocked?.minimumStock ?? 0,
+        requestedQuantity: item.requestedQuantity,
+      }
+    }),
+  )
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -98,24 +139,34 @@ export function RequisitionForm({
     event.preventDefault()
     setError(null)
 
+    const payload = {
+      department,
+      requesterName,
+      desiredDate,
+      note: note.trim() || null,
+      items: lines.map((line) => ({
+        inventoryItemId: line.inventoryItemId,
+        requestedQuantity: line.requestedQuantity,
+        unit: line.unit,
+        note: line.note.trim() || null,
+      })),
+    }
+
     startTransition(async () => {
       try {
-        const created = await createRequisition({
-          department,
-          requesterName,
-          desiredDate,
-          note: note.trim() || null,
-          items: lines.map((line) => ({
-            inventoryItemId: line.inventoryItemId,
-            requestedQuantity: line.requestedQuantity,
-            unit: line.unit,
-            note: line.note.trim() || null,
-          })),
-        })
-        router.push(`/requisitions/${created.id}`)
+        if (isEditing) {
+          await updateRequisition(initialValues.requisitionId, payload)
+          router.push(`/requisitions/${initialValues.requisitionId}`)
+        } else {
+          const created = await createRequisition(payload)
+          router.push(`/requisitions/${created.id}`)
+        }
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'สร้างใบเบิกไม่สำเร็จ กรุณาลองใหม่')
+        const fallback = isEditing
+          ? 'แก้ไขใบเบิกไม่สำเร็จ กรุณาลองใหม่'
+          : 'สร้างใบเบิกไม่สำเร็จ กรุณาลองใหม่'
+        setError(caught instanceof Error ? caught.message : fallback)
       }
     })
   }
@@ -216,14 +267,24 @@ export function RequisitionForm({
                   minimum: line.minimumStock,
                   issueQuantity: line.requestedQuantity,
                 })
+                // Only reachable while editing: the picker never offers an item
+                // at zero, but a saved line can be carried in after its stock
+                // ran out. It has to stand out, because keeping it means asking
+                // for something the store cannot hand over.
+                const isDepleted = line.onHand <= 0
 
                 return (
-                  <li key={line.key}>
+                  <li key={line.key} data-depleted={isDepleted || undefined}>
                     <div className="requisition-line__identity">
                       <span className="identifier">{line.lsCode}</span>
                       <div>
                         <strong>{line.name}</strong>
-                        <small>คงเหลือ {formatQuantity(line.onHand, line.unit)} · ขั้นต่ำ {formatQuantity(line.minimumStock, line.unit)}</small>
+                        <small>
+                          <span className={isDepleted ? 'requisition-line__depleted' : undefined}>
+                            คงเหลือ {formatQuantity(line.onHand, line.unit)}
+                          </span>
+                          {' · '}ขั้นต่ำ {formatQuantity(line.minimumStock, line.unit)}
+                        </small>
                       </div>
                     </div>
 
@@ -255,9 +316,16 @@ export function RequisitionForm({
                       </label>
                     </div>
 
-                    {willBreachMinimum && (
+                    {isDepleted ? (
+                      // Replaces the minimum-stock warning rather than stacking
+                      // on top of it: at zero on hand that warning is always
+                      // true as well, and the emptier fact is the useful one.
+                      <p className="requisition-line__warning requisition-line__warning--depleted" role="status">
+                        {OUT_OF_STOCK_WARNING}
+                      </p>
+                    ) : willBreachMinimum ? (
                       <p className="requisition-line__warning" role="status">{MINIMUM_STOCK_WARNING}</p>
-                    )}
+                    ) : null}
 
                     <Button variant="ghost" onClick={() => removeLine(line.key)}>นำออก</Button>
                   </li>
@@ -271,13 +339,25 @@ export function RequisitionForm({
       {error && <p className="form-error" role="alert">{error}</p>}
 
       <div className="form-action-bar">
-        <p>ส่งแล้วใบเบิกจะอยู่ในสถานะรอจ่าย เจ้าหน้าที่คลังจะเลือกล็อตตามลำดับ FIFO</p>
+        <p>
+          {isEditing
+            ? 'แก้ไขได้จนกว่าเจ้าหน้าที่คลังจะจ่ายของ ยอดคงคลังยังไม่ถูกตัดจนกว่าจะจ่ายจริง'
+            : 'ส่งแล้วใบเบิกจะอยู่ในสถานะรอจ่าย เจ้าหน้าที่คลังจะเลือกล็อตตามลำดับ FIFO'}
+        </p>
         <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => router.push('/requisitions')} disabled={isPending}>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              router.push(isEditing ? `/requisitions/${initialValues.requisitionId}` : '/requisitions')
+            }
+            disabled={isPending}
+          >
             ยกเลิก
           </Button>
           <Button type="submit" disabled={isPending || lines.length === 0}>
-            {isPending ? 'กำลังส่ง…' : 'ส่งใบเบิก'}
+            {isPending
+              ? (isEditing ? 'กำลังบันทึก…' : 'กำลังส่ง…')
+              : (isEditing ? 'บันทึกการแก้ไข' : 'ส่งใบเบิก')}
           </Button>
         </div>
       </div>

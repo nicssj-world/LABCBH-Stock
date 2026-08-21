@@ -3038,6 +3038,13 @@ input[type="number"] {
 }
 
 .requisition-line__warning { grid-column: 1 / -1; margin: 0; color: var(--lab-amber); font-size: 12px; font-weight: 700; }
+.requisition-line__warning--depleted { color: var(--lab-red); }
+
+/* A line whose item has run out. The red carries no meaning on its own — the
+   quantity still reads 0 and the warning below spells it out — but the tinted
+   row is what makes it findable in a long requisition. */
+.requisition-line-list li[data-depleted] { background: var(--lab-red-soft); border-color: var(--lab-red); }
+.requisition-line__identity small .requisition-line__depleted { color: var(--lab-red); font-weight: 700; }
 
 .lot-picker { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 
@@ -3153,9 +3160,14 @@ input[type="number"] {
 .pr-review__meta { display: grid; gap: 2px; text-align: right; }
 .pr-review__meta .pr-review__intro { font-size: 11px; }
 .pr-review__closed { display: grid; gap: 4px; }
-.pr-lifecycle-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* The edit/delete pair that sits in a document heading. Shared by the PR and
+   requisition detail pages — same widget, same slot, one rule. */
+.pr-lifecycle-controls,
+.requisition-lifecycle-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pr-lifecycle-controls .lab-link-button,
-.pr-lifecycle-controls .lab-button { min-height: 38px; padding: 8px 13px; font-size: 12px; }
+.pr-lifecycle-controls .lab-button,
+.requisition-lifecycle-controls .lab-link-button,
+.requisition-lifecycle-controls .lab-button { min-height: 38px; padding: 8px 13px; font-size: 12px; }
 
 @media (max-width: 1180px) {
   .inventory-detail-grid { grid-template-columns: 1fr; }
@@ -3267,8 +3279,10 @@ input[type="number"] {
   .pr-review__meta { text-align: left; }
   .contract-detail-heading__top { align-items: flex-start; flex-direction: column; padding: 12px 16px 16px; }
   .contract-detail-heading__status { justify-content: flex-start; width: 100%; }
-  .contract-detail-heading__status .pr-lifecycle-controls { width: 100%; margin-top: 4px; }
-  .contract-detail-heading__status .pr-lifecycle-controls > * { flex: 1; }
+  .contract-detail-heading__status .pr-lifecycle-controls,
+  .contract-detail-heading__status .requisition-lifecycle-controls { width: 100%; margin-top: 4px; }
+  .contract-detail-heading__status .pr-lifecycle-controls > *,
+  .contract-detail-heading__status .requisition-lifecycle-controls > * { flex: 1; }
   .app-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
   .contract-summary-dialog__facts { grid-template-columns: 1fr; }
   .contract-summary-dialog__facts > div,

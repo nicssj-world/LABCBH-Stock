@@ -5,11 +5,13 @@ import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
 import { assertPurchaseRequester } from '@/lib/pr/authorization'
+import { assertRequisitionManager } from '@/lib/requisitions/authorization'
 import {
   fulfillRequisitionInputSchema,
   requisitionInputSchema,
   signRequisitionInputSchema,
 } from '@/lib/requisitions/schema'
+import { getRequisition } from '@/lib/requisitions/queries'
 import type { FulfillRequisitionInput, RequisitionInput, SignRequisitionInput } from '@/lib/requisitions/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
@@ -46,6 +48,54 @@ export async function createRequisition(input: RequisitionInput) {
   const created = unwrapMutation('สร้างใบเบิก', result)
   revalidateRequisition()
   return created
+}
+
+/**
+ * A requisition can only be corrected while it is still waiting. Nothing has
+ * left the store yet at that point, so there is no stock to put back — the RPC
+ * locks the row and re-reads the status so an edit cannot land halfway through
+ * a stock officer dispensing it.
+ */
+export async function updateRequisition(requisitionId: string, input: RequisitionInput) {
+  const actor = await requireActor()
+  const parsedId = requisitionIdSchema.parse(requisitionId)
+  const parsed = requisitionInputSchema.parse(input)
+  const existing = await getRequisition(parsedId)
+  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการแก้ไข')
+  assertRequisitionManager(actor, existing.requesterId)
+  const { items, ...requisition } = parsed
+
+  const result = await supabaseAdmin.rpc('update_requisition', {
+    p_requisition_id: parsedId,
+    p_actor_id: actor.id,
+    p_requisition: requisition,
+    p_items: items.map(omitNullishProperties),
+  })
+
+  const updated = unwrapMutation('แก้ไขใบเบิก', result)
+  revalidateRequisition(parsedId)
+  return updated
+}
+
+/**
+ * "ลบ" ในหน้าจอใบเบิกคือการยกเลิกแบบเก็บประวัติไว้ ไม่ลบแถวหรือรายการน้ำยาจริง
+ * เพื่อให้เลขที่ใบเบิกและการตรวจสอบย้อนหลังยังเชื่อถือได้
+ */
+export async function cancelRequisition(requisitionId: string) {
+  const actor = await requireActor()
+  const parsedId = requisitionIdSchema.parse(requisitionId)
+  const existing = await getRequisition(parsedId)
+  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการลบ')
+  assertRequisitionManager(actor, existing.requesterId)
+
+  const result = await supabaseAdmin.rpc('cancel_requisition', {
+    p_requisition_id: parsedId,
+    p_actor_id: actor.id,
+  })
+
+  const cancelled = unwrapMutation('ลบใบเบิก', result)
+  revalidateRequisition(parsedId)
+  return cancelled
 }
 
 export async function fulfillRequisition(

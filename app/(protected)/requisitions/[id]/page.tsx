@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FulfillmentPanel } from '@/components/requisitions/FulfillmentPanel'
+import { RequisitionLifecycleControls } from '@/components/requisitions/RequisitionLifecycleControls'
 import { RequisitionSignaturePanel } from '@/components/requisitions/RequisitionSignaturePanel'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { bangkokToday, listOnHand } from '@/lib/inventory/queries'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
+import { canManageRequisition } from '@/lib/requisitions/authorization'
 import { getRequisition, listSelectableLots } from '@/lib/requisitions/queries'
 import type { SelectableLot } from '@/lib/requisitions/types'
 
@@ -37,6 +39,10 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
   if (!requisition) notFound()
 
   const canFulfil = canOperateStock(actor) && requisition.status === 'waiting'
+  // Nothing has left the store while a requisition is waiting, so correcting or
+  // withdrawing one moves no stock. Once it is dispensed the ledger is
+  // append-only and the record closes.
+  const canManage = canManageRequisition(actor, requisition.requesterId) && requisition.status === 'waiting'
   const itemIds = requisition.items.map((item) => item.inventoryItemId)
   const lotsByItem: Record<string, SelectableLot[]> = {}
 
@@ -68,6 +74,12 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
               {STATUS_LABELS[requisition.status]}
             </StatusChip>
             <span>{requisition.department}</span>
+            {canManage && (
+              <RequisitionLifecycleControls
+                requisitionId={requisition.id}
+                documentNumber={requisition.documentNumber}
+              />
+            )}
             {requisition.status === 'fulfilled' && (
               <Link className="lab-link-button lab-link-button--secondary" href={`/requisitions/${requisition.id}/print`}>
                 พิมพ์ใบเบิก
