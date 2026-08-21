@@ -12,6 +12,7 @@ export interface NotificationItem {
   href: string
   readAt: string | null
   resolvedAt: string | null
+  dismissedAt: string | null
   createdAt: string
 }
 

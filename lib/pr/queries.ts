@@ -8,6 +8,7 @@ import { PURCHASE_METHODS, PURCHASE_REQUEST_STATUSES } from './schema'
 import type {
   PurchaseRequestRecord,
   PurchaseRequestItemRecord,
+  PurchaseRequestReceiptItemRecord,
   PurchaseRequestReceiptRecord,
 } from './types'
 
@@ -69,6 +70,28 @@ const requestRowSchema = z.object({
   short_closer: z.object({ name: z.string().nullable() }).nullable(),
   updater: z.object({ name: z.string().nullable() }).nullable(),
   purchase_request_items: z.array(itemRowSchema).nullable().default([]),
+})
+
+const receiptHistoryItemSchema = z.object({
+  id: z.string().uuid(),
+  line_number: z.number().int().positive(),
+  inventory_item_id: z.string().uuid(),
+  lot_number: z.string(),
+  expiry_date: z.string().nullable(),
+  quantity: numericSchema,
+  unit: z.string(),
+  inventory_items: z.object({ ls_code: z.string(), name: z.string() }).nullable(),
+})
+
+const receiptHistorySchema = z.object({
+  id: z.string().uuid(),
+  po_number: z.string().nullable(),
+  received_date: z.string(),
+  status: z.enum(GOODS_RECEIPT_STATUSES),
+  posted_at: z.string().nullable(),
+  cancellation_note: z.string().nullable(),
+  created_at: z.string(),
+  goods_receipt_items: z.array(receiptHistoryItemSchema).nullable().default([]),
 })
 
 const REQUEST_SELECT = `
@@ -205,6 +228,22 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
   }
 }
 
+function mapReceiptHistoryItem(
+  row: z.infer<typeof receiptHistoryItemSchema>,
+): PurchaseRequestReceiptItemRecord {
+  return {
+    id: row.id,
+    lineNumber: row.line_number,
+    inventoryItemId: row.inventory_item_id,
+    lsCode: row.inventory_items?.ls_code ?? '—',
+    name: row.inventory_items?.name ?? 'ไม่ระบุรายการ',
+    lotNumber: row.lot_number,
+    expiryDate: row.expiry_date,
+    quantity: row.quantity,
+    unit: row.unit,
+  }
+}
+
 export async function listPurchaseRequests(
   filters: PurchaseRequestFilters = {},
 ): Promise<PurchaseRequestRecord[]> {
@@ -307,7 +346,16 @@ export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRec
         posted_at,
         cancellation_note,
         created_at,
-        goods_receipt_items (quantity)
+        goods_receipt_items (
+          id,
+          line_number,
+          inventory_item_id,
+          lot_number,
+          expiry_date,
+          quantity,
+          unit,
+          inventory_items (ls_code, name)
+        )
       `)
       .eq('purchase_request_id', id)
       .order('received_date', { ascending: false })
@@ -318,31 +366,25 @@ export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRec
   if (receiptsResult.error) throw new Error(`อ่านประวัติรับเข้าของใบ PR ไม่สำเร็จ: ${receiptsResult.error.message}`)
   if (!requestResult.data) return null
 
-  const receiptHistorySchema = z.object({
-    id: z.string().uuid(),
-    po_number: z.string().nullable(),
-    received_date: z.string(),
-    status: z.enum(GOODS_RECEIPT_STATUSES),
-    posted_at: z.string().nullable(),
-    cancellation_note: z.string().nullable(),
-    created_at: z.string(),
-    goods_receipt_items: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
-  })
-
   const receiptHistory: PurchaseRequestReceiptRecord[] = receiptHistorySchema
     .array()
     .parse(receiptsResult.data ?? [])
-    .map((receipt) => ({
-      id: receipt.id,
-      poNumber: receipt.po_number,
-      receivedDate: receipt.received_date,
-      status: receipt.status,
-      postedAt: receipt.posted_at,
-      cancellationNote: receipt.cancellation_note,
-      totalQuantity: roundQuantity(
-        (receipt.goods_receipt_items ?? []).reduce((sum, item) => sum + item.quantity, 0),
-      ),
-    }))
+    .map((receipt) => {
+      const items = (receipt.goods_receipt_items ?? [])
+        .sort((left, right) => left.line_number - right.line_number)
+        .map(mapReceiptHistoryItem)
+
+      return {
+        id: receipt.id,
+        poNumber: receipt.po_number,
+        receivedDate: receipt.received_date,
+        status: receipt.status,
+        postedAt: receipt.posted_at,
+        cancellationNote: receipt.cancellation_note,
+        items,
+        totalQuantity: roundQuantity(items.reduce((sum, item) => sum + item.quantity, 0)),
+      }
+    })
 
   return {
     ...mapRequest(requestRowSchema.parse(requestResult.data)),

@@ -1980,6 +1980,15 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .opening-balance-history__lines li { white-space: nowrap; }
 .data-table td .opening-balance-history__lines strong { display: inline; }
 .detail-items-table { overflow-x: auto; }
+.pr-receipt-history__items { display: grid; gap: 7px; min-width: 300px; }
+.pr-receipt-history__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 7px 9px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 8px; }
+.pr-receipt-history__item-identity { min-width: 0; }
+.pr-receipt-history__item-identity strong,
+.pr-receipt-history__item-identity small { display: block; }
+.pr-receipt-history__item-identity strong { overflow-wrap: anywhere; font-size: 11px; line-height: 1.4; }
+.pr-receipt-history__item-identity small { margin-top: 3px; color: var(--lab-muted); font: 10px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.pr-receipt-history__item-quantity { color: var(--lab-navy-strong); font: 600 12px/1.35 var(--font-mono); white-space: nowrap; }
+.pr-receipt-history__empty { color: var(--lab-muted); font-size: 12px; }
 .contract-line-balance { min-width: 148px; }
 .contract-line-balance strong { white-space: nowrap; }
 .contract-line-balance small { white-space: nowrap; }

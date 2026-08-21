@@ -74,6 +74,7 @@ function toNotification(row: Record<string, unknown>): NotificationItem | null {
     href,
     readAt: asNullableString(row.read_at),
     resolvedAt: asNullableString(row.resolved_at),
+    dismissedAt: asNullableString(row.dismissed_at),
     createdAt,
   }
 }
@@ -98,6 +99,9 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
   const [busy, setBusy] = useState(false)
   const knownNotificationIds = useRef(new Set(snapshot.notifications.map((notification) => notification.id)))
   const panelId = `notification-center-${actorId}`
+  const visibleNotifications = snapshot.notifications.filter(
+    (notification) => !notification.resolvedAt && !notification.dismissedAt,
+  )
 
   useEffect(() => {
     snapshot.notifications.forEach((notification) => knownNotificationIds.current.add(notification.id))
@@ -134,7 +138,12 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
         },
         (payload) => {
           const notification = toNotification(payload.new)
-          if (!notification || knownNotificationIds.current.has(notification.id)) return
+          if (
+            !notification ||
+            notification.resolvedAt ||
+            notification.dismissedAt ||
+            knownNotificationIds.current.has(notification.id)
+          ) return
 
           knownNotificationIds.current.add(notification.id)
           onSnapshotChange((current) => ({
@@ -170,12 +179,19 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
             const previous = current.notifications.find((item) => item.id === notification.id)
             if (!previous) return current
 
-            const unreadDelta = !previous.readAt && notification.readAt ? -1 : previous.readAt && !notification.readAt ? 1 : 0
+            const leavesQueue = Boolean(notification.resolvedAt || notification.dismissedAt)
+            const unreadDelta = !previous.readAt && (notification.readAt || leavesQueue)
+              ? -1
+              : previous.readAt && !notification.readAt && !leavesQueue
+                ? 1
+                : 0
             const resolvedDelta = !previous.resolvedAt && notification.resolvedAt ? -1 : 0
 
             return {
               ...current,
-              notifications: current.notifications.map((item) => item.id === notification.id ? notification : item),
+              notifications: leavesQueue
+                ? current.notifications.filter((item) => item.id !== notification.id)
+                : current.notifications.map((item) => item.id === notification.id ? notification : item),
               unreadCount: Math.max(0, current.unreadCount + unreadDelta),
               pendingPurchaseRequests: notification.eventType === 'purchase_request_created'
                 ? Math.max(0, current.pendingPurchaseRequests + resolvedDelta)
@@ -185,6 +201,9 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
                 : current.waitingRequisitions,
             }
           })
+          if (notification.resolvedAt || notification.dismissedAt) {
+            setToast((current) => current?.id === notification.id ? null : current)
+          }
           router.refresh()
         },
       )
@@ -213,18 +232,17 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
   }
 
   async function handleMarkAllRead() {
-    if (!snapshot.unreadCount || busy) return
+    if ((!snapshot.unreadCount && !visibleNotifications.length) || busy) return
     setBusy(true)
     onSnapshotChange((current) => ({
       ...current,
-      notifications: current.notifications.map((notification) => ({
-        ...notification,
-        readAt: notification.readAt ?? new Date().toISOString(),
-      })),
+      notifications: [],
       unreadCount: 0,
     }))
+    setToast(null)
     try {
       await markAllNotificationsRead()
+      router.refresh()
     } catch {
       router.refresh()
     } finally {
@@ -260,7 +278,7 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
               <button
                 className="notification-center__mark-all"
                 type="button"
-                disabled={!snapshot.unreadCount || busy}
+                disabled={(!snapshot.unreadCount && !visibleNotifications.length) || busy}
                 onClick={() => void handleMarkAllRead()}
               >
                 อ่านทั้งหมด
@@ -271,12 +289,12 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
             </div>
           </div>
 
-          {snapshot.notifications.length === 0 ? (
+          {visibleNotifications.length === 0 ? (
             <p className="notification-center__empty">ยังไม่มีการแจ้งเตือน</p>
           ) : (
             <ul className="notification-center__list">
-              {snapshot.notifications.map((notification) => (
-                <li key={notification.id} className={`notification-center__item${notification.readAt ? '' : ' is-unread'}${notification.resolvedAt ? ' is-resolved' : ''}`}>
+              {visibleNotifications.map((notification) => (
+                <li key={notification.id} className={`notification-center__item${notification.readAt ? '' : ' is-unread'}`}>
                   <Link
                     href={notification.href}
                     className="notification-center__item-link"
@@ -291,7 +309,6 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
                       <span>{notification.body}</span>
                       <small>
                         {notification.documentNumber} · {formatNotificationTime(notification.createdAt)}
-                        {notification.resolvedAt && <em>จัดการแล้ว</em>}
                       </small>
                     </span>
                     {!notification.readAt && <span className="visually-hidden">ยังไม่ได้อ่าน</span>}

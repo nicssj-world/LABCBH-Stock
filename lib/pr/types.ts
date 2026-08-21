@@ -49,7 +49,20 @@ export interface PurchaseRequestReceiptRecord {
   status: GoodsReceiptStatus
   postedAt: string | null
   cancellationNote: string | null
+  items: PurchaseRequestReceiptItemRecord[]
   totalQuantity: number
+}
+
+export interface PurchaseRequestReceiptItemRecord {
+  id: string
+  lineNumber: number
+  inventoryItemId: string
+  lsCode: string
+  name: string
+  lotNumber: string
+  expiryDate: string | null
+  quantity: number
+  unit: string
 }
 
 export interface PurchaseRequestRecord {

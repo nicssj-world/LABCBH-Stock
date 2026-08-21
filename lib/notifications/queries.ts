@@ -12,7 +12,7 @@ import type {
 import { EMPTY_NOTIFICATION_SNAPSHOT } from '@/lib/notifications/types'
 
 const NOTIFICATION_SELECT =
-  'id,event_type,entity_type,entity_id,document_number,title,body,href,read_at,resolved_at,created_at'
+  'id,event_type,entity_type,entity_id,document_number,title,body,href,read_at,resolved_at,dismissed_at,created_at'
 
 interface NotificationRow {
   id: string
@@ -25,6 +25,7 @@ interface NotificationRow {
   href: string
   read_at: string | null
   resolved_at: string | null
+  dismissed_at: string | null
   created_at: string
 }
 
@@ -45,6 +46,7 @@ function parseNotification(row: NotificationRow): NotificationItem {
     href: row.href,
     readAt: row.read_at,
     resolvedAt: row.resolved_at,
+    dismissedAt: row.dismissed_at,
     createdAt: row.created_at,
   }
 }
@@ -73,11 +75,15 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
       .from('lab_stock_notifications')
       .select('id', { count: 'exact', head: true })
       .eq('recipient_id', actor.id)
-      .is('read_at', null),
+      .is('read_at', null)
+      .is('resolved_at', null)
+      .is('dismissed_at', null),
     supabaseAdmin
       .from('lab_stock_notifications')
       .select(NOTIFICATION_SELECT)
       .eq('recipient_id', actor.id)
+      .is('resolved_at', null)
+      .is('dismissed_at', null)
       .order('created_at', { ascending: false })
       .limit(12),
   ])

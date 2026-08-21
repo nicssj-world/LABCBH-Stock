@@ -217,6 +217,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 <tr>
                   <th>วันที่รับ</th>
                   <th>เลขที่ PO</th>
+                  <th>รายการ / LOT / จำนวน</th>
                   <th className="numeric-cell">จำนวนในใบรับ</th>
                   <th>สถานะ</th>
                   <th><span className="visually-hidden">เปิดใบรับเข้า</span></th>
@@ -227,6 +228,28 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                   <tr key={receipt.id}>
                     <td>{formatThaiDate(receipt.receivedDate)}</td>
                     <td className="identifier">{receipt.poNumber ?? 'ไม่ระบุ'}</td>
+                    <td>
+                      <div className="pr-receipt-history__items">
+                        {receipt.items.length === 0 ? (
+                          <span className="pr-receipt-history__empty">ไม่พบรายการรับเข้า</span>
+                        ) : (
+                          receipt.items.map((item) => (
+                            <div key={item.id} className="pr-receipt-history__item">
+                              <div className="pr-receipt-history__item-identity">
+                                <strong>{item.name}</strong>
+                                <small>
+                                  {item.lsCode} · LOT {item.lotNumber}
+                                  {item.expiryDate ? ` · หมดอายุ ${formatThaiDate(item.expiryDate)}` : ''}
+                                </small>
+                              </div>
+                              <strong className="pr-receipt-history__item-quantity">
+                                {formatQuantity(item.quantity, item.unit)}
+                              </strong>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </td>
                     <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
                     <td>
                       <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>

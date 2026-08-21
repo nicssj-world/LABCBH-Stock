@@ -46,6 +46,11 @@ assert.match(detailPage, /item\.receivedQuantity/, 'each PR line must show the p
 assert.match(detailPage, /item\.remainingQuantity/, 'each PR line must show how much can still be received')
 assert.match(detailPage, /request\.receiptHistory\.map/, 'the PR detail page must show every linked receipt')
 assert.match(detailPage, /GOODS_RECEIPT_STATUS_LABELS/, 'receipt history must identify draft, posted, and cancelled receipts')
+assert.match(detailPage, /receipt\.items\.map/, 'receipt history must show every received line')
+assert.match(detailPage, /item\.lotNumber/, 'receipt history must show the lot for each received line')
+assert.match(detailPage, /item\.quantity/, 'receipt history must show the quantity for each received line')
+assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expiry date for each received line')
+assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /params:\s*Promise</)
@@ -281,6 +286,8 @@ assert.match(queries, /department\?: string/, 'purchase-request queries accept a
 assert.match(queries, /filters\.department/, 'purchase-request queries apply the department filter')
 assert.match(queries, /listNextContractPurchaseSequences/)
 assert.match(queries, /created_contract_id/, 'a confirmed PR must link forward to the contract it opened')
+assert.match(queries, /goods_receipt_items \([\s\S]*?lot_number[\s\S]*?expiry_date[\s\S]*?quantity/, 'PR receipt history must load receipt line details')
+assert.match(queries, /mapReceiptHistoryItem/, 'receipt line details must be mapped into the PR domain record')
 assert.doesNotMatch(queries, /supabaseAdmin/, 'PR reads stay under RLS')
 assert.match(
   queries,
