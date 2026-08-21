@@ -22,7 +22,8 @@ const read = (suffix: string) => {
 }
 
 const ledgerSql = read('_lab_stock_inventory_ledger.sql')
-const receivingSql = read('_lab_stock_receiving.sql')
+const partialReceivingSql = read('_partial_receiving_compatibility.sql')
+const partialReceivingBackfillSql = read('_partial_receiving_backfill.sql')
 
 // 1. Idempotency comes from the ledger's unique index on the source document
 //    plus item plus lot, so a retry collides instead of double-counting.
@@ -31,7 +32,7 @@ assert.match(
   /create unique index if not exists stock_movements_source_document_key[\s\S]*?source_document_type,\s*source_document_id,\s*inventory_item_id,\s*coalesce\(inventory_lot_id/i,
 )
 
-const post = receivingSql.match(
+const post = partialReceivingSql.match(
   /create or replace function public\.post_goods_receipt[\s\S]*?\$function\$;/i,
 )?.[0]
 assert.ok(post, 'post_goods_receipt must exist')
@@ -58,7 +59,7 @@ assert.ok(
 
 // 5. Receiving the same lot again adds a movement instead of rewriting the lot,
 //    so history stays truthful.
-assert.match(post, /on conflict \(inventory_item_id, lot_number\)/i)
+assert.match(post, /on conflict \(inventory_item_id, lot_number_key\)/i)
 assert.doesNotMatch(post, /delete from public\.(stock_movements|inventory_lots)/i)
 
 // 6. Negative stock stays impossible: the Task 5 guard runs before every insert.
@@ -114,8 +115,7 @@ assert.deepEqual(
 
 // 9. create_goods_receipt itself must reject the same overage server-side —
 //    the client check alone would be decoration without this.
-const receivingCeilingSql = read('_goods_receipt_quantity_ceiling.sql')
-const createGoodsReceipt = receivingCeilingSql.match(
+const createGoodsReceipt = partialReceivingSql.match(
   /create or replace function public\.create_goods_receipt[\s\S]*?\$function\$;/i,
 )?.[0]
 assert.ok(createGoodsReceipt, 'create_goods_receipt must be redefined with the quantity ceiling')
@@ -128,28 +128,48 @@ assert.match(
 )
 assert.match(
   createGoodsReceipt,
-  /join public\.purchase_request_items pr_item[\s\S]*?total_quantity > pr_item\.requested_quantity/i,
+  /join public\.purchase_request_items pr_item[\s\S]*?total_quantity > pr_item\.remaining_quantity/i,
 )
-assert.match(createGoodsReceipt, /received quantity exceeds the purchase request''s requested quantity/i)
+assert.match(createGoodsReceipt, /receipt\.status = 'posted'/i, 'draft creation must reconcile posted history only')
+assert.match(createGoodsReceipt, /set received_quantity = coalesce/i)
+assert.match(createGoodsReceipt, /remaining quantity/i)
 assert.match(createGoodsReceipt, /if parsed_purchase_request_id is not null then/i)
+assert.match(createGoodsReceipt, /locked_request\.status not in \('completed', 'partially_received'\)/i)
 for (const role of ['public', 'anon', 'authenticated']) {
   assert.match(
-    receivingCeilingSql,
+    partialReceivingSql,
     new RegExp(`revoke execute on function public\\.create_goods_receipt[\\s\\S]*?from[\\s\\S]*?${role}`, 'i'),
   )
 }
 assert.match(
-  receivingCeilingSql,
+  partialReceivingSql,
   /grant execute on function public\.create_goods_receipt[\s\S]*?to service_role/i,
 )
 
-const integritySql = read('_receiving_integrity.sql')
-assert.match(integritySql, /create unique index if not exists goods_receipts_active_purchase_request_key/i)
-assert.match(integritySql, /for update/i, 'receipt creation must lock the referenced PR before checking duplicates')
-assert.match(integritySql, /status is distinct from 'completed'/i)
-assert.match(integritySql, /purchase request already has an active goods receipt/i)
-assert.match(integritySql, /left join public\.purchase_request_items pr_item/i)
-assert.match(integritySql, /pr_item\.id is null/i)
-assert.match(integritySql, /purchase request belongs to a different department/i)
+assert.match(partialReceivingSql, /for update/i, 'receipt creation must lock the referenced PR before checking drafts')
+assert.match(partialReceivingSql, /purchase request already has an open draft goods receipt/i)
+assert.match(partialReceivingSql, /left join public\.purchase_request_items pr_item/i)
+assert.match(partialReceivingSql, /pr_item\.id is null/i)
+assert.match(partialReceivingSql, /purchase request belongs to a different department/i)
+
+assert.match(post, /from public\.purchase_requests[\s\S]*?for update/i, 'posting must also lock the PR')
+assert.ok((post.match(/set received_quantity = coalesce/gi) ?? []).length >= 2, 'posting reconciles received quantity before and after posting')
+assert.match(post, /total_quantity > pr_item\.remaining_quantity/i, 'posting re-checks the draft against the latest remainder')
+assert.match(post, /then 'partially_received'[\s\S]*?else 'received'/i)
+
+// Cancelled drafts release the draft lock without altering posted quantities.
+// Posted receipts are deliberately not cancellable.
+const cancelGoodsReceipt = partialReceivingSql.match(
+  /create or replace function public\.cancel_goods_receipt[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(cancelGoodsReceipt, 'cancel_goods_receipt must exist')
+assert.match(cancelGoodsReceipt, /status <> 'draft'/i)
+assert.match(cancelGoodsReceipt, /set status = 'cancelled'/i)
+assert.doesNotMatch(cancelGoodsReceipt, /received_quantity|stock_movements/i)
+
+// Existing rows are migrated from posted history in a later rollout step.
+assert.match(partialReceivingBackfillSql, /where receipt\.status = 'posted'/i)
+assert.match(partialReceivingBackfillSql, /totals\.received_quantity > pr_item\.requested_quantity/i)
+assert.match(partialReceivingBackfillSql, /then 'completed'[\s\S]*?then 'partially_received'[\s\S]*?else 'received'/i)
 
 console.log('receiving transaction contract: ok (static; live post/retry pass pending a database)')

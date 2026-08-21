@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import type { GoodsReceiptStatus } from '@/lib/receipts/schema'
 import type {
   PurchaseMethod,
   PurchaseRequestStatus,
@@ -30,9 +31,23 @@ export interface PurchaseRequestItemRecord {
   /** Item on-hand captured when the PR was submitted. */
   onHandSnapshot: number
   requestedQuantity: number
+  /** Quantity already posted into stock across every receipt for this PR line. */
+  receivedQuantity: number
+  /** Quantity still available to receive; no LOT exists until it is received. */
+  remainingQuantity: number
   unit: string
   unitPrice: number
   lineTotal: number
+}
+
+export interface PurchaseRequestReceiptRecord {
+  id: string
+  poNumber: string | null
+  receivedDate: string
+  status: GoodsReceiptStatus
+  postedAt: string | null
+  cancellationNote: string | null
+  totalQuantity: number
 }
 
 export interface PurchaseRequestRecord {
@@ -65,5 +80,6 @@ export interface PurchaseRequestRecord {
   createdAt: string
   updatedAt: string | null
   items: PurchaseRequestItemRecord[]
+  receiptHistory: PurchaseRequestReceiptRecord[]
   total: number
 }

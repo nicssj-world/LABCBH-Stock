@@ -50,6 +50,8 @@ export const PURCHASE_REQUEST_STATUSES = [
   'draft',
   'pending',
   'completed',
+  'partially_received',
+  'received',
   'cancelled',
   'reversed',
 ] as const
@@ -144,7 +146,9 @@ const TRANSITIONS: Record<PurchaseRequestStatus, PurchaseRequestStatus[]> = {
   pending: ['completed', 'cancelled'],
   // A confirmed PR already moved contracted quantity, so undoing it is an
   // audited reversal rather than a cancellation.
-  completed: ['reversed'],
+  completed: ['partially_received', 'received', 'reversed'],
+  partially_received: ['received'],
+  received: [],
   cancelled: [],
   reversed: [],
 }

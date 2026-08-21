@@ -187,14 +187,17 @@ assert.equal(methodCreatesContract({ kind: 'equipment_lease', contractDraft }), 
 assert.equal(methodCreatesContract({ kind: 'contract', contractId: 4, purchaseSequence: 1 }), false)
 assert.equal(methodCreatesContract({ kind: 'off_plan' }), false)
 
-// Status flow: a PR is drafted, submitted, confirmed, and only then reversed.
+// Status flow: after confirmation, receiving can complete the PR in one post or
+// move through a partial state across several posted receipts.
 assert.deepEqual(
   [...PURCHASE_REQUEST_STATUSES],
-  ['draft', 'pending', 'completed', 'cancelled', 'reversed'],
+  ['draft', 'pending', 'completed', 'partially_received', 'received', 'cancelled', 'reversed'],
 )
 assert.deepEqual(allowedPurchaseRequestTransitions('draft'), ['pending', 'cancelled'])
 assert.deepEqual(allowedPurchaseRequestTransitions('pending'), ['completed', 'cancelled'])
-assert.deepEqual(allowedPurchaseRequestTransitions('completed'), ['reversed'])
+assert.deepEqual(allowedPurchaseRequestTransitions('completed'), ['partially_received', 'received', 'reversed'])
+assert.deepEqual(allowedPurchaseRequestTransitions('partially_received'), ['received'])
+assert.deepEqual(allowedPurchaseRequestTransitions('received'), [])
 assert.deepEqual(allowedPurchaseRequestTransitions('cancelled'), [])
 assert.deepEqual(allowedPurchaseRequestTransitions('reversed'), [])
 

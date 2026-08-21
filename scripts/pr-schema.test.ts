@@ -10,6 +10,16 @@ assert.equal(migrationNames.length, 1, 'exactly one purchase request migration m
 
 const sql = readFileSync(join(migrationsDir, migrationNames[0]), 'utf8')
 const compactSql = sql.replace(/\s+/g, ' ')
+const partialReceivingCompatibilityNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_compatibility.sql'),
+)
+const partialReceivingBackfillNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_backfill.sql'),
+)
+assert.equal(partialReceivingCompatibilityNames.length, 1, 'partial receiving needs one compatibility migration')
+assert.equal(partialReceivingBackfillNames.length, 1, 'partial receiving backfill must be a separate migration')
+const partialReceivingSql = readFileSync(join(migrationsDir, partialReceivingCompatibilityNames[0]), 'utf8')
+const partialReceivingBackfillSql = readFileSync(join(migrationsDir, partialReceivingBackfillNames[0]), 'utf8')
 
 const TABLES = ['purchase_requests', 'purchase_request_items']
 
@@ -65,6 +75,9 @@ for (const method of [
 for (const status of ['draft', 'pending', 'completed', 'cancelled', 'reversed']) {
   assert.match(sql, new RegExp(`'${status}'`))
 }
+for (const status of ['partially_received', 'received']) {
+  assert.match(partialReceivingSql, new RegExp(`'${status}'`), `partial receiving must add ${status}`)
+}
 
 assert.match(sql, /create unique index if not exists purchase_requests_document_number_key/i)
 assert.match(sql, /unique \(fiscal_year, sequence_number\)/i)
@@ -83,6 +96,21 @@ for (const column of [
 }
 assert.match(sql, /requested_quantity numeric\(15,3\) not null check \(requested_quantity > 0\)/i)
 assert.match(sql, /line_total numeric\(17,2\) generated always as/i)
+assert.match(
+  partialReceivingSql,
+  /add column if not exists received_quantity numeric\(15,3\) not null default 0/i,
+  'each PR line must cache the quantity reconciled from posted receipts',
+)
+assert.match(
+  partialReceivingSql,
+  /remaining_quantity numeric\(15,3\)[\s\S]*?generated always as \(requested_quantity - received_quantity\) stored/i,
+  'remaining quantity must be derived from requested minus posted received quantity',
+)
+assert.match(
+  partialReceivingSql,
+  /check \(received_quantity >= 0 and received_quantity <= requested_quantity\)/i,
+  'the persisted quantity must never exceed its PR ceiling',
+)
 assert.match(
   sql,
   /create unique index if not exists purchase_request_items_contract_item_key/i,
@@ -329,6 +357,23 @@ assert.doesNotMatch(
   /\(line ->> 'unitPrice'\)::numeric/i,
   'the insert must not fall back to the raw payload price once resolved_unit_price exists',
 )
+
+assert.match(
+  partialReceivingSql,
+  /create trigger purchase_requests_guard_receipt_reversal[\s\S]*?before update of status/i,
+  'receipt history must guard PR reversal at the database boundary',
+)
+assert.match(partialReceivingSql, /receipt\.status = 'posted'/i)
+assert.match(partialReceivingSql, /receipt\.status = 'draft'/i)
+
+assert.match(
+  partialReceivingBackfillSql,
+  /where receipt\.status = 'posted'/i,
+  'backfill must count posted receipts only',
+)
+assert.match(partialReceivingBackfillSql, /then 'partially_received'/i)
+assert.match(partialReceivingBackfillSql, /else 'received'/i)
+assert.match(partialReceivingBackfillSql, /then 'completed'/i)
 
 const integrityNames = readdirSync(migrationsDir).filter((name) =>
   name.endsWith('_pr_contract_integrity.sql'),

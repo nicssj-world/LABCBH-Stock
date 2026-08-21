@@ -7,6 +7,10 @@ import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import {
+  GOODS_RECEIPT_STATUS_LABELS,
+  GOODS_RECEIPT_STATUS_TONES,
+} from '@/lib/receipts/presenter'
+import {
   PURCHASE_METHOD_LABELS,
   PURCHASE_REQUEST_STATUS_LABELS,
   PURCHASE_REQUEST_STATUS_TONES,
@@ -154,6 +158,8 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอซื้อ</th>
+                <th className="numeric-cell">รับสะสม</th>
+                <th className="numeric-cell">คงเหลือรับเข้า</th>
                 <th className="numeric-cell">คงเหลือในสัญญา</th>
                 <th className="numeric-cell">เบิกเฉลี่ย/เดือน</th>
                 <th className="numeric-cell">ราคาต่อหน่วย</th>
@@ -169,6 +175,8 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     <small>{item.contractDisplayName ?? 'ไม่ตัดยอดสัญญา'}</small>
                   </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
+                  <td className="numeric-cell identifier">{formatQuantity(item.receivedQuantity, item.unit)}</td>
+                  <td className="numeric-cell identifier"><strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong></td>
                   <td className="numeric-cell identifier">
                     {item.contractRemaining === null
                       ? 'ไม่ตัดยอดสัญญา'
@@ -182,6 +190,51 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="bench-panel" aria-labelledby="pr-receipt-history-title">
+        <div className="bench-panel__header">
+          <div>
+            <p className="section-kicker">RECEIVING HISTORY</p>
+            <h2 id="pr-receipt-history-title">ประวัติรับเข้า</h2>
+          </div>
+          <p>{request.receiptHistory.length} ใบ</p>
+        </div>
+        {request.receiptHistory.length === 0 ? (
+          <p className="empty-state">ยังไม่มีใบรับเข้าที่อ้างอิง PR นี้</p>
+        ) : (
+          <div className="detail-items-table">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>วันที่รับ</th>
+                  <th>เลขที่ PO</th>
+                  <th className="numeric-cell">จำนวนในใบรับ</th>
+                  <th>สถานะ</th>
+                  <th><span className="visually-hidden">เปิดใบรับเข้า</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {request.receiptHistory.map((receipt) => (
+                  <tr key={receipt.id}>
+                    <td>{formatThaiDate(receipt.receivedDate)}</td>
+                    <td className="identifier">{receipt.poNumber ?? 'ไม่ระบุ'}</td>
+                    <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
+                    <td>
+                      <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>
+                        {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}
+                      </StatusChip>
+                      {receipt.cancellationNote && <small>หมายเหตุ: {receipt.cancellationNote}</small>}
+                    </td>
+                    <td>
+                      <Link className="text-link" href={`/receipts/${receipt.id}`}>เปิดใบรับเข้า →</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {canReview && (

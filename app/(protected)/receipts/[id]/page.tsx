@@ -5,7 +5,7 @@ import { ReceiptPostPanel } from '@/components/receipts/ReceiptPostPanel'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getGoodsReceipt } from '@/lib/receipts/queries'
 
 interface ReceiptDetailPageProps {
@@ -74,10 +74,20 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
           <div><dt>รวมที่รับเข้า</dt><dd className="identifier">{formatQuantity(receipt.totalQuantity)}</dd></div>
           <div>
             <dt>บันทึกเข้าคลัง</dt>
-            <dd>{receipt.postedAt ? `${formatThaiDate(receipt.postedAt.slice(0, 10))} · ${receipt.postedByName ?? ''}` : 'ยังไม่บันทึก'}</dd>
+            <dd>{receipt.postedAt ? `${formatThaiDateTime(receipt.postedAt)} · ${receipt.postedByName ?? ''}` : 'ยังไม่บันทึก'}</dd>
           </div>
+          {receipt.status === 'cancelled' && (
+            <div>
+              <dt>ยกเลิกใบรับเข้า</dt>
+              <dd>{receipt.cancelledAt ? `${formatThaiDateTime(receipt.cancelledAt)} · ${receipt.cancelledByName ?? ''}` : 'ยกเลิกแล้ว'}</dd>
+            </div>
+          )}
         </dl>
       </header>
+
+      {receipt.status === 'cancelled' && receipt.cancellationNote && (
+        <p className="inline-alert" role="status">หมายเหตุการยกเลิก: {receipt.cancellationNote}</p>
+      )}
 
       {poUploadFailed && (
         <p className="inline-alert" role="alert">

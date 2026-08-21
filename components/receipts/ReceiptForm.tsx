@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
+import { roundQuantity } from '@/lib/inventory/balance'
+import { formatQuantity } from '@/lib/inventory/presenter'
 import {
   ReceiptLinesEditor,
   type CatalogChoice,
@@ -14,7 +16,10 @@ import {
 import { createGoodsReceipt, uploadPoImage } from '@/lib/receipts/actions'
 import { preparePoFile } from '@/lib/receipts/po-file'
 import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
-import type { ReceivablePurchaseRequest } from '@/lib/receipts/types'
+import type {
+  ReceivablePurchaseRequest,
+  ReceivablePurchaseRequestItem,
+} from '@/lib/receipts/types'
 
 export interface ReceiptFormProps {
   catalog: CatalogChoice[]
@@ -55,8 +60,27 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
   const addLine = (item: CatalogChoice) => {
     setLines((current) => [
       ...current,
-      makeDraftLine(item, 1, `${item.inventoryItemId}-${current.length}`),
+      makeDraftLine(item, 1, `${item.inventoryItemId}-${crypto.randomUUID()}`),
     ])
+  }
+
+  const addPurchaseRequestLine = (item: ReceivablePurchaseRequestItem) => {
+    setLines((current) => {
+      const stagedQuantity = current
+        .filter((line) => line.inventoryItemId === item.inventoryItemId)
+        .reduce((sum, line) => sum + line.quantity, 0)
+      const availableQuantity = roundQuantity(item.remainingQuantity - stagedQuantity)
+      if (availableQuantity <= 0) return current
+
+      return [
+        ...current,
+        makeDraftLine(
+          item,
+          availableQuantity,
+          `pr-${purchaseRequestId}-${item.inventoryItemId}-${crypto.randomUUID()}`,
+        ),
+      ]
+    })
   }
 
   const changeLine = (key: string, patch: Partial<ReceiptDraftLine>) => {
@@ -68,9 +92,9 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
   }
 
   // The receiving department is selected first, so a PR can never be linked
-  // across departments. Selecting a PR then pre-fills its PO number and
-  // requested lines; the officer only needs to complete LOT/Expired and adjust
-  // delivered quantities.
+  // across departments. Selecting a PR fills its PO number and shows remaining
+  // balances. A balance becomes a LOT line only when the officer adds what
+  // physically arrived in this delivery.
   const departmentPurchaseRequests = purchaseRequests.filter((request) => request.department === department)
   const selectedRequest = departmentPurchaseRequests.find((request) => request.id === purchaseRequestId)
 
@@ -78,11 +102,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
     const request = departmentPurchaseRequests.find((candidate) => candidate.id === id)
     setPurchaseRequestId(request?.id ?? '')
     setPoNumber(request?.poNumber ?? '')
-    setLines(
-      request?.items.map((item, index) =>
-        makeDraftLine(item, item.quantity, `pr-${request.id}-${item.inventoryItemId}-${index}`),
-      ) ?? [],
-    )
+    setLines([])
   }
 
   const changeDepartment = (nextDepartment: string) => {
@@ -94,7 +114,15 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
     }
   }
   const requestedByItem = Object.fromEntries(
-    (selectedRequest?.items ?? []).map((item) => [item.inventoryItemId, item.quantity]),
+    (selectedRequest?.items ?? []).map((item) => [item.inventoryItemId, item.remainingQuantity]),
+  )
+  const stagedByItem = Object.fromEntries(
+    (selectedRequest?.items ?? []).map((item) => [
+      item.inventoryItemId,
+      roundQuantity(lines
+        .filter((line) => line.inventoryItemId === item.inventoryItemId)
+        .reduce((sum, line) => sum + line.quantity, 0)),
+    ]),
   )
 
   const hasDuplicates = detectDuplicateLots(lines).length > 0
@@ -173,7 +201,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
               <option value="">{department ? 'ไม่อ้างอิงใบ PR' : 'เลือกหน่วยงานก่อน'}</option>
               {departmentPurchaseRequests.map((request) => (
                 <option key={request.id} value={request.id}>
-                  {request.documentNumber} · {request.items.length} รายการ
+                  {request.documentNumber} · {request.status === 'partially_received' ? 'รับบางส่วน' : 'ยืนยันแล้ว'}
                 </option>
               ))}
             </select>
@@ -182,7 +210,7 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
                 ? 'กรุณาเลือกหน่วยงานที่รับของก่อน'
                 : departmentPurchaseRequests.length === 0
                   ? 'หน่วยงานนี้ไม่มีใบ PR ที่รอรับของ'
-                  : 'เลือกใบ PR แล้วระบบจะเติม PO รายการ และจำนวนให้โดยอัตโนมัติ'}
+                  : 'เลือกใบ PR แล้วระบบจะแสดงยอดขอซื้อ รับสะสม และคงเหลือ'}
             </small>
           </label>
           <label className="field-row">
@@ -216,11 +244,65 @@ export function ReceiptForm({ catalog, departments, purchaseRequests, receiverNa
           </div>
           <p>{lines.length} รายการ</p>
         </div>
+        {selectedRequest && (
+          <div className="receipt-pr-balance">
+            <div className="receipt-pr-balance__heading">
+              <div>
+                <strong>ยอดคงเหลือจาก {selectedRequest.documentNumber}</strong>
+                <p>ยอดส่วนนี้ยังไม่ใช่รายการรับเข้า จึงยังไม่ต้องระบุ LOT หรือวันหมดอายุ</p>
+              </div>
+            </div>
+            <div className="detail-items-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>รายการ</th>
+                    <th className="numeric-cell">ขอซื้อ</th>
+                    <th className="numeric-cell">รับสะสม</th>
+                    <th className="numeric-cell">คงเหลือ</th>
+                    <th><span className="visually-hidden">เพิ่มเข้ารับ</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRequest.items.map((item) => {
+                    const stagedQuantity = stagedByItem[item.inventoryItemId] ?? 0
+                    const availableQuantity = roundQuantity(item.remainingQuantity - stagedQuantity)
+                    return (
+                      <tr key={item.inventoryItemId}>
+                        <td>
+                          <strong>{item.name}</strong>
+                          <small>{item.lsCode} · {item.unit}</small>
+                        </td>
+                        <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
+                        <td className="numeric-cell identifier">{formatQuantity(item.receivedQuantity, item.unit)}</td>
+                        <td className="numeric-cell identifier">
+                          <strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong>
+                          {stagedQuantity > 0 && <small>เลือกเข้ารอบนี้ {formatQuantity(stagedQuantity, item.unit)}</small>}
+                        </td>
+                        <td>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={isPending || availableQuantity <= 0}
+                            onClick={() => addPurchaseRequestLine(item)}
+                          >
+                            {availableQuantity > 0 ? 'เพิ่มเข้ารับ' : 'เลือกครบแล้ว'}
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         <ReceiptLinesEditor
           lines={lines}
           catalog={catalog}
           hasPurchaseRequest={Boolean(purchaseRequestId)}
           requestedByItem={requestedByItem}
+          showCatalogPicker={!selectedRequest}
           onAdd={addLine}
           onChange={changeLine}
           onRemove={removeLine}

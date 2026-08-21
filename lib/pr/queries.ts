@@ -2,9 +2,14 @@ import 'server-only'
 
 import { z } from 'zod'
 import { roundQuantity } from '@/lib/inventory/balance'
+import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
 import { createClient } from '@/lib/supabase/server'
 import { PURCHASE_METHODS, PURCHASE_REQUEST_STATUSES } from './schema'
-import type { PurchaseRequestRecord, PurchaseRequestItemRecord } from './types'
+import type {
+  PurchaseRequestRecord,
+  PurchaseRequestItemRecord,
+  PurchaseRequestReceiptRecord,
+} from './types'
 
 const numericSchema = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
 
@@ -16,6 +21,8 @@ const itemRowSchema = z.object({
   monthly_usage_snapshot: numericSchema,
   on_hand_snapshot: numericSchema,
   requested_quantity: numericSchema,
+  received_quantity: numericSchema,
+  remaining_quantity: numericSchema,
   unit: z.string(),
   unit_price: numericSchema,
   line_total: numericSchema,
@@ -95,6 +102,8 @@ const REQUEST_SELECT = `
     monthly_usage_snapshot,
     on_hand_snapshot,
     requested_quantity,
+    received_quantity,
+    remaining_quantity,
     unit,
     unit_price,
     line_total,
@@ -135,6 +144,8 @@ function mapItem(row: z.infer<typeof itemRowSchema>): PurchaseRequestItemRecord 
     monthlyUsageSnapshot: row.monthly_usage_snapshot,
     onHandSnapshot: row.on_hand_snapshot,
     requestedQuantity: row.requested_quantity,
+    receivedQuantity: row.received_quantity,
+    remainingQuantity: row.remaining_quantity,
     unit: row.unit,
     unitPrice: row.unit_price,
     lineTotal: row.line_total,
@@ -177,6 +188,7 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items,
+    receiptHistory: [],
     total: items.reduce((sum, item) => sum + item.lineTotal, 0),
   }
 }
@@ -267,16 +279,63 @@ async function findRequestsByLine(
 
 export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRecord | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('purchase_requests')
-    .select(REQUEST_SELECT)
-    .eq('id', id)
-    .maybeSingle()
+  const [requestResult, receiptsResult] = await Promise.all([
+    supabase
+      .from('purchase_requests')
+      .select(REQUEST_SELECT)
+      .eq('id', id)
+      .maybeSingle(),
+    supabase
+      .from('goods_receipts')
+      .select(`
+        id,
+        po_number,
+        received_date,
+        status,
+        posted_at,
+        cancellation_note,
+        created_at,
+        goods_receipt_items (quantity)
+      `)
+      .eq('purchase_request_id', id)
+      .order('received_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+  ])
 
-  if (error) throw new Error(`อ่านข้อมูลใบ PR ไม่สำเร็จ: ${error.message}`)
-  if (!data) return null
+  if (requestResult.error) throw new Error(`อ่านข้อมูลใบ PR ไม่สำเร็จ: ${requestResult.error.message}`)
+  if (receiptsResult.error) throw new Error(`อ่านประวัติรับเข้าของใบ PR ไม่สำเร็จ: ${receiptsResult.error.message}`)
+  if (!requestResult.data) return null
 
-  return mapRequest(requestRowSchema.parse(data))
+  const receiptHistorySchema = z.object({
+    id: z.string().uuid(),
+    po_number: z.string().nullable(),
+    received_date: z.string(),
+    status: z.enum(GOODS_RECEIPT_STATUSES),
+    posted_at: z.string().nullable(),
+    cancellation_note: z.string().nullable(),
+    created_at: z.string(),
+    goods_receipt_items: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
+  })
+
+  const receiptHistory: PurchaseRequestReceiptRecord[] = receiptHistorySchema
+    .array()
+    .parse(receiptsResult.data ?? [])
+    .map((receipt) => ({
+      id: receipt.id,
+      poNumber: receipt.po_number,
+      receivedDate: receipt.received_date,
+      status: receipt.status,
+      postedAt: receipt.posted_at,
+      cancellationNote: receipt.cancellation_note,
+      totalQuantity: roundQuantity(
+        (receipt.goods_receipt_items ?? []).reduce((sum, item) => sum + item.quantity, 0),
+      ),
+    }))
+
+  return {
+    ...mapRequest(requestRowSchema.parse(requestResult.data)),
+    receiptHistory,
+  }
 }
 
 /** Preview only: create_purchase_request recomputes this sequence under its transaction lock. */

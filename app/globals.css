@@ -2715,6 +2715,12 @@ input[type="number"] {
 .receipt-lines { display: grid; gap: 16px; padding: 8px 22px 20px; }
 .receipt-pr-hint { color: var(--lab-muted); font-size: 11px; font-weight: 500; line-height: 1.4; }
 .receipt-lines__hint { margin: 0; padding: 10px 12px; color: var(--lab-primary); background: var(--lab-primary-soft); border: 1px solid color-mix(in srgb, var(--lab-primary) 24%, var(--lab-border)); border-radius: var(--radius-control); font-size: 12px; font-weight: 600; line-height: 1.45; }
+.receipt-pr-balance { display: grid; gap: 12px; padding: 16px 22px 6px; border-bottom: 1px solid var(--lab-border); }
+.receipt-pr-balance__heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.receipt-pr-balance__heading strong { font-size: 14px; }
+.receipt-pr-balance__heading p { margin: 4px 0 0; color: var(--lab-muted); font-size: 11px; }
+.receipt-pr-balance .data-table td small { display: block; margin-top: 3px; color: var(--lab-muted); font-size: 10px; }
+.receipt-pr-balance .lab-button { white-space: nowrap; }
 
 .receipt-line-list {
   display: grid;
@@ -2984,6 +2990,8 @@ input[type="number"] {
 
 .receipt-post { display: grid; gap: 14px; padding: 8px 22px 20px; justify-items: start; }
 .receipt-post__intro { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.receipt-post__cancel-note { width: min(100%, 620px); }
+.receipt-post__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .requisition-lines { display: grid; gap: 16px; padding: 8px 22px 20px; }
 

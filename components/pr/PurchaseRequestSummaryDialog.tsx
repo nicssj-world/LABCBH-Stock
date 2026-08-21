@@ -142,8 +142,8 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
                         <small>{item.lsCode}</small>
                       </div>
                       <div className="list-summary-dialog__item-value">
-                        <strong>{formatQuantity(item.requestedQuantity, item.unit)}</strong>
-                        <small>จำนวนที่ขอ</small>
+                        <strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong>
+                        <small>คงเหลือจากขอ {formatQuantity(item.requestedQuantity, item.unit)}</small>
                       </div>
                     </li>
                   ))}

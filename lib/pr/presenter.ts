@@ -19,6 +19,8 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, strin
   draft: 'ฉบับร่าง',
   pending: 'รอเจ้าหน้าที่คลังยืนยัน',
   completed: 'ยืนยันแล้ว',
+  partially_received: 'รับบางส่วน',
+  received: 'รับครบ',
   cancelled: 'ยกเลิก',
   reversed: 'กลับรายการแล้ว',
 }
@@ -30,6 +32,8 @@ export const PURCHASE_REQUEST_STATUS_TONES: Record<
   draft: 'neutral',
   pending: 'attention',
   completed: 'success',
+  partially_received: 'attention',
+  received: 'success',
   cancelled: 'danger',
   reversed: 'danger',
 }

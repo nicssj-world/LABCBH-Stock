@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
-import { goodsReceiptInputSchema } from '@/lib/receipts/schema'
+import { cancelGoodsReceiptSchema, goodsReceiptInputSchema } from '@/lib/receipts/schema'
 import {
   PO_IMAGE_BUCKET,
   PO_MAX_FILE_SIZE_BYTES,
@@ -12,7 +12,7 @@ import {
   isPoFileTypeAllowed,
   isPoImagePathAllowed,
 } from '@/lib/receipts/storage'
-import type { GoodsReceiptInput } from '@/lib/receipts/types'
+import type { CancelGoodsReceiptInput, GoodsReceiptInput } from '@/lib/receipts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 
@@ -35,6 +35,7 @@ function revalidateReceipt(id?: string) {
   if (id) revalidatePath(`/receipts/${id}`)
   revalidatePath('/inventory')
   revalidatePath('/dashboard')
+  revalidatePath('/purchase-requests')
 }
 
 export async function createGoodsReceipt(input: GoodsReceiptInput) {
@@ -168,4 +169,21 @@ export async function postGoodsReceipt(receiptId: string) {
   const posted = unwrapMutation('บันทึกรับเข้าคลัง', result)
   revalidateReceipt(parsedId)
   return posted
+}
+
+export async function cancelGoodsReceipt(receiptId: string, input: CancelGoodsReceiptInput) {
+  const actor = await requireActor()
+  assertStockOperator(actor)
+  const parsedId = receiptIdSchema.parse(receiptId)
+  const parsed = cancelGoodsReceiptSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('cancel_goods_receipt', {
+    p_receipt_id: parsedId,
+    p_actor_id: actor.id,
+    p_note: parsed.note,
+  })
+
+  const cancelled = unwrapMutation('ยกเลิกใบรับเข้า', result)
+  revalidateReceipt(parsedId)
+  return cancelled
 }

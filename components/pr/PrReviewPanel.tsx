@@ -57,6 +57,9 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
   const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
+  const hasDraftReceipt = request.receiptHistory.some((receipt) => receipt.status === 'draft')
+  const hasPostedReceipt = request.receiptHistory.some((receipt) => receipt.status === 'posted')
+  const receiptBlocksReversal = hasDraftReceipt || hasPostedReceipt
 
   const run = (operation: () => Promise<unknown>, fallback: string, onSuccess?: () => void) => {
     setError(null)
@@ -260,7 +263,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
                   {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ' : 'แก้ไขเลขที่ใบสั่งซื้อ'}
                 </Button>
               )}
-              {!reversing && (
+              {!reversing && !receiptBlocksReversal && (
                 <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
                   กลับรายการใบ PR
                 </Button>
@@ -272,6 +275,12 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
               </p>
               {request.poNumber && request.updatedByName && (
                 <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อโดย {request.updatedByName}</p>
+              )}
+              {hasDraftReceipt && (
+                <p className="pr-review__intro">ต้องยกเลิกใบรับเข้าฉบับร่างก่อน จึงจะกลับรายการใบ PR ได้</p>
+              )}
+              {hasPostedReceipt && (
+                <p className="pr-review__intro">ไม่สามารถกลับรายการใบ PR ที่มีใบรับเข้า Posted แล้ว</p>
               )}
             </div>
           </div>

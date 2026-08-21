@@ -10,6 +10,11 @@ assert.equal(migrationNames.length, 1, 'exactly one receiving migration must exi
 
 const sql = readFileSync(join(migrationsDir, migrationNames[0]), 'utf8')
 const compactSql = sql.replace(/\s+/g, ' ')
+const partialReceivingNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_compatibility.sql'),
+)
+assert.equal(partialReceivingNames.length, 1, 'exactly one partial-receiving compatibility migration must exist')
+const partialReceivingSql = readFileSync(join(migrationsDir, partialReceivingNames[0]), 'utf8')
 
 const TABLES = ['goods_receipts', 'goods_receipt_items']
 
@@ -54,6 +59,9 @@ for (const column of [
 for (const status of ['draft', 'posted', 'cancelled']) {
   assert.match(sql, new RegExp(`'${status}'`))
 }
+for (const column of ['cancelled_by', 'cancelled_at', 'cancellation_note']) {
+  assert.match(partialReceivingSql, new RegExp(`\\b${column}\\b`), `goods_receipts must carry ${column}`)
+}
 
 // Lines describe the lot that receiving will create.
 for (const column of [
@@ -82,9 +90,16 @@ const receivingIntegritySql = readFileSync(join(migrationsDir, receivingIntegrit
 assert.match(receivingIntegritySql, /goods_receipts_active_purchase_request_key/i)
 assert.match(receivingIntegritySql, /create or replace function public\.create_goods_receipt/i)
 assert.match(receivingIntegritySql, /locked_request.*for update|for update[\s\S]*locked_request/i)
+assert.match(partialReceivingSql, /drop index if exists public\.goods_receipts_active_purchase_request_key/i)
+assert.match(
+  partialReceivingSql,
+  /create unique index if not exists goods_receipts_one_draft_purchase_request_key[\s\S]*?status = 'draft'/i,
+  'one PR may have many posted receipts but only one open draft',
+)
+assert.match(partialReceivingSql, /drop index if exists public\.goods_receipts_po_number_key/i)
 
 // Posting is atomic, idempotent, and service-role only.
-const postFunction = sql.match(
+const postFunction = partialReceivingSql.match(
   /create or replace function public\.post_goods_receipt[\s\S]*?\$function\$;/i,
 )?.[0]
 assert.ok(postFunction, 'post_goods_receipt must exist')
@@ -112,7 +127,21 @@ assert.match(
 assert.match(postFunction, /source_document_id/i)
 assert.match(postFunction, /'goods_receipt'::text|source_document_type/i)
 
-for (const fn of ['post_goods_receipt', 'create_goods_receipt', 'set_goods_receipt_image']) {
+for (const fn of ['post_goods_receipt', 'create_goods_receipt']) {
+  for (const role of ['public', 'anon', 'authenticated']) {
+    assert.match(
+      partialReceivingSql,
+      new RegExp(`revoke execute on function public\\.${fn}\\([^)]*\\) from[^;]*${role}`, 'i'),
+      `${fn} must remain revoked from ${role}`,
+    )
+  }
+  assert.match(
+    partialReceivingSql,
+    new RegExp(`grant execute on function public\\.${fn}\\([^)]*\\) to service_role`, 'i'),
+  )
+}
+
+for (const fn of ['set_goods_receipt_image']) {
   for (const role of ['public', 'anon', 'authenticated']) {
     assert.match(
       sql,
@@ -125,6 +154,22 @@ for (const fn of ['post_goods_receipt', 'create_goods_receipt', 'set_goods_recei
     new RegExp(`grant execute on function public\\.${fn}\\([^)]*\\) to service_role`, 'i'),
   )
 }
+
+const cancelFunction = partialReceivingSql.match(
+  /create or replace function public\.cancel_goods_receipt[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(cancelFunction, 'cancel_goods_receipt must exist')
+assert.match(cancelFunction, /status <> 'draft'/i, 'only drafts may be cancelled')
+assert.match(cancelFunction, /cancelled_by = p_actor_id/i)
+assert.match(cancelFunction, /cancelled_at = now\(\)/i)
+assert.match(cancelFunction, /cancellation_note = nullif/i, 'the optional cancellation note is audited when present')
+for (const role of ['public', 'anon', 'authenticated']) {
+  assert.match(
+    partialReceivingSql,
+    new RegExp(`revoke execute on function public\\.cancel_goods_receipt\\([^)]*\\) from[^;]*${role}`, 'i'),
+  )
+}
+assert.match(partialReceivingSql, /grant execute on function public\.cancel_goods_receipt[\s\S]*?to service_role/i)
 
 // Lots gain their real link back to the receipt line now that it exists.
 assert.match(

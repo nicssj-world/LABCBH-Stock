@@ -42,6 +42,10 @@ export const goodsReceiptImageSchema = z
   .object({ poImagePath: z.string().trim().min(1) })
   .strict()
 
+export const cancelGoodsReceiptSchema = z
+  .object({ note: z.string().trim().max(1000).nullable() })
+  .strict()
+
 /**
  * Lot numbers are written by hand from a label, so `L1`, `l1`, and `l1 ` are the
  * same lot. Returns the duplicated `item::lot` keys.

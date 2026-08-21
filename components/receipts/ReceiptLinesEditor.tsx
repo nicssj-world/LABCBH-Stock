@@ -30,6 +30,7 @@ export interface ReceiptLinesEditorProps {
   catalog: CatalogChoice[]
   hasPurchaseRequest?: boolean
   requestedByItem?: Record<string, number>
+  showCatalogPicker?: boolean
   onAdd: (item: CatalogChoice) => void
   onChange: (key: string, patch: Partial<ReceiptDraftLine>) => void
   onRemove: (key: string) => void
@@ -40,6 +41,7 @@ export function ReceiptLinesEditor({
   catalog,
   hasPurchaseRequest = false,
   requestedByItem = {},
+  showCatalogPicker = true,
   onAdd,
   onChange,
   onRemove,
@@ -50,7 +52,7 @@ export function ReceiptLinesEditor({
 
   // A reagent can be split across lots (several lines share one inventoryItemId);
   // this flags every line in a group whose combined quantity exceeds what the
-  // referenced PR actually requested for that item.
+  // referenced PR still has available for that item.
   const overRequested = new Set(findOverRequestedItems(lines, requestedByItem, hasPurchaseRequest))
   const isOverRequested = (line: ReceiptDraftLine) => overRequested.has(line.inventoryItemId)
   const isUnrequested = (line: ReceiptDraftLine) =>
@@ -58,20 +60,22 @@ export function ReceiptLinesEditor({
 
   return (
     <div className="receipt-lines">
-      <CatalogItemCombobox
-        label="เพิ่มน้ำยาเข้าใบรับ"
-        placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
-        options={catalog.map((item) => ({
-          id: item.inventoryItemId,
-          label: `${item.lsCode} · ${item.name}`,
-          hint: `หน่วย ${item.unit} · หลังเลือกให้กรอกเลขล็อตและจำนวน`,
-          searchText: `${item.lsCode} ${item.name}`,
-        }))}
-        onSelect={(id) => {
-          const choice = catalog.find((item) => item.inventoryItemId === id)
-          if (choice) onAdd(choice)
-        }}
-      />
+      {showCatalogPicker && (
+        <CatalogItemCombobox
+          label="เพิ่มน้ำยาเข้าใบรับ"
+          placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
+          options={catalog.map((item) => ({
+            id: item.inventoryItemId,
+            label: `${item.lsCode} · ${item.name}`,
+            hint: `หน่วย ${item.unit} · หลังเลือกให้กรอกเลขล็อตและจำนวน`,
+            searchText: `${item.lsCode} ${item.name}`,
+          }))}
+          onSelect={(id) => {
+            const choice = catalog.find((item) => item.inventoryItemId === id)
+            if (choice) onAdd(choice)
+          }}
+        />
+      )}
 
       {duplicates.size > 0 && (
         <p className="inline-alert" role="status">
@@ -85,7 +89,7 @@ export function ReceiptLinesEditor({
         <>
           {hasPurchaseRequest && (
             <p className="receipt-lines__hint" role="status">
-              รายการและจำนวนจากใบ PR ถูกเติมให้อัตโนมัติแล้ว กรุณากรอก LOT และวันหมดอายุของแต่ละรายการ
+              ด้านล่างคือรายการที่เลือกมารับจริงในรอบนี้เท่านั้น กรุณากรอก LOT และจำนวนที่ได้รับ
             </p>
           )}
           <ul className="receipt-line-list">
@@ -140,7 +144,7 @@ export function ReceiptLinesEditor({
                       </small>
                     ) : isOverRequested(line) && (
                       <small className="field-error">
-                        เกินจำนวนที่ขอซื้อ (สั่ง {formatQuantity(requestedByItem[line.inventoryItemId], line.unit)})
+                        เกินยอดคงเหลือที่รับได้ ({formatQuantity(requestedByItem[line.inventoryItemId], line.unit)})
                       </small>
                     )}
                   </label>
