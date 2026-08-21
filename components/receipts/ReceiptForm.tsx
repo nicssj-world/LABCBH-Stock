@@ -26,14 +26,24 @@ export interface ReceiptFormProps {
   departments: readonly string[]
   purchaseRequests: ReceivablePurchaseRequest[]
   receiverName: string
+  initialPurchaseRequestId?: string
+  initialDepartment?: string
 }
 
-export function ReceiptForm({ catalog, departments, purchaseRequests, receiverName: initialReceiver }: ReceiptFormProps) {
+export function ReceiptForm({
+  catalog,
+  departments,
+  purchaseRequests,
+  receiverName: initialReceiver,
+  initialPurchaseRequestId,
+  initialDepartment,
+}: ReceiptFormProps) {
   const router = useRouter()
-  const [purchaseRequestId, setPurchaseRequestId] = useState('')
-  const [poNumber, setPoNumber] = useState('')
+  const initialRequest = purchaseRequests.find((request) => request.id === initialPurchaseRequestId)
+  const [purchaseRequestId, setPurchaseRequestId] = useState(initialRequest?.id ?? '')
+  const [poNumber, setPoNumber] = useState(initialRequest?.poNumber ?? '')
   const [poFile, setPoFile] = useState<File | null>(null)
-  const [department, setDepartment] = useState('')
+  const [department, setDepartment] = useState(initialDepartment ?? initialRequest?.department ?? '')
   const [receivedDate, setReceivedDate] = useState(() => bangkokIsoDate())
   const [receiverName, setReceiverName] = useState(initialReceiver)
   const [note, setNote] = useState('')

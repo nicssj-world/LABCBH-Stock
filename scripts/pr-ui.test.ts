@@ -31,6 +31,8 @@ assert.match(formOptions, /contractType !== 'equipment_lease'/, 'a lease has no 
 const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</)
 assert.match(detailPage, /PrReviewPanel/)
+assert.match(detailPage, /request\.status === 'partially_received'/, 'partial PRs must expose the continue-receiving action')
+assert.match(detailPage, /purchaseRequestId=\$\{encodeURIComponent\(request\.id\)\}/, 'continue receiving must deep-link the selected PR')
 assert.match(detailPage, /PurchaseRequestLifecycleControls/, 'pending PRs expose edit and cancel controls')
 assert.match(detailPage, /canManagePurchaseRequest\(actor, request\.requesterId\) && request\.status === 'pending'/)
 assert.match(detailPage, /canOperateStock/, 'only stock officers and admins confirm')
@@ -167,7 +169,8 @@ assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*bac
 assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
 
 assert.match(styles, /\.pr-register-table\s*\{[\s\S]*?table-layout:\s*fixed/, 'PR register columns must stay aligned even when row content widths differ')
-assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*15%/, 'the PR status column needs a stable width for different chip labels')
+assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*13%/, 'the PR status column needs a stable width for different chip labels')
+assert.match(styles, /\.pr-register-table__receiving\s*\{[^}]*width:/, 'the PR register must reserve a stable receiving-summary column')
 
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
@@ -317,6 +320,11 @@ assert.match(lifecycleControls, /cancelPurchaseRequest/)
 assert.match(lifecycleControls, /ยืนยันการลบใบ PR/)
 assert.match(lifecycleControls, /เก็บประวัติไว้/, 'deleting a PR keeps an audit trail')
 assert.match(lifecycleControls, /router\.push\('\/purchase-requests'\)/)
+
+const shortClose = read('components/pr/PurchaseRequestRemainingClosePanel.tsx')
+assert.match(shortClose, /closePurchaseRequestRemaining/, 'short close must use a server-side audited action')
+assert.match(shortClose, /hasDraftReceipt/, 'an open draft must block short close until it is cancelled')
+assert.match(shortClose, /closedShortByName|closedShortAt|closedShortReason/, 'short close must render actor, time, and reason audit fields')
 
 const shell = read('components/ui/AppShell.tsx')
 assert.match(shell, /\/purchase-requests/)

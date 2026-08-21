@@ -16,6 +16,7 @@ import {
   purchaseMethodSchema,
   purchaseRequestInputSchema,
 } from '../lib/pr/schema'
+import { PURCHASE_REQUEST_STATUS_TONES } from '../lib/pr/presenter'
 
 const actor = (id: string, appRoles: LabStockRole[]): Actor => ({
   id,
@@ -191,15 +192,21 @@ assert.equal(methodCreatesContract({ kind: 'off_plan' }), false)
 // move through a partial state across several posted receipts.
 assert.deepEqual(
   [...PURCHASE_REQUEST_STATUSES],
-  ['draft', 'pending', 'completed', 'partially_received', 'received', 'cancelled', 'reversed'],
+  ['draft', 'pending', 'completed', 'partially_received', 'received', 'closed_short', 'cancelled', 'reversed'],
 )
 assert.deepEqual(allowedPurchaseRequestTransitions('draft'), ['pending', 'cancelled'])
 assert.deepEqual(allowedPurchaseRequestTransitions('pending'), ['completed', 'cancelled'])
 assert.deepEqual(allowedPurchaseRequestTransitions('completed'), ['partially_received', 'received', 'reversed'])
-assert.deepEqual(allowedPurchaseRequestTransitions('partially_received'), ['received'])
+assert.deepEqual(allowedPurchaseRequestTransitions('partially_received'), ['received', 'closed_short'])
 assert.deepEqual(allowedPurchaseRequestTransitions('received'), [])
+assert.deepEqual(allowedPurchaseRequestTransitions('closed_short'), [])
 assert.deepEqual(allowedPurchaseRequestTransitions('cancelled'), [])
 assert.deepEqual(allowedPurchaseRequestTransitions('reversed'), [])
+
+assert.equal(PURCHASE_REQUEST_STATUS_TONES.completed, 'info', 'a confirmed PR uses the informational blue tone')
+assert.equal(PURCHASE_REQUEST_STATUS_TONES.partially_received, 'attention', 'a partially received PR uses the attention tone')
+assert.equal(PURCHASE_REQUEST_STATUS_TONES.received, 'success', 'a fully received PR uses the success tone')
+assert.equal(PURCHASE_REQUEST_STATUS_TONES.closed_short, 'attention', 'a short-closed PR uses the attention tone')
 
 // Line totals round to satang, matching numeric(17,2) in the ledger.
 assert.equal(calculateLineTotal(3, 12.5), 37.5)

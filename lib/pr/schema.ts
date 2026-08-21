@@ -52,6 +52,7 @@ export const PURCHASE_REQUEST_STATUSES = [
   'completed',
   'partially_received',
   'received',
+  'closed_short',
   'cancelled',
   'reversed',
 ] as const
@@ -147,8 +148,9 @@ const TRANSITIONS: Record<PurchaseRequestStatus, PurchaseRequestStatus[]> = {
   // A confirmed PR already moved contracted quantity, so undoing it is an
   // audited reversal rather than a cancellation.
   completed: ['partially_received', 'received', 'reversed'],
-  partially_received: ['received'],
+  partially_received: ['received', 'closed_short'],
   received: [],
+  closed_short: [],
   cancelled: [],
   reversed: [],
 }
@@ -311,4 +313,14 @@ export const ephisPrNumberSchema = z
 
 export const purchaseRequestReversalSchema = z
   .object({ reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลในการกลับรายการ') })
+  .strict()
+
+export const purchaseRequestShortCloseSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1, 'กรุณาระบุเหตุผลในการปิดยอดคงเหลือ')
+      .max(1000, 'เหตุผลต้องไม่เกิน 1,000 ตัวอักษร'),
+  })
   .strict()

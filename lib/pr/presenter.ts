@@ -1,4 +1,5 @@
 import type { PurchaseMethodKind, PurchasePurpose, PurchaseRequestStatus } from './schema'
+import type { PurchaseRequestItemRecord } from './types'
 
 export const PURCHASE_PURPOSE_LABELS: Record<PurchasePurpose, string> = {
   purchase_order: 'ทำใบ PR เพื่อสั่งซื้อ (ออก PO)',
@@ -21,21 +22,44 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, strin
   completed: 'ยืนยันแล้ว',
   partially_received: 'รับบางส่วน',
   received: 'รับครบ',
+  closed_short: 'ปิดยอดไม่ครบ',
   cancelled: 'ยกเลิก',
   reversed: 'กลับรายการแล้ว',
 }
 
 export const PURCHASE_REQUEST_STATUS_TONES: Record<
   PurchaseRequestStatus,
-  'neutral' | 'attention' | 'success' | 'danger'
+  'neutral' | 'info' | 'attention' | 'success' | 'danger'
 > = {
   draft: 'neutral',
   pending: 'attention',
-  completed: 'success',
+  completed: 'info',
   partially_received: 'attention',
   received: 'success',
+  closed_short: 'attention',
   cancelled: 'danger',
   reversed: 'danger',
+}
+
+export interface PurchaseRequestReceivingSummary {
+  lineCount: number
+  receivedLineCount: number
+  remainingLineCount: number
+}
+
+/**
+ * A register can contain different units (ขวด, กล่อง, ชุด) in one PR. The
+ * list therefore summarizes receiving by line, while the detail page remains
+ * the source for exact quantities and units.
+ */
+export function summarizePurchaseRequestReceiving(
+  items: readonly Pick<PurchaseRequestItemRecord, 'receivedQuantity' | 'remainingQuantity'>[],
+): PurchaseRequestReceivingSummary {
+  return {
+    lineCount: items.length,
+    receivedLineCount: items.filter((item) => item.receivedQuantity > 0).length,
+    remainingLineCount: items.filter((item) => item.remainingQuantity > 0).length,
+  }
 }
 
 /**

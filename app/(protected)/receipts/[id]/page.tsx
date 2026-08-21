@@ -95,6 +95,12 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
         </p>
       )}
 
+      {receipt.status === 'posted' && (
+        <p className="inline-alert inline-alert--info" role="note">
+          ใบรับเข้านี้ Posted แล้วและแก้ไขประวัติเดิมไม่ได้ หากยอดรับไม่ตรง ให้เปิดรายการน้ำยาจากตารางด้านล่างเพื่อทำ “ปรับยอด/รับคืน” พร้อมเหตุผลใน ledger
+        </p>
+      )}
+
       <div className="inventory-detail-grid">
         <section className="bench-panel" aria-labelledby="receipt-detail-lines-title">
           <div className="bench-panel__header">
@@ -119,7 +125,11 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
                 {receipt.items.map((item) => (
                   <tr key={item.id}>
                     <td className="identifier">{item.lsCode}</td>
-                    <td>{item.name}</td>
+                    <td>
+                      <Link className="text-link" href={`/inventory/${item.inventoryItemId}`}>
+                        {item.name}
+                      </Link>
+                    </td>
                     <td className="identifier">{item.lotNumber}</td>
                     <td>{formatThaiDate(item.expiryDate)}</td>
                     <td className="numeric-cell identifier">{formatQuantity(item.quantity, item.unit)}</td>

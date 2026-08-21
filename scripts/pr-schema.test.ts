@@ -16,9 +16,29 @@ const partialReceivingCompatibilityNames = readdirSync(migrationsDir).filter((na
 const partialReceivingBackfillNames = readdirSync(migrationsDir).filter((name) =>
   name.endsWith('_partial_receiving_backfill.sql'),
 )
+const partialReceivingAcknowledgementNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_acknowledgement.sql'),
+)
+const partialReceivingTriggerScopeNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_trigger_scope.sql'),
+)
+const partialReceivingShortCloseNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_partial_receiving_short_close.sql'),
+)
 assert.equal(partialReceivingCompatibilityNames.length, 1, 'partial receiving needs one compatibility migration')
+assert.equal(partialReceivingAcknowledgementNames.length, 1, 'partial receiving must extend the PR acknowledgement invariant')
+assert.equal(partialReceivingTriggerScopeNames.length, 1, 'partial receiving must scope unrelated PR item updates out of contract validation')
 assert.equal(partialReceivingBackfillNames.length, 1, 'partial receiving backfill must be a separate migration')
+assert.equal(partialReceivingShortCloseNames.length, 1, 'short close must be a separate audited migration')
+assert.ok(
+  partialReceivingCompatibilityNames[0] < partialReceivingAcknowledgementNames[0]
+    && partialReceivingAcknowledgementNames[0] < partialReceivingTriggerScopeNames[0]
+    && partialReceivingTriggerScopeNames[0] < partialReceivingBackfillNames[0],
+  'compatibility fixes must run before partial-receiving backfill',
+)
 const partialReceivingSql = readFileSync(join(migrationsDir, partialReceivingCompatibilityNames[0]), 'utf8')
+const partialReceivingAcknowledgementSql = readFileSync(join(migrationsDir, partialReceivingAcknowledgementNames[0]), 'utf8')
+const partialReceivingTriggerScopeSql = readFileSync(join(migrationsDir, partialReceivingTriggerScopeNames[0]), 'utf8')
 const partialReceivingBackfillSql = readFileSync(join(migrationsDir, partialReceivingBackfillNames[0]), 'utf8')
 
 const TABLES = ['purchase_requests', 'purchase_request_items']
@@ -78,6 +98,31 @@ for (const status of ['draft', 'pending', 'completed', 'cancelled', 'reversed'])
 for (const status of ['partially_received', 'received']) {
   assert.match(partialReceivingSql, new RegExp(`'${status}'`), `partial receiving must add ${status}`)
 }
+assert.match(
+  partialReceivingAcknowledgementSql,
+  /status in \('completed', 'partially_received', 'received', 'reversed'\)/i,
+  'confirmed PRs must retain valid acknowledgement fields throughout receiving',
+)
+assert.match(
+  partialReceivingAcknowledgementSql,
+  /\(acknowledged_by is null\) = \(acknowledged_at is null\)/i,
+  'the acknowledgement actor and timestamp must remain paired',
+)
+assert.match(
+  partialReceivingTriggerScopeSql,
+  /before insert or update of purchase_request_id, inventory_item_id, contract_item_id\s+on public\.purchase_request_items/i,
+  'received-quantity reconciliation must not rerun unrelated contract-reference validation',
+)
+assert.doesNotMatch(
+  partialReceivingTriggerScopeSql,
+  /before insert or update\s+on public\.purchase_request_items/i,
+  'the replacement trigger must not fire on every PR item update',
+)
+
+const partialReceivingShortCloseSql = readFileSync(join(migrationsDir, partialReceivingShortCloseNames[0]), 'utf8')
+assert.match(partialReceivingShortCloseSql, /close_purchase_request_remaining/i)
+assert.match(partialReceivingShortCloseSql, /closed_short_reason/i)
+assert.match(partialReceivingShortCloseSql, /cancel the open draft goods receipt before closing remaining quantity/i)
 
 assert.match(sql, /create unique index if not exists purchase_requests_document_number_key/i)
 assert.match(sql, /unique \(fiscal_year, sequence_number\)/i)

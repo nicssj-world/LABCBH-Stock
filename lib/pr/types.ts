@@ -8,6 +8,7 @@ import type {
   purchaseRequestInputSchema,
   purchaseRequestLineSchema,
   purchaseRequestReversalSchema,
+  purchaseRequestShortCloseSchema,
 } from './schema'
 
 export type PurchaseRequestInput = z.infer<typeof purchaseRequestInputSchema>
@@ -15,6 +16,7 @@ export type PurchaseRequestLineInput = z.infer<typeof purchaseRequestLineSchema>
 export type PurchaseOrderNumberInput = z.infer<typeof purchaseOrderNumberSchema>
 export type EphisPrNumberInput = z.infer<typeof ephisPrNumberSchema>
 export type PurchaseRequestReversalInput = z.infer<typeof purchaseRequestReversalSchema>
+export type PurchaseRequestShortCloseInput = z.infer<typeof purchaseRequestShortCloseSchema>
 
 export interface PurchaseRequestItemRecord {
   id: string
@@ -74,6 +76,10 @@ export interface PurchaseRequestRecord {
   reversedByName: string | null
   reversedAt: string | null
   reversalReason: string | null
+  closedShortBy: string | null
+  closedShortByName: string | null
+  closedShortAt: string | null
+  closedShortReason: string | null
   /** Last mutation actor — only meaningfully distinct from acknowledgedBy/reversedBy while the PR sits completed and its PO number gets edited. */
   updatedByName: string | null
   note: string | null

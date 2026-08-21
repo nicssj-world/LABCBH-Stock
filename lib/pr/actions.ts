@@ -13,6 +13,7 @@ import {
   purchaseOrderNumberSchema,
   purchaseRequestInputSchema,
   purchaseRequestReversalSchema,
+  purchaseRequestShortCloseSchema,
 } from '@/lib/pr/schema'
 import { isoDateSchema } from '@/lib/validation/date'
 import type {
@@ -20,6 +21,7 @@ import type {
   PurchaseOrderNumberInput,
   PurchaseRequestInput,
   PurchaseRequestReversalInput,
+  PurchaseRequestShortCloseInput,
 } from '@/lib/pr/types'
 import { getPurchaseRequest } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -168,6 +170,26 @@ export async function reversePurchaseRequest(
   const reversed = unwrapMutation('กลับรายการใบ PR', result)
   revalidatePurchaseRequest(parsedId)
   return reversed
+}
+
+export async function closePurchaseRequestRemaining(
+  purchaseRequestId: string,
+  input: PurchaseRequestShortCloseInput,
+) {
+  const actor = await requireActor()
+  assertStockOperator(actor)
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const parsed = purchaseRequestShortCloseSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('close_purchase_request_remaining', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+    p_reason: parsed.reason,
+  })
+
+  const closed = unwrapMutation('ปิดยอดคงเหลือของใบ PR', result)
+  revalidatePurchaseRequest(parsedId)
+  return closed
 }
 
 export async function setPurchaseOrderNumber(

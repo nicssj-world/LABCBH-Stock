@@ -1507,10 +1507,31 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .pr-register-table__method { width: 12%; }
 .pr-register-table__requester { width: 18%; }
 .pr-register-table__value { width: 11%; }
-.pr-register-table__status { width: 15%; }
+.pr-register-table__receiving { width: 12%; }
+.pr-register-table__status { width: 13%; }
 .pr-register-table__action { width: 8%; }
-.pr-register-table td:nth-child(7),
+.pr-register-table td:nth-child(8),
 .pr-register-table td:last-child { white-space: nowrap; }
+.pr-receiving-summary { display: grid; gap: 2px; line-height: 1.25; }
+.pr-receiving-summary strong { font-variant-numeric: tabular-nums; }
+.pr-receiving-summary small { color: var(--lab-muted); font-size: 10px; white-space: nowrap; }
+.pr-receiving-summary__empty { color: var(--lab-muted); }
+.pr-receiving-summary--card { color: var(--lab-ink); font-size: 12px; }
+.status-filter-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 11px;
+  color: var(--lab-amber);
+  background: var(--lab-amber-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-amber) 32%, var(--lab-border));
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.status-filter-link:hover,
+.status-filter-link[aria-current="page"] { color: var(--lab-ink); border-color: var(--lab-amber); }
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
 .pr-line-cell--center { text-align: center !important; font-variant-numeric: tabular-nums; }
 
@@ -3168,6 +3189,13 @@ input[type="number"] {
 .pr-review__meta { display: grid; gap: 2px; text-align: right; }
 .pr-review__meta .pr-review__intro { font-size: 11px; }
 .pr-review__closed { display: grid; gap: 4px; }
+.pr-short-close { margin-top: 4px; }
+.pr-short-close__remaining { display: grid; gap: 6px; }
+.pr-short-close__remaining > span { color: var(--lab-muted); font-size: 12px; }
+.pr-short-close__remaining > strong { font-size: 16px; }
+.pr-short-close__remaining ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.pr-short-close__remaining li { display: flex; justify-content: space-between; gap: 16px; padding-top: 5px; border-top: 1px solid var(--lab-border); font-size: 12px; }
+.pr-short-close__remaining li strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The edit/delete pair that sits in a document heading. Shared by the PR and
    requisition detail pages — same widget, same slot, one rule. */
 .pr-lifecycle-controls,

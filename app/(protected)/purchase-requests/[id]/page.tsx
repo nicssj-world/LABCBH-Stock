@@ -84,6 +84,14 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 documentNumber={request.documentNumber}
               />
             )}
+            {canReview && request.status === 'partially_received' && (
+              <Link
+                className="lab-link-button lab-link-button--primary"
+                href={`/receipts/new?purchaseRequestId=${encodeURIComponent(request.id)}&department=${encodeURIComponent(request.department)}`}
+              >
+                รับเข้าต่อ
+              </Link>
+            )}
           </div>
         </div>
 

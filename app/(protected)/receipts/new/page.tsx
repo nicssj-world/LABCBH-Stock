@@ -7,9 +7,19 @@ import { listInventoryCatalog } from '@/lib/inventory/queries'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { listReceivablePurchaseRequests } from '@/lib/receipts/queries'
 
-export default async function NewReceiptPage() {
+interface NewReceiptPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+
+export default async function NewReceiptPage({ searchParams }: NewReceiptPageProps) {
   const actor = await requireActor()
   if (!canOperateStock(actor)) redirect('/receipts')
+
+  const params = await searchParams
+  const initialPurchaseRequestId = first(params.purchaseRequestId)?.trim() || undefined
+  const initialDepartment = first(params.department)?.trim() || undefined
 
   const [inventoryItems, purchaseRequests] = await Promise.all([
     listInventoryCatalog(),
@@ -37,6 +47,8 @@ export default async function NewReceiptPage() {
         departments={DEPARTMENTS}
         purchaseRequests={purchaseRequests}
         receiverName={actor.name ?? ''}
+        initialPurchaseRequestId={initialPurchaseRequestId}
+        initialDepartment={initialDepartment}
       />
     </div>
   )

@@ -37,6 +37,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   }
 
   const pendingCount = requests.filter((request) => request.status === 'pending').length
+  const partialCount = requests.filter((request) => request.status === 'partially_received').length
   const paginatedRequests = paginate(requests, page, LIST_PAGE_SIZE)
   const buildPageHref = (nextPage: number) => {
     const nextParams = new URLSearchParams()
@@ -47,6 +48,11 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
     const query = nextParams.toString()
     return query ? `/purchase-requests?${query}` : '/purchase-requests'
   }
+  const partialFilterParams = new URLSearchParams()
+  if (search) partialFilterParams.set('search', search)
+  if (department) partialFilterParams.set('department', department)
+  partialFilterParams.set('status', 'partially_received')
+  const partialFilterHref = `/purchase-requests?${partialFilterParams.toString()}`
 
   return (
     <div className="route-stack">
@@ -60,6 +66,13 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
           <StatusChip tone={pendingCount ? 'attention' : 'success'}>
             {pendingCount ? `${pendingCount} ใบรอยืนยัน` : 'ไม่มีใบรอยืนยัน'}
           </StatusChip>
+          <Link
+            className="status-filter-link"
+            href={partialFilterHref}
+            aria-current={status === 'partially_received' ? 'page' : undefined}
+          >
+            รับบางส่วน {partialCount} ใบ
+          </Link>
           {canRequestPurchase(actor) && (
             <Link className="lab-link-button lab-link-button--primary" href="/purchase-requests/new">
               สร้างใบ PR

@@ -3,6 +3,10 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import {
+  PurchaseRequestRemainingClosePanel,
+  PurchaseRequestShortClosedAudit,
+} from '@/components/pr/PurchaseRequestRemainingClosePanel'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
@@ -316,6 +320,14 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
             </div>
           )}
         </>
+      )}
+
+      {request.status === 'partially_received' && (
+        <PurchaseRequestRemainingClosePanel request={request} />
+      )}
+
+      {request.status === 'closed_short' && (
+        <PurchaseRequestShortClosedAudit request={request} />
       )}
 
       {request.status === 'reversed' && (

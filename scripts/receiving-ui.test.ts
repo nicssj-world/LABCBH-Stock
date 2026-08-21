@@ -48,6 +48,8 @@ assert.match(detailPage, /params:\s*Promise</)
 assert.match(detailPage, /PoImageUploader/)
 assert.match(detailPage, /ReceiptLinesEditor|ReceiptPostPanel/)
 assert.match(detailPage, /formatThaiDateTime\(receipt\.cancelledAt\)/, 'the cancellation audit must show its time, not just its date')
+assert.match(detailPage, /inline-alert--info/, 'posted receipts must explain the immutable correction path')
+assert.match(detailPage, /inventory\/\$\{item\.inventoryItemId\}/, 'posted receipt lines must link to the audited inventory adjustment path')
 
 const form = read('components/receipts/ReceiptForm.tsx')
 assert.match(form, /^['"]use client['"]/m)
@@ -99,7 +101,9 @@ assert.match(linesEditor, /ไม่มีอยู่ในใบ PR/, 'a linke
 
 // The "ใบ PR ที่เกี่ยวข้อง" picker only offers PRs from the department
 // currently receiving, so the list stays short as open PRs accumulate.
-assert.match(form, /const \[department, setDepartment\] = useState\(''\)/, 'the receiving department must be chosen explicitly')
+assert.match(form, /const \[department, setDepartment\] = useState\(initialDepartment \?\? initialRequest\?\.department \?\? ''\)/, 'the receiving department must be chosen explicitly or prefilled from a PR deep link')
+assert.match(form, /initialPurchaseRequestId/, 'the receipt form accepts a PR deep-link selection')
+assert.match(newPage, /searchParams/, 'the new-receipt page reads the PR deep-link query')
 assert.match(form, /disabled=\{!department \|\| isPending\}/, 'the PR picker must wait for a department')
 assert.ok(
   form.indexOf('หน่วยงานที่รับของ') < form.indexOf('ใบ PR ที่เกี่ยวข้อง'),
