@@ -6,6 +6,7 @@ const baseActor: Actor = {
   id: 'profile-1',
   ephisId: '10000',
   name: 'ผู้ใช้งานทดสอบ',
+  department: null,
   profileRole: 'Staff',
   appRoles: [],
 }

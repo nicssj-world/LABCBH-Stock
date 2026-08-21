@@ -11,6 +11,13 @@ export default async function NewRequisitionPage() {
   if (!canRequestPurchase(actor)) redirect('/requisitions')
 
   const inventoryItems = await listInventoryItems({})
+  const requesterDepartment = actor.department?.trim() || null
+  // Keep an out-of-band profile department visible and selected as well. This
+  // matters for shared/staging profiles while still letting the picker use the
+  // exact department value stored on the profile.
+  const departments = requesterDepartment && !(DEPARTMENTS as readonly string[]).includes(requesterDepartment)
+    ? [requesterDepartment, ...DEPARTMENTS]
+    : DEPARTMENTS
 
   return (
     <div className="route-stack">
@@ -34,7 +41,8 @@ export default async function NewRequisitionPage() {
           minimumStock: item.minimumStock,
           responsibleDepartment: item.responsibleDepartment,
         }))}
-        departments={DEPARTMENTS}
+        departments={departments}
+        requesterDepartment={requesterDepartment}
         requesterName={actor.name ?? ''}
       />
     </div>

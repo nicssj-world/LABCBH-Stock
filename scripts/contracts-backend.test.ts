@@ -37,6 +37,7 @@ async function main() {
     id: '00000000-0000-4000-8000-000000000001',
     ephisId: '10001',
     name: 'Test User',
+    department: null,
     profileRole: null,
     appRoles: roles,
   })

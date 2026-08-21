@@ -8,6 +8,7 @@ import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { isProjectedBelowMinimum } from '@/lib/inventory/balance'
+import { getRequisitionItemDepartments } from '@/lib/organization/departments'
 import { MINIMUM_STOCK_WARNING } from '@/lib/pr/presenter'
 import { OUT_OF_STOCK_WARNING } from '@/lib/requisitions/presenter'
 import { createRequisition, updateRequisition } from '@/lib/requisitions/actions'
@@ -54,19 +55,24 @@ interface DraftLine {
 export function RequisitionForm({
   catalog,
   departments,
+  requesterDepartment,
   requesterName: initialRequester,
   mode = 'create',
   initialValues,
 }: {
   catalog: RequisitionCatalogItem[]
   departments: readonly string[]
+  requesterDepartment?: string | null
   requesterName: string
   mode?: 'create' | 'edit'
   initialValues?: RequisitionFormInitialValues
 }) {
   const router = useRouter()
   const isEditing = mode === 'edit' && initialValues !== undefined
-  const [department, setDepartment] = useState(initialValues?.department ?? departments[0] ?? '')
+  const autoDepartment = requesterDepartment?.trim() ?? ''
+  const [department, setDepartment] = useState(
+    initialValues?.department ?? (autoDepartment || departments[0] || ''),
+  )
   const [requesterName, setRequesterName] = useState(initialValues?.requesterName ?? initialRequester)
   const [desiredDate, setDesiredDate] = useState(() => initialValues?.desiredDate ?? bangkokIsoDate())
   const [note, setNote] = useState(initialValues?.note ?? '')
@@ -97,18 +103,13 @@ export function RequisitionForm({
   // sitting at zero on hand would create a line no FIFO lot could fill.
   const inStockCatalog = catalog.filter((item) => item.onHand > 0)
 
-  // Narrows the item picker to what this department is responsible for, so the
-  // list stays short as the catalog grows. Items with no department assigned
-  // belong to no one in particular, so every department can still reach them.
-  // If nothing matches — a department whose items were never tagged, or a
-  // legacy responsibleDepartment value that doesn't match this department's
-  // exact name — fall back to every in-stock item rather than leaving the picker
-  // silently empty.
-  const scopedCatalog = inStockCatalog.filter(
-    (item) => item.responsibleDepartment === null || item.responsibleDepartment === department,
+  // The selected requesting department can draw from its work unit and the two
+  // shared stock units. Do not fall back to the whole catalogue: an unassigned
+  // or unrelated item must stay out of the requisition picker.
+  const eligibleDepartments = getRequisitionItemDepartments(department)
+  const departmentCatalog = inStockCatalog.filter(
+    (item) => item.responsibleDepartment !== null && eligibleDepartments.includes(item.responsibleDepartment),
   )
-  const departmentCatalog = scopedCatalog.length > 0 ? scopedCatalog : inStockCatalog
-  const showingUnfilteredCatalog = scopedCatalog.length === 0 && inStockCatalog.length > 0
 
   const addLine = (item: RequisitionCatalogItem) => {
     setLines((current) => [
@@ -183,7 +184,11 @@ export function RequisitionForm({
         <div className="form-grid">
           <label className="field-row">
             หน่วยงานผู้ขอเบิก
-            <select required value={department} onChange={(event) => setDepartment(event.target.value)}>
+            <select
+              required
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
+            >
               {departments.map((department) => (
                 <option value={department} key={department}>{department}</option>
               ))}
@@ -248,11 +253,6 @@ export function RequisitionForm({
           />
           {departmentCatalog.length === 0 && (
             <p className="empty-state">ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง</p>
-          )}
-          {showingUnfilteredCatalog && (
-            <p className="form-field-note" role="status">
-              ไม่พบรายการที่ระบุหน่วยงานนี้โดยตรง จึงแสดงรายการน้ำยาทั้งหมดในคลังแทน
-            </p>
           )}
 
           {lines.length === 0 ? (

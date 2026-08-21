@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { getRequisitionItemDepartments } from '../lib/organization/departments'
 
 const read = (path: string) => readFileSync(path, 'utf8')
 
@@ -36,12 +37,15 @@ assert.match(summaryDialog, /requisition\.items\.map/, 'the requisition popup mu
 assert.match(summaryDialog, /formatQuantity\(item\.requestedQuantity, item\.unit\)/, 'the requisition popup must show each requested quantity')
 assert.match(newPage, /RequisitionForm/)
 assert.match(newPage, /DEPARTMENTS/)
-assert.match(newPage, /departments=\{DEPARTMENTS\}/)
+assert.match(newPage, /requesterDepartment=\{requesterDepartment\}/)
+assert.match(newPage, /actor\.department/)
 assert.match(newPage, /note: item\.note/, 'the requisition catalog must carry each inventory note')
 
 const form = read('components/requisitions/RequisitionForm.tsx')
 assert.match(form, /departments: readonly string\[\]/)
-assert.match(form, /<select required value=\{department\}/)
+assert.match(form, /requesterDepartment\?: string \| null/)
+assert.doesNotMatch(form, /departmentIsAutoSelected|disabled=\{departmentIsAutoSelected\}/, 'the auto-selected department must remain editable')
+assert.match(form, /<select[\s\S]*required[\s\S]*value=\{department\}/)
 assert.match(form, /\{departments\.map\(\(department\)/)
 assert.doesNotMatch(form, /<input type="text" required value=\{department\}/)
 assert.match(form, /CatalogItemCombobox/, 'requisition items must be searchable by typing')
@@ -52,11 +56,8 @@ assert.match(form, /readOnly/, 'the inventory note field must not be editable')
 const catalogCombobox = read('components/ui/CatalogItemCombobox.tsx')
 assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หรือชื่อรายการ/, 'requisition item search must provide a hint')
 
-// The item picker only offers what the requesting department is responsible
-// for, so the list stays short as the catalog grows; items with no assigned
-// department stay reachable from any department. If nothing matches at all
-// (a department whose items were never tagged), fall back to every in-stock item
-// rather than leaving the picker silently empty.
+// The item picker only offers the requester's work unit plus the two shared
+// stock units. Unassigned and unrelated items must stay out of the picker.
 
 // Zero-on-hand items never reach the picker: the store cannot fill a line
 // with no lot behind it, so offering one only produces a requisition that
@@ -69,13 +70,13 @@ assert.match(
 
 assert.match(
   form,
-  /scopedCatalog = inStockCatalog.filter\(\s*\(item\) => item\.responsibleDepartment === null \|\| item\.responsibleDepartment === department,?\s*\)/,
-  'the item picker must be scoped to the requesting department',
+  /eligibleDepartments = getRequisitionItemDepartments\(department\)/,
+  'the item picker must calculate the requester eligible departments',
 )
 assert.match(
   form,
-  /departmentCatalog = scopedCatalog\.length > 0 \? scopedCatalog : inStockCatalog/,
-  'an empty department match must fall back to every in-stock item, not an empty picker',
+  /item\.responsibleDepartment !== null && eligibleDepartments\.includes\(item\.responsibleDepartment\)/,
+  'the item picker must include only assigned items in eligible departments',
 )
 assert.match(form, /departmentCatalog\.map/, 'the picker options must come from the department-filtered catalog')
 assert.match(form, /ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง/)
@@ -88,7 +89,13 @@ assert.match(
   /\{item\.lsCode\} · \{item\.name\} · คงเหลือ \{formatQuantity\(item\.onHand, item\.unit\)\}/,
   'the dropdown option must show the total on-hand quantity',
 )
-assert.match(form, /showingUnfilteredCatalog/, 'the fallback to the unfiltered catalog must be explained to the requester')
+assert.doesNotMatch(form, /showingUnfilteredCatalog|scopedCatalog/, 'the picker must not fall back to unrelated inventory')
+
+assert.deepEqual(
+  getRequisitionItemDepartments('งานอณูชีววิทยา'),
+  ['งานอณูชีววิทยา', 'สำนักงานกลุ่มงานเทคนิคการแพทย์', 'คลังน้ำยาและวัสดุวิทยาศาสตร์'],
+  'the requisition picker must include the requester work unit and both shared stock units',
+)
 
 // A real <select> lets the requester browse every eligible item at once,
 // alongside the type-ahead combobox for a faster path when they know the code.
@@ -138,6 +145,10 @@ assert.match(signaturePad, /ล้างลายเซ็นต์/, 'the signe
 assert.doesNotMatch(signaturePad, /createBrowserClient|supabase\.from/, 'the browser must never talk to Supabase directly')
 
 const requisitionActions = read('lib/requisitions/actions.ts')
+const actorSource = read('lib/auth/actor.ts')
+assert.match(actorSource, /name,dept,avatar_url/, 'the signed-in actor must carry profiles.dept')
+assert.match(requisitionActions, /assertCreateItemScope/, 'the server must validate the selected department scope')
+assert.match(requisitionActions, /requisition\.department/, 'the server must validate against the department selected in the form')
 assert.match(requisitionActions, /export async function signRequisitionReceipt/)
 assert.match(requisitionActions, /supabaseAdmin\.rpc\('sign_requisition_receipt'/)
 assert.match(requisitionActions, /assertStockOperator/)

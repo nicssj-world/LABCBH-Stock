@@ -12,6 +12,7 @@ export interface Actor {
   id: string
   ephisId: string | null
   name: string | null
+  department: string | null
   avatarUrl?: string | null
   profileRole: string | null
   appRoles: LabStockRole[]
@@ -26,6 +27,7 @@ interface ProfileRow {
   id: string
   ephis_id: string | null
   name: string | null
+  dept: string | null
   avatar_url: string | null
   role: string | null
   status: string | null
@@ -45,7 +47,7 @@ interface ProfileRow {
  * separate query did not.
  */
 const ACTOR_PROFILE_SELECT =
-  'id,ephis_id,name,avatar_url,role,status,deleted_at,lab_stock_memberships!profile_id(role,active)'
+  'id,ephis_id,name,dept,avatar_url,role,status,deleted_at,lab_stock_memberships!profile_id(role,active)'
 
 export const getActor = cache(async (): Promise<Actor | null> => {
   const supabase = await createClient()
@@ -63,6 +65,7 @@ export const getActor = cache(async (): Promise<Actor | null> => {
       id: subject,
       ephisId: null,
       name: null,
+      department: null,
       avatarUrl: null,
       profileRole: null,
       appRoles: [],
@@ -75,6 +78,7 @@ export const getActor = cache(async (): Promise<Actor | null> => {
     id: profile.id,
     ephisId: profile.ephis_id,
     name: profile.name,
+    department: profile.dept,
     avatarUrl: profile.avatar_url,
     profileRole: profile.role,
     // deriveAppRoles is what withholds every role from an inactive or

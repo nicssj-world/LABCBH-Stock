@@ -4,8 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
+import { getRequisitionItemDepartments } from '@/lib/organization/departments'
 import { assertPurchaseRequester } from '@/lib/pr/authorization'
-import { assertRequisitionManager } from '@/lib/requisitions/authorization'
+import {
+  assertRequisitionManager,
+  RequisitionAuthorizationError,
+} from '@/lib/requisitions/authorization'
 import {
   fulfillRequisitionInputSchema,
   requisitionInputSchema,
@@ -33,11 +37,42 @@ function revalidateRequisition(id?: string) {
   revalidatePath('/dashboard')
 }
 
+async function assertCreateItemScope(itemIds: string[], department: string) {
+  const eligibleDepartments = new Set(getRequisitionItemDepartments(department))
+  const uniqueItemIds = [...new Set(itemIds)]
+  const { data, error } = await supabaseAdmin
+    .from('inventory_items')
+    .select('id, responsible_department, is_active')
+    .in('id', uniqueItemIds)
+
+  if (error) throw new Error('ตรวจสอบรายการน้ำยาไม่สำเร็จ: ' + error.message)
+
+  const rows = data ?? []
+  const allItemsEligible =
+    rows.length === uniqueItemIds.length &&
+    rows.every(
+      (item) =>
+        item.is_active &&
+        item.responsible_department !== null &&
+        eligibleDepartments.has(item.responsible_department),
+    )
+
+  if (!allItemsEligible) {
+    throw new RequisitionAuthorizationError(
+      'รายการน้ำยาที่เลือกไม่อยู่ในหน่วยงานของผู้ขอเบิกหรือหน่วยงานกลาง',
+    )
+  }
+}
+
 export async function createRequisition(input: RequisitionInput) {
   const actor = await requireActor()
   assertPurchaseRequester(actor)
   const parsed = requisitionInputSchema.parse(input)
   const { items, ...requisition } = parsed
+  await assertCreateItemScope(
+    items.map((item) => item.inventoryItemId),
+    requisition.department,
+  )
 
   const result = await supabaseAdmin.rpc('create_requisition', {
     p_actor_id: actor.id,

@@ -117,7 +117,7 @@ assert.throws(
 )
 
 function actor(roles: LabStockRole[], id = 'actor-1'): Actor {
-  return { id, ephisId: null, name: null, profileRole: null, appRoles: roles }
+  return { id, ephisId: null, name: null, department: null, profileRole: null, appRoles: roles }
 }
 
 // The people entering these figures day to day are Medical Technologists who

@@ -265,6 +265,7 @@ const actor = (id: string, roles: LabStockRole[]): Actor => ({
   id,
   ephisId: null,
   name: null,
+  department: null,
   profileRole: null,
   appRoles: roles,
 })

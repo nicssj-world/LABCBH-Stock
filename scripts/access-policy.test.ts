@@ -10,6 +10,7 @@ const actor = (overrides: Partial<Actor>): Actor => ({
   id: '11111111-1111-4111-8111-111111111111',
   ephisId: '10000',
   name: 'ผู้ใช้งาน',
+  department: null,
   profileRole: 'Staff',
   appRoles: [],
   ...overrides,

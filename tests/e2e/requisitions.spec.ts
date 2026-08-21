@@ -13,9 +13,10 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
     await loginAs(manager, 'manager')
     await manager.goto('/requisitions/new')
     await expect(manager.getByRole('heading', { name: 'สร้างใบเบิก' })).toBeVisible()
-    await manager.getByLabel('หน่วยงานผู้ขอเบิก').selectOption({ label: 'งานอณูชีววิทยา' })
     const itemSelect = manager.getByLabel('เลือกน้ำยาจากรายการ')
-    const stockedOption = itemSelect.locator('option').filter({ hasText: 'LHLAB75' }).first()
+    // The department is derived from the signed-in fixture profile. Pick the
+    // first eligible stocked item instead of overriding that department.
+    const stockedOption = itemSelect.locator('option[value]:not([value=""])').first()
     const stockedValue = await stockedOption.getAttribute('value')
     expect(stockedValue).toBeTruthy()
     await itemSelect.selectOption(stockedValue!)
