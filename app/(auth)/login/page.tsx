@@ -58,7 +58,7 @@ export default function LoginPage() {
 
           <div className="login-heading">
             <p>กลุ่มงานเทคนิคการแพทย์ · โรงพยาบาลชลบุรี</p>
-            <h1 id="login-title">เข้าสู่ระบบคลังพัสดุและสัญญา</h1>
+            <h1 id="login-title">เข้าสู่ระบบ<br />คลังพัสดุและสัญญา</h1>
             <span>ใช้บัญชีเดียวกับระบบ Lab Management Portal</span>
           </div>
 
@@ -118,7 +118,7 @@ export default function LoginPage() {
       <aside className="login-bench-panel" aria-label="ขอบเขตระบบ">
         <div>
           <p className="section-kicker section-kicker--light">LAB OPERATIONS</p>
-          <h2>ระบบบริหารคลัง<br /><span className="login-bench-panel__title-line">พัสดุและสัญญา</span></h2>
+          <h2>ระบบบริหาร<br /><span className="login-bench-panel__title-line">คลังน้ำยา-วัสดุวิทยาศาสตร์<br />และสัญญา</span></h2>
           <p>สัญญา · จัดซื้อ · รับเข้า · เบิกจ่าย · คงคลัง</p>
         </div>
         <dl>
