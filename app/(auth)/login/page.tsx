@@ -51,14 +51,14 @@ export default function LoginPage() {
               preload
             />
             <span>
-              <strong>LABCBH Stock</strong>
-              <small>Laboratory Control Bench</small>
+              <strong>LAB-CBH</strong>
+              <small>Inventory &amp; Contract Management</small>
             </span>
           </div>
 
           <div className="login-heading">
             <p>กลุ่มงานเทคนิคการแพทย์ · โรงพยาบาลชลบุรี</p>
-            <h1 id="login-title">เข้าสู่ระบบงานคลัง</h1>
+            <h1 id="login-title">เข้าสู่ระบบคลังพัสดุและสัญญา</h1>
             <span>ใช้บัญชีเดียวกับระบบ Lab Management Portal</span>
           </div>
 
@@ -118,12 +118,12 @@ export default function LoginPage() {
       <aside className="login-bench-panel" aria-label="ขอบเขตระบบ">
         <div>
           <p className="section-kicker section-kicker--light">LAB OPERATIONS</p>
-          <h2>ระบบคลังน้ำยาและ<br /><span className="login-bench-panel__title-line">วัสดุวิทยาศาสตร์</span></h2>
-          <p>รับเข้า · ควบคุม · เบิกจ่าย</p>
+          <h2>ระบบบริหารคลัง<br /><span className="login-bench-panel__title-line">พัสดุและสัญญา</span></h2>
+          <p>สัญญา · จัดซื้อ · รับเข้า · เบิกจ่าย · คงคลัง</p>
         </div>
         <dl>
-          <div><dt>01</dt><dd>รับเข้าและตรวจรับวัสดุ</dd></div>
-          <div><dt>02</dt><dd>ควบคุมคงคลังและ PR</dd></div>
+          <div><dt>01</dt><dd>ทะเบียนสัญญาและรายการพัสดุ</dd></div>
+          <div><dt>02</dt><dd>จัดซื้อ รับเข้า และตรวจรับ</dd></div>
           <div><dt>03</dt><dd>FIFO และระดับคงเหลือ</dd></div>
         </dl>
       </aside>

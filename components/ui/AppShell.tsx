@@ -159,8 +159,8 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
               preload
             />
             <span className="bench-brand__copy">
-              <strong>LABCBH Stock</strong>
-              <small>Laboratory Management</small>
+              <strong>LAB-CBH</strong>
+              <small>Inventory &amp; Contract Management</small>
             </span>
           </div>
           <p className="bench-nav__section">งานคลังและสัญญา</p>
@@ -200,7 +200,7 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
           </nav>
           <div className="bench-rail__footer">
             <span className="bench-rail__signal" aria-hidden="true" />
-            <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังกลาง · LABCBH</small></span>
+            <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังพัสดุและสัญญา · LAB-CBH</small></span>
           </div>
         </aside>
         <div className="workbench">
@@ -226,8 +226,8 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
                 <UtilityIcon name="menu" />
               </button>
               <div>
-                <p className="workbench-header__eyebrow">LABCBH STOCK</p>
-                <p className="workbench-header__hospital">{currentItem?.label ?? 'ระบบคลังกลาง'}</p>
+                <p className="workbench-header__eyebrow">LAB-CBH INVENTORY &amp; CONTRACT MANAGEMENT</p>
+                <p className="workbench-header__hospital">{currentItem?.label ?? 'ระบบบริหารคลังพัสดุและสัญญา'}</p>
               </div>
             </div>
             <div className="workbench-header__actions">
@@ -261,7 +261,7 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
                 )}
                 <span>
                   <strong>{actorLabel}</strong>
-                  <small>{actor.profileRole ?? 'LABCBH Stock'}</small>
+                  <small>{actor.profileRole ?? 'LAB-CBH'}</small>
                 </span>
               </div>
               <LogoutButton />

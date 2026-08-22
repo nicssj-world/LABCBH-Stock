@@ -4,10 +4,10 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'LABCBH Stock',
-    template: '%s | LABCBH Stock',
+    default: 'LAB-CBH Inventory & Contract Management',
+    template: '%s | LAB-CBH Inventory & Contract Management',
   },
-  description: 'ระบบงานคลังน้ำยาและวัสดุวิทยาศาสตร์ กลุ่มงานเทคนิคการแพทย์ โรงพยาบาลชลบุรี',
+  description: 'ระบบบริหารคลังพัสดุและสัญญา กลุ่มงานเทคนิคการแพทย์ โรงพยาบาลชลบุรี',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
