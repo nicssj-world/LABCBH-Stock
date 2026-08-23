@@ -97,40 +97,59 @@ export function PrReviewPanel({
 
   return (
     <div className="pr-review">
-      <label className="field-row pr-review__identifier-field">
-        เลข PR จาก E-Phis
-        <input
-          type="text"
-          readOnly={!isEditingEphisPrNumber}
-          value={ephisPrNumberInput}
-          onChange={(event) => setEphisPrNumberInput(event.target.value)}
-        />
-      </label>
-      <Button
-        variant="secondary"
-        type="button"
-        className="pr-review__number-action"
-        disabled={isPending || (isEditingEphisPrNumber && !ephisPrNumberInput.trim())}
-        onClick={() => {
-          if (!isEditingEphisPrNumber) {
-            setIsEditingEphisPrNumber(true)
-            return
-          }
-          run(
-            () => setEphisPrNumber(request.id, { ephisPrNumber: ephisPrNumberInput }),
-            'บันทึกเลข PR จาก E-Phis ไม่สำเร็จ',
-            () => setIsEditingEphisPrNumber(false),
-          )
-        }}
-      >
-        {isEditingEphisPrNumber ? 'บันทึกเลข PR จาก E-Phis' : 'แก้เลข PR จาก E-Phis'}
-      </Button>
-      {request.ephisPrNumber && request.updatedByName && (
-        <p className="pr-review__intro">บันทึกเลข PR จาก E-Phis โดย {request.updatedByName}</p>
-      )}
+      <section className="pr-review__section" aria-labelledby="pr-review-reference-title">
+        <div className="pr-review__section-heading">
+          <div>
+            <h3 id="pr-review-reference-title">ข้อมูลอ้างอิง</h3>
+            <p className="pr-review__intro">บันทึกเลขจากระบบ E-Phis เพื่อใช้ติดตามใบ PR</p>
+          </div>
+        </div>
+        <div className="pr-review__identifier-row">
+          <label className="field-row pr-review__identifier-field">
+            <span>เลข PR จาก E-Phis</span>
+            <input
+              type="text"
+              readOnly={!isEditingEphisPrNumber}
+              value={ephisPrNumberInput}
+              onChange={(event) => setEphisPrNumberInput(event.target.value)}
+            />
+          </label>
+          <div className="pr-review__identifier-actions">
+            <Button
+              variant="secondary"
+              type="button"
+              className="pr-review__number-action"
+              disabled={isPending || (isEditingEphisPrNumber && !ephisPrNumberInput.trim())}
+              onClick={() => {
+                if (!isEditingEphisPrNumber) {
+                  setIsEditingEphisPrNumber(true)
+                  return
+                }
+                run(
+                  () => setEphisPrNumber(request.id, { ephisPrNumber: ephisPrNumberInput }),
+                  'บันทึกเลข PR จาก E-Phis ไม่สำเร็จ',
+                  () => setIsEditingEphisPrNumber(false),
+                )
+              }}
+            >
+              {isEditingEphisPrNumber ? 'บันทึกเลข PR จาก E-Phis' : 'แก้เลข PR จาก E-Phis'}
+            </Button>
+            {request.ephisPrNumber && request.updatedByName && (
+              <p className="pr-review__intro">บันทึกโดย {request.updatedByName}</p>
+            )}
+          </div>
+        </div>
+      </section>
 
       {showPoWorkbench && (
-        <div className="pr-review__po-workbench">
+        <section className="pr-review__section" aria-labelledby="pr-review-po-title">
+          <div className="pr-review__section-heading">
+            <div>
+              <h3 id="pr-review-po-title">ข้อมูลใบสั่งซื้อ</h3>
+              <p className="pr-review__intro">เลขที่ใบสั่งซื้อและเอกสารประกอบ</p>
+            </div>
+          </div>
+          <div className="pr-review__po-workbench">
           {canEditPoNumber && (
             <div className="pr-review__po-number">
               <label className="field-row pr-review__identifier-field">
@@ -200,14 +219,20 @@ export function PrReviewPanel({
               }
             />
           </div>
-        </div>
+          </div>
+        </section>
       )}
 
       {request.status === 'pending' && contractType && contractDraft && (
-        <>
-          <p className="pr-review__intro">
-            ยืนยันแล้วระบบจะสร้างสัญญาใหม่ทันทีที่ขั้นตอน &quot;ส่งพัสดุ&quot; — ย้อนกลับไม่ได้ด้วยการกลับรายการ
-          </p>
+        <section className="pr-review__section pr-review__section--decision" aria-labelledby="pr-review-contract-title">
+          <div className="pr-review__section-heading">
+            <div>
+              <h3 id="pr-review-contract-title">ยืนยันและสร้างสัญญา</h3>
+              <p className="pr-review__intro">
+                ยืนยันแล้วระบบจะสร้างสัญญาใหม่ทันทีที่ขั้นตอน &quot;ส่งพัสดุ&quot; — ย้อนกลับไม่ได้ด้วยการกลับรายการ
+              </p>
+            </div>
+          </div>
           <dl className="item-picker__facts">
             <div>
               <dt>ประเภทสัญญา</dt>
@@ -249,26 +274,45 @@ export function PrReviewPanel({
             <ThaiDateInput required value={sentToProcurementDate} onChange={setSentToProcurementDate} />
           </label>
 
-          <Button
-            type="button"
-            disabled={isPending || !sentToProcurementDate || !checklistReadyForConfirmation}
-            onClick={() =>
-              run(
-                () => confirmPurchaseRequest(request.id, sentToProcurementDate),
-                'ยืนยันใบ PR ไม่สำเร็จ',
-              )
-            }
-          >
-            {isPending ? 'กำลังยืนยัน…' : 'ยืนยันและสร้างสัญญา'}
-          </Button>
-        </>
+          <div className="pr-review__confirm-zone">
+            {!checklistReadyForConfirmation && (
+              <div className="pr-review__blocker" role="status">
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <path d="M10 2.25 18 17.5H2L10 2.25Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+                  <path d="M10 7v4.5M10 14.25v.1" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                </svg>
+                <div>
+                  <strong>ยังยืนยันใบ PR ไม่ได้</strong>
+                  <p>กรรมการอย่างน้อยหนึ่งคนยังไม่มีตำแหน่งในข้อมูลบุคลากร กรุณาแก้ที่ระบบบุคลากรแล้วโหลดหน้าใหม่</p>
+                </div>
+              </div>
+            )}
+            <Button
+              type="button"
+              disabled={isPending || !sentToProcurementDate || !checklistReadyForConfirmation}
+              onClick={() =>
+                run(
+                  () => confirmPurchaseRequest(request.id, sentToProcurementDate),
+                  'ยืนยันใบ PR ไม่สำเร็จ',
+                )
+              }
+            >
+              {isPending ? 'กำลังยืนยัน…' : 'ยืนยันและสร้างสัญญา'}
+            </Button>
+          </div>
+        </section>
       )}
 
       {request.status === 'pending' && !(contractType && contractDraft) && (
-        <>
-          <p className="pr-review__intro">
-            ยืนยันแล้วยอดในสัญญาจะถูกตัดทันทีและย้อนกลับได้ด้วยการกลับรายการเท่านั้น
-          </p>
+        <section className="pr-review__section pr-review__section--decision" aria-labelledby="pr-review-impact-title">
+          <div className="pr-review__section-heading">
+            <div>
+              <h3 id="pr-review-impact-title">ผลกระทบต่อยอดสัญญา</h3>
+              <p className="pr-review__intro">
+                ยืนยันแล้วยอดในสัญญาจะถูกตัดทันทีและย้อนกลับได้ด้วยการกลับรายการเท่านั้น
+              </p>
+            </div>
+          </div>
           <div className="detail-items-table">
             <table className="data-table">
               <caption className="visually-hidden">ผลกระทบต่อยอดคงเหลือในสัญญา</caption>
@@ -309,20 +353,28 @@ export function PrReviewPanel({
               </tbody>
             </table>
           </div>
-          <Button
-            type="button"
-            disabled={isPending || !checklistReadyForConfirmation}
-            onClick={() => run(() => confirmPurchaseRequest(request.id), 'ยืนยันใบ PR ไม่สำเร็จ')}
-          >
-            {isPending ? 'กำลังยืนยัน…' : 'ยืนยันใบ PR'}
-          </Button>
-        </>
-      )}
-
-      {request.status === 'pending' && !checklistReadyForConfirmation && (
-        <p className="form-error" role="status">
-          ยังยืนยันใบ PR ไม่ได้ เพราะกรรมการอย่างน้อยหนึ่งคนไม่มีตำแหน่งในข้อมูลบุคลากร กรุณาแก้ที่ระบบบุคลากรแล้วโหลดหน้าใหม่
-        </p>
+          <div className="pr-review__confirm-zone">
+            {!checklistReadyForConfirmation && (
+              <div className="pr-review__blocker" role="status">
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <path d="M10 2.25 18 17.5H2L10 2.25Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+                  <path d="M10 7v4.5M10 14.25v.1" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                </svg>
+                <div>
+                  <strong>ยังยืนยันใบ PR ไม่ได้</strong>
+                  <p>กรรมการอย่างน้อยหนึ่งคนยังไม่มีตำแหน่งในข้อมูลบุคลากร กรุณาแก้ที่ระบบบุคลากรแล้วโหลดหน้าใหม่</p>
+                </div>
+              </div>
+            )}
+            <Button
+              type="button"
+              disabled={isPending || !checklistReadyForConfirmation}
+              onClick={() => run(() => confirmPurchaseRequest(request.id), 'ยืนยันใบ PR ไม่สำเร็จ')}
+            >
+              {isPending ? 'กำลังยืนยัน…' : 'ยืนยันใบ PR'}
+            </Button>
+          </div>
+        </section>
       )}
 
       {request.status === 'completed' && (

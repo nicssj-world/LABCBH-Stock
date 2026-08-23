@@ -22,16 +22,15 @@
 **Files:**
 - Modify: `scripts/pr-ui.test.ts`
 - Modify: `scripts/pr-checklist-ui.test.ts`
-- Modify: `package.json`
 
 **Interfaces:**
 - Tests inspect the existing `PrReviewPanel` and `PurchaseRequestChecklistPanel` source contracts; no production API changes.
 
-- [ ] **Step 1: Write the failing assertions**
+- [x] **Step 1: Write the failing assertions**
 
 Add assertions for `pr-review__section`, `pr-review__identifier-row`, `pr-review__confirm-zone`, `pr-review__blocker`, Thai download labels, checklist group headings, and attachment ordering.
 
-- [ ] **Step 2: Run focused tests to verify RED**
+- [x] **Step 2: Run focused tests to verify RED**
 
 Run `npx tsx scripts/pr-ui.test.ts` and `npx tsx scripts/pr-checklist-ui.test.ts`.
 Expected: fail because the new semantic classes and Thai labels are not present.
@@ -46,19 +45,19 @@ Expected: fail because the new semantic classes and Thai labels are not present.
 - Consume existing `checklist`, `request`, `checklistReadyForConfirmation`, and callbacks.
 - Produce stable class names used by `app/globals.css` and tests; mutation calls and disabled conditions remain unchanged.
 
-- [ ] **Step 1: Sort and label checklist content**
+- [x] **Step 1: Sort and label checklist content**
 
-Derive `activeAttachments` in `PurchaseRequestChecklistPanel` with stable kind order `tor`, `plan`, `quotation`, change download labels to Thai, and add visible group headings for files and committees.
+Derive `activeAttachments` in `PurchaseRequestChecklistPanel` with stable kind order `tor`, `plan`, `quotation`, change the archive label to Thai, replace the committee-PDF download control with `เปิดดู PDF กรรมการ` in the existing preview dialog, and update the committee-PDF route disposition to `inline` so the iframe renders it.
 
-- [ ] **Step 2: Group review content into working regions**
+- [x] **Step 2: Group review content into working regions**
 
 Wrap the E-Phis field/action in `pr-review__section` and `pr-review__identifier-row`. Wrap pending contract facts/date or the contract-impact table in a decision section. Keep existing inputs and server-action handlers intact.
 
-- [ ] **Step 3: Move the blocker beside the confirmation action**
+- [x] **Step 3: Move the blocker beside the confirmation action**
 
 Render `pr-review__blocker` immediately before the existing confirm button when `!checklistReadyForConfirmation`; retain the exact readiness condition and error copy. Put the button in `pr-review__confirm-zone` and keep loading text unchanged.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run `npx tsx scripts/pr-ui.test.ts && npx tsx scripts/pr-checklist-ui.test.ts`.
 Expected: PASS.
@@ -71,19 +70,19 @@ Expected: PASS.
 **Interfaces:**
 - Style only the new `pr-review__*` and `pr-checklist-detail__*` hooks; reuse existing `--lab-*`, spacing, radius, and typography tokens.
 
-- [ ] **Step 1: Add flat section rhythm**
+- [x] **Step 1: Add flat section rhythm**
 
 Use section padding and dividers to separate the four work regions, align identifier input/action in a desktop grid, and make the confirmation zone visually authoritative without adding a nested card.
 
-- [ ] **Step 2: Add blocker and control states**
+- [x] **Step 2: Add blocker and control states**
 
 Style blocker with semantic red surface plus written heading/copy, keep focus/disabled states visible, and preserve existing loading/error styles.
 
-- [ ] **Step 3: Add responsive rules**
+- [x] **Step 3: Add responsive rules**
 
 At the existing 800px breakpoint collapse identifier/action and checklist toolbar; make action buttons full width on mobile and preserve readable table overflow.
 
-- [ ] **Step 4: Run focused tests and diff hygiene**
+- [x] **Step 4: Run focused tests and diff hygiene**
 
 Run `npx tsx scripts/pr-ui.test.ts && npx tsx scripts/pr-checklist-ui.test.ts && git diff --check`.
 Expected: PASS with no whitespace errors.
@@ -93,15 +92,15 @@ Expected: PASS with no whitespace errors.
 **Files:**
 - Inspect: `components/pr/PrReviewPanel.tsx`, `components/pr/PurchaseRequestChecklistPanel.tsx`, `app/globals.css`, and changed tests
 
-- [ ] **Step 1: Run quality gates**
+- [x] **Step 1: Run quality gates**
 
 Run `npm run test:pr`, `npm run typecheck`, `npm run lint`, and `npm run build`.
 
-- [ ] **Step 2: Run the full repository gate**
+- [x] **Step 2: Run the full repository gate**
 
 Run `npm run verify` and record any environment-skipped E2E tests without changing unrelated code.
 
-- [ ] **Step 3: Run the Impeccable detector once**
+- [x] **Step 3: Run the Impeccable detector once**
 
 Run `node C:\Users\User\.agents\skills\impeccable\scripts\detect.mjs --json components/pr/PrReviewPanel.tsx components/pr/PurchaseRequestChecklistPanel.tsx app/globals.css`.
 Expected: no findings.

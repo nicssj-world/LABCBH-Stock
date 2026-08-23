@@ -61,6 +61,18 @@ assert.match(detailPage, /contract-facts__po-value/, 'the PO open action stays b
 assert.match(detailPage, /document-open-button/, 'the created contract action uses the same rectangular open-button treatment')
 assert.match(detailPage, /<DocumentOpenIcon/, 'the created contract action uses the same document icon as the PO action')
 
+const reviewPanel = read('components/pr/PrReviewPanel.tsx')
+assert.match(reviewPanel, /pr-review__section/, 'stock officer actions need named working regions')
+assert.match(reviewPanel, /pr-review__identifier-row/, 'E-Phis input and action need one aligned working row')
+assert.match(reviewPanel, /pr-review__confirm-zone/, 'confirmation needs a distinct action zone')
+assert.match(reviewPanel, /pr-review__blocker/, 'confirmation blockers need to sit beside the action')
+assert.match(reviewPanel, /!checklistReadyForConfirmation/, 'the existing checklist readiness guard must remain in place')
+assert.match(
+  reviewPanel,
+  /pr-review__blocker[\s\S]*pr-review__confirm-zone[\s\S]*ยืนยันใบ PR/,
+  'the blocker and confirmation action must be rendered in the same flow',
+)
+
 const poFileCard = read('components/pr/PurchaseRequestPoFileCard.tsx')
 assert.match(poFileCard, /po-file-card--inline/, 'the PO file card supports the inline PR fact treatment')
 assert.match(poFileCard, /compact/, 'the inline PO file action uses a compact dropzone')
@@ -169,6 +181,7 @@ assert.match(form, /aria-live="polite"/, 'clearing picked lines on a method/depa
 assert.match(form, /methodSelectionMissing/, 'the form must know when there is nothing to select and disable submit')
 
 const styles = read('app/globals.css')
+assert.match(styles, /\.pr-review__section\s*\{[^}]*border-top:\s*2px solid/, 'review sections need a visible divider')
 assert.match(
   styles,
   /\.bench-panel > \.form-grid\s*\{[\s\S]*?padding:\s*20px;[\s\S]*?\}/,

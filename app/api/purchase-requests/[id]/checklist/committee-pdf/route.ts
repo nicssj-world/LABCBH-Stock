@@ -12,9 +12,9 @@ function pdfFileName(documentNumber: string) {
   return `กรรมการ-${documentNumber.replace(/[^a-zA-Z0-9ก-๙._-]/g, '_')}.pdf`
 }
 
-function attachmentDisposition(fileName: string) {
+function inlineDisposition(fileName: string) {
   const ascii = fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
 }
 
 export async function GET(_request: Request, context: RouteContext) {
@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return new Response(Buffer.from(bytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': attachmentDisposition(fileName),
+        'Content-Disposition': inlineDisposition(fileName),
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },
