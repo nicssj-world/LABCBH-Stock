@@ -57,14 +57,14 @@ export function ContractCommitteeRoster({
     }
     return ids
   }
+  const membersFor = (kind: PurchaseRequestCommitteeKind) =>
+    members.filter((member) => member.kind === kind).sort((a, b) => a.seat - b.seat)
 
   return (
     <section className="bench-panel contract-committee-roster" aria-labelledby="contract-committee-title">
       <div className="bench-panel__header">
         <div>
-          <p className="section-kicker">COMMITTEE ROSTER</p>
-          <h2 id="contract-committee-title">รายชื่อกรรมการประจำสัญญา</h2>
-          <p>PR ที่ซื้อในสัญญาจะดึงรายชื่อนี้ไปอัตโนมัติ</p>
+          <p id="contract-committee-title" className="section-kicker">COMMITTEE ROSTER</p>
         </div>
         <span className={members.length === expectedCount ? 'pr-checklist__status is-complete' : 'pr-checklist__status'}>
           {members.length === expectedCount ? 'ครบแล้ว' : 'ยังไม่ครบ'}
@@ -73,17 +73,19 @@ export function ContractCommitteeRoster({
 
       {!editing ? (
         <div className="pr-checklist-detail__committees">
-          {kinds.map((kind) => (
-            <section key={kind}>
-              <h3>{PR_COMMITTEE_KIND_LABELS[kind]}</h3>
-              <ol>
-                {members.filter((member) => member.kind === kind).sort((a, b) => a.seat - b.seat).map((member) => (
-                  <li key={member.id}><span>{member.name}</span><small>{member.positionTitle ?? 'ยังไม่ระบุตำแหน่ง'}</small></li>
-                ))}
-              </ol>
-            </section>
-          ))}
-          {members.length === 0 && <p className="empty-state">สัญญาเดิมนี้ยังไม่มี roster กรรมการ</p>}
+          {kinds.map((kind) => {
+            const kindMembers = membersFor(kind)
+            return (
+              <section key={kind}>
+                <h3>{PR_COMMITTEE_KIND_LABELS[kind]}</h3>
+                <ol>
+                  {kindMembers.length > 0 ? kindMembers.map((member) => (
+                    <li key={member.id}><span>{member.name}</span><small>{member.positionTitle ?? 'ยังไม่ระบุตำแหน่ง'}</small></li>
+                  )) : <li className="contract-committee-roster__empty">ยังไม่ได้กำหนดกรรมการ</li>}
+                </ol>
+              </section>
+            )
+          })}
         </div>
       ) : (
         <div className="pr-checklist__committees">
@@ -129,11 +131,11 @@ export function ContractCommitteeRoster({
                   }
                 })}
               >
-                {isPending ? 'กำลังบันทึก…' : 'บันทึก roster กรรมการ'}
+                {isPending ? 'กำลังบันทึก…' : 'บันทึกรายชื่อกรรมการ'}
               </Button>
             </>
           ) : (
-            <Button type="button" variant="secondary" onClick={() => setEditing(true)}>แก้ไข roster</Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(true)}>แก้ไขรายชื่อกรรมการ</Button>
           )}
         </div>
       )}

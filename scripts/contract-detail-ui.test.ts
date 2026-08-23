@@ -5,6 +5,10 @@ import { join } from 'node:path'
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 const detailPage = read('app/(protected)/contracts/[id]/page.tsx')
 const queries = read('lib/contracts/queries.ts')
+const committeeRoster = read('components/contracts/ContractCommitteeRoster.tsx')
+const rosterRenderIndex = detailPage.indexOf('<ContractCommitteeRoster')
+const detailContentIndex = detailPage.indexOf("{mode === 'budget' ? (")
+const archiveSectionIndex = detailPage.indexOf('{isAdmin && (')
 
 assert.match(detailPage, /remainingTotal/, 'E-Bidding detail must calculate a total remaining value')
 assert.match(detailPage, /ยอดคงเหลือรวม/, 'the total remaining value needs a clear Thai label')
@@ -16,6 +20,15 @@ assert.match(detailPage, /ContractRemainingGauge/, 'the total remaining balance 
 assert.match(detailPage, /ใช้ไป/, 'each line must explain the consumed quantity, not rely on color alone')
 assert.match(queries, /contractSupplyBalance/, 'contract reads must use the shared supply balance calculation')
 assert.match(queries, /allocatedQuantity/, 'contract reads must preserve the allocated quantity from the ledger')
+assert.match(committeeRoster, /contract-committee-roster__empty/, 'each empty committee seat group needs a clear empty state')
+assert.match(committeeRoster, /ยังไม่ได้กำหนดกรรมการ/, 'empty committee groups must explain that no member has been assigned')
+assert.doesNotMatch(committeeRoster, /รายชื่อกรรมการประจำสัญญา/, 'the roster must not repeat its Thai title')
+assert.match(committeeRoster, /บันทึกรายชื่อกรรมการ/, 'the save action should use clear Thai wording')
+assert.doesNotMatch(committeeRoster, /บันทึก roster กรรมการ/, 'the save action should not mix Thai and English terminology')
+assert.match(committeeRoster, /แก้ไขรายชื่อกรรมการ/, 'the edit action should use clear Thai wording')
+assert.doesNotMatch(committeeRoster, /แก้ไข roster/, 'the edit action should not mix Thai and English terminology')
+assert.ok(rosterRenderIndex > detailContentIndex, 'the committee roster should follow the contract content sections')
+assert.ok(rosterRenderIndex < archiveSectionIndex, 'the committee roster should remain before admin archive controls')
 
 // Purchase history: every "ซื้อในสัญญา" PR against a started supply contract,
 // 5 most recent shown by default with a "ดูเพิ่ม" expand control.
@@ -106,6 +119,26 @@ assert.match(
 assert.match(openingBalanceDialog, /disabled=\{isPending \|\| !note\.trim\(\)\}/, 'the note field is required before submitting')
 
 const dialogStyles = read('app/globals.css')
+assert.match(
+  dialogStyles,
+  /\.contract-committee-roster > \.bench-panel__header > \.pr-checklist__status\s*\{[^}]*color:\s*var\(--lab-amber\)/,
+  'an incomplete roster needs a visible warning treatment that stays within the shared semantic palette',
+)
+assert.match(
+  dialogStyles,
+  /\.contract-committee-roster \.pr-checklist-detail__committees section\s*\{[^}]*background:\s*var\(--lab-surface-muted\)[^}]*border:\s*1px solid var\(--lab-border\)/,
+  'committee groups should read as clean flat work surfaces instead of unbounded blank columns',
+)
+assert.match(
+  dialogStyles,
+  /\.contract-committee-roster \.pr-checklist-detail__committees section\s*\{[^}]*border-left:\s*1px solid var\(--lab-border\)/,
+  'committee groups should not retain the shared blue accent stripe on the left',
+)
+assert.match(
+  dialogStyles,
+  /\.contract-committee-roster \.pr-checklist-detail__committees h3\s*\{[^}]*font-size:/,
+  'contract committee headings must use the detail page type hierarchy',
+)
 assert.match(
   dialogStyles,
   /\.opening-balance-dialog__body textarea\s*\{[^}]*border:\s*1px solid var\(--lab-border-strong\)/,

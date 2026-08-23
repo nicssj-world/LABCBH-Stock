@@ -250,14 +250,6 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         )}
       </div>
 
-      <ContractCommitteeRoster
-        contractId={contract.id}
-        contractType={contract.contractType}
-        members={committeeRoster}
-        candidates={committeeCandidates}
-        canEdit={canManageCommitteeRoster}
-      />
-
       {mode === 'budget' ? (
         <BudgetPanel
           contractId={contract.id}
@@ -367,6 +359,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       </section>
       </>
       )}
+
+      <ContractCommitteeRoster
+        contractId={contract.id}
+        contractType={contract.contractType}
+        members={committeeRoster}
+        candidates={committeeCandidates}
+        canEdit={canManageCommitteeRoster}
+      />
 
       {isAdmin && (
         record.isArchived

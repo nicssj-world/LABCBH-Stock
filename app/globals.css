@@ -4057,7 +4057,27 @@ body {
 .pr-checklist-preview__header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pr-checklist-preview__header span { color: var(--lab-muted); font-size: 12px; }
 .pr-checklist-preview iframe, .pr-checklist-preview img { display: block; width: 100%; height: calc(100% - 64px); border: 0; object-fit: contain; background: #eef1f4; }
-.contract-committee-roster { display: grid; gap: 18px; }
+.contract-committee-roster { display: grid; gap: 0; overflow: hidden; }
+.contract-committee-roster > .bench-panel__header { align-items: flex-start; padding: 20px 24px; }
+.contract-committee-roster > .bench-panel__header > div { min-width: 0; }
+.contract-committee-roster > .bench-panel__header h2 { margin-top: 4px; }
+.contract-committee-roster > .bench-panel__header > div > p:last-child:not(.section-kicker) { margin: 6px 0 0; color: var(--lab-muted); font-size: 13px; }
+.contract-committee-roster > .bench-panel__header > .pr-checklist__status { align-self: flex-start; color: var(--lab-amber); background: var(--lab-amber-soft); border-color: color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border)); }
+.contract-committee-roster > .bench-panel__header > .pr-checklist__status.is-complete { color: var(--lab-green); background: var(--lab-green-soft); border-color: color-mix(in srgb, var(--lab-green) 30%, var(--lab-border)); }
+.contract-committee-roster > .pr-checklist-detail__committees { gap: 14px; padding: 20px 24px 24px; }
+.contract-committee-roster .pr-checklist-detail__committees section { min-height: 138px; padding: 16px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-left: 1px solid var(--lab-border); border-radius: 10px; }
+.contract-committee-roster .pr-checklist-detail__committees h3 { margin: 0 0 12px; color: var(--lab-navy-strong); font-size: 14px; line-height: 1.4; }
+.contract-committee-roster .pr-checklist-detail__committees ol { min-height: 44px; padding-left: 20px; }
+.contract-committee-roster__empty { display: flex; align-items: center; min-height: 44px; margin: 0; padding: 9px 0; color: var(--lab-muted); border-top: 1px dashed var(--lab-border-strong); font-size: 12px; list-style: none; }
+.contract-committee-roster > .pr-checklist__committees { padding: 20px 24px 24px; }
+.contract-committee-roster > .form-action-bar__buttons { padding: 0 24px 24px; }
+
+@media (max-width: 700px) {
+  .contract-committee-roster > .bench-panel__header,
+  .contract-committee-roster > .pr-checklist-detail__committees,
+  .contract-committee-roster > .pr-checklist__committees { padding-inline: 16px; }
+  .contract-committee-roster > .form-action-bar__buttons { padding-inline: 16px; }
+}
 
 @media (max-width: 1180px) {
   .pr-checklist__file-grid--quotation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
