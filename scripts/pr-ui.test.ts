@@ -197,6 +197,8 @@ assert.match(
 assert.match(styles, /\.pr-review__identifier-field\s*\{[^}]*width:\s*min\(100%, 520px\)/, 'PR and PO identifiers should not stretch across the full review card')
 assert.match(styles, /\.pr-review__identifier-field input:read-only\s*\{[^}]*background:\s*color-mix/, 'saved PR and PO identifiers should have a muted filled-state background')
 assert.match(styles, /\.pr-review__number-action\s*\{[^}]*min-width:\s*220px/, 'identifier actions should size to their label instead of stretching')
+assert.match(styles, /\.pr-review__po-file:only-child\s*\{[^}]*grid-column:\s*2/, 'a PO file without an editable number field should stay in the right workbench column')
+assert.match(styles, /@media \(max-width: 800px\) \{[\s\S]*?\.pr-review__po-file:only-child\s*\{[^}]*grid-column:\s*auto/, 'the standalone PO file should return to the mobile flow')
 
 assert.match(styles, /\.pr-register-table\s*\{[\s\S]*?table-layout:\s*fixed/, 'PR register columns must stay aligned even when row content widths differ')
 assert.match(styles, /\.pr-register-table__status\s*\{[^}]*width:\s*13%/, 'the PR status column needs a stable width for different chip labels')

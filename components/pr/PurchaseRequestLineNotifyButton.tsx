@@ -156,7 +156,7 @@ export function PurchaseRequestLineNotifyButton({
 
           {error && <p className="form-error" role="alert">{error}</p>}
 
-          <div className="decision-panel__actions">
+          <div className="decision-panel__actions line-notify-dialog__actions">
             <Button variant="secondary" type="button" onClick={closeDialog} disabled={isPending}>
               กลับไปตรวจสอบ
             </Button>
