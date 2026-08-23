@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileCard'
+import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
@@ -150,8 +151,12 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               <div>
                 <dt>สัญญาที่สร้าง</dt>
                 <dd>
-                  <Link className="identifier" href={`/contracts/${request.createdContractId}`}>
-                    เปิดสัญญา →
+                  <Link
+                    className="lab-button lab-button--secondary document-open-button"
+                    href={`/contracts/${request.createdContractId}`}
+                  >
+                    <DocumentOpenIcon className="document-open-button__icon" />
+                    เปิดสัญญา
                   </Link>
                 </dd>
               </div>

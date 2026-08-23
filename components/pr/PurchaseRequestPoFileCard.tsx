@@ -4,6 +4,7 @@ import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { PoFileDropzone } from '@/components/po/PoFileDropzone'
 import { Button } from '@/components/ui/Button'
+import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatPoFileSize, preparePoFile } from '@/lib/po/file'
 import {
@@ -145,7 +146,13 @@ export function PurchaseRequestPoFileCard({
   const fileActions = file.path || isCleanupPending ? (
     <div className="po-file-card__actions">
       {file.path && (
-        <Button variant="ghost" onClick={open} disabled={isPending}>
+        <Button
+          variant="secondary"
+          className="document-open-button"
+          onClick={open}
+          disabled={isPending}
+        >
+          <DocumentOpenIcon className="document-open-button__icon" />
           {pendingAction === 'open' ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
         </Button>
       )}
@@ -304,14 +311,11 @@ export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: stri
       <div className="po-file-open-action">
         <Button
           variant="secondary"
-          className="po-file-open-button"
+          className="document-open-button"
           onClick={open}
           disabled={isPending}
         >
-          <svg className="po-file-open-button__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M5 3.5h9l5 5v12H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-            <path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <DocumentOpenIcon className="document-open-button__icon" />
           {isPending ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
         </Button>
         {error && <p className="form-error po-file-open-action__error" role="alert">{error}</p>}

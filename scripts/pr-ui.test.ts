@@ -58,11 +58,16 @@ assert.doesNotMatch(detailPage, /<PurchaseRequestPoFileCard/, 'the PR header mus
 assert.match(detailPage, /PurchaseRequestPoFileOpenButton/, 'the PR summary exposes the open action for an attached PO')
 assert.match(detailPage, /request\.poFile\.path && !request\.poFile\.deletedAt/, 'the PR summary only exposes active attached PO files')
 assert.match(detailPage, /contract-facts__po-value/, 'the PO open action stays beside the PO number in the summary fact')
+assert.match(detailPage, /document-open-button/, 'the created contract action uses the same rectangular open-button treatment')
+assert.match(detailPage, /<DocumentOpenIcon/, 'the created contract action uses the same document icon as the PO action')
 
 const poFileCard = read('components/pr/PurchaseRequestPoFileCard.tsx')
 assert.match(poFileCard, /po-file-card--inline/, 'the PO file card supports the inline PR fact treatment')
 assert.match(poFileCard, /compact/, 'the inline PO file action uses a compact dropzone')
 assert.match(poFileCard, /export function PurchaseRequestPoFileOpenButton/, 'the PO open action owns its private preview dialog')
+assert.match(poFileCard, /document-open-button/, 'the PO open action uses the shared rectangular open-button treatment')
+assert.match(poFileCard, /variant="secondary"/, 'the lower PO open action keeps the same secondary button treatment as the summary action')
+assert.match(poFileCard, /DocumentOpenIcon/, 'the lower PO open action uses the same document icon as the summary action')
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /params:\s*Promise</)
