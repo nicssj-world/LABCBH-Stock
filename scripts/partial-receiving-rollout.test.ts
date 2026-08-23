@@ -13,6 +13,7 @@ const expected = [
   '20260821164000_partial_receiving_trigger_scope.sql',
   '20260821170000_partial_receiving_backfill.sql',
   '20260821180000_partial_receiving_short_close.sql',
+  '20260823163348_allow_po_number_on_partial_receiving.sql',
 ]
 
 assert.deepEqual(names, expected, 'partial receiving migrations must remain a complete ordered rollout')
@@ -23,6 +24,7 @@ const acknowledgement = read(expected[1])
 const triggerScope = read(expected[2])
 const backfill = read(expected[3])
 const shortClose = read(expected[4])
+const poNumber = read(expected[5])
 
 assert.match(compatibility, /create unique index if not exists goods_receipts_one_draft_purchase_request_key/i)
 assert.match(compatibility, /drop index if exists public\.goods_receipts_po_number_key/i)
@@ -33,6 +35,8 @@ assert.match(backfill, /set received_quantity = coalesce/i)
 assert.match(shortClose, /closed_short_by/i)
 assert.match(shortClose, /close_purchase_request_remaining/i)
 assert.match(shortClose, /nullif\(btrim\(coalesce\(closed_short_reason/i)
+assert.match(poNumber, /set_purchase_order_number/i)
+assert.match(poNumber, /status in \('completed', 'partially_received'\)/i)
 
 const runbook = readFileSync(join(process.cwd(), 'docs', 'runbooks', 'partial-receiving-rollout.md'), 'utf8')
 assert.match(runbook, /Do not paste a migration into the SQL editor/i)
