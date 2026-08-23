@@ -41,4 +41,13 @@ assert.match(route, /status:\s*401/)
 assert.match(route, /limit/)
 assert.match(route, /offset/)
 
+const disclosure = readFileSync('components/dashboard/DashboardWatchlist.tsx', 'utf8')
+assert.match(disclosure, /^'use client'/)
+assert.match(disclosure, /แสดงเพิ่มเติม/)
+assert.match(disclosure, /ยุบรายการ/)
+assert.match(disclosure, /aria-expanded/)
+assert.match(disclosure, /\/api\/dashboard\/watchlist/)
+assert.match(disclosure, /aria-live/)
+assert.match(disclosure, /ลองใหม่/)
+
 console.log('dashboard watchlist pagination: ok')
