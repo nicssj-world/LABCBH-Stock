@@ -434,8 +434,8 @@ export function PurchaseRequestChecklistFields({
 
       {policy.committeeSource === 'contract' ? (
         <div className={`pr-checklist__contract-roster${contractRosterReady ? ' is-complete' : ' is-blocked'}`}>
-          <strong>{contractRosterReady ? 'ใช้รายชื่อกรรมการจากสัญญาอัตโนมัติ' : 'สัญญานี้ยังไม่มีรายชื่อกรรมการครบถ้วน'}</strong>
-          <p>{contractRosterReady ? 'ไม่ต้องเลือกชื่อซ้ำ ระบบจะบันทึก snapshot จาก roster ของสัญญา' : 'ให้เจ้าหน้าที่คลังตั้งค่า roster ที่หน้ารายละเอียดสัญญาก่อนส่งใบ PR'}</p>
+          <strong>{contractRosterReady ? 'ใช้รายชื่อกรรมการจากสัญญาอัตโนมัติ' : 'รายชื่อกรรมการยังไม่ครบถ้วน'}</strong>
+          <p>{contractRosterReady ? 'ไม่ต้องเลือกชื่อซ้ำ ระบบจะบันทึก snapshot จาก roster ของสัญญา' : 'กรุณาเพิ่มรายชื่อกรรมการให้ครบที่หน้ารายละเอียดสัญญา ก่อนส่งใบ PR'}</p>
         </div>
       ) : (
         <div className="pr-checklist__section">

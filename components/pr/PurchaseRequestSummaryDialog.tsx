@@ -210,7 +210,6 @@ export function PurchaseRequestSummaryDialog({
               href={`/purchase-requests/${request.id}`}
               label={`เปิดรายละเอียดเต็มใบ PR ${request.documentNumber}`}
               title="เปิดรายละเอียดเต็มใบ PR"
-              icon="open"
               onClick={unmountDialog}
             />
             <Button variant="secondary" onClick={unmountDialog}>ปิด</Button>

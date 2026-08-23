@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import type { ComponentProps } from 'react'
-import { OpenDetailIcon, ViewIcon } from '@/components/inventory/InventoryDetailIcons'
+import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
+import { ViewIcon } from '@/components/inventory/InventoryDetailIcons'
 
 type DetailIconLinkProps = Omit<ComponentProps<typeof Link>, 'aria-label' | 'children' | 'className' | 'title'> & {
   label: string
   title?: string
-  icon?: 'view' | 'open'
+  icon?: 'document' | 'view'
   className?: string
 }
 
-export function DetailIconLink({ href, label, title = label, icon = 'open', className = '', ...props }: DetailIconLinkProps) {
+export function DetailIconLink({ href, label, title = label, icon = 'document', className = '', ...props }: DetailIconLinkProps) {
   return (
     <Link
       {...props}
@@ -18,7 +19,7 @@ export function DetailIconLink({ href, label, title = label, icon = 'open', clas
       aria-label={label}
       title={title}
     >
-      {icon === 'open' ? <OpenDetailIcon /> : <ViewIcon />}
+      {icon === 'document' ? <DocumentOpenIcon /> : <ViewIcon />}
     </Link>
   )
 }

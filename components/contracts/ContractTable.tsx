@@ -34,17 +34,19 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
             <tr>
               <th>เลขที่สัญญา</th>
               <th>ชื่อสัญญา</th>
-              <th>ประเภท</th>
+              <th className="contract-register-table__cell--center">ประเภท</th>
               <th className="contract-register-table__cell--center">ขั้นตอนจัดซื้อ</th>
               <th className="contract-register-table__cell--center">สถานะสัญญา</th>
               <th>คงเหลือ</th>
-              <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
+              <th className="contract-register-table__cell--center"><span className="visually-hidden">เปิดรายละเอียด</span></th>
             </tr>
           </thead>
           <tbody>
             {contracts.map((contract) => (
               <tr key={contract.id}>
-                <td className="identifier">{contract.contractNumberLabel}</td>
+                <td className="identifier">
+                  <span className="contract-number-token">{contract.contractNumberLabel}</span>
+                </td>
                 <td>
                   <ContractSummaryDialog contract={contract} />
                   <small>{contract.vendor || 'ไม่ระบุคู่สัญญา'} · {contract.department || 'ไม่ระบุหน่วยงาน'}</small>
@@ -58,11 +60,11 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
                   )}
                   {contract.contractType !== 'equipment_lease' && <ContractItemsDisclosure items={contract.items} />}
                 </td>
-                <td>{contract.contractTypeLabel}</td>
+                <td className="contract-register-table__cell--center">{contract.contractTypeLabel}</td>
                 <td className="contract-register-table__cell--center"><StageProgress stage={contract.procurementStage} label={contract.procurementStageLabel} /></td>
                 <td className="contract-register-table__cell--center"><StatusChip tone={tone(contract)}>{contract.contractStatusLabel}</StatusChip></td>
                 <td><ContractRemainingGauge percent={contract.remainingPercent} /></td>
-                <td>
+                <td className="contract-register-table__cell--center">
                   <div className="detail-actions">
                     <DetailIconLink
                       href={`/contracts/${contract.id}`}

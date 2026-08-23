@@ -134,7 +134,6 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
               href={`/receipts/${receipt.id}`}
               label={`เปิดรายละเอียดเต็มใบรับเข้า ${title}`}
               title="เปิดรายละเอียดเต็มใบรับเข้า"
-              icon="open"
               onClick={unmountDialog}
             />
             <Button variant="secondary" onClick={unmountDialog}>ปิด</Button>

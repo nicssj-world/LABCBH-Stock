@@ -24,6 +24,9 @@ assert.match(fields, /quotationAttachments/, 'quotation slots must stay together
 assert.match(fields, /บริษัทที่ \$\{item\.requirement\.slot\}/, 'quotation order needs an explicit company label')
 assert.match(fields, /แนบแล้ว \{completeAttachmentCount\}\/\{policy\.attachments\.length\} ไฟล์/, 'overall file count must show progress')
 assert.doesNotMatch(fields, /complete \? '✓' : requirement\.slot/, 'slot numbers must not be rendered as ambiguous card markers')
+assert.match(fields, /รายชื่อกรรมการยังไม่ครบถ้วน/, 'incomplete contract committees need a clear heading')
+assert.match(fields, /กรุณาเพิ่มรายชื่อกรรมการให้ครบที่หน้ารายละเอียดสัญญา ก่อนส่งใบ PR/, 'incomplete contract committees need a clear next step')
+assert.doesNotMatch(fields, /ให้เจ้าหน้าที่คลังตั้งค่า roster ที่หน้ารายละเอียดสัญญาก่อนส่งใบ PR/, 'blocked-state guidance must avoid the internal roster term')
 
 const form = read('components/pr/PurchaseRequestForm.tsx')
 assert.match(form, /PurchaseRequestChecklistFields/)

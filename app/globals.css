@@ -1477,19 +1477,31 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .data-table td strong,
 .data-table td small { display: block; }
 .data-table td small { margin-top: 3px; color: var(--lab-muted); font-size: 11px; }
-.contract-summary-trigger { display: block; width: 100%; min-height: 44px; padding: 0; color: var(--lab-primary); background: transparent; border: 0; text-align: left; font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--lab-primary) 36%, transparent); text-decoration-style: dotted; text-underline-offset: 3px; }
-.contract-summary-trigger:hover { color: var(--lab-primary-strong); text-decoration-color: currentColor; }
+.contract-summary-trigger { display: block; width: 100%; min-height: 44px; padding: 0; color: var(--lab-primary); background: transparent; border: 0; text-align: left; font: inherit; cursor: pointer; text-decoration: none; }
+.contract-summary-trigger:hover { color: var(--lab-primary-strong); }
 .contract-summary-trigger--card { color: var(--lab-ink); font-weight: 700; line-height: 1.35; text-decoration: none; }
 .contract-summary-trigger--card:hover { color: var(--lab-primary); }
-.contract-register-table { table-layout: fixed; }
-.contract-register-table__name { width: 33%; }
-.contract-register-table__type { width: 9%; }
-.contract-register-table__stage { width: 13%; }
-.contract-register-table__status { width: 12%; }
-.contract-register-table__number { width: 10%; }
+.contract-register-table { min-width: 1240px; table-layout: fixed; }
+.contract-register-table__number { width: 14%; }
+.contract-register-table__name { width: 29%; }
+.contract-register-table__type { width: 10%; }
+.contract-register-table__stage { width: 14%; }
+.contract-register-table__status { width: 13%; }
 .contract-register-table__remaining { width: 13%; }
-.contract-register-table__action { width: 10%; }
+.contract-register-table__action { width: 7%; }
 .contract-register-table td:last-child { white-space: nowrap; }
+.contract-number-token {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 8px;
+  color: var(--lab-ink);
+  background: transparent;
+  border: 1px solid var(--lab-border);
+  border-radius: 6px;
+  font: 600 12px/1.35 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
 /* Column alignment cannot ride on the <col> classes above — a col element
    only carries width, background, border and visibility to its cells. The
    .data-table prefix is what makes this win: `.data-table th, .data-table td`
@@ -1780,8 +1792,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 /* Shared shell for the PR/receipt/requisition list-row summary popups —
    same shape as .contract-summary-dialog*, kept generic since three domains
    now use it (the contract classes above stay untouched). */
-.list-summary-trigger { display: block; width: 100%; padding: 0; color: var(--lab-primary); background: transparent; border: 0; border-radius: 4px; text-align: left; font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--lab-primary) 36%, transparent); text-decoration-style: dotted; text-underline-offset: 3px; }
-.list-summary-trigger:hover { color: var(--lab-primary-strong); text-decoration-color: currentColor; }
+.list-summary-trigger { display: block; width: 100%; padding: 0; color: var(--lab-primary); background: transparent; border: 0; border-radius: 4px; text-align: left; font: inherit; cursor: pointer; text-decoration: none; }
+.list-summary-trigger:hover { color: var(--lab-primary-strong); }
 .list-summary-trigger:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: 2px; }
 .list-summary-trigger--card { color: var(--lab-ink); font-weight: 700; line-height: 1.35; text-decoration: none; }
 .list-summary-trigger--card:hover { color: var(--lab-primary); }

@@ -104,7 +104,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
             <dl className="contract-summary-dialog__facts">
               <div>
                 <dt>เลขที่สัญญา</dt>
-                <dd className="identifier">{contract.contractNumberLabel}</dd>
+                <dd className="identifier contract-number-token">{contract.contractNumberLabel}</dd>
               </div>
               <div>
                 <dt>คู่สัญญา</dt>

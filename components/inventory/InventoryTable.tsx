@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { OpenDetailIcon } from '@/components/inventory/InventoryDetailIcons'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
+import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import {
   STOCK_LEVEL_LABELS,
@@ -68,7 +68,7 @@ export function InventoryTable({
                       aria-label={`ดูรายละเอียด ${item.name}`}
                       title="ดูรายละเอียดน้ำยา"
                     >
-                      <OpenDetailIcon />
+                      <DocumentOpenIcon />
                     </Link>
                     {canEdit && (
                       <>
@@ -107,7 +107,7 @@ export function InventoryTable({
                 aria-label={`ดูรายละเอียด ${item.name}`}
                 title="ดูรายละเอียดน้ำยา"
               >
-                <OpenDetailIcon />
+                <DocumentOpenIcon />
               </Link>
               {canEdit && (
                 <>

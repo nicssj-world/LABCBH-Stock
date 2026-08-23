@@ -403,6 +403,19 @@ assert.match(summaryDialog, /request\.items\.map/, 'the PR popup must list every
 assert.match(summaryDialog, /formatQuantity\(item\.remainingQuantity, item\.unit\)/, 'the PR popup must foreground each remaining quantity')
 assert.match(summaryDialog, /formatQuantity\(item\.requestedQuantity, item\.unit\)/, 'the PR popup must retain the original requested quantity for context')
 
+const detailIconLink = read('components/ui/DetailIconLink.tsx')
+assert.match(detailIconLink, /DocumentOpenIcon/, 'detail links must use the document icon')
+assert.match(detailIconLink, /icon = 'document'/, 'the document icon must be the shared default for detail links')
+assert.match(detailIconLink, /icon === 'document' \? <DocumentOpenIcon \/>/, 'the shared detail link must render the document icon')
+assert.doesNotMatch(detailIconLink, /OpenDetailIcon|icon === 'open'/, 'detail links must not retain the arrow-icon variant')
+for (const path of [
+  'components/pr/PurchaseRequestSummaryDialog.tsx',
+  'components/requisitions/RequisitionSummaryDialog.tsx',
+  'components/receipts/GoodsReceiptSummaryDialog.tsx',
+] as const) {
+  assert.doesNotMatch(read(path), /icon="open"/, `${path} must not override the document detail icon`)
+}
+
 const lifecycleControls = read('components/pr/PurchaseRequestLifecycleControls.tsx')
 assert.match(lifecycleControls, /cancelPurchaseRequest/)
 assert.match(lifecycleControls, /ยืนยันการลบใบ PR/)

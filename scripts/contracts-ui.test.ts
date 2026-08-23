@@ -41,6 +41,7 @@ assert.match(contractFilters, /showOlder/, 'clearing interactive filters must pr
 
 const detailPage = read(contractRoutes[2])
 assert.match(detailPage, /params:\s*Promise</, 'Next 16 detail params must be awaited')
+assert.match(detailPage, /<strong className="contract-number-token">\{contract\.contractNumberLabel\}<\/strong>/, 'the contract detail heading should use the shared neutral number token')
 assert.match(detailPage, /StageTimeline/, 'detail must show six-step history')
 assert.match(detailPage, /StageAdvanceControl/, 'detail must expose confirmed stage advance')
 assert.match(
@@ -155,6 +156,8 @@ assert.match(form, /onDirtyChange\?:\s*\(dirty:\s*boolean\)\s*=>\s*void/, 'contr
 assert.match(form, /onSaved\?\.\(\)/, 'contract form must notify the popup after a successful edit')
 
 const globalStyles = read('app/globals.css')
+assert.match(globalStyles, /\.contract-summary-trigger\s*\{[^}]*text-decoration:\s*none/, 'contract summary triggers should not render an underline')
+assert.match(globalStyles, /\.list-summary-trigger\s*\{[^}]*text-decoration:\s*none/, 'list summary triggers should not render an underline')
 assert.match(globalStyles, /\.app-dialog\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;[\s\S]*margin:\s*auto;/, 'application popups must stay centered in the viewport')
 assert.match(
   globalStyles,
@@ -244,6 +247,10 @@ assert.match(table, /contract-table--desktop/, 'desktop table variant must exist
 assert.match(table, /contract-task-cards/, 'mobile task-card variant must exist')
 assert.match(table, /contract-register-table/, 'each fiscal-year register must share one fixed table layout')
 assert.match(table, /<colgroup>/, 'each fiscal-year register must declare the same column structure')
+assert.match(table, /<th className="contract-register-table__cell--center">ประเภท<\/th>/, 'contract type should share the centered categorical column alignment')
+assert.match(table, /<td className="contract-register-table__cell--center">\{contract\.contractTypeLabel\}<\/td>/, 'contract type values should align with their centered header')
+assert.match(table, /<td className="contract-register-table__cell--center">\s*<div className="detail-actions">/, 'detail actions should stay centered in their narrow column')
+assert.match(table, /<span className="contract-number-token">\{contract\.contractNumberLabel\}<\/span>/, 'contract numbers should use a compact neutral identifier token')
 const contractNumberHeader = table.indexOf('<th>เลขที่สัญญา</th>')
 const contractNameHeader = table.indexOf('<th>ชื่อสัญญา</th>')
 assert.ok(contractNumberHeader >= 0 && contractNumberHeader < contractNameHeader, 'contract number must appear before contract name')
@@ -269,6 +276,7 @@ assert.match(summaryDialog, /\{isRendered && \(/, 'the dialog body must stay beh
 assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the shared hook must still open a native modal dialog')
 assert.match(summaryDialog, /aria-haspopup="dialog"/, 'the summary trigger must announce its dialog relationship')
 assert.match(summaryDialog, /ข้อมูลสัญญาแบบย่อ/, 'the dialog must identify itself as a concise contract summary')
+assert.match(summaryDialog, /<dd className="identifier contract-number-token">\{contract\.contractNumberLabel\}<\/dd>/, 'the contract popup should use the shared neutral number token')
 assert.match(summaryDialog, /เปิดรายละเอียดเต็ม/, 'the summary must offer a route to the complete contract page')
 assert.match(summaryDialog, /DetailIconLink/, 'the contract popup detail route must use the shared icon link')
 assert.match(summaryDialog, /contractMode\(contract\.contractType \?\? 'e_bidding'\)/, 'the popup must use the contract mode when resolving its value')
@@ -286,6 +294,11 @@ assert.doesNotMatch(table, /contract-table__status-stack/, 'the lifecycle state 
 assert.match(globalStyles, /\.contract-expiry-chip--danger/, 'the final-30-day deadline needs a distinct compact urgent visual treatment')
 assert.match(globalStyles, /\.contract-renewal-hint--danger/, 'urgent renewal metadata needs a dedicated accessible visual treatment')
 assert.match(globalStyles, /\.contract-register-table\s*\{[\s\S]*table-layout:\s*fixed/, 'fiscal-year registers must not size columns independently from their row content')
+assert.match(globalStyles, /\.contract-register-table\s*\{[\s\S]*min-width:\s*1240px[\s\S]*table-layout:\s*fixed/, 'desktop registers need a readable floor for long identifiers and gauges')
+assert.match(globalStyles, /\.contract-register-table__number\s*\{\s*width:\s*14%;/, 'contract numbers need enough width for long identifiers')
+assert.match(globalStyles, /\.contract-register-table__name\s*\{\s*width:\s*29%;/, 'contract names should remain the primary wide column')
+assert.match(globalStyles, /\.contract-register-table__action\s*\{\s*width:\s*7%;/, 'the detail action should not consume a full data column')
+assert.match(globalStyles, /\.contract-number-token\s*\{[\s\S]*color:\s*var\(--lab-ink\)[\s\S]*background:\s*transparent[;\s][\s\S]*border:\s*1px solid var\(--lab-border\)/, 'contract number tokens should stay neutral and unfilled instead of competing with linked contract names')
 
 const dashboardPage = read('app/(protected)/dashboard/page.tsx')
 assert.match(dashboardPage, /getExecutiveDashboard/, 'dashboard must use a real SSR\/RLS read boundary')

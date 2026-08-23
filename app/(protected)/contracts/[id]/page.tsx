@@ -183,7 +183,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           <div className="contract-detail-heading__identity">
             <p className="contract-detail-heading__number">
               <span>เลขที่สัญญา</span>
-              <strong>{contract.contractNumberLabel}</strong>
+              <strong className="contract-number-token">{contract.contractNumberLabel}</strong>
             </p>
             <h1>{contract.resolvedDisplayName}</h1>
           </div>
