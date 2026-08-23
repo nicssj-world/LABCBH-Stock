@@ -99,7 +99,7 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
 
       {receipt.status === 'posted' && (
         <p className="inline-alert inline-alert--info" role="note">
-          ใบรับเข้านี้ Posted แล้วและแก้ไขประวัติเดิมไม่ได้ หากยอดรับไม่ตรง ให้เปิดรายการน้ำยาจากตารางด้านล่างเพื่อทำ “ปรับยอด/รับคืน” พร้อมเหตุผลใน ledger
+          ใบรับเข้านี้บันทึกเข้าคลังแล้ว จึงแก้ไขประวัติเดิมไม่ได้ หากยอดไม่ตรง ให้คลิกชื่อน้ำยาด้านล่าง แล้วเลือก “ปรับยอดคงคลัง” เพื่อเพิ่มหรือลดยอด พร้อมระบุเหตุผลทุกครั้ง
         </p>
       )}
 

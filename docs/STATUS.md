@@ -6,6 +6,23 @@ Update this file when any line moves.
 
 ---
 
+## Latest schema-drift remediation — 2026-08-23
+
+- Read-only comparison found that Production and Staging diverged in both
+  data and schema; Production was not simply a newer linear version.
+- Staging (`stogulcfwsvunydmwrex`) received the existing stock-balance
+  migrations `20260818100000` and `20260818103000`. It now exposes both
+  `set_stock_balance` overloads and enforces lot expiry on
+  `record_stock_adjustment`.
+- Production (`fslagsuorkcckvvtrmyi`) was not modified. Local `.env.local`
+  remains pointed at Staging.
+- The remote migration ledger is still non-canonical because the migration
+  service recorded generated apply-time versions. Do not run a normal
+  `supabase db push` until the ledger is deliberately repaired and reviewed.
+- Static drift, inventory, receiving, typecheck, and lint checks pass. The
+  Staging advisor snapshot has no ERROR-level finding but retains broad
+  pre-existing INFO/WARN findings from the legacy schema.
+
 ## Done
 
 ### Equipment lease budget management

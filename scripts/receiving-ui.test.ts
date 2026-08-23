@@ -49,6 +49,12 @@ assert.doesNotMatch(detailPage, /PO EVIDENCE|PoImageUploader|poUpload=failed/)
 assert.match(detailPage, /ReceiptLinesEditor|ReceiptPostPanel/)
 assert.match(detailPage, /formatThaiDateTime\(receipt\.cancelledAt\)/, 'the cancellation audit must show its time, not just its date')
 assert.match(detailPage, /inline-alert--info/, 'posted receipts must explain the immutable correction path')
+assert.match(
+  detailPage,
+  /ใบรับเข้านี้บันทึกเข้าคลังแล้ว จึงแก้ไขประวัติเดิมไม่ได้ หากยอดไม่ตรง ให้คลิกชื่อน้ำยาด้านล่าง แล้วเลือก “ปรับยอดคงคลัง” เพื่อเพิ่มหรือลดยอด พร้อมระบุเหตุผลทุกครั้ง/,
+  'posted receipt guidance must explain the Thai correction path',
+)
+assert.doesNotMatch(detailPage, /Posted|ledger|ปรับยอด\/รับคืน/, 'posted receipt guidance must avoid technical English and ambiguous shorthand')
 assert.match(detailPage, /inventory\/\$\{item\.inventoryItemId\}/, 'posted receipt lines must link to the audited inventory adjustment path')
 
 const form = read('components/receipts/ReceiptForm.tsx')

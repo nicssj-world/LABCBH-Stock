@@ -9,6 +9,7 @@ import {
   formatBaht,
   summarizePurchaseRequestReceiving,
 } from '@/lib/pr/presenter'
+import { purchaseMethodPurpose } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
 
 /** A lease PR carries zero items, so request.total (summed from items) is
@@ -55,6 +56,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
           <tbody>
             {requests.map((request) => {
               const receiving = summarizePurchaseRequestReceiving(request.items)
+              const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
               return (
               <tr key={request.id}>
                 <td>
@@ -72,9 +74,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                   {request.purchaseMethod === 'equipment_lease' ? leaseCeilingLabel(request) : formatBaht(request.total)}
                 </td>
                 <td>
-                  {receiving.lineCount === 0 ? (
-                    <span className="pr-receiving-summary__empty">—</span>
-                  ) : (
+                  {showsReceiving && receiving.lineCount > 0 ? (
                     <span
                       className="pr-receiving-summary"
                       aria-label={`รับแล้ว ${receiving.receivedLineCount} จาก ${receiving.lineCount} รายการ เหลือ ${receiving.remainingLineCount} รายการ`}
@@ -82,6 +82,8 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                       <strong>{receiving.receivedLineCount}/{receiving.lineCount}</strong>
                       <small>รับแล้ว · เหลือ {receiving.remainingLineCount} รายการ</small>
                     </span>
+                  ) : (
+                    <span className="pr-receiving-summary__empty">—</span>
                   )}
                 </td>
                 <td>
@@ -108,6 +110,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
       <ul className="pr-task-cards" aria-label="รายการใบ PR">
         {requests.map((request) => {
           const receiving = summarizePurchaseRequestReceiving(request.items)
+          const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
           return (
           <li key={request.id}>
             <div className="task-card__topline">
@@ -123,7 +126,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
               {PURCHASE_METHOD_LABELS[request.purchaseMethod]} · {formatThaiDate(request.requestedDate)}
               {request.purchaseMethod !== 'equipment_lease' && ` · ${request.items.length} รายการ`}
             </p>
-            {receiving.lineCount > 0 && (
+            {showsReceiving && receiving.lineCount > 0 && (
               <p className="pr-receiving-summary pr-receiving-summary--card">
                 รับแล้ว {receiving.receivedLineCount}/{receiving.lineCount} รายการ · เหลือ {receiving.remainingLineCount} รายการ
               </p>
