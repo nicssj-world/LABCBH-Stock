@@ -264,8 +264,8 @@ const missingHeadName = purchaseRequestInputSchema.safeParse({ ...validInput, he
 assert.equal(missingHeadName.success, false)
 if (!missingHeadName.success) {
   assert.ok(
-    missingHeadName.error.issues.some((issue) => issue.message === 'กรุณาระบุหัวหน้างาน'),
-    'the supervisor validation message uses the current label',
+    missingHeadName.error.issues.some((issue) => issue.message === 'กรุณาระบุชื่อผู้ขอ'),
+    'the requester validation message uses the current label',
   )
 }
 assert.equal(

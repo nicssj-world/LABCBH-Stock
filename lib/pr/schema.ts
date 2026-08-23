@@ -206,7 +206,7 @@ export const purchaseRequestLineSchema = z
 export const purchaseRequestInputSchema = z
   .object({
     department: z.string().trim().min(1, 'กรุณาระบุหน่วยงานผู้ขอ'),
-    headName: z.string().trim().min(1, 'กรุณาระบุหัวหน้างาน'),
+    headName: z.string().trim().min(1, 'กรุณาระบุชื่อผู้ขอ'),
     requestedDate: isoDateSchema,
     note: z.string().trim().max(1000).nullable(),
     method: purchaseMethodSchema,

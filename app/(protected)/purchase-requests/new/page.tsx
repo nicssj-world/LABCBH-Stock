@@ -10,6 +10,14 @@ export default async function NewPurchaseRequestPage() {
   const actor = await requireActor()
   if (!canRequestPurchase(actor)) redirect('/purchase-requests')
 
+  const requesterDepartment = actor.department?.trim() || null
+  // Keep an out-of-band profile department visible and selected as well. This
+  // matters for shared/staging profiles while still letting the picker use the
+  // exact department value stored on the profile.
+  const departments = requesterDepartment && !(DEPARTMENTS as readonly string[]).includes(requesterDepartment)
+    ? [requesterDepartment, ...DEPARTMENTS]
+    : DEPARTMENTS
+
   const { contracts, awaitingContracts, contractLines, catalog } = await loadPurchaseRequestFormOptions()
 
   return (
@@ -24,8 +32,8 @@ export default async function NewPurchaseRequestPage() {
       </header>
 
       <PurchaseRequestForm
-        department={DEPARTMENTS[0]}
-        departments={DEPARTMENTS}
+        department={requesterDepartment ?? DEPARTMENTS[0]}
+        departments={departments}
         headName={actor.name ?? ''}
         contracts={contracts}
         awaitingContracts={awaitingContracts}

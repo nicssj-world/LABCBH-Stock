@@ -391,7 +391,7 @@ export function PurchaseRequestForm({
             </select>
           </label>
           <label className="field-row">
-            หัวหน้างาน
+            ชื่อผู้ขอ
             <input type="text" required readOnly value={headName} title="ชื่อผู้สร้างใบขอซื้อ แก้ไขไม่ได้" />
           </label>
           <label className="field-row">
