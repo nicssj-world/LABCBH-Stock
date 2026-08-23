@@ -1794,6 +1794,10 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .list-summary-dialog__fact--wide { grid-column: 1 / -1; border-right: 0 !important; }
 .list-summary-dialog__facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .list-summary-dialog__facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 700; }
+.list-summary-dialog__po-value { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.list-summary-dialog__po-value > span { min-width: 0; }
+.list-summary-dialog__po-value > .po-file-open-action { display: contents; }
+.list-summary-dialog__po-value .document-open-button { min-width: 142px; margin-left: auto; }
 .list-summary-dialog__items { overflow: hidden; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 12px; }
 .list-summary-dialog__items-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--lab-border); }
 .list-summary-dialog__items-heading h3 { margin: 0; color: var(--lab-ink); font-size: 12px; font-weight: 700; }

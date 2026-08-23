@@ -1,14 +1,13 @@
 'use client'
 
-import { useRef, useState, useTransition, type FormEvent } from 'react'
+import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { PoFileDropzone } from '@/components/po/PoFileDropzone'
+import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
 import { Button } from '@/components/ui/Button'
-import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { formatPoFileSize, preparePoFile } from '@/lib/po/file'
 import {
-  getPurchaseRequestPoFileUrl,
   retryPurchaseRequestPoFileCleanup,
   uploadPurchaseRequestPoFile,
 } from '@/lib/pr/po-file-actions'
@@ -33,11 +32,9 @@ export function PurchaseRequestPoFileCard({
   canRetryCleanup,
 }: PurchaseRequestPoFileCardProps) {
   const router = useRouter()
-  const previewDialogRef = useRef<HTMLDialogElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pendingAction, setPendingAction] = useState<'upload' | 'open' | 'retry' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'upload' | 'retry' | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const hasActiveFile = Boolean(file.path) && !file.deletedAt
@@ -82,24 +79,6 @@ export function PurchaseRequestPoFileCard({
     })
   }
 
-  const open = () => {
-    if (!file.path) return
-    setError(null)
-    setPendingAction('open')
-    startTransition(async () => {
-      try {
-        const signedUrl = await getPurchaseRequestPoFileUrl(requestId)
-        if (!signedUrl) throw new Error('ไม่พบไฟล์ PO ที่เปิดดูได้')
-        setPreviewUrl(signedUrl)
-        previewDialogRef.current?.showModal()
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'เปิดไฟล์ PO ไม่สำเร็จ')
-      } finally {
-        setPendingAction(null)
-      }
-    })
-  }
-
   const retry = () => {
     setError(null)
     setPendingAction('retry')
@@ -113,11 +92,6 @@ export function PurchaseRequestPoFileCard({
         setPendingAction(null)
       }
     })
-  }
-
-  const closePreview = () => {
-    previewDialogRef.current?.close()
-    setPreviewUrl(null)
   }
 
   const uploadForm = canEdit && poNumber ? (
@@ -146,15 +120,7 @@ export function PurchaseRequestPoFileCard({
   const fileActions = file.path || isCleanupPending ? (
     <div className="po-file-card__actions">
       {file.path && (
-        <Button
-          variant="secondary"
-          className="document-open-button"
-          onClick={open}
-          disabled={isPending}
-        >
-          <DocumentOpenIcon className="document-open-button__icon" />
-          {pendingAction === 'open' ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
-        </Button>
+        <PurchaseRequestPoFileOpenButton requestId={requestId} />
       )}
       {isCleanupPending && (
         <Button variant="secondary" onClick={retry} disabled={isPending}>
@@ -249,105 +215,6 @@ export function PurchaseRequestPoFileCard({
           </div>
         </section>
       )}
-
-      <dialog
-        ref={previewDialogRef}
-        className="app-dialog file-preview-dialog"
-        aria-labelledby="pr-po-file-preview-title"
-        onCancel={(event) => {
-          event.preventDefault()
-          closePreview()
-        }}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closePreview()
-        }}
-      >
-        <header className="app-dialog__header">
-          <div>
-            <h2 id="pr-po-file-preview-title">ไฟล์ PO</h2>
-            <p>แสดงเอกสารจากที่จัดเก็บส่วนตัวในหน้ารายละเอียดใบ PR</p>
-          </div>
-          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่างไฟล์ PO" onClick={closePreview}>
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        </header>
-        <div className="app-dialog__body file-preview-dialog__body">
-          {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
-        </div>
-      </dialog>
-    </>
-  )
-}
-
-export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: string }) {
-  const previewDialogRef = useRef<HTMLDialogElement>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
-
-  const open = () => {
-    setError(null)
-    startTransition(async () => {
-      try {
-        const signedUrl = await getPurchaseRequestPoFileUrl(requestId)
-        if (!signedUrl) throw new Error('ไม่พบไฟล์ PO ที่เปิดดูได้')
-        setPreviewUrl(signedUrl)
-        previewDialogRef.current?.showModal()
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'เปิดไฟล์ PO ไม่สำเร็จ')
-      }
-    })
-  }
-
-  const closePreview = () => {
-    previewDialogRef.current?.close()
-    setPreviewUrl(null)
-  }
-
-  return (
-    <>
-      <div className="po-file-open-action">
-        <Button
-          variant="secondary"
-          className="document-open-button"
-          onClick={open}
-          disabled={isPending}
-        >
-          <DocumentOpenIcon className="document-open-button__icon" />
-          {isPending ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
-        </Button>
-        {error && <p className="form-error po-file-open-action__error" role="alert">{error}</p>}
-      </div>
-
-      <dialog
-        ref={previewDialogRef}
-        className="app-dialog file-preview-dialog"
-        aria-labelledby="pr-po-file-open-preview-title"
-        onCancel={(event) => {
-          event.preventDefault()
-          closePreview()
-        }}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closePreview()
-        }}
-      >
-        <header className="app-dialog__header">
-          <div>
-            <h2 id="pr-po-file-open-preview-title">ไฟล์ PO</h2>
-            <p>แสดงเอกสารจากที่จัดเก็บส่วนตัวในหน้ารายละเอียดใบ PR</p>
-          </div>
-          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่างไฟล์ PO" onClick={closePreview}>
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        </header>
-        <div className="app-dialog__body file-preview-dialog__body">
-          {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
-        </div>
-      </dialog>
     </>
   )
 }

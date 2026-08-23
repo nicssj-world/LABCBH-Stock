@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -78,7 +79,12 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
             <dl className="list-summary-dialog__facts">
               <div>
                 <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
-                <dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd>
+                <dd className="identifier list-summary-dialog__po-value">
+                  <span>{request.poNumber ?? 'ยังไม่มี'}</span>
+                  {request.poFile.path && !request.poFile.deletedAt && (
+                    <PurchaseRequestPoFileOpenButton requestId={request.id} />
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>วิธีจัดซื้อ</dt>
