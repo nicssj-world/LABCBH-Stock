@@ -55,11 +55,6 @@ export function ReceiptPostPanel({ receipt }: { receipt: GoodsReceiptRecord }) {
         บันทึกแล้วระบบจะสร้างล็อตและลงบัญชีรับเข้า {formatQuantity(receipt.totalQuantity)} หน่วย จาก{' '}
         {receipt.items.length} รายการ · กดซ้ำจะไม่ทำให้ยอดเพิ่มซ้ำ
       </p>
-      {!receipt.poImagePath && (
-        <p className="inline-alert" role="status">
-          ยังไม่ได้แนบไฟล์ PO แนะนำให้แนบก่อนบันทึกเข้าคลังเพื่อใช้อ้างอิงภายหลัง
-        </p>
-      )}
       {isCancelling && (
         <label className="field-row receipt-post__cancel-note">
           หมายเหตุการยกเลิก (ไม่บังคับ)

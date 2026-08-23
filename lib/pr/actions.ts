@@ -16,6 +16,7 @@ import {
   purchaseRequestShortCloseSchema,
 } from '@/lib/pr/schema'
 import { isoDateSchema } from '@/lib/validation/date'
+import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
 import type {
   EphisPrNumberInput,
   PurchaseOrderNumberInput,
@@ -189,6 +190,18 @@ export async function closePurchaseRequestRemaining(
   })
 
   const closed = unwrapMutation('ปิดยอดคงเหลือของใบ PR', result)
+  try {
+    // The short-close RPC is already committed. Cleanup failure must remain
+    // retryable and must never make the caller believe the PR was reopened.
+    await cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
+      reason: 'closed_short',
+      receiptId: null,
+    })
+  } catch (error) {
+    revalidatePurchaseRequest(parsedId)
+    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+    throw new Error(`ปิดยอดคงเหลือสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ: ${message}`)
+  }
   revalidatePurchaseRequest(parsedId)
   return closed
 }

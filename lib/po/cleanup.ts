@@ -107,6 +107,40 @@ function validateCleanupPaths(
   return [...paths]
 }
 
+async function listPurchaseRequestPoPaths(
+  purchaseRequestId: string,
+  fiscalYear: number,
+): Promise<Set<string>> {
+  const paths = new Set<string>()
+  const prefix = `po/${fiscalYear}/${purchaseRequestId}`
+  let offset = 0
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.storage.from(PO_IMAGE_BUCKET).list(prefix, {
+      limit: 100,
+      offset,
+      sortBy: { column: 'name', order: 'asc' },
+    })
+
+    if (error) throw new Error(`อ่านไฟล์ PO ของใบ PR ไม่สำเร็จ: ${error.message}`)
+
+    const entries = data ?? []
+    for (const entry of entries) {
+      if (!entry.name) continue
+      const path = `${prefix}/${entry.name}`
+      if (!isPurchaseRequestPoFilePathAllowed(path, fiscalYear, purchaseRequestId)) {
+        throw new Error('เส้นทางไฟล์ PO ของใบ PR ไม่ถูกต้อง')
+      }
+      paths.add(path)
+    }
+
+    if (entries.length < 100) break
+    offset += entries.length
+  }
+
+  return paths
+}
+
 export async function cleanupTerminalPurchaseRequestPoFile(
   purchaseRequestId: string,
   actorId: string,
@@ -119,9 +153,14 @@ export async function cleanupTerminalPurchaseRequestPoFile(
   if (!['received', 'closed_short'].includes(request.status)) return
   if (request.status !== input.reason) return
 
-  const paths = validateCleanupPaths(purchaseRequestId, request, receipts)
-  if (paths.length > 0) {
-    const { error } = await supabaseAdmin.storage.from(PO_IMAGE_BUCKET).remove(paths)
+  const paths = new Set(validateCleanupPaths(purchaseRequestId, request, receipts))
+  // Replacements use unique object names. Sweep the whole PR namespace so an
+  // older object cannot become an untracked storage leak after terminal cleanup.
+  for (const path of await listPurchaseRequestPoPaths(purchaseRequestId, request.fiscal_year)) {
+    paths.add(path)
+  }
+  if (paths.size > 0) {
+    const { error } = await supabaseAdmin.storage.from(PO_IMAGE_BUCKET).remove([...paths])
     if (error && !isMissingStorageObject(error)) {
       throw new Error(`ล้างไฟล์ PO ไม่สำเร็จ: ${error.message}`)
     }
