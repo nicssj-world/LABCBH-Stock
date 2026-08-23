@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import * as purchaseRequestAuthorization from '../lib/pr/authorization'
+import * as purchaseRequestSchema from '../lib/pr/schema'
 import { canManagePurchaseRequest } from '../lib/pr/authorization'
 import type { Actor, LabStockRole } from '../lib/auth/actor'
 import {
@@ -44,6 +46,70 @@ assert.equal(
   true,
   'an admin can edit or cancel any pending PR',
 )
+
+const canReceivePurchaseRequestOutsideStock = (
+  purchaseRequestAuthorization as Record<string, unknown>
+).canReceivePurchaseRequestOutsideStock as
+  | ((candidate: Actor, requesterId: string | null) => boolean)
+  | undefined
+assert.equal(
+  typeof canReceivePurchaseRequestOutsideStock,
+  'function',
+  'outside-stock receiving must expose a dedicated authorization predicate',
+)
+assert.equal(canReceivePurchaseRequestOutsideStock?.(owner, owner.id), true, 'the exact PR owner can receive outside stock')
+assert.equal(
+  canReceivePurchaseRequestOutsideStock?.(actor('other-head-id', ['head']), owner.id),
+  false,
+  'another head cannot receive someone else\'s PR outside stock',
+)
+assert.equal(
+  canReceivePurchaseRequestOutsideStock?.(actor('stock-id', ['stock_officer']), owner.id),
+  true,
+  'a stock officer can receive any eligible PR outside stock',
+)
+assert.equal(
+  canReceivePurchaseRequestOutsideStock?.(actor('admin-id', ['admin']), owner.id),
+  true,
+  'an admin can receive any eligible PR outside stock',
+)
+assert.equal(
+  canReceivePurchaseRequestOutsideStock?.(actor('viewer-id', ['viewer']), owner.id),
+  false,
+  'a viewer cannot receive a PR outside stock',
+)
+
+const isPurchaseRequestOutsideStockEligible = (
+  purchaseRequestSchema as Record<string, unknown>
+).isPurchaseRequestOutsideStockEligible as
+  | ((status: string, purchaseMethod: string) => boolean)
+  | undefined
+assert.equal(
+  typeof isPurchaseRequestOutsideStockEligible,
+  'function',
+  'outside-stock receiving must expose one shared status/method eligibility rule',
+)
+for (const method of PURCHASE_METHODS_BY_PURPOSE.purchase_order) {
+  assert.equal(
+    isPurchaseRequestOutsideStockEligible?.('completed', method),
+    true,
+    `${method} is eligible only after confirmation`,
+  )
+}
+for (const method of PURCHASE_METHODS_BY_PURPOSE.new_contract) {
+  assert.equal(
+    isPurchaseRequestOutsideStockEligible?.('completed', method),
+    false,
+    `${method} starts a contract and must never be closed as outside-stock PO receiving`,
+  )
+}
+for (const status of ['pending', 'partially_received', 'received', 'closed_short', 'cancelled', 'reversed']) {
+  assert.equal(
+    isPurchaseRequestOutsideStockEligible?.(status, 'off_plan'),
+    false,
+    `outside-stock receiving must reject ${status}`,
+  )
+}
 
 const contractDraft = {
   fiscalYear: 2569,

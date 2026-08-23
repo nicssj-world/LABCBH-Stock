@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
+import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import {
   PURCHASE_METHOD_LABELS,
   PURCHASE_REQUEST_STATUS_LABELS,
@@ -26,15 +27,27 @@ function leaseCeilingLabel(request: PurchaseRequestRecord): string {
 export interface PurchaseRequestSummaryDialogProps {
   request: PurchaseRequestRecord
   variant?: 'table' | 'card'
+  canReceiveOutsideStock?: boolean
+  canRetryOutsideStockCleanup?: boolean
+  receiveOutsideStockAction: (purchaseRequestId: string) => Promise<unknown>
+  retryOutsideStockCleanupAction: (purchaseRequestId: string) => Promise<void>
 }
 
-export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: PurchaseRequestSummaryDialogProps) {
+export function PurchaseRequestSummaryDialog({
+  request,
+  variant = 'table',
+  canReceiveOutsideStock = false,
+  canRetryOutsideStockCleanup = false,
+  receiveOutsideStockAction,
+  retryOutsideStockCleanupAction,
+}: PurchaseRequestSummaryDialogProps) {
   // One of these renders per row, in both the table and the card layout,
   // so the dialog body is built only once someone opens it.
   const { dialogRef, isRendered, open: openDialog, close: closeDialog } = useDeferredDialog()
   const dialogId = `pr-summary-dialog-${request.id}-${variant}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
+  const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
 
   return (
     <>
@@ -122,6 +135,23 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
                   <dd>{request.reversalReason}</dd>
                 </div>
               )}
+              {request.note && (
+                <div className="list-summary-dialog__fact--wide">
+                  <dt>หมายเหตุจากผู้ขอ</dt>
+                  <dd>{request.note}</dd>
+                </div>
+              )}
+              {request.outsideStockReceivedNote && (
+                <div className="list-summary-dialog__fact--wide">
+                  <dt>หมายเหตุระบบ</dt>
+                  <dd>
+                    <strong>{request.outsideStockReceivedNote}</strong>
+                    <small>
+                      โดย {request.outsideStockReceivedByName ?? 'ผู้ดำเนินการ'} · {formatThaiDateTime(request.outsideStockReceivedAt)}
+                    </small>
+                  </dd>
+                </div>
+              )}
               {request.createdContractId && (
                 <div className="list-summary-dialog__fact--wide">
                   <dt>สัญญาที่สร้าง</dt>
@@ -148,8 +178,14 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
                         <small>{item.lsCode}</small>
                       </div>
                       <div className="list-summary-dialog__item-value">
-                        <strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong>
-                        <small>คงเหลือจากขอ {formatQuantity(item.requestedQuantity, item.unit)}</small>
+                        <strong>
+                          {isOutsideStockReceived ? 'ไม่เข้าคลัง' : formatQuantity(item.remainingQuantity, item.unit)}
+                        </strong>
+                        <small>
+                          {isOutsideStockReceived
+                            ? `หน่วยงานรับของเอง · ไม่เข้าคลัง · ขอ ${formatQuantity(item.requestedQuantity, item.unit)}`
+                            : `คงเหลือจากขอ ${formatQuantity(item.requestedQuantity, item.unit)}`}
+                        </small>
                       </div>
                     </li>
                   ))}
@@ -161,6 +197,15 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
           </div>
 
           <footer className="list-summary-dialog__footer">
+            <PurchaseRequestOutsideStockReceiveControl
+              requestId={request.id}
+              documentNumber={request.documentNumber}
+              canReceive={canReceiveOutsideStock}
+              canRetryCleanup={canRetryOutsideStockCleanup}
+              receiveAction={receiveOutsideStockAction}
+              retryCleanupAction={retryOutsideStockCleanupAction}
+              variant="summary"
+            />
             <DetailIconLink
               href={`/purchase-requests/${request.id}`}
               label={`เปิดรายละเอียดเต็มใบ PR ${request.documentNumber}`}

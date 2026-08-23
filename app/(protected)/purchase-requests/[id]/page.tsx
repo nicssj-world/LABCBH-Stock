@@ -1,13 +1,15 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
+import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
+import { receivePurchaseRequestOutsideStock } from '@/lib/pr/actions'
 import {
   GOODS_RECEIPT_STATUS_LABELS,
   GOODS_RECEIPT_STATUS_TONES,
@@ -18,8 +20,13 @@ import {
   PURCHASE_REQUEST_STATUS_TONES,
   formatBaht,
 } from '@/lib/pr/presenter'
-import { canManagePurchaseRequest } from '@/lib/pr/authorization'
+import {
+  canManagePurchaseRequest,
+  canReceivePurchaseRequestOutsideStock,
+} from '@/lib/pr/authorization'
 import { getPurchaseRequest } from '@/lib/pr/queries'
+import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
+import { isPurchaseRequestOutsideStockEligible } from '@/lib/pr/schema'
 
 interface PurchaseRequestDetailPageProps {
   params: Promise<{ id: string }>
@@ -54,6 +61,12 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
 
   const canReview = canOperateStock(actor)
   const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
+  const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
+  const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
+  const canReceiveOutsideStock =
+    canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)
+  const canRetryOutsideStockCleanup =
+    canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt
   // contractDraft is a nested object with its own rendering below; the flat
   // key/value list here would otherwise print it as "[object Object]".
   const methodDetails = Object.entries(request.methodDetails).filter(
@@ -86,6 +99,14 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 documentNumber={request.documentNumber}
               />
             )}
+            <PurchaseRequestOutsideStockReceiveControl
+              requestId={request.id}
+              documentNumber={request.documentNumber}
+              canReceive={canReceiveOutsideStock}
+              canRetryCleanup={canRetryOutsideStockCleanup}
+              receiveAction={receivePurchaseRequestOutsideStock}
+              retryCleanupAction={retryPurchaseRequestPoFileCleanup}
+            />
             {canReview && request.status === 'partially_received' && (
               <Link
                 className="lab-link-button lab-link-button--primary"
@@ -123,6 +144,36 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           </div>
         </dl>
       </header>
+
+      {(request.note || request.outsideStockReceivedNote) && (
+        <section className="bench-panel" aria-labelledby="pr-note-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">NOTES</p>
+              <h2 id="pr-note-title">หมายเหตุใบ PR</h2>
+            </div>
+          </div>
+          <dl className="issue-history">
+            {request.note && (
+              <div>
+                <dt>หมายเหตุจากผู้ขอ</dt>
+                <dd>{request.note}</dd>
+              </div>
+            )}
+            {request.outsideStockReceivedNote && (
+              <div>
+                <dt>หมายเหตุระบบ</dt>
+                <dd>
+                  <strong>{request.outsideStockReceivedNote}</strong>
+                  <small>
+                    โดย {request.outsideStockReceivedByName ?? 'ผู้ดำเนินการ'} · {formatThaiDateTime(request.outsideStockReceivedAt)}
+                  </small>
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
 
       {(methodDetails.length > 0 || contractDraftEntries.length > 0) && (
         <section className="bench-panel" aria-labelledby="pr-method-detail-title">
@@ -197,8 +248,14 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     <small>{item.contractDisplayName ?? 'ไม่ตัดยอดสัญญา'}</small>
                   </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
-                  <td className="numeric-cell identifier">{formatQuantity(item.receivedQuantity, item.unit)}</td>
-                  <td className="numeric-cell identifier"><strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong></td>
+                  <td className="numeric-cell identifier">
+                    {isOutsideStockReceived ? '—' : formatQuantity(item.receivedQuantity, item.unit)}
+                  </td>
+                  <td className="numeric-cell identifier">
+                    <strong>
+                      {isOutsideStockReceived ? 'ไม่เข้าคลัง' : formatQuantity(item.remainingQuantity, item.unit)}
+                    </strong>
+                  </td>
                   <td className="numeric-cell identifier">
                     {item.contractRemaining === null
                       ? 'ไม่ตัดยอดสัญญา'
@@ -223,7 +280,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <p>{request.receiptHistory.length} ใบ</p>
         </div>
         {request.receiptHistory.length === 0 ? (
-          <p className="empty-state">ยังไม่มีใบรับเข้าที่อ้างอิง PR นี้</p>
+          <p className="empty-state">
+            {isOutsideStockReceived
+              ? 'หน่วยงานรับของเอง จึงไม่มีใบรับเข้าคลัง'
+              : 'ยังไม่มีใบรับเข้าที่อ้างอิง PR นี้'}
+          </p>
         ) : (
           <div className="detail-items-table">
             <table className="data-table">

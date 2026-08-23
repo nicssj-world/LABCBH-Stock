@@ -28,6 +28,24 @@ export function canManagePurchaseRequest(actor: Actor, requesterId: string | nul
   return requesterId === actor.id || hasAppRole(actor, 'admin', 'stock_officer')
 }
 
+/** The requester may close their own PO outside stock; stock operators retain
+ *  the same cross-department authority they have over the PR workflow. */
+export function canReceivePurchaseRequestOutsideStock(
+  actor: Actor,
+  requesterId: string | null,
+): boolean {
+  return canManagePurchaseRequest(actor, requesterId)
+}
+
+export function assertPurchaseRequestOutsideStockReceiver(
+  actor: Actor,
+  requesterId: string | null,
+): void {
+  if (!canReceivePurchaseRequestOutsideStock(actor, requesterId)) {
+    throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์บันทึกว่าหน่วยงานรับของเองสำหรับใบ PR นี้')
+  }
+}
+
 export function assertPurchaseRequestManager(actor: Actor, requesterId: string | null): void {
   if (!canManagePurchaseRequest(actor, requesterId)) {
     throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือลบใบ PR นี้')

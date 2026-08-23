@@ -100,6 +100,10 @@ export interface PurchaseRequestRecord {
   acknowledgedBy: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null
+  outsideStockReceivedBy: string | null
+  outsideStockReceivedByName: string | null
+  outsideStockReceivedAt: string | null
+  outsideStockReceivedNote: 'หน่วยงานรับของเอง' | null
   reversedBy: string | null
   reversedByName: string | null
   reversedAt: string | null

@@ -1,6 +1,7 @@
 import { PurchaseRequestSummaryDialog } from '@/components/pr/PurchaseRequestSummaryDialog'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
+import type { Actor } from '@/lib/auth/actor'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import {
   PURCHASE_METHOD_LABELS,
@@ -9,7 +10,8 @@ import {
   formatBaht,
   summarizePurchaseRequestReceiving,
 } from '@/lib/pr/presenter'
-import { purchaseMethodPurpose } from '@/lib/pr/schema'
+import { canReceivePurchaseRequestOutsideStock } from '@/lib/pr/authorization'
+import { isPurchaseRequestOutsideStockEligible, purchaseMethodPurpose } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
 
 /** A lease PR carries zero items, so request.total (summed from items) is
@@ -20,7 +22,19 @@ function leaseCeilingLabel(request: PurchaseRequestRecord): string {
   return typeof total === 'number' ? formatBaht(total) : 'ไม่ระบุ'
 }
 
-export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRecord[] }) {
+interface PurchaseRequestTableProps {
+  requests: PurchaseRequestRecord[]
+  actor: Actor
+  receiveOutsideStockAction: (purchaseRequestId: string) => Promise<unknown>
+  retryOutsideStockCleanupAction: (purchaseRequestId: string) => Promise<void>
+}
+
+export function PurchaseRequestTable({
+  requests,
+  actor,
+  receiveOutsideStockAction,
+  retryOutsideStockCleanupAction,
+}: PurchaseRequestTableProps) {
   if (requests.length === 0) {
     return <p className="empty-state">ไม่พบใบ PR ตามเงื่อนไขที่เลือก</p>
   }
@@ -57,10 +71,18 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
             {requests.map((request) => {
               const receiving = summarizePurchaseRequestReceiving(request.items)
               const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
+              const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
+              const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
               return (
               <tr key={request.id}>
                 <td>
-                  <PurchaseRequestSummaryDialog request={request} />
+                  <PurchaseRequestSummaryDialog
+                    request={request}
+                    canReceiveOutsideStock={canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)}
+                    canRetryOutsideStockCleanup={canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt}
+                    receiveOutsideStockAction={receiveOutsideStockAction}
+                    retryOutsideStockCleanupAction={retryOutsideStockCleanupAction}
+                  />
                   <small>{request.poNumber ? `PO ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}</small>
                 </td>
                 <td className="identifier">{request.ephisPrNumber ?? 'ยังไม่มี'}</td>
@@ -74,7 +96,12 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                   {request.purchaseMethod === 'equipment_lease' ? leaseCeilingLabel(request) : formatBaht(request.total)}
                 </td>
                 <td>
-                  {showsReceiving && receiving.lineCount > 0 ? (
+                  {isOutsideStockReceived ? (
+                    <span className="pr-receiving-summary" aria-label="รับเอง ไม่เข้าคลัง">
+                      <strong>รับเอง</strong>
+                      <small>ไม่เข้าคลัง</small>
+                    </span>
+                  ) : showsReceiving && receiving.lineCount > 0 ? (
                     <span
                       className="pr-receiving-summary"
                       aria-label={`รับแล้ว ${receiving.receivedLineCount} จาก ${receiving.lineCount} รายการ เหลือ ${receiving.remainingLineCount} รายการ`}
@@ -111,6 +138,8 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
         {requests.map((request) => {
           const receiving = summarizePurchaseRequestReceiving(request.items)
           const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
+          const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
+          const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
           return (
           <li key={request.id}>
             <div className="task-card__topline">
@@ -121,12 +150,25 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
                 {request.purchaseMethod === 'equipment_lease' ? leaseCeilingLabel(request) : formatBaht(request.total)}
               </span>
             </div>
-            <h3 className="identifier"><PurchaseRequestSummaryDialog request={request} variant="card" /></h3>
+            <h3 className="identifier">
+              <PurchaseRequestSummaryDialog
+                request={request}
+                variant="card"
+                canReceiveOutsideStock={canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)}
+                canRetryOutsideStockCleanup={canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt}
+                receiveOutsideStockAction={receiveOutsideStockAction}
+                retryOutsideStockCleanupAction={retryOutsideStockCleanupAction}
+              />
+            </h3>
             <p>
               {PURCHASE_METHOD_LABELS[request.purchaseMethod]} · {formatThaiDate(request.requestedDate)}
               {request.purchaseMethod !== 'equipment_lease' && ` · ${request.items.length} รายการ`}
             </p>
-            {showsReceiving && receiving.lineCount > 0 && (
+            {isOutsideStockReceived ? (
+              <p className="pr-receiving-summary pr-receiving-summary--card">
+                รับเอง · ไม่เข้าคลัง
+              </p>
+            ) : showsReceiving && receiving.lineCount > 0 && (
               <p className="pr-receiving-summary pr-receiving-summary--card">
                 รับแล้ว {receiving.receivedLineCount}/{receiving.lineCount} รายการ · เหลือ {receiving.remainingLineCount} รายการ
               </p>

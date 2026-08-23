@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
+import { assertPurchaseRequestOutsideStockReceiver } from '@/lib/pr/authorization'
 import {
   isLegacyReceiptPoImagePathAllowed,
   isPoFileTypeAllowed,
@@ -25,6 +26,8 @@ const purchaseRequestFileRowSchema = z.object({
   status: z.string(),
   po_number: z.string().nullable(),
   po_file_path: z.string().nullable(),
+  requester_id: z.string().uuid().nullable(),
+  outside_stock_received_at: z.string().nullable(),
 })
 
 const visiblePurchaseRequestRowSchema = z.object({ id: z.string().uuid() })
@@ -58,7 +61,7 @@ function assertOpenPurchaseRequest(request: z.infer<typeof purchaseRequestFileRo
 async function readPurchaseRequestFileRow(purchaseRequestId: string) {
   const { data, error } = await supabaseAdmin
     .from('purchase_requests')
-    .select('id, fiscal_year, status, po_number, po_file_path')
+    .select('id, fiscal_year, status, po_number, po_file_path, requester_id, outside_stock_received_at')
     .eq('id', purchaseRequestId)
     .maybeSingle()
 
@@ -188,9 +191,14 @@ export async function retryPurchaseRequestPoFileCleanup(
   purchaseRequestId: string,
 ): Promise<void> {
   const actor = await requireActor()
-  assertStockOperator(actor)
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
   const request = await readPurchaseRequestFileRow(parsedId)
+
+  if (request.outside_stock_received_at) {
+    assertPurchaseRequestOutsideStockReceiver(actor, request.requester_id)
+  } else {
+    assertStockOperator(actor)
+  }
 
   if (!['received', 'closed_short'].includes(request.status)) {
     throw new Error('ใบ PR ยังไม่อยู่ในสถานะสิ้นสุดสำหรับการล้างไฟล์ PO')

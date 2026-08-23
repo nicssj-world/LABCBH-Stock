@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
 import {
+  assertPurchaseRequestOutsideStockReceiver,
   assertPurchaseRequestManager,
   assertPurchaseRequester,
 } from '@/lib/pr/authorization'
@@ -204,6 +205,34 @@ export async function closePurchaseRequestRemaining(
   }
   revalidatePurchaseRequest(parsedId)
   return closed
+}
+
+export async function receivePurchaseRequestOutsideStock(purchaseRequestId: string) {
+  const actor = await requireActor()
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const existing = await getPurchaseRequest(parsedId)
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการรับของโดยหน่วยงาน')
+  assertPurchaseRequestOutsideStockReceiver(actor, existing.requesterId)
+
+  const result = await supabaseAdmin.rpc('mark_purchase_request_received_outside_stock', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+  })
+
+  const received = unwrapMutation('รับของโดยหน่วยงาน', result)
+  try {
+    await cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
+      reason: 'received',
+      receiptId: null,
+    })
+  } catch (error) {
+    revalidatePurchaseRequest(parsedId)
+    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+    throw new Error(`รับของโดยหน่วยงานสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ: ${message}`)
+  }
+
+  revalidatePurchaseRequest(parsedId)
+  return received
 }
 
 export async function setPurchaseOrderNumber(

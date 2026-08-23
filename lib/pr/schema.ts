@@ -35,6 +35,15 @@ export function purchaseMethodPurpose(kind: PurchaseMethodKind): PurchasePurpose
     : 'purchase_order'
 }
 
+/** A department can receive outside stock only after an ordinary PO PR has
+ *  been confirmed and before any warehouse receiving transition begins. */
+export function isPurchaseRequestOutsideStockEligible(
+  status: PurchaseRequestStatus,
+  purchaseMethod: PurchaseMethodKind,
+): boolean {
+  return status === 'completed' && purchaseMethodPurpose(purchaseMethod) === 'purchase_order'
+}
+
 const METHOD_CONTRACT_TYPE: Partial<Record<PurchaseMethodKind, ContractType>> = {
   specific_contract: 'specific',
   e_bidding: 'e_bidding',
