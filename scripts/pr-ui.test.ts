@@ -54,11 +54,9 @@ assert.match(detailPage, /item\.lotNumber/, 'receipt history must show the lot f
 assert.match(detailPage, /item\.quantity/, 'receipt history must show the quantity for each received line')
 assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expiry date for each received line')
 assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
-assert.match(detailPage, /PurchaseRequestPoFileCard/, 'PO file ownership belongs on PR detail')
-assert.match(detailPage, /request\.poFile/, 'PR detail passes its PO file audit record to the card')
-assert.match(detailPage, /contract-facts__po/, 'the PO file action belongs beside the PO number')
-assert.match(detailPage, /variant="inline"/, 'the PO file action uses the inline PR fact treatment')
-assert.doesNotMatch(detailPage, /<\/header>\s*<PurchaseRequestPoFileCard/, 'the PO file action is not rendered as a separate panel below the header')
+assert.doesNotMatch(detailPage, /PurchaseRequestPoFileCard/, 'the PO file action belongs in the stock officer panel, not the PR header')
+assert.doesNotMatch(detailPage, /request\.poFile/, 'the PR header must not own PO file controls')
+assert.doesNotMatch(detailPage, /contract-facts__po/, 'the PO fact grid must stay focused on summary information')
 
 const poFileCard = read('components/pr/PurchaseRequestPoFileCard.tsx')
 assert.match(poFileCard, /po-file-card--inline/, 'the PO file card supports the inline PR fact treatment')
@@ -242,6 +240,10 @@ assert.match(review, /contractTypeForMethod/, 'confirming a specific_contract\/e
 assert.match(review, /ยืนยันและสร้างสัญญา/, 'the button must name its irreversible consequence, not just say "confirm"')
 assert.match(review, /วันที่ส่งพัสดุ/, 'the stock officer supplies the real ส่งพัสดุ date at confirm time')
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
+assert.match(review, /PurchaseRequestPoFileCard/, 'PO file controls belong in the stock officer panel')
+assert.match(review, /variant="inline"/, 'the PO file controls use the inline treatment beside PO controls')
+assert.match(review, /request\.poFile/, 'the stock officer panel passes the PR PO file audit record to the card')
+assert.match(review, /pr-review__po-file/, 'the PO file controls sit beside the officer PO controls')
 assert.match(
   review,
   /\['completed', 'partially_received'\]\.includes\(request\.status\)/,

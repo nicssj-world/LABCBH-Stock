@@ -74,7 +74,9 @@ assert.match(form, /purchase-requests\/\$\{selectedRequest\.id\}/)
 assert.match(form, /selectedRequest\.poNumber/)
 
 const prPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
-assert.match(prPage, /PurchaseRequestPoFileCard/)
-assert.match(prPage, /request\.poFile/)
+const prReview = read('components/pr/PrReviewPanel.tsx')
+assert.doesNotMatch(prPage, /PurchaseRequestPoFileCard/, 'PO file controls must not render above the stock officer panel')
+assert.match(prReview, /PurchaseRequestPoFileCard/)
+assert.match(prReview, /request\.poFile/)
 
 console.log('PR PO file lifecycle: ok')

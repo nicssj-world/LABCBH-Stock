@@ -1842,8 +1842,6 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-facts > div:last-child { border-right: 0; }
 .contract-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .contract-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; }
-.contract-facts__po > dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.contract-facts__po-number { flex: 0 0 auto; }
 .contract-facts__vendor dd { color: var(--lab-navy-strong); font-size: 16px; }
 .contract-facts__period dd { display: grid; gap: 8px; }
 .contract-expiry-chip { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--lab-border); border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.2; }
@@ -3221,6 +3219,7 @@ input[type="number"] {
 .access-toggle__saved { color: var(--lab-green); font-weight: 700; }
 
 .pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
+.pr-review__po-file { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--lab-border); }
 .pr-review__identifier-field { width: min(100%, 520px); }
 .pr-review__identifier-field input { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .pr-review__identifier-field input:read-only { color: var(--lab-ink); background: color-mix(in srgb, var(--lab-surface-muted) 72%, var(--lab-border-strong)); border-color: var(--lab-border-strong); font-weight: 500; }
@@ -3316,8 +3315,6 @@ input[type="number"] {
   .po-file-card__facts > div:last-child { border-bottom: 0; }
   .po-file-card__actions { align-items: stretch; flex-direction: column; }
   .po-file-card__actions .lab-button { width: 100%; }
-  .contract-facts__po > dd { align-items: stretch; flex-direction: column; }
-  .contract-facts__po-number { width: 100%; }
   .po-file-card--inline,
   .po-file-card__inline-controls,
   .po-file-card__inline-form { align-items: stretch; flex-direction: column; }

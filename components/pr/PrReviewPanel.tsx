@@ -7,6 +7,7 @@ import {
   PurchaseRequestRemainingClosePanel,
   PurchaseRequestShortClosedAudit,
 } from '@/components/pr/PurchaseRequestRemainingClosePanel'
+import { PurchaseRequestPoFileCard } from '@/components/pr/PurchaseRequestPoFileCard'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
@@ -151,6 +152,23 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
             )}
           </div>
         </>
+      )}
+
+      {!contractType && ['completed', 'partially_received', 'received', 'closed_short'].includes(request.status) && (
+        <div className="pr-review__po-file">
+          <PurchaseRequestPoFileCard
+            requestId={request.id}
+            poNumber={request.poNumber}
+            file={request.poFile}
+            variant="inline"
+            canEdit={canEditPoNumber}
+            canRetryCleanup={
+              ['received', 'closed_short'].includes(request.status) &&
+              !request.poFile.deletedAt &&
+              Boolean(request.poFile.path)
+            }
+          />
+        </div>
       )}
 
       {request.status === 'pending' && contractType && contractDraft && (
