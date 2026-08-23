@@ -17,6 +17,7 @@ export interface PurchaseRequestPoFileCardProps {
   requestId: string
   poNumber: string | null
   file: PurchaseRequestPoFileRecord
+  variant?: 'inline' | 'panel'
   canEdit: boolean
   canRetryCleanup: boolean
 }
@@ -25,6 +26,7 @@ export function PurchaseRequestPoFileCard({
   requestId,
   poNumber,
   file,
+  variant = 'panel',
   canEdit,
   canRetryCleanup,
 }: PurchaseRequestPoFileCardProps) {
@@ -40,6 +42,16 @@ export function PurchaseRequestPoFileCard({
   const isDeleted = Boolean(file.deletedAt)
   const isCleanupPending = canRetryCleanup && !isDeleted
   const state = isDeleted ? 'deleted' : isCleanupPending ? 'pending' : hasActiveFile ? 'active' : 'empty'
+  const isInline = variant === 'inline'
+  const statusLabel = isDeleted
+    ? file.deletionReason === 'closed_short'
+      ? 'ลบไฟล์แล้วเมื่อปิดยอดค้าง'
+      : 'ลบไฟล์แล้วหลังบันทึกเข้าคลัง'
+    : isCleanupPending
+      ? 'รอล้างไฟล์ PO'
+      : hasActiveFile
+        ? 'แนบไฟล์ PO แล้ว'
+        : 'ยังไม่ได้แนบไฟล์ PO'
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -101,90 +113,123 @@ export function PurchaseRequestPoFileCard({
     setPreviewUrl(null)
   }
 
-  return (
-    <section className="bench-panel po-file-card" data-po-file-state={state} aria-labelledby="pr-po-file-title">
-      <div className="bench-panel__header po-file-card__header">
-        <div>
-          <p className="section-kicker">PO DOCUMENT</p>
-          <h2 id="pr-po-file-title">เอกสารใบสั่งซื้อ (PO)</h2>
+  const uploadForm = canEdit && poNumber ? (
+    <form className={isInline ? 'po-file-card__inline-form' : 'po-file-card__form'} onSubmit={submit}>
+      {isInline ? (
+        <PoFileDropzone
+          compact
+          file={selectedFile}
+          onChange={setSelectedFile}
+          disabled={isPending}
+        />
+      ) : (
+        <div className="field-row">
+          <span>ไฟล์ PO</span>
+          <PoFileDropzone file={selectedFile} onChange={setSelectedFile} disabled={isPending} />
         </div>
-        <p className="po-file-card__status" role={state === 'pending' ? 'status' : undefined}>
-          {isDeleted
-            ? file.deletionReason === 'closed_short'
-              ? 'ลบไฟล์แล้วเมื่อปิดยอดค้าง'
-              : 'ลบไฟล์แล้วหลังบันทึกเข้าคลัง'
-            : isCleanupPending
-              ? 'รอล้างไฟล์ PO'
-              : hasActiveFile
-                ? 'แนบไฟล์ PO แล้ว'
-                : 'ยังไม่ได้แนบไฟล์ PO'}
+      )}
+      <Button type="submit" variant="secondary" disabled={isPending || !selectedFile}>
+        {pendingAction === 'upload' ? 'กำลังอัปโหลด…' : hasActiveFile ? 'อัปโหลดแทนไฟล์เดิม' : 'แนบไฟล์ PO'}
+      </Button>
+    </form>
+  ) : null
+
+  const fileActions = file.path || isCleanupPending ? (
+    <div className="po-file-card__actions">
+      {file.path && (
+        <Button variant="ghost" onClick={open} disabled={isPending}>
+          {pendingAction === 'open' ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
+        </Button>
+      )}
+      {isCleanupPending && (
+        <Button variant="secondary" onClick={retry} disabled={isPending}>
+          {pendingAction === 'retry' ? 'กำลังล้างไฟล์…' : 'ลองล้างไฟล์อีกครั้ง'}
+        </Button>
+      )}
+    </div>
+  ) : null
+
+  const fileControls = isDeleted ? (
+    <p className="po-file-card__audit">
+      ลบเมื่อ {formatThaiDateTime(file.deletedAt)} โดย {file.deletedByName ?? 'เจ้าหน้าที่คลัง'}
+    </p>
+  ) : (
+    <>
+      {canEdit && !poNumber && (
+        <p className="po-file-card__hint" role="note">
+          กรุณาบันทึกเลขที่ใบสั่งซื้อ (PO) ก่อนแนบไฟล์
         </p>
-      </div>
+      )}
 
-      <div className="po-file-card__body">
-        <dl className="po-file-card__facts">
-          <div>
-            <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
-            <dd className="identifier">{poNumber ?? 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}</dd>
+      {uploadForm}
+      {fileActions}
+
+      {isCleanupPending && (
+        <p className="po-file-card__pending-note" role="status">
+          ใบ PR อยู่ในสถานะสิ้นสุดแล้ว ระบบจะลบไฟล์ PO ออกจากพื้นที่จัดเก็บ เหลือไว้เฉพาะประวัติการแนบไฟล์
+        </p>
+      )}
+    </>
+  )
+
+  const fileStatus = (
+    <p className="po-file-card__status" role={state === 'pending' ? 'status' : undefined}>
+      {statusLabel}
+    </p>
+  )
+
+  const fileError = error && <p className="form-error po-file-card__error" role="alert">{error}</p>
+
+  return (
+    <>
+      {isInline ? (
+        <div className="po-file-card po-file-card--inline" data-po-file-state={state} role="group" aria-label="การจัดการไฟล์ PO">
+          <div className="po-file-card__inline-summary">
+            {fileStatus}
+            {file.fileName && (
+              <span className="po-file-card__inline-file" title={file.fileName}>
+                {file.fileName}
+                {file.sizeBytes !== null && ` · ${formatPoFileSize(file.sizeBytes)}`}
+              </span>
+            )}
           </div>
-          {file.fileName && (
+          <div className="po-file-card__inline-controls">
+            {fileControls}
+            {fileError}
+          </div>
+        </div>
+      ) : (
+        <section className="bench-panel po-file-card" data-po-file-state={state} aria-labelledby="pr-po-file-title">
+          <div className="bench-panel__header po-file-card__header">
             <div>
-              <dt>ไฟล์</dt>
-              <dd>
-                <strong className="po-file-card__filename">{file.fileName}</strong>
-                {file.sizeBytes !== null && <small>{formatPoFileSize(file.sizeBytes)}</small>}
-              </dd>
+              <p className="section-kicker">PO DOCUMENT</p>
+              <h2 id="pr-po-file-title">เอกสารใบสั่งซื้อ (PO)</h2>
             </div>
-          )}
-        </dl>
+            {fileStatus}
+          </div>
 
-        {isDeleted ? (
-          <p className="po-file-card__audit">
-            ลบเมื่อ {formatThaiDateTime(file.deletedAt)} โดย {file.deletedByName ?? 'เจ้าหน้าที่คลัง'}
-          </p>
-        ) : (
-          <>
-            {canEdit && !poNumber && (
-              <p className="po-file-card__hint" role="note">
-                กรุณาบันทึกเลขที่ใบสั่งซื้อ (PO) ก่อนแนบไฟล์
-              </p>
-            )}
-
-            {canEdit && poNumber && (
-              <form className="po-file-card__form" onSubmit={submit}>
-                <div className="field-row">
-                  <span>ไฟล์ PO</span>
-                  <PoFileDropzone file={selectedFile} onChange={setSelectedFile} disabled={isPending} />
+          <div className="po-file-card__body">
+            <dl className="po-file-card__facts">
+              <div>
+                <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
+                <dd className="identifier">{poNumber ?? 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}</dd>
+              </div>
+              {file.fileName && (
+                <div>
+                  <dt>ไฟล์</dt>
+                  <dd>
+                    <strong className="po-file-card__filename">{file.fileName}</strong>
+                    {file.sizeBytes !== null && <small>{formatPoFileSize(file.sizeBytes)}</small>}
+                  </dd>
                 </div>
-                <Button type="submit" variant="secondary" disabled={isPending || !selectedFile}>
-                  {pendingAction === 'upload' ? 'กำลังอัปโหลด…' : hasActiveFile ? 'อัปโหลดแทนไฟล์เดิม' : 'แนบไฟล์ PO'}
-                </Button>
-              </form>
-            )}
-
-            <div className="po-file-card__actions">
-              {file.path && (
-                <Button variant="ghost" onClick={open} disabled={isPending}>
-                  {pendingAction === 'open' ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
-                </Button>
               )}
-              {isCleanupPending && (
-                <Button variant="secondary" onClick={retry} disabled={isPending}>
-                  {pendingAction === 'retry' ? 'กำลังล้างไฟล์…' : 'ลองล้างไฟล์อีกครั้ง'}
-                </Button>
-              )}
-            </div>
+            </dl>
 
-            {isCleanupPending && (
-              <p className="po-file-card__pending-note" role="status">
-                ใบ PR อยู่ในสถานะสิ้นสุดแล้ว ระบบจะลบไฟล์ PO ออกจากพื้นที่จัดเก็บ เหลือไว้เฉพาะประวัติการแนบไฟล์
-              </p>
-            )}
-          </>
-        )}
-
-        {error && <p className="form-error po-file-card__error" role="alert">{error}</p>}
-      </div>
+            {fileControls}
+            {fileError}
+          </div>
+        </section>
+      )}
 
       <dialog
         ref={previewDialogRef}
@@ -213,6 +258,6 @@ export function PurchaseRequestPoFileCard({
           {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
         </div>
       </dialog>
-    </section>
+    </>
   )
 }

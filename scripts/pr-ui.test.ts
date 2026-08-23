@@ -56,6 +56,13 @@ assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expi
 assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
 assert.match(detailPage, /PurchaseRequestPoFileCard/, 'PO file ownership belongs on PR detail')
 assert.match(detailPage, /request\.poFile/, 'PR detail passes its PO file audit record to the card')
+assert.match(detailPage, /contract-facts__po/, 'the PO file action belongs beside the PO number')
+assert.match(detailPage, /variant="inline"/, 'the PO file action uses the inline PR fact treatment')
+assert.doesNotMatch(detailPage, /<\/header>\s*<PurchaseRequestPoFileCard/, 'the PO file action is not rendered as a separate panel below the header')
+
+const poFileCard = read('components/pr/PurchaseRequestPoFileCard.tsx')
+assert.match(poFileCard, /po-file-card--inline/, 'the PO file card supports the inline PR fact treatment')
+assert.match(poFileCard, /compact/, 'the inline PO file action uses a compact dropzone')
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /params:\s*Promise</)

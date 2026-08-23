@@ -111,22 +111,27 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <div><dt>ผู้ขอ</dt><dd>{request.requesterName ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{request.department}</dd></div>
           <div><dt>วันที่ขอ</dt><dd>{formatThaiDate(request.requestedDate)}</dd></div>
-          <div><dt>เลขที่ใบสั่งซื้อ (PO)</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
+          <div className="contract-facts__po">
+            <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
+            <dd>
+              <span className="contract-facts__po-number identifier">{request.poNumber ?? 'ยังไม่มี'}</span>
+              <PurchaseRequestPoFileCard
+                requestId={request.id}
+                poNumber={request.poNumber}
+                file={request.poFile}
+                variant="inline"
+                canEdit={canReview && ['completed', 'partially_received'].includes(request.status)}
+                canRetryCleanup={
+                  canReview &&
+                  ['received', 'closed_short'].includes(request.status) &&
+                  !request.poFile.deletedAt &&
+                  Boolean(request.poFile.path)
+                }
+              />
+            </dd>
+          </div>
         </dl>
       </header>
-
-      <PurchaseRequestPoFileCard
-        requestId={request.id}
-        poNumber={request.poNumber}
-        file={request.poFile}
-        canEdit={canReview && ['completed', 'partially_received'].includes(request.status)}
-        canRetryCleanup={
-          canReview &&
-          ['received', 'closed_short'].includes(request.status) &&
-          !request.poFile.deletedAt &&
-          Boolean(request.poFile.path)
-        }
-      />
 
       {(methodDetails.length > 0 || contractDraftEntries.length > 0) && (
         <section className="bench-panel" aria-labelledby="pr-method-detail-title">

@@ -11,9 +11,10 @@ export interface PoFileDropzoneProps {
   file: File | null
   onChange: (file: File | null) => void
   disabled?: boolean
+  compact?: boolean
 }
 
-export function PoFileDropzone({ file, onChange, disabled = false }: PoFileDropzoneProps) {
+export function PoFileDropzone({ file, onChange, disabled = false, compact = false }: PoFileDropzoneProps) {
   const inputId = useId()
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +50,7 @@ export function PoFileDropzone({ file, onChange, disabled = false }: PoFileDropz
   }
 
   return (
-    <div className="po-dropzone">
+    <div className={`po-dropzone${compact ? ' po-dropzone--compact' : ''}`}>
       <label
         className="po-dropzone__surface"
         data-dragging={isDragging || undefined}
@@ -65,7 +66,7 @@ export function PoFileDropzone({ file, onChange, disabled = false }: PoFileDropz
         }}
         onDrop={drop}
       >
-        <strong>{file ? 'เปลี่ยนไฟล์ PO' : 'ลากไฟล์ PO มาวางที่นี่'}</strong>
+        <strong>{file ? 'เปลี่ยนไฟล์ PO' : compact ? 'เลือกไฟล์ PO' : 'ลากไฟล์ PO มาวางที่นี่'}</strong>
         <span>หรือคลิกเพื่อเลือกไฟล์</span>
         <small>รองรับ JPG, PNG, WEBP และ PDF · รูปภาพจะ resize อัตโนมัติก่อนอัปโหลด</small>
         <input

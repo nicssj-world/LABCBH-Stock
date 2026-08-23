@@ -1842,6 +1842,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-facts > div:last-child { border-right: 0; }
 .contract-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .contract-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; }
+.contract-facts__po > dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.contract-facts__po-number { flex: 0 0 auto; }
 .contract-facts__vendor dd { color: var(--lab-navy-strong); font-size: 16px; }
 .contract-facts__period dd { display: grid; gap: 8px; }
 .contract-expiry-chip { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--lab-border); border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.2; }
@@ -2796,6 +2798,12 @@ input[type="number"] {
 .po-dropzone__surface span,
 .po-dropzone__surface small { color: var(--lab-muted); font-size: 11px; font-weight: 500; }
 .po-dropzone__surface small { line-height: 1.4; }
+.po-dropzone--compact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.po-dropzone--compact .po-dropzone__surface { display: inline-flex; min-height: 44px; padding: 8px 12px; }
+.po-dropzone--compact .po-dropzone__surface span,
+.po-dropzone--compact .po-dropzone__surface small { display: none; }
+.po-dropzone--compact .po-dropzone__file { max-width: min(320px, 100%); padding: 8px 10px; }
+.po-dropzone--compact .po-dropzone__error { flex-basis: 100%; }
 .po-dropzone__file { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
 .po-dropzone__file > div { display: grid; min-width: 0; gap: 2px; }
 .po-dropzone__file strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -2819,6 +2827,15 @@ input[type="number"] {
 .po-file-card__form { display: grid; gap: 12px; }
 .po-file-card__form > .field-row { margin: 0; }
 .po-file-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.po-file-card--inline { display: grid; flex: 1 1 320px; min-width: min(100%, 260px); gap: 8px; }
+.po-file-card__inline-summary,
+.po-file-card__inline-controls,
+.po-file-card__inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.po-file-card__inline-summary { gap: 6px 8px; }
+.po-file-card__inline-file { min-width: 0; overflow: hidden; color: var(--lab-muted); font-size: 11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.po-file-card__inline-form { flex: 1 1 420px; }
+.po-file-card__inline-form .po-dropzone { flex: 1 1 220px; }
+.po-file-card__inline-form .lab-button { flex: 0 0 auto; }
 .po-file-card__hint,
 .po-file-card__audit,
 .po-file-card__pending-note { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.55; }
@@ -3299,6 +3316,17 @@ input[type="number"] {
   .po-file-card__facts > div:last-child { border-bottom: 0; }
   .po-file-card__actions { align-items: stretch; flex-direction: column; }
   .po-file-card__actions .lab-button { width: 100%; }
+  .contract-facts__po > dd { align-items: stretch; flex-direction: column; }
+  .contract-facts__po-number { width: 100%; }
+  .po-file-card--inline,
+  .po-file-card__inline-controls,
+  .po-file-card__inline-form { align-items: stretch; flex-direction: column; }
+  .po-file-card--inline { width: 100%; }
+  .po-file-card__inline-summary { align-items: flex-start; flex-direction: column; }
+  .po-file-card__inline-form,
+  .po-file-card__inline-form .po-dropzone { width: 100%; }
+  .po-file-card__inline-form .lab-button { width: 100%; }
+  .po-file-card__inline-controls .po-file-card__actions { width: 100%; }
   .file-preview-dialog__body { max-height: calc(100dvh - 108px); padding: 0; }
   .file-preview-dialog iframe { height: calc(100dvh - 108px); }
   .executive-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
