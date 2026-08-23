@@ -2870,6 +2870,7 @@ input[type="number"] {
 .expense-entry__toggle:hover { background: var(--lab-surface-muted); }
 .expense-entry__toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--lab-primary) 34%, transparent); outline-offset: -3px; }
 .expense-entry__glyph { display: grid; place-items: center; width: 44px; height: 44px; color: var(--lab-primary); background: var(--lab-primary-soft); border-radius: 11px; }
+.expense-entry--contract .expense-entry__glyph { color: var(--lab-surface); background: var(--lab-primary); border: 1px solid var(--lab-primary-strong); }
 .expense-entry__copy { display: grid; gap: 2px; min-width: 0; }
 .expense-entry__copy strong { font-size: 14px; line-height: 1.35; }
 .expense-entry__copy small { color: var(--lab-muted); font-size: 11px; line-height: 1.35; }

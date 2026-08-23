@@ -83,7 +83,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
   }
 
   return (
-    <section className="expense-entry" aria-labelledby={`${formId}-title`}>
+    <section className="expense-entry expense-entry--contract" aria-labelledby={`${formId}-title`}>
       <button
         type="button"
         className="expense-entry__toggle"
