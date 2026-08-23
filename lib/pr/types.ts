@@ -18,6 +18,20 @@ export type EphisPrNumberInput = z.infer<typeof ephisPrNumberSchema>
 export type PurchaseRequestReversalInput = z.infer<typeof purchaseRequestReversalSchema>
 export type PurchaseRequestShortCloseInput = z.infer<typeof purchaseRequestShortCloseSchema>
 
+export interface PurchaseRequestPoFileRecord {
+  path: string | null
+  fileName: string | null
+  mimeType: string | null
+  sizeBytes: number | null
+  checksum: string | null
+  uploadedAt: string | null
+  uploadedByName: string | null
+  deletedAt: string | null
+  deletedByName: string | null
+  deletionReason: 'received' | 'closed_short' | null
+  deletedReceiptId: string | null
+}
+
 export interface PurchaseRequestItemRecord {
   id: string
   lineNumber: number
@@ -79,6 +93,7 @@ export interface PurchaseRequestRecord {
   methodDetails: Record<string, unknown>
   status: PurchaseRequestStatus
   poNumber: string | null
+  poFile: PurchaseRequestPoFileRecord
   ephisPrNumber: string | null
   /** Set once confirmation opens a contract from this PR (specific_contract/e_bidding). */
   createdContractId: number | null

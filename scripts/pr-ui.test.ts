@@ -287,6 +287,9 @@ assert.match(actions, /assertStockOperator/)
 const queries = read('lib/pr/queries.ts')
 assert.match(queries, /server-only/)
 assert.match(queries, /createClient/)
+assert.match(queries, /po_file_path/, 'PR reads must own the PO file path and audit metadata')
+assert.match(queries, /po_file_uploaded_by|po_uploader/, 'PR reads must include the uploader audit relation')
+assert.match(queries, /po_file_deleted_by|po_deleter/, 'PR reads must include the deletion audit relation')
 assert.match(queries, /department\?: string/, 'purchase-request queries accept a department filter')
 assert.match(queries, /filters\.department/, 'purchase-request queries apply the department filter')
 assert.match(queries, /listNextContractPurchaseSequences/)
@@ -299,6 +302,10 @@ assert.match(
   /requesterName: row\.requester\?\.name\?\.trim\(\) \|\| row\.head_name\.trim\(\) \|\| null/,
   'the requester display must fall back to the PR name snapshot when profile RLS hides the relation',
 )
+
+const prTypes = read('lib/pr/types.ts')
+assert.match(prTypes, /PurchaseRequestPoFileRecord/)
+assert.match(prTypes, /poFile:/)
 
 const table = read('components/pr/PurchaseRequestTable.tsx')
 assert.match(table, /className="data-table pr-register-table"/, 'the PR register must use its fixed column layout')

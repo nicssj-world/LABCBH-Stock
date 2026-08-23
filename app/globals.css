@@ -2810,6 +2810,28 @@ input[type="number"] {
 .po-uploader__form > .field-row { margin: 0; }
 .po-uploader__preview { display: grid; gap: 8px; }
 
+.po-file-card { overflow: hidden; }
+.po-file-card__header { align-items: flex-start; }
+.po-file-card__status { color: var(--lab-primary); font-size: 12px; font-weight: 750; }
+.po-file-card[data-po-file-state="deleted"] .po-file-card__status { color: var(--lab-muted); }
+.po-file-card[data-po-file-state="pending"] .po-file-card__status { color: var(--lab-amber); }
+.po-file-card__body { display: grid; gap: 16px; padding: 20px; }
+.po-file-card__facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); margin: 0; overflow: hidden; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.po-file-card__facts > div { display: grid; gap: 5px; min-width: 0; padding: 13px 16px; border-right: 1px solid var(--lab-border); }
+.po-file-card__facts > div:last-child { border-right: 0; }
+.po-file-card__facts dt { color: var(--lab-muted); font-size: 11px; font-weight: 650; }
+.po-file-card__facts dd { display: grid; gap: 3px; min-width: 0; margin: 0; color: var(--lab-ink); font-size: 13px; }
+.po-file-card__facts dd small { color: var(--lab-muted); font-size: 11px; }
+.po-file-card__filename { overflow-wrap: anywhere; }
+.po-file-card__form { display: grid; gap: 12px; }
+.po-file-card__form > .field-row { margin: 0; }
+.po-file-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.po-file-card__hint,
+.po-file-card__audit,
+.po-file-card__pending-note { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.55; }
+.po-file-card__pending-note { padding: 10px 12px; color: var(--lab-amber); background: var(--lab-amber-soft); border: 1px solid color-mix(in srgb, var(--lab-amber) 32%, var(--lab-border)); border-radius: var(--radius-control); }
+.po-file-card__error { margin: 0; }
+
 /* Equipment lease budget: a monthly baht drawdown against the contract value. */
 .budget-gauge { display: grid; gap: 16px; padding: 8px 22px 20px; }
 .budget-gauge__track {
@@ -3279,6 +3301,11 @@ input[type="number"] {
   .expense-history__controls { justify-content: space-between; width: 100%; }
   .contract-file-card { grid-template-columns: 1fr; }
   .contract-file-card__controls { justify-content: flex-start; }
+  .po-file-card__facts { grid-template-columns: 1fr; }
+  .po-file-card__facts > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .po-file-card__facts > div:last-child { border-bottom: 0; }
+  .po-file-card__actions { align-items: stretch; flex-direction: column; }
+  .po-file-card__actions .lab-button { width: 100%; }
   .file-preview-dialog__body { max-height: calc(100dvh - 108px); padding: 0; }
   .file-preview-dialog iframe { height: calc(100dvh - 108px); }
   .executive-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3302,6 +3329,7 @@ input[type="number"] {
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,
   .filter-bench .lab-link-button { width: 100%; }
+  .po-file-card__body { padding: 16px; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .section-heading-row .lab-button { width: 100%; }
   .contract-filters { grid-template-columns: 1fr; }

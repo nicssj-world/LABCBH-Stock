@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
+import { PurchaseRequestPoFileCard } from '@/components/pr/PurchaseRequestPoFileCard'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
@@ -113,6 +114,19 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <div><dt>เลขที่ใบสั่งซื้อ (PO)</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
         </dl>
       </header>
+
+      <PurchaseRequestPoFileCard
+        requestId={request.id}
+        poNumber={request.poNumber}
+        file={request.poFile}
+        canEdit={canReview && ['completed', 'partially_received'].includes(request.status)}
+        canRetryCleanup={
+          canReview &&
+          ['received', 'closed_short'].includes(request.status) &&
+          !request.poFile.deletedAt &&
+          Boolean(request.poFile.path)
+        }
+      />
 
       {(methodDetails.length > 0 || contractDraftEntries.length > 0) && (
         <section className="bench-panel" aria-labelledby="pr-method-detail-title">
