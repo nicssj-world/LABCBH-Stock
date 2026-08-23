@@ -3894,12 +3894,22 @@ body {
 .pr-checklist__section-heading { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
 .pr-checklist__section-heading h3 { margin: 0; color: var(--lab-navy-strong); font-size: 18px; }
 .pr-checklist__section-heading span { color: var(--lab-muted); font-size: 13px; }
-.pr-checklist__files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.pr-checklist__file { display: grid; gap: 14px; min-width: 0; padding: 18px; background: color-mix(in srgb, var(--lab-surface) 94%, var(--lab-background)); border: 1px solid var(--lab-border); border-radius: 12px; }
-.pr-checklist__file.is-complete { border-color: color-mix(in srgb, var(--lab-success) 38%, var(--lab-border)); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--lab-success) 72%, transparent); }
-.pr-checklist__file-copy { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; }
-.pr-checklist__file-copy > span { display: grid; width: 28px; height: 28px; place-items: center; color: var(--lab-muted); background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: 50%; font: 700 12px/1 var(--font-mono); }
-.pr-checklist__file.is-complete .pr-checklist__file-copy > span { color: white; background: var(--lab-success); border-color: var(--lab-success); }
+.pr-checklist__attachment-groups { display: grid; gap: 20px; }
+.pr-checklist__file-group { display: grid; gap: 14px; }
+.pr-checklist__file-group + .pr-checklist__file-group { padding-top: 20px; border-top: 1px solid var(--lab-border); }
+.pr-checklist__file-group-heading { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
+.pr-checklist__file-group-heading h4 { margin: 0; color: var(--lab-navy-strong); font-size: 15px; }
+.pr-checklist__file-group-heading span { color: var(--lab-muted); font-size: 12px; }
+.pr-checklist__file-grid { display: grid; gap: 14px; }
+.pr-checklist__file-grid--primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pr-checklist__file-grid--quotation { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pr-checklist__file { display: grid; gap: 14px; min-width: 0; padding: 18px; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 12px; }
+.pr-checklist__file.is-complete { background: color-mix(in srgb, var(--lab-green) 3%, var(--lab-surface)); border-color: color-mix(in srgb, var(--lab-green) 38%, var(--lab-border)); }
+.pr-checklist__file-copy { display: flex; min-width: 0; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.pr-checklist__file-copy > div { min-width: 0; }
+.pr-checklist__file-state { display: inline-flex; flex: 0 0 auto; min-height: 24px; align-items: center; color: var(--lab-muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pr-checklist__file-state svg { width: 12px; height: 12px; margin-right: 5px; }
+.pr-checklist__file-state.is-complete { color: var(--lab-green); }
 .pr-checklist__file-copy strong, .pr-checklist__file-copy small { display: block; overflow-wrap: anywhere; }
 .pr-checklist__file-copy strong { line-height: 1.45; }
 .pr-checklist__file-copy small { margin-top: 5px; color: var(--lab-muted); line-height: 1.45; }
@@ -3997,6 +4007,10 @@ body {
 .pr-checklist-preview iframe, .pr-checklist-preview img { display: block; width: 100%; height: calc(100% - 64px); border: 0; object-fit: contain; background: #eef1f4; }
 .contract-committee-roster { display: grid; gap: 18px; }
 
+@media (max-width: 1180px) {
+  .pr-checklist__file-grid--quotation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 900px) {
   .pr-checklist__committee-grid, .pr-checklist-detail__committees { grid-template-columns: 1fr; }
 }
@@ -4004,7 +4018,7 @@ body {
 @media (max-width: 700px) {
   .pr-checklist__section { padding-inline: 16px; }
   .pr-checklist__committees fieldset { padding: 16px; }
-  .pr-checklist__files, .pr-checklist-detail__files { grid-template-columns: 1fr; }
+  .pr-checklist__file-grid, .pr-checklist-detail__files { grid-template-columns: 1fr; }
   .pr-checklist__dropzone { min-height: 84px; padding-inline: 14px; }
   .pr-checklist-detail__toolbar { align-items: stretch; flex-direction: column; }
   .pr-checklist-detail__actions { justify-content: stretch; }
