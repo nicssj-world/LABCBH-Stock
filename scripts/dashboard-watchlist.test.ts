@@ -57,4 +57,11 @@ assert.match(dashboardPage, /watchlistTotal/)
 assert.match(dashboardPage, /\/purchase-requests\/new/)
 assert.match(dashboardPage, /\/requisitions\/new/)
 
+const globalStyles = readFileSync('app/globals.css', 'utf8')
+assert.match(globalStyles, /\.dashboard-operations\s*\{[\s\S]*grid-template-areas:/)
+assert.match(globalStyles, /\.dashboard-watchlist__disclosure\s*\{[\s\S]*min-height:\s*64px/)
+assert.match(globalStyles, /\.watchlist li:focus-visible/)
+assert.match(globalStyles, /\.dashboard-watchlist__button\s*\{[\s\S]*min-height:\s*44px/)
+assert.match(globalStyles, /@media \(max-width: 540px\)[\s\S]*dashboard-watchlist__disclosure/)
+
 console.log('dashboard watchlist pagination: ok')

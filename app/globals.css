@@ -4560,3 +4560,85 @@ body {
     transition: none;
   }
 }
+
+/* Dashboard watchlist disclosure ---------------------------------------- */
+.dashboard-operations {
+  grid-template-areas: "watchlist lease" "watchlist pipeline";
+}
+
+.dashboard-operations .watchlist-panel { grid-area: watchlist; }
+.dashboard-operations .lease-watchlist-panel { grid-area: lease; }
+.dashboard-operations .pipeline-panel { grid-area: pipeline; }
+
+.watchlist li {
+  min-width: 0;
+}
+
+.watchlist__identity strong {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.watchlist li:focus-visible {
+  outline: 3px solid var(--lab-focus);
+  outline-offset: -3px;
+}
+
+.dashboard-watchlist__disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--lab-border);
+}
+
+.dashboard-watchlist__disclosure > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dashboard-watchlist__button {
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+.dashboard-watchlist__status {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.dashboard-watchlist__error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--lab-red);
+  font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+  .dashboard-operations {
+    grid-template-areas: "watchlist" "lease" "pipeline";
+  }
+}
+
+@media (max-width: 540px) {
+  .dashboard-watchlist__disclosure {
+    align-items: stretch;
+    flex-direction: column;
+    padding-inline: 16px;
+  }
+
+  .dashboard-watchlist__button {
+    width: 100%;
+  }
+
+  .watchlist li {
+    min-height: 0;
+    padding-block: 16px;
+  }
+}
