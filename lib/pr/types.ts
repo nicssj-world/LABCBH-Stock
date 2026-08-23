@@ -10,6 +10,10 @@ import type {
   purchaseRequestReversalSchema,
   purchaseRequestShortCloseSchema,
 } from './schema'
+import type {
+  PurchaseRequestAttachmentKind,
+  PurchaseRequestCommitteeKind,
+} from './checklist'
 
 export type PurchaseRequestInput = z.infer<typeof purchaseRequestInputSchema>
 export type PurchaseRequestLineInput = z.infer<typeof purchaseRequestLineSchema>
@@ -17,6 +21,42 @@ export type PurchaseOrderNumberInput = z.infer<typeof purchaseOrderNumberSchema>
 export type EphisPrNumberInput = z.infer<typeof ephisPrNumberSchema>
 export type PurchaseRequestReversalInput = z.infer<typeof purchaseRequestReversalSchema>
 export type PurchaseRequestShortCloseInput = z.infer<typeof purchaseRequestShortCloseSchema>
+
+export interface PurchaseRequestChecklistAttachmentRecord {
+  id: string
+  kind: PurchaseRequestAttachmentKind
+  slot: number
+  fileName: string
+  mimeType: string
+  sizeBytes: number
+  uploadedAt: string
+  uploadedByName: string | null
+  deletedAt: string | null
+  deletedByName: string | null
+  deletionReason: 'replaced' | 'edit_removed' | 'received' | 'closed_short' | 'winner_announced' | null
+  objectDeletedAt: string | null
+}
+
+export interface PurchaseRequestCommitteeMemberRecord {
+  id: string
+  kind: PurchaseRequestCommitteeKind
+  seat: number
+  profileId: string
+  name: string
+  positionTitle: string | null
+  profileActive: boolean
+  sourceContractId: number | null
+}
+
+export interface PurchaseRequestChecklistRecord {
+  policyVersion: number | null
+  completedAt: string | null
+  attachments: PurchaseRequestChecklistAttachmentRecord[]
+  committees: PurchaseRequestCommitteeMemberRecord[]
+  canDownloadCommitteePdf: boolean
+  cleanupPendingCount: number
+  downloadsBlocked: boolean
+}
 
 export interface PurchaseRequestPoFileRecord {
   path: string | null
@@ -109,6 +149,8 @@ export interface PurchaseRequestRecord {
   ephisPrNumber: string | null
   /** Set once confirmation opens a contract from this PR (specific_contract/e_bidding). */
   createdContractId: number | null
+  checklistPolicyVersion: number | null
+  checklistCompletedAt: string | null
   acknowledgedBy: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null

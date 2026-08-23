@@ -3,6 +3,14 @@ import { listContracts } from '@/lib/contracts/queries'
 import { listInventoryItems } from '@/lib/inventory/queries'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { listContractItemOptions, listNextContractPurchaseSequences } from '@/lib/pr/queries'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+
+export interface PurchaseRequestCommitteeCandidate {
+  id: string
+  name: string
+  ephisId: string | null
+  positionTitle: string | null
+}
 
 export interface PurchaseRequestFormOptions {
   contracts: Array<{
@@ -10,6 +18,7 @@ export interface PurchaseRequestFormOptions {
     department: string
     label: string
     nextPurchaseSequence: number
+    committeeRosterReady: boolean
   }>
   awaitingContracts: Array<{
     id: number
@@ -40,6 +49,7 @@ export interface PurchaseRequestFormOptions {
     averageMonthlyUsage: number
     belowMinimum: boolean
   }>
+  committeeCandidates: PurchaseRequestCommitteeCandidate[]
 }
 
 /**
@@ -48,11 +58,19 @@ export interface PurchaseRequestFormOptions {
  * away from the safeguards on the new-PR screen.
  */
 export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: string): Promise<PurchaseRequestFormOptions> {
-  const [inventoryItems, contractItems, allContracts] = await Promise.all([
+  const [inventoryItems, contractItems, allContracts, profileResult] = await Promise.all([
     listInventoryItems({}),
     listContractItemOptions(undefined, excludePurchaseRequestId),
     listContracts({}),
+    supabaseAdmin
+      .from('profiles')
+      .select('id, name, ephis_id, position_title')
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .not('name', 'is', null)
+      .order('name'),
   ])
+  if (profileResult.error) throw new Error(`อ่านรายชื่อบุคลากรไม่สำเร็จ: ${profileResult.error.message}`)
 
   const startedContracts = allContracts.filter(
     (contract) =>
@@ -68,11 +86,25 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
 
   const contracts = startedContracts.map((contract) => ({
     id: contract.id,
+    contractType: contract.contractType,
     department: contract.department ?? '',
     label: `${contract.displayName?.trim() || contract.product}${
       contract.contractNumber ? ` · ${contract.contractNumber}` : ''
     }`,
   }))
+  const committeeResult = contracts.length === 0
+    ? { data: [], error: null }
+    : await supabaseAdmin
+        .from('contract_committees')
+        .select('contract_id, committee_kind, seat')
+        .in('contract_id', contracts.map((contract) => contract.id))
+  if (committeeResult.error) throw new Error(`อ่านรายชื่อกรรมการสัญญาไม่สำเร็จ: ${committeeResult.error.message}`)
+  const committeesByContract = new Map<number, Array<{ committee_kind: string; seat: number }>>()
+  for (const row of committeeResult.data ?? []) {
+    const rows = committeesByContract.get(Number(row.contract_id)) ?? []
+    rows.push({ committee_kind: row.committee_kind, seat: Number(row.seat) })
+    committeesByContract.set(Number(row.contract_id), rows)
+  }
   const nextPurchaseSequenceByContract = await listNextContractPurchaseSequences(contracts.map((contract) => contract.id))
 
   const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
@@ -114,8 +146,16 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
 
   return {
     contracts: contracts.map((contract) => ({
-      ...contract,
+      id: contract.id,
+      department: contract.department,
+      label: contract.label,
       nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
+      committeeRosterReady: (() => {
+        const roster = committeesByContract.get(contract.id) ?? []
+        const count = (kind: string) => roster.filter((row) => row.committee_kind === kind).length
+        const expectedResultCount = ['e_bidding', 'equipment_lease'].includes(contract.contractType ?? '') ? 3 : 0
+        return count('specification') === 3 && count('inspection') === 3 && count('result') === expectedResultCount
+      })(),
     })),
     awaitingContracts: awaitingContracts.map((contract) => ({
       id: contract.id,
@@ -126,5 +166,11 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     })),
     contractLines,
     catalog,
+    committeeCandidates: (profileResult.data ?? []).map((profile) => ({
+      id: profile.id,
+      name: profile.name?.trim() || profile.ephis_id || profile.id,
+      ephisId: profile.ephis_id ?? null,
+      positionTitle: profile.position_title?.trim() || null,
+    })),
   }
 }

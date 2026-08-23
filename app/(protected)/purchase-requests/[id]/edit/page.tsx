@@ -10,6 +10,7 @@ import { canManagePurchaseRequest } from '@/lib/pr/authorization'
 import { loadPurchaseRequestFormOptions } from '@/lib/pr/form-options'
 import { purchaseMethodPurpose, purchaseMethodSchema } from '@/lib/pr/schema'
 import { getPurchaseRequest } from '@/lib/pr/queries'
+import { getPurchaseRequestChecklist } from '@/lib/pr/checklist-queries'
 
 interface PurchaseRequestEditPageProps {
   params: Promise<{ id: string }>
@@ -34,7 +35,10 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
   })
   if (!parsedMethod.success) redirect(`/purchase-requests/${request.id}`)
 
-  const options = await loadPurchaseRequestFormOptions(request.id)
+  const [options, checklist] = await Promise.all([
+    loadPurchaseRequestFormOptions(request.id),
+    request.checklistPolicyVersion === null ? Promise.resolve(null) : getPurchaseRequestChecklist(request.id, actor),
+  ])
   const initialValues: PurchaseRequestFormInitialValues = {
     requestId: request.id,
     requestedDate: request.requestedDate,
@@ -54,6 +58,8 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
         item.contractRemaining,
       monthlyUsageSnapshot: item.monthlyUsageSnapshot,
     })),
+    checklistPolicyVersion: request.checklistPolicyVersion,
+    checklist,
   }
 
   return (
@@ -75,6 +81,7 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
         awaitingContracts={options.awaitingContracts}
         contractLines={options.contractLines}
         catalog={options.catalog}
+        committeeCandidates={options.committeeCandidates}
         mode="edit"
         initialValues={initialValues}
       />

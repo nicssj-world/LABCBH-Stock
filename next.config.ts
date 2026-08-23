@@ -2,6 +2,14 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    '/api/purchase-requests/*/checklist/committee-pdf': [
+      './node_modules/font-th-sarabun-new/fonts/*.ttf',
+    ],
+    '/api/purchase-requests/*/checklist/download-all': [
+      './node_modules/font-th-sarabun-new/fonts/*.ttf',
+    ],
+  },
   experimental: {
     serverActions: {
       // Matches the lab-stock-contracts bucket's file_size_limit (25MB); the

@@ -17,6 +17,24 @@ import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest, updatePurchaseRequest } from '@/lib/pr/actions'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
 import { calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
+import {
+  PurchaseRequestChecklistFields,
+  checklistFileFingerprint,
+  purchaseRequestFileMime,
+  uploadChecklistFiles,
+  type ChecklistFileSelections,
+  type UploadedChecklistFile,
+  type UploadedChecklistFiles,
+} from '@/components/pr/PurchaseRequestChecklistFields'
+import {
+  derivePurchaseRequestChecklist,
+  purchaseRequestAttachmentSlotKey,
+  validateCommitteeAssignments,
+  validatePurchaseRequestAttachment,
+  type CommitteeAssignmentInput,
+} from '@/lib/pr/checklist'
+import type { PurchaseRequestCommitteeCandidate } from '@/lib/pr/form-options'
+import type { PurchaseRequestChecklistRecord } from '@/lib/pr/types'
 
 export interface CatalogOption {
   inventoryItemId: string
@@ -55,6 +73,8 @@ export interface PurchaseRequestFormInitialValues {
   purpose: PurchasePurpose
   method: PurchaseMethod
   items: PurchaseRequestFormInitialItem[]
+  checklistPolicyVersion: number | null
+  checklist: PurchaseRequestChecklistRecord | null
 }
 
 export interface PurchaseRequestFormProps {
@@ -65,6 +85,7 @@ export interface PurchaseRequestFormProps {
   awaitingContracts: AwaitingContractOption[]
   contractLines: ContractLineOption[]
   catalog: CatalogOption[]
+  committeeCandidates: PurchaseRequestCommitteeCandidate[]
   mode?: 'create' | 'edit'
   initialValues?: PurchaseRequestFormInitialValues
 }
@@ -123,6 +144,7 @@ export function PurchaseRequestForm({
   awaitingContracts,
   contractLines,
   catalog,
+  committeeCandidates,
   mode = 'create',
   initialValues,
 }: PurchaseRequestFormProps) {
@@ -158,6 +180,17 @@ export function PurchaseRequestForm({
       }
     }) ?? [],
   )
+  const [uploadSessionId, setUploadSessionId] = useState(() => crypto.randomUUID())
+  const [checklistFiles, setChecklistFiles] = useState<ChecklistFileSelections>({})
+  const [uploadedChecklistFiles, setUploadedChecklistFiles] = useState<UploadedChecklistFiles>({})
+  const [committeeAssignments, setCommitteeAssignments] = useState<CommitteeAssignmentInput[]>(() =>
+    initialValues?.checklist?.committees.map((member) => ({
+      kind: member.kind,
+      seat: member.seat,
+      profileId: member.profileId,
+    })) ?? [],
+  )
+  const [overallProgress, setOverallProgress] = useState<number | null>(null)
   const [clearAnnouncement, setClearAnnouncement] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -272,6 +305,12 @@ export function PurchaseRequestForm({
     setMethod(next)
     if (!shouldClear) return
 
+    setChecklistFiles({})
+    setUploadedChecklistFiles({})
+    setCommitteeAssignments([])
+    setUploadSessionId(crypto.randomUUID())
+    setOverallProgress(null)
+
     // "ซื้อในสัญญา" draws down one specific contract, so its full remaining
     // balance is exactly what the requester is choosing among — fill every
     // line in automatically rather than making them re-search it item by item.
@@ -295,6 +334,11 @@ export function PurchaseRequestForm({
     setMethod(null)
     setClearAnnouncement(lines.length > 0 ? `ล้างรายการที่เลือกไว้ ${lines.length} รายการ เพราะเปลี่ยนจุดประสงค์` : null)
     setLines([])
+    setChecklistFiles({})
+    setUploadedChecklistFiles({})
+    setCommitteeAssignments([])
+    setUploadSessionId(crypto.randomUUID())
+    setOverallProgress(null)
   }
 
   const changeDepartment = (nextDepartment: string) => {
@@ -332,12 +376,63 @@ export function PurchaseRequestForm({
     0,
   )
 
+  const legacyChecklistExempt = Boolean(isEditMode && initialValues?.checklistPolicyVersion === null)
+  const checklistTotal = method?.kind === 'equipment_lease' ? null : total
+  const checklistPolicy = method ? derivePurchaseRequestChecklist(method.kind, checklistTotal) : null
+  const existingChecklistAttachments = initialValues?.checklist?.attachments ?? []
+  const existingChecklistBySlot = new Map(
+    existingChecklistAttachments
+      .filter((attachment) => !attachment.deletedAt)
+      .map((attachment) => [purchaseRequestAttachmentSlotKey(attachment.kind, attachment.slot), attachment]),
+  )
+  const applicableAssignments = checklistPolicy?.committees.flatMap((requirement) =>
+    Array.from({ length: requirement.seats }, (_, index) =>
+      committeeAssignments.find(
+        (assignment) => assignment.kind === requirement.kind && assignment.seat === index + 1,
+      ),
+    ).filter((assignment): assignment is CommitteeAssignmentInput => Boolean(assignment)),
+  ) ?? []
+  const selectedContractRosterReady = method?.kind !== 'contract'
+    ? true
+    : contracts.find((contract) => contract.id === method.contractId)?.committeeRosterReady === true
+  const checklistComplete = legacyChecklistExempt || Boolean(
+    checklistPolicy &&
+    selectedContractRosterReady &&
+    checklistPolicy.attachments.every((requirement) => {
+      const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
+      const file = checklistFiles[key]
+      if (!file) return existingChecklistBySlot.has(key)
+      return validatePurchaseRequestAttachment({
+        kind: requirement.kind,
+        mimeType: purchaseRequestFileMime(file),
+        sizeBytes: file.size,
+      }).length === 0
+    }) &&
+    validateCommitteeAssignments(checklistPolicy, applicableAssignments).length === 0
+  )
+
+  const changeChecklistFile = (slotKey: string, file: File | undefined) => {
+    setChecklistFiles((current) => ({ ...current, [slotKey]: file }))
+    setUploadedChecklistFiles((current) => {
+      const next = { ...current }
+      delete next[slotKey]
+      return next
+    })
+    setOverallProgress(null)
+  }
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
 
     if (method === null) {
       setError('กรุณาเลือกจุดประสงค์และวิธีจัดซื้อก่อนส่งใบ PR')
+      return
+    }
+
+    if (!checklistComplete) {
+      setError('กรุณาแนบเอกสารและเลือกรายชื่อกรรมการใน checklist ให้ครบก่อนส่งใบ PR')
+      document.getElementById('pr-checklist-title')?.focus()
       return
     }
 
@@ -361,12 +456,53 @@ export function PurchaseRequestForm({
               unitPrice: line.unitPrice,
             })),
         }
+        if (legacyChecklistExempt && isEditMode && initialValues) {
+          const saved = await updatePurchaseRequest(initialValues.requestId, input)
+          router.push(`/purchase-requests/${saved.id}`)
+          router.refresh()
+          return
+        }
+
+        if (!checklistPolicy) throw new Error('ไม่พบกฎ checklist ของวิธีจัดซื้อ')
+        setOverallProgress(0)
+        const uploaded = await uploadChecklistFiles({
+          uploadSessionId,
+          method: method.kind,
+          total: checklistTotal,
+          policy: checklistPolicy,
+          files: checklistFiles,
+          uploaded: uploadedChecklistFiles,
+          onUploaded: (slotKey: string, uploadedFile: UploadedChecklistFile) => {
+            setUploadedChecklistFiles((current) => ({ ...current, [slotKey]: uploadedFile }))
+          },
+          onOverallProgress: setOverallProgress,
+        })
+        const attachments = checklistPolicy.attachments.map((requirement) => {
+          const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
+          const file = checklistFiles[key]
+          const existing = existingChecklistBySlot.get(key)
+          if (file) {
+            const uploadedFile = uploaded[key]
+            if (!uploadedFile || uploadedFile.fingerprint !== checklistFileFingerprint(file)) {
+              throw new Error(`อัปโหลด ${requirement.label} ยังไม่สำเร็จ`)
+            }
+            return { kind: requirement.kind, slot: requirement.slot, uploadId: uploadedFile.uploadId }
+          }
+          if (existing) return { kind: requirement.kind, slot: requirement.slot, attachmentId: existing.id }
+          throw new Error(`ยังไม่ได้แนบ ${requirement.label}`)
+        })
+        const checklist = {
+          uploadSessionId,
+          attachments,
+          committees: checklistPolicy.committeeSource === 'contract' ? [] : applicableAssignments,
+        }
         const saved = isEditMode && initialValues
-          ? await updatePurchaseRequest(initialValues.requestId, input)
-          : await createPurchaseRequest(input)
+          ? await updatePurchaseRequest(initialValues.requestId, input, checklist)
+          : await createPurchaseRequest(input, checklist)
         router.push(`/purchase-requests/${saved.id}`)
         router.refresh()
       } catch (caught) {
+        setOverallProgress(null)
         setError(caught instanceof Error ? caught.message : `${isEditMode ? 'แก้ไข' : 'สร้าง'}ใบ PR ไม่สำเร็จ กรุณาลองใหม่`)
       }
     })
@@ -598,6 +734,29 @@ export function PurchaseRequestForm({
       </section>
       )}
 
+      {method !== null && !legacyChecklistExempt && (
+        <PurchaseRequestChecklistFields
+          method={method.kind}
+          total={checklistTotal}
+          candidates={committeeCandidates}
+          files={checklistFiles}
+          existingAttachments={existingChecklistAttachments}
+          assignments={applicableAssignments}
+          contractRosterReady={selectedContractRosterReady}
+          checklistComplete={checklistComplete}
+          overallProgress={overallProgress}
+          disabled={isPending}
+          onFileChange={changeChecklistFile}
+          onAssignmentsChange={setCommitteeAssignments}
+        />
+      )}
+
+      {legacyChecklistExempt && (
+        <section className="bench-panel pr-checklist pr-checklist--legacy" aria-label="ข้อยกเว้น checklist">
+          <p>ใบ PR นี้สร้างก่อนเริ่มใช้นโยบาย checklist จึงแก้ไขและส่งต่อได้โดยไม่ต้องแนบเอกสารย้อนหลัง</p>
+        </section>
+      )}
+
       {error && <p className="form-error" role="alert">{error}</p>}
 
       <div className="form-action-bar">
@@ -620,7 +779,7 @@ export function PurchaseRequestForm({
           >
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasOverLimitLine}>
+          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasOverLimitLine || !checklistComplete}>
             {isPending ? (isEditMode ? 'กำลังบันทึก…' : 'กำลังส่ง…') : isEditMode ? 'บันทึกการแก้ไข' : 'ส่งใบ PR'}
           </Button>
         </div>

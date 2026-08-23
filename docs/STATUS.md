@@ -6,6 +6,22 @@ Update this file when any line moves.
 
 ---
 
+## Latest PR checklist schema remediation — 2026-08-24
+
+- Staging (`stogulcfwsvunydmwrex`) was missing the three
+  `purchase_requests.checklist_*` columns and five checklist tables required by
+  the current PR query. The reviewed repository migration
+  `20260824120000_purchase_request_checklist.sql` was applied without resetting
+  the hosted database.
+- The migration service recorded it as `20260823200005` with the name
+  `purchase_request_checklist`. The live contract check
+  `npm run test:staging-pr` now passes and covers both checklist columns and the
+  existing `profiles` relationships.
+- The remote migration ledger remains non-canonical. Keep the deliberate ledger
+  reconciliation open; do not run an unreviewed linked `supabase db push`.
+
+---
+
 ## Latest schema-drift remediation — 2026-08-23
 
 - Read-only comparison found that Production and Staging diverged in both

@@ -123,8 +123,8 @@ assert.match(form, /isOverContractLimit/, 'requesting more than a contract line 
 assert.match(form, /isLowContractBalance/, 'a line under 30% remaining must be flagged, matching the dashboard watchlist threshold')
 assert.match(
   form,
-  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasOverLimitLine\}/,
-  'submit must stay blocked while any line exceeds its contract remaining, but a lease with zero lines must still be submittable',
+  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasOverLimitLine \|\| !checklistComplete\}/,
+  'submit must stay blocked for invalid contract quantities or an incomplete checklist, but a complete lease with zero lines must still be submittable',
 )
 assert.match(form, /const isLease = method\?\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')
 assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
@@ -310,10 +310,10 @@ assert.match(presenter, /ต่ำกว่าขั้นต่ำ|ควรท
 
 const actions = read('lib/pr/actions.ts')
 assert.match(actions, /^['"]use server['"]/m)
-assert.match(actions, /supabaseAdmin\.rpc\('create_purchase_request'/)
+assert.match(actions, /supabaseAdmin\.rpc\('create_purchase_request_with_checklist'/)
 assert.match(actions, /supabaseAdmin\.rpc\('update_purchase_request'/)
 assert.match(actions, /supabaseAdmin\.rpc\('cancel_purchase_request'/)
-assert.match(actions, /supabaseAdmin\.rpc\('confirm_purchase_request'/)
+assert.match(actions, /supabaseAdmin\.rpc\('confirm_purchase_request_with_committees'/)
 assert.match(actions, /p_sent_to_procurement_date/, 'confirming a contract-opening PR must carry its ส่งพัสดุ date')
 assert.match(actions, /supabaseAdmin\.rpc\('reverse_purchase_request'/)
 assert.match(actions, /supabaseAdmin\.rpc\('set_purchase_order_number'/)
@@ -370,6 +370,18 @@ assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /PurchaseRequestPoFileOpenButton/, 'the compact PR summary exposes the PO open action')
 assert.match(summaryDialog, /request\.poFile\.path && !request\.poFile\.deletedAt/, 'the compact PR summary only exposes active attached PO files')
 assert.match(summaryDialog, /list-summary-dialog__po-value/, 'the compact summary keeps the PO action with the PO number')
+assert.match(
+  styles,
+  /\.list-summary-dialog\[open\]\s*\{[\s\S]*?display:\s*grid/,
+  'the list summary layout must only override display while the native dialog is open',
+)
+for (const [path, label] of [
+  ['components/receipts/GoodsReceiptSummaryDialog.tsx', 'receipt summary'],
+  ['components/requisitions/RequisitionSummaryDialog.tsx', 'requisition summary'],
+  ['components/contracts/ContractSummaryDialog.tsx', 'contract summary'],
+] as const) {
+  assert.match(read(path), /unmount: unmountDialog/, `${label} must use the immediate hard-close path`)
+}
 assert.match(summaryDialog, /StatusChip tone=\{PURCHASE_REQUEST_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /createdContractId/, 'a PR that opened a contract must link to it from the popup')
 assert.match(summaryDialog, /DetailIconLink/, 'the popup detail route must use the shared icon link')

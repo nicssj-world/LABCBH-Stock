@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArchiveContractControl } from '@/components/contracts/ArchiveContractControl'
 import { BudgetPanel } from '@/components/contracts/BudgetPanel'
 import { ContractEditDialog } from '@/components/contracts/ContractEditDialog'
+import { ContractCommitteeRoster } from '@/components/contracts/ContractCommitteeRoster'
 import { ContractFileCard } from '@/components/contracts/ContractFileCard'
 import { ContractOpeningBalanceHistory } from '@/components/contracts/ContractOpeningBalanceHistory'
 import { ContractPurchaseHistory } from '@/components/contracts/ContractPurchaseHistory'
@@ -24,6 +25,10 @@ import { presentContract } from '@/lib/contracts/presenter'
 import { getContract, listContractOpeningBalanceHistory } from '@/lib/contracts/queries'
 import { listInventoryCatalog } from '@/lib/inventory/queries'
 import { listContractPurchaseHistory } from '@/lib/pr/queries'
+import {
+  getContractCommitteeRoster,
+  listContractCommitteeCandidates,
+} from '@/lib/contracts/committee-queries'
 
 interface ContractDetailPageProps {
   params: Promise<{ id: string }>
@@ -64,6 +69,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const contract = presentContract(record)
   const canEdit = hasAppRole(actor, 'admin', 'head') && !record.isArchived
   const canManageStageHistory = canOperateStock(actor)
+  const canManageCommitteeRoster = canOperateStock(actor) && !record.isArchived
   const mode = contractMode(contract.contractType ?? 'e_bidding')
   const canRecord = contract.effectiveStatus === 'active' && canRecordContractExpense(actor, contract)
   const isContractStarted = contract.procurementStage === 'contract_started'
@@ -86,7 +92,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   // What each of these reads needs — the contract's mode and stage — is known
   // by now, so they overlap on the wire instead of queueing. A started supply
   // contract used to pay for all four one after another.
-  const [responsibleCandidates, purchaseHistory, openingBalanceResult, editCatalog] =
+  const [responsibleCandidates, purchaseHistory, openingBalanceResult, editCatalog, committeeRoster, committeeCandidates] =
     await Promise.all([
       mode === 'budget' && responsibleCandidatesSettled
         ? responsibleCandidatesSettled.then((settled) =>
@@ -103,6 +109,8 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       // A lease has no line items, so the edit dialog's catalog lookup is only
       // needed for editors of a supply contract.
       canEdit && mode !== 'budget' ? listInventoryCatalog() : [],
+      getContractCommitteeRoster(contract.id),
+      canManageCommitteeRoster ? listContractCommitteeCandidates() : [],
     ])
   const openingBalanceHistory = openingBalanceResult.history
   const openingBalanceHistoryError = openingBalanceResult.error
@@ -241,6 +249,14 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </aside>
         )}
       </div>
+
+      <ContractCommitteeRoster
+        contractId={contract.id}
+        contractType={contract.contractType}
+        members={committeeRoster}
+        candidates={committeeCandidates}
+        canEdit={canManageCommitteeRoster}
+      />
 
       {mode === 'budget' ? (
         <BudgetPanel

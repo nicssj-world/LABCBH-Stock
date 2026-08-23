@@ -27,6 +27,8 @@ import type {
 } from '@/lib/contracts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
+import { cleanupPurchaseRequestChecklistForContract } from '@/lib/pr/checklist-cleanup'
+import { purchaseRequestCommitteeAssignmentSchema } from '@/lib/pr/checklist-schema'
 
 const mutationResultSchema = z.object({ id: z.coerce.number().int().positive() }).passthrough()
 
@@ -187,9 +189,39 @@ export async function advanceContractStage(contractId: number, input: StageAdvan
   })
 
   const advanced = unwrapMutation('เปลี่ยนขั้นตอนสัญญา', result)
+  if (parsed.to === 'winner_announced') {
+    try {
+      await cleanupPurchaseRequestChecklistForContract(parsedContractId, actor.id)
+    } catch (error) {
+      revalidatePath('/contracts')
+      revalidatePath(`/contracts/${parsedContractId}`)
+      const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+      throw new Error(`เปลี่ยนขั้นตอนเป็นประกาศผู้ชนะสำเร็จ แต่ล้างเอกสาร checklist ไม่สำเร็จ: ${message}`)
+    }
+  }
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
   return advanced
+}
+
+export async function setContractCommittees(
+  contractId: number,
+  assignments: Array<z.infer<typeof purchaseRequestCommitteeAssignmentSchema>>,
+) {
+  const actor = await requireActor()
+  if (!canOperateStock(actor)) throw new Error('เฉพาะเจ้าหน้าที่คลังหรือผู้ดูแลระบบเท่านั้นที่แก้ roster กรรมการได้')
+  const parsedContractId = z.number().int().positive().parse(contractId)
+  const parsedAssignments = z.array(purchaseRequestCommitteeAssignmentSchema).min(6).max(9).parse(assignments)
+  const result = await supabaseAdmin.rpc('set_contract_committees', {
+    p_contract_id: parsedContractId,
+    p_actor_id: actor.id,
+    p_committees: parsedAssignments,
+  })
+  const updated = unwrapMutation('บันทึก roster กรรมการ', result)
+  revalidatePath('/contracts')
+  revalidatePath(`/contracts/${parsedContractId}`)
+  revalidatePath('/purchase-requests/new')
+  return updated
 }
 
 export async function correctContractStageHistory(input: StageHistoryCorrectionInput) {

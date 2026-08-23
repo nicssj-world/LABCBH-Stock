@@ -11,7 +11,7 @@ import type { GoodsReceiptRecord } from '@/lib/receipts/types'
 export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRecord }) {
   // One of these renders per row, in both the table and the card layout,
   // so the dialog body is built only once someone opens it.
-  const { dialogRef, isRendered, open: openDialog, close: closeDialog } = useDeferredDialog()
+  const { dialogRef, isRendered, open: openDialog, unmount: unmountDialog } = useDeferredDialog()
   const dialogId = `receipt-summary-dialog-${receipt.id}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
@@ -38,10 +38,10 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
           aria-describedby={descriptionId}
           onCancel={(event) => {
             event.preventDefault()
-            closeDialog()
+            unmountDialog()
           }}
           onClick={(event) => {
-            if (event.target === event.currentTarget) closeDialog()
+            if (event.target === event.currentTarget) unmountDialog()
           }}
         >
           <header className="app-dialog__header">
@@ -49,7 +49,7 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
               <h2 id={titleId}>{title}</h2>
               <p id={descriptionId}>ข้อมูลใบรับเข้าแบบย่อ</p>
             </div>
-            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลใบรับเข้าแบบย่อ" onClick={closeDialog}>
+            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลใบรับเข้าแบบย่อ" onClick={unmountDialog}>
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -135,9 +135,9 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
               label={`เปิดรายละเอียดเต็มใบรับเข้า ${title}`}
               title="เปิดรายละเอียดเต็มใบรับเข้า"
               icon="open"
-              onClick={closeDialog}
+              onClick={unmountDialog}
             />
-            <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
+            <Button variant="secondary" onClick={unmountDialog}>ปิด</Button>
           </footer>
         </dialog>
       )}

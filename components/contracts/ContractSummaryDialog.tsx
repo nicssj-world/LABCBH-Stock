@@ -28,7 +28,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
   // the card layout, so both dialogs below are built only once the summary
   // is opened. The file preview can only be reached from inside the
   // summary, so the one flag correctly gates both.
-  const { dialogRef, isRendered, open: openDialog, close: closeDialog } = useDeferredDialog()
+  const { dialogRef, isRendered, open: openDialog, close: closeDialog, unmount: unmountDialog } = useDeferredDialog()
   const previewDialogRef = useRef<HTMLDialogElement>(null)
   const dialogId = `contract-summary-dialog-${contract.id}-${variant}`
   const titleId = `${dialogId}-title`
@@ -82,10 +82,10 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
           aria-describedby={descriptionId}
           onCancel={(event) => {
             event.preventDefault()
-            closeDialog()
+            unmountDialog()
           }}
           onClick={(event) => {
-            if (event.target === event.currentTarget) closeDialog()
+            if (event.target === event.currentTarget) unmountDialog()
           }}
         >
           <header className="app-dialog__header">
@@ -93,7 +93,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
               <h2 id={titleId}>{contract.resolvedDisplayName}</h2>
               <p id={descriptionId}>ข้อมูลสัญญาแบบย่อ · {contract.contractNumberLabel}</p>
             </div>
-            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลสัญญาแบบย่อ" onClick={closeDialog}>
+            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลสัญญาแบบย่อ" onClick={unmountDialog}>
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -177,9 +177,9 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
               href={`/contracts/${contract.id}`}
               label={`เปิดรายละเอียดเต็มสัญญา ${contract.contractNumberLabel}`}
               title="เปิดรายละเอียดเต็มสัญญา"
-              onClick={closeDialog}
+              onClick={unmountDialog}
             />
-            <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
+            <Button variant="secondary" onClick={unmountDialog}>ปิด</Button>
           </footer>
         </dialog>
 

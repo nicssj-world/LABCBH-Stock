@@ -13,6 +13,11 @@ export function canRequestPurchase(actor: Actor): boolean {
   return hasAppRole(actor, 'admin', 'head')
 }
 
+/** Heads upload while composing; stock operators may upload when correcting a pending PR. */
+export function canUploadPurchaseRequestChecklist(actor: Actor): boolean {
+  return hasAppRole(actor, 'admin', 'head', 'stock_officer')
+}
+
 export function assertPurchaseRequester(actor: Actor): void {
   if (!canRequestPurchase(actor)) {
     throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์สร้างใบ PR')

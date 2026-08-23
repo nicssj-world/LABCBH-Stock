@@ -19,6 +19,7 @@ export interface ContractOption {
   /** Used to filter this contract out once the requester picks a different department. */
   department: string
   nextPurchaseSequence: number
+  committeeRosterReady?: boolean
 }
 
 export interface AwaitingContractOption {

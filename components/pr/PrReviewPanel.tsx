@@ -51,10 +51,12 @@ export function PrReviewPanel({
   request,
   lineNotification = null,
   lineNotificationConfigured = false,
+  checklistReadyForConfirmation = true,
 }: {
   request: PurchaseRequestRecord
   lineNotification?: PurchaseRequestLineNotificationSummary | null
   lineNotificationConfigured?: boolean
+  checklistReadyForConfirmation?: boolean
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -249,7 +251,7 @@ export function PrReviewPanel({
 
           <Button
             type="button"
-            disabled={isPending || !sentToProcurementDate}
+            disabled={isPending || !sentToProcurementDate || !checklistReadyForConfirmation}
             onClick={() =>
               run(
                 () => confirmPurchaseRequest(request.id, sentToProcurementDate),
@@ -309,12 +311,18 @@ export function PrReviewPanel({
           </div>
           <Button
             type="button"
-            disabled={isPending}
+            disabled={isPending || !checklistReadyForConfirmation}
             onClick={() => run(() => confirmPurchaseRequest(request.id), 'ยืนยันใบ PR ไม่สำเร็จ')}
           >
             {isPending ? 'กำลังยืนยัน…' : 'ยืนยันใบ PR'}
           </Button>
         </>
+      )}
+
+      {request.status === 'pending' && !checklistReadyForConfirmation && (
+        <p className="form-error" role="status">
+          ยังยืนยันใบ PR ไม่ได้ เพราะกรรมการอย่างน้อยหนึ่งคนไม่มีตำแหน่งในข้อมูลบุคลากร กรุณาแก้ที่ระบบบุคลากรแล้วโหลดหน้าใหม่
+        </p>
       )}
 
       {request.status === 'completed' && (

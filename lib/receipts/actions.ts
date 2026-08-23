@@ -6,6 +6,7 @@ import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
 import { cancelGoodsReceiptSchema, goodsReceiptInputSchema } from '@/lib/receipts/schema'
 import { cleanupPoFileAfterPostedReceipt } from '@/lib/po/cleanup'
+import { cleanupPurchaseRequestChecklistAfterPostedReceipt } from '@/lib/pr/checklist-cleanup'
 import type { CancelGoodsReceiptInput, GoodsReceiptInput } from '@/lib/receipts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
@@ -61,7 +62,10 @@ export async function postGoodsReceipt(receiptId: string) {
 
   const posted = unwrapMutation('บันทึกรับเข้าคลัง', result)
   try {
-    await cleanupPoFileAfterPostedReceipt(parsedId, actor.id)
+    await Promise.all([
+      cleanupPoFileAfterPostedReceipt(parsedId, actor.id),
+      cleanupPurchaseRequestChecklistAfterPostedReceipt(parsedId, actor.id),
+    ])
   } catch (error) {
     // The receipt and stock transition are already committed by the RPC. Do
     // not pretend that it rolled back; surface a retryable cleanup warning.

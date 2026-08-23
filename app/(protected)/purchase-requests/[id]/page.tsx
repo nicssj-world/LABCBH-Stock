@@ -4,9 +4,10 @@ import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseReques
 import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
+import { PurchaseRequestChecklistPanel } from '@/components/pr/PurchaseRequestChecklistPanel'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { canOperateStock } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getLineNotificationConfig } from '@/lib/line/config'
@@ -28,7 +29,8 @@ import {
 import { getPurchaseRequest } from '@/lib/pr/queries'
 import { getLatestPurchaseRequestLineNotification } from '@/lib/pr/line-notification-queries'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
-import { isPurchaseRequestOutsideStockEligible } from '@/lib/pr/schema'
+import { isPurchaseRequestOutsideStockEligible, purchaseMethodPurpose } from '@/lib/pr/schema'
+import { getPurchaseRequestChecklist } from '@/lib/pr/checklist-queries'
 
 interface PurchaseRequestDetailPageProps {
   params: Promise<{ id: string }>
@@ -62,7 +64,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   if (!request) notFound()
 
   const canReview = canOperateStock(actor)
-  const lineNotification = canReview ? await getLatestPurchaseRequestLineNotification(id, actor) : null
+  const canAccessChecklist = request.checklistPolicyVersion !== null && (canReview || request.requesterId === actor.id)
+  const [lineNotification, checklist] = await Promise.all([
+    canReview ? getLatestPurchaseRequestLineNotification(id, actor) : Promise.resolve(null),
+    canAccessChecklist ? getPurchaseRequestChecklist(id, actor) : Promise.resolve(null),
+  ])
   const lineNotificationConfigured = canReview && Boolean(getLineNotificationConfig())
   const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
   const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
@@ -71,6 +77,9 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
     canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)
   const canRetryOutsideStockCleanup =
     canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt
+  const canRetryChecklistCleanup = purchaseMethodPurpose(request.purchaseMethod) === 'new_contract'
+    ? hasAppRole(actor, 'admin', 'head')
+    : canManagePurchaseRequest(actor, request.requesterId)
   // contractDraft is a nested object with its own rendering below; the flat
   // key/value list here would otherwise print it as "[object Object]".
   const methodDetails = Object.entries(request.methodDetails).filter(
@@ -347,6 +356,23 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
         )}
       </section>
 
+      {checklist && !canReview && (
+        <section className="bench-panel" aria-labelledby="pr-checklist-detail-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">SUPPORTING DOCUMENTS</p>
+              <h2 id="pr-checklist-detail-title">เอกสารและรายชื่อกรรมการ</h2>
+            </div>
+          </div>
+          <PurchaseRequestChecklistPanel
+            requestId={request.id}
+            checklist={checklist}
+            stockAccess={false}
+            canRetryCleanup={canRetryChecklistCleanup}
+          />
+        </section>
+      )}
+
       {canReview && (
         <section
           className={request.status === 'pending' ? 'bench-panel bench-panel--decision' : 'bench-panel'}
@@ -358,10 +384,21 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               <h2 id="pr-review-title">การดำเนินการของเจ้าหน้าที่คลัง</h2>
             </div>
           </div>
+          {checklist ? (
+            <PurchaseRequestChecklistPanel
+              requestId={request.id}
+              checklist={checklist}
+              stockAccess
+              canRetryCleanup={canRetryChecklistCleanup}
+            />
+          ) : request.checklistPolicyVersion === null ? (
+            <p className="pr-checklist-detail__notice">ใบ PR นี้สร้างก่อนเริ่มใช้นโยบาย checklist จึงไม่มีเอกสารบังคับย้อนหลัง</p>
+          ) : null}
           <PrReviewPanel
             request={request}
             lineNotification={lineNotification}
             lineNotificationConfigured={lineNotificationConfigured}
+            checklistReadyForConfirmation={request.checklistPolicyVersion === null || Boolean(checklist?.canDownloadCommitteePdf)}
           />
         </section>
       )}

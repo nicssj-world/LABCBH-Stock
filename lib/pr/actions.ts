@@ -16,6 +16,8 @@ import {
   purchaseRequestReversalSchema,
   purchaseRequestShortCloseSchema,
 } from '@/lib/pr/schema'
+import { purchaseRequestChecklistSubmissionSchema } from '@/lib/pr/checklist-schema'
+import { verifyPurchaseRequestChecklistUploads } from '@/lib/pr/checklist-server'
 import { isoDateSchema } from '@/lib/validation/date'
 import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
 import type {
@@ -25,10 +27,12 @@ import type {
   PurchaseRequestReversalInput,
   PurchaseRequestShortCloseInput,
 } from '@/lib/pr/types'
+import type { PurchaseRequestChecklistSubmission } from '@/lib/pr/checklist-schema'
 import { getPurchaseRequest } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 import { formatPurchaseRequestMutationError } from './errors'
+import { cleanupPurchaseRequestChecklistObjects } from './checklist-cleanup'
 
 const purchaseRequestIdSchema = z.string().uuid()
 
@@ -59,13 +63,23 @@ function thaiFiscalYear(isoDate: string): number {
   return year + 543 + (month >= 10 ? 1 : 0)
 }
 
-export async function createPurchaseRequest(input: PurchaseRequestInput) {
+export async function createPurchaseRequest(
+  input: PurchaseRequestInput,
+  checklist: PurchaseRequestChecklistSubmission,
+) {
   const actor = await requireActor()
   assertPurchaseRequester(actor)
   const parsed = purchaseRequestInputSchema.parse(input)
+  const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
+    actor,
+    method: parsed.method.kind,
+    items: parsed.items,
+    submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
+    allowExistingAttachments: false,
+  })
   const { items, ...request } = parsed
 
-  const result = await supabaseAdmin.rpc('create_purchase_request', {
+  const result = await supabaseAdmin.rpc('create_purchase_request_with_checklist', {
     p_actor_id: actor.id,
     // headName always names the actor creating the PR — never trust a
     // client-supplied value, which a direct call to this action could set
@@ -74,6 +88,9 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
     // Usage and on-hand snapshots are taken inside the transaction, not here,
     // so a stale browser value can never be recorded as fact.
     p_items: items.map(omitNullishProperties),
+    p_upload_session_id: parsedChecklist.uploadSessionId,
+    p_attachments: parsedChecklist.attachments,
+    p_committees: parsedChecklist.committees,
   })
 
   const created = unwrapMutation('สร้างใบ PR', result)
@@ -89,6 +106,7 @@ export async function createPurchaseRequest(input: PurchaseRequestInput) {
 export async function updatePurchaseRequest(
   purchaseRequestId: string,
   input: PurchaseRequestInput,
+  checklist?: PurchaseRequestChecklistSubmission,
 ) {
   const actor = await requireActor()
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
@@ -98,14 +116,44 @@ export async function updatePurchaseRequest(
   assertPurchaseRequestManager(actor, existing.requesterId)
   const { items, ...request } = parsed
 
-  const result = await supabaseAdmin.rpc('update_purchase_request', {
+  if (existing.checklistPolicyVersion === null) {
+    const legacyResult = await supabaseAdmin.rpc('update_purchase_request', {
+      p_pr_id: parsedId,
+      p_actor_id: actor.id,
+      p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+      p_items: items.map(omitNullishProperties),
+    })
+    const legacyUpdated = unwrapMutation('แก้ไขใบ PR', legacyResult)
+    revalidatePurchaseRequest(parsedId)
+    return legacyUpdated
+  }
+
+  const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
+    actor,
+    method: parsed.method.kind,
+    items: parsed.items,
+    submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
+    allowExistingAttachments: true,
+  })
+
+  const result = await supabaseAdmin.rpc('update_purchase_request_with_checklist', {
     p_pr_id: parsedId,
     p_actor_id: actor.id,
     p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
     p_items: items.map(omitNullishProperties),
+    p_upload_session_id: parsedChecklist.uploadSessionId,
+    p_attachments: parsedChecklist.attachments,
+    p_committees: parsedChecklist.committees,
   })
 
   const updated = unwrapMutation('แก้ไขใบ PR', result)
+  try {
+    await cleanupPurchaseRequestChecklistObjects(parsedId, actor.id, 'edit_removed')
+  } catch (error) {
+    revalidatePurchaseRequest(parsedId)
+    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+    throw new Error(`แก้ไขใบ PR สำเร็จ แต่ล้างไฟล์ที่เปลี่ยนออกไม่สำเร็จ: ${message}`)
+  }
   revalidatePurchaseRequest(parsedId)
   return updated
 }
@@ -144,7 +192,7 @@ export async function confirmPurchaseRequest(purchaseRequestId: string, sentToPr
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
   const parsedDate = sentToProcurementDate ? isoDateSchema.parse(sentToProcurementDate) : null
 
-  const result = await supabaseAdmin.rpc('confirm_purchase_request', {
+  const result = await supabaseAdmin.rpc('confirm_purchase_request_with_committees', {
     p_pr_id: parsedId,
     p_actor_id: actor.id,
     p_sent_to_procurement_date: parsedDate,
@@ -194,10 +242,13 @@ export async function closePurchaseRequestRemaining(
   try {
     // The short-close RPC is already committed. Cleanup failure must remain
     // retryable and must never make the caller believe the PR was reopened.
-    await cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
-      reason: 'closed_short',
-      receiptId: null,
-    })
+    await Promise.all([
+      cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
+        reason: 'closed_short',
+        receiptId: null,
+      }),
+      cleanupPurchaseRequestChecklistObjects(parsedId, actor.id, 'closed_short'),
+    ])
   } catch (error) {
     revalidatePurchaseRequest(parsedId)
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
@@ -221,10 +272,13 @@ export async function receivePurchaseRequestOutsideStock(purchaseRequestId: stri
 
   const received = unwrapMutation('รับของโดยหน่วยงาน', result)
   try {
-    await cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
-      reason: 'received',
-      receiptId: null,
-    })
+    await Promise.all([
+      cleanupTerminalPurchaseRequestPoFile(parsedId, actor.id, {
+        reason: 'received',
+        receiptId: null,
+      }),
+      cleanupPurchaseRequestChecklistObjects(parsedId, actor.id, 'received'),
+    ])
   } catch (error) {
     revalidatePurchaseRequest(parsedId)
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'

@@ -74,12 +74,28 @@ Serial order puts `dashboard` before `receiving`, which is why CI pins one worke
 
 ## Applying migrations to Staging
 
-`supabase db push` silently skips every migration because `[db.migrations]
-enabled` is `false` in `supabase/config.toml`. To push, set it to `true` for the
-run and restore it afterwards. Change only that one line: a blanket
-find-and-replace on `enabled = false` also switches on `[auth.sms.twilio]`, and
-the push then fails validation on its empty `account_sid`.
+Before applying anything, verify `[db.migrations] enabled = true` in
+`supabase/config.toml`. When this flag is false, `supabase db push` reports
+success while applying nothing. Change only that one setting if it is disabled:
+a blanket find-and-replace on `enabled = false` also switches on
+`[auth.sms.twilio]`, and the push then fails validation on its empty
+`account_sid`.
 
-The cutover runbook says to apply migrations "using the standard forward
-migration command". With this flag off, that command reports success and applies
-nothing. Confirm the flag before relying on it in the cutover window.
+This repository's hosted migration ledgers are currently non-canonical: a
+remote migration version is not sufficient evidence that the SQL effect exists,
+and a normal linked `supabase db push` is unsafe until the ledger is deliberately
+reconciled. Apply reviewed migrations through the approved forward migration
+runner/operator workflow in filename order. Record both the repository filename
+and the version recorded by the environment. Do not reset a hosted database or
+paste SQL into the SQL editor as the normal deployment path.
+
+Before deploying the application version that consumes the schema, run the live
+PR contract check while `.env.local` points at Staging:
+
+```powershell
+npm run test:staging-pr
+```
+
+The check requires the Staging service-role key and verifies the exact PR list
+select, including checklist columns and `profiles` relationships. A failing
+check blocks the application deployment until the reviewed migration is applied.
