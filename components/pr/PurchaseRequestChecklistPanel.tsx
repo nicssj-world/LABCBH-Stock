@@ -47,6 +47,8 @@ export function PurchaseRequestChecklistPanel({
   const activeAttachments = checklist.attachments
     .filter((attachment) => !attachment.deletedAt)
     .sort((left, right) => attachmentKindOrder[left.kind] - attachmentKindOrder[right.kind] || left.slot - right.slot)
+  const primaryAttachments = activeAttachments.filter((attachment) => attachment.kind !== 'quotation')
+  const quotationAttachments = activeAttachments.filter((attachment) => attachment.kind === 'quotation')
   const deletedAttachments = checklist.attachments.filter((attachment) => attachment.deletedAt || attachment.objectDeletedAt)
 
   const openPreview = (attachment: PurchaseRequestChecklistAttachmentRecord) => {
@@ -63,6 +65,17 @@ export function PurchaseRequestChecklistPanel({
     setIsCommitteePdfOpen(true)
     dialogRef.current?.showModal()
   }
+  const renderAttachment = (attachment: PurchaseRequestChecklistAttachmentRecord) => (
+    <article key={attachment.id}>
+      <div>
+        <strong>{attachment.kind === 'quotation' ? `บริษัทที่ ${attachment.slot}` : PR_ATTACHMENT_KIND_LABELS[attachment.kind]}</strong>
+        <span>{attachment.fileName} · {formatSize(attachment.sizeBytes)}</span>
+      </div>
+      {!checklist.downloadsBlocked && !attachment.objectDeletedAt && (
+        <Button type="button" variant="primary" onClick={() => openPreview(attachment)}>เปิดดู</Button>
+      )}
+    </article>
+  )
 
   return (
     <div className="pr-checklist-detail">
@@ -96,28 +109,39 @@ export function PurchaseRequestChecklistPanel({
 
       <section className="pr-checklist-detail__group" aria-labelledby="pr-checklist-detail-files-title">
         <div className="pr-checklist-detail__group-heading">
-          <h3 id="pr-checklist-detail-files-title">ไฟล์แนบ</h3>
+          <h3 id="pr-checklist-detail-files-title">เอกสารแนบ</h3>
           <span>{activeAttachments.length} ไฟล์</span>
         </div>
-        <div className="pr-checklist-detail__files">
-          {activeAttachments.map((attachment) => (
-            <article key={attachment.id}>
-              <div>
-                <strong>{PR_ATTACHMENT_KIND_LABELS[attachment.kind]}{attachment.kind === 'quotation' ? ` บริษัทที่ ${attachment.slot}` : ''}</strong>
-                <span>{attachment.fileName} · {formatSize(attachment.sizeBytes)}</span>
+        <div className="pr-checklist-detail__file-groups">
+          {primaryAttachments.length > 0 && (
+            <section className="pr-checklist-detail__file-group" aria-labelledby="pr-checklist-detail-primary-files-title">
+              <div className="pr-checklist-detail__file-group-heading">
+                <h4 id="pr-checklist-detail-primary-files-title">เอกสารหลัก</h4>
+                <span>{primaryAttachments.length} ไฟล์</span>
               </div>
-              {!checklist.downloadsBlocked && !attachment.objectDeletedAt && (
-                <Button type="button" variant="primary" onClick={() => openPreview(attachment)}>เปิดดู</Button>
-              )}
-            </article>
-          ))}
+              <div className="pr-checklist-detail__files pr-checklist-detail__files--primary">
+                {primaryAttachments.map(renderAttachment)}
+              </div>
+            </section>
+          )}
+          {quotationAttachments.length > 0 && (
+            <section className="pr-checklist-detail__file-group" aria-labelledby="pr-checklist-detail-quotation-files-title">
+              <div className="pr-checklist-detail__file-group-heading">
+                <h4 id="pr-checklist-detail-quotation-files-title">ใบเสนอราคาจากบริษัท</h4>
+                <span>{quotationAttachments.length} ไฟล์</span>
+              </div>
+              <div className="pr-checklist-detail__files pr-checklist-detail__files--quotation">
+                {quotationAttachments.map(renderAttachment)}
+              </div>
+            </section>
+          )}
           {activeAttachments.length === 0 && <p className="empty-state">ไม่มีไฟล์ต้นฉบับที่เปิดดูได้</p>}
         </div>
       </section>
 
       <section className="pr-checklist-detail__group" aria-labelledby="pr-checklist-detail-committees-title">
         <div className="pr-checklist-detail__group-heading">
-          <h3 id="pr-checklist-detail-committees-title">รายชื่อกรรมการ</h3>
+          <h3 id="pr-checklist-detail-committees-title">รายชื่อคณะกรรมการ</h3>
           <span>{checklist.committees.length} รายชื่อ</span>
         </div>
         <div className="pr-checklist-detail__committees">
