@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractType } from '@/lib/contracts/types'
-import type { ProcurementStage } from '@/lib/contracts/stages'
 import {
   budgetSnapshot,
   contractMode,
