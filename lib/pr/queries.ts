@@ -10,7 +10,6 @@ import type {
   PurchaseRequestItemRecord,
   PurchaseRequestReceiptItemRecord,
   PurchaseRequestReceiptRecord,
-  PurchaseRequestPoFileRecord,
 } from './types'
 
 const numericSchema = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
