@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { ContractValueCards } from '@/components/dashboard/ContractValueCards'
+import { DashboardWatchlist } from '@/components/dashboard/DashboardWatchlist'
 import {
   ContractStackIcon,
   PendingClockIcon,
@@ -90,31 +91,13 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
               <p className="section-kicker">WATCHLIST · BELOW 30%</p>
               <h2 id="watchlist-title">รายการตามสัญญาคงเหลือต่ำ</h2>
             </div>
-            <StatusChip tone={data.watchlist.length ? 'danger' : 'success'}>{data.watchlist.length} รายการ</StatusChip>
+            <StatusChip tone={data.watchlistTotal ? 'danger' : 'success'}>{data.watchlistTotal} รายการ</StatusChip>
           </div>
-          {data.watchlist.length === 0 ? (
-            <div className="empty-state">
-              <strong>ยังไม่มีรายการต่ำกว่า 30%</strong>
-              <p>ยอดคงเหลือของรายการสัญญาทั้งหมดยังอยู่เหนือเกณฑ์เฝ้าระวัง</p>
-            </div>
-          ) : (
-            <ol className="watchlist">
-              {data.watchlist.map((item) => (
-                <li key={`${item.contractId}-${item.lsCode}`}>
-                  <div className="watchlist__identity">
-                    <span className="identifier">{item.lsCode}</span>
-                    <div><strong>{item.name}</strong><small>{item.contractName} · ปีงบประมาณ {item.fiscalYear ?? 'ไม่ระบุ'}</small></div>
-                  </div>
-                  <div className="watchlist__remaining">
-                    <strong>{item.remainingPercent.toLocaleString('th-TH', { maximumFractionDigits: 1 })}% คงเหลือ</strong>
-                    <span>{item.remainingQuantity.toLocaleString('th-TH')} / {item.contractedQuantity.toLocaleString('th-TH')} {item.unit}</span>
-                    <div className="remaining-track" aria-hidden="true"><span style={{ width: `${Math.max(item.remainingPercent, 2)}%` }} /></div>
-                  </div>
-                  <Link className="text-link" href={`/contracts/${item.contractId}`}>เปิดสัญญา</Link>
-                </li>
-              ))}
-            </ol>
-          )}
+          <DashboardWatchlist
+            initialItems={data.watchlist}
+            totalCount={data.watchlistTotal}
+            nextOffset={data.watchlistNextOffset}
+          />
         </section>
 
         <section className="bench-panel lease-watchlist-panel" aria-labelledby="lease-watchlist-title">
@@ -217,7 +200,7 @@ export default async function DashboardPage() {
   let data: ExecutiveDashboard | null = null
   let error: string | null = null
   try {
-    data = await getExecutiveDashboard()
+    data = await getExecutiveDashboard({ watchlistLimit: 5 })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านข้อมูลภาพรวมไม่สำเร็จ'
   }

@@ -50,4 +50,11 @@ assert.match(disclosure, /\/api\/dashboard\/watchlist/)
 assert.match(disclosure, /aria-live/)
 assert.match(disclosure, /ลองใหม่/)
 
+const dashboardPage = readFileSync('app/(protected)/dashboard/page.tsx', 'utf8')
+assert.match(dashboardPage, /getExecutiveDashboard\(\{\s*watchlistLimit:\s*5\s*\}\)/)
+assert.match(dashboardPage, /<DashboardWatchlist/)
+assert.match(dashboardPage, /watchlistTotal/)
+assert.match(dashboardPage, /\/purchase-requests\/new/)
+assert.match(dashboardPage, /\/requisitions\/new/)
+
 console.log('dashboard watchlist pagination: ok')
