@@ -3,7 +3,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
+import { PoFileDropzone } from '@/components/po/PoFileDropzone'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
@@ -14,7 +14,7 @@ import {
   type ReceiptDraftLine,
 } from '@/components/receipts/ReceiptLinesEditor'
 import { createGoodsReceipt, uploadPoImage } from '@/lib/receipts/actions'
-import { preparePoFile } from '@/lib/receipts/po-file'
+import { preparePoFile } from '@/lib/po/file'
 import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
 import type {
   ReceivablePurchaseRequest,

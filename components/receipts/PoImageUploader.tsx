@@ -3,9 +3,9 @@
 import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { PoFileDropzone } from '@/components/receipts/PoFileDropzone'
+import { PoFileDropzone } from '@/components/po/PoFileDropzone'
 import { getPoImageUrl, uploadPoImage } from '@/lib/receipts/actions'
-import { preparePoFile } from '@/lib/receipts/po-file'
+import { preparePoFile } from '@/lib/po/file'
 
 export interface PoImageUploaderProps {
   receiptId: string

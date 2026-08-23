@@ -4,8 +4,8 @@ import { useId, useState, type ChangeEvent, type DragEvent } from 'react'
 import {
   isPoFileTypeAllowed,
   PO_MAX_FILE_SIZE_BYTES,
-} from '@/lib/receipts/storage'
-import { formatPoFileSize } from '@/lib/receipts/po-file'
+} from '@/lib/po/storage'
+import { formatPoFileSize } from '@/lib/po/file'
 
 export interface PoFileDropzoneProps {
   file: File | null
@@ -39,7 +39,6 @@ export function PoFileDropzone({ file, onChange, disabled = false }: PoFileDropz
 
   const choose = (event: ChangeEvent<HTMLInputElement>) => {
     accept(event.target.files?.[0] ?? null)
-    // Allow choosing the same file again after removing or correcting it.
     event.target.value = ''
   }
 

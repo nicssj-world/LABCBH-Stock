@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildPoImagePath, isPoImagePathAllowed } from '../lib/receipts/storage'
+import {
+  buildLegacyReceiptPoImagePath,
+  buildPurchaseRequestPoFilePath,
+  isLegacyReceiptPoImagePathAllowed,
+  isPurchaseRequestPoFilePathAllowed,
+} from '../lib/po/storage'
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations')
 const name = readdirSync(migrationsDir).find((file) => file.endsWith('_lab_stock_receiving.sql'))
@@ -31,45 +36,57 @@ assert.doesNotMatch(
   'PO evidence is not deletable from the app',
 )
 
-// Paths are namespaced so one receipt cannot write into another's folder.
-const firstPoPath = buildPoImagePath({
+// Paths are namespaced so one PR cannot write into another's folder.
+const firstPoPath = buildPurchaseRequestPoFilePath({
   fiscalYear: 2569,
-  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  purchaseRequestId: 'a1b2c3d4-0000-4000-8000-000000000000',
   fileName: 'po.jpg',
 })
-const secondPoPath = buildPoImagePath({
+const secondPoPath = buildPurchaseRequestPoFilePath({
   fiscalYear: 2569,
-  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  purchaseRequestId: 'a1b2c3d4-0000-4000-8000-000000000000',
   fileName: 'po.jpg',
 })
 assert.match(firstPoPath, /^po\/2569\/a1b2c3d4-0000-4000-8000-000000000000\/.+-po\.jpg$/)
 assert.notEqual(firstPoPath, secondPoPath, 'each replacement must use a new object path')
-const traversalPoPath = buildPoImagePath({
+const traversalPoPath = buildPurchaseRequestPoFilePath({
   fiscalYear: 2569,
-  receiptId: 'a1b2c3d4-0000-4000-8000-000000000000',
+  purchaseRequestId: 'a1b2c3d4-0000-4000-8000-000000000000',
   fileName: '../../escape.jpg',
 })
 assert.match(traversalPoPath, /^po\/2569\/a1b2c3d4-0000-4000-8000-000000000000\/.+-escape\.jpg$/)
 assert.doesNotMatch(traversalPoPath, /\.\./, 'traversal segments are stripped, never honoured')
 
 const receiptId = 'a1b2c3d4-0000-4000-8000-000000000000'
-assert.equal(isPoImagePathAllowed('po/2569/a1b2c3d4-0000-4000-8000-000000000000/po.jpg', 2569, receiptId), true)
+assert.equal(isPurchaseRequestPoFilePathAllowed('po/2569/a1b2c3d4-0000-4000-8000-000000000000/po.jpg', 2569, receiptId), true)
 assert.equal(
-  isPoImagePathAllowed('po/2568/a1b2c3d4-0000-4000-8000-000000000000/po.jpg', 2569, receiptId),
+  isPurchaseRequestPoFilePathAllowed('po/2568/a1b2c3d4-0000-4000-8000-000000000000/po.jpg', 2569, receiptId),
   false,
   'a mismatched fiscal year is rejected',
 )
 assert.equal(
-  isPoImagePathAllowed('po/2569/ffffffff-0000-4000-8000-000000000000/po.jpg', 2569, receiptId),
+  isPurchaseRequestPoFilePathAllowed('po/2569/ffffffff-0000-4000-8000-000000000000/po.jpg', 2569, receiptId),
   false,
   'writing into another receipt folder is rejected',
 )
 assert.equal(
-  isPoImagePathAllowed('po/2569/a1b2c3d4-0000-4000-8000-000000000000/../../po.jpg', 2569, receiptId),
+  isPurchaseRequestPoFilePathAllowed('po/2569/a1b2c3d4-0000-4000-8000-000000000000/../../po.jpg', 2569, receiptId),
   false,
   'traversal out of the receipt folder is rejected',
 )
-assert.equal(isPoImagePathAllowed('contracts/secret.pdf', 2569, receiptId), false)
-assert.equal(isPoImagePathAllowed('', 2569, receiptId), false)
+assert.equal(isPurchaseRequestPoFilePathAllowed('contracts/secret.pdf', 2569, receiptId), false)
+assert.equal(isPurchaseRequestPoFilePathAllowed('', 2569, receiptId), false)
+
+const legacyReceiptPath = buildLegacyReceiptPoImagePath({
+  fiscalYear: 2569,
+  receiptId,
+  fileName: 'po.pdf',
+})
+assert.match(legacyReceiptPath, /^po\/2569\/a1b2c3d4-0000-4000-8000-000000000000\/.+-po\.pdf$/)
+assert.equal(isLegacyReceiptPoImagePathAllowed(legacyReceiptPath, 2569, receiptId), true)
+assert.equal(
+  isLegacyReceiptPoImagePathAllowed('po/2569/ffffffff-0000-4000-8000-000000000000/po.pdf', 2569, receiptId),
+  false,
+)
 
 console.log('storage policy: ok')

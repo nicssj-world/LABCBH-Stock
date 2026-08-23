@@ -8,10 +8,10 @@ import { cancelGoodsReceiptSchema, goodsReceiptInputSchema } from '@/lib/receipt
 import {
   PO_IMAGE_BUCKET,
   PO_MAX_FILE_SIZE_BYTES,
-  buildPoImagePath,
+  buildLegacyReceiptPoImagePath,
   isPoFileTypeAllowed,
-  isPoImagePathAllowed,
-} from '@/lib/receipts/storage'
+  isLegacyReceiptPoImagePathAllowed,
+} from '@/lib/po/storage'
 import type { CancelGoodsReceiptInput, GoodsReceiptInput } from '@/lib/receipts/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
@@ -85,11 +85,11 @@ export async function uploadPoImage(receiptId: string, formData: FormData) {
   if (!receipt) throw new Error('ไม่พบใบรับเข้าที่ระบุ')
 
   const { fiscal_year: fiscalYear } = receiptRowSchema.parse(receipt)
-  const path = buildPoImagePath({ fiscalYear, receiptId: parsedId, fileName: file.name })
+  const path = buildLegacyReceiptPoImagePath({ fiscalYear, receiptId: parsedId, fileName: file.name })
 
-  // buildPoImagePath already sanitises, but the path is what the storage policy
+  // buildLegacyReceiptPoImagePath already sanitises, but the path is what the storage policy
   // keys on, so it is re-checked rather than trusted.
-  if (!isPoImagePathAllowed(path, fiscalYear, parsedId)) {
+  if (!isLegacyReceiptPoImagePathAllowed(path, fiscalYear, parsedId)) {
     throw new Error('เส้นทางไฟล์ไม่ถูกต้อง')
   }
 
@@ -144,7 +144,7 @@ export async function getPoImageUrl(receiptId: string) {
     .parse(receipt)
 
   if (!parsedReceipt?.po_image_path) return null
-  if (!isPoImagePathAllowed(parsedReceipt.po_image_path, parsedReceipt.fiscal_year, parsedId)) {
+  if (!isLegacyReceiptPoImagePathAllowed(parsedReceipt.po_image_path, parsedReceipt.fiscal_year, parsedId)) {
     throw new Error('เส้นทางไฟล์ไม่ถูกต้อง')
   }
 
