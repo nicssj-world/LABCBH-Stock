@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { compareDashboardWatchItems, paginateDashboardWatchlist } from '../lib/dashboard/watchlist'
 import type { DashboardWatchItem } from '../lib/dashboard/types'
 
@@ -30,5 +31,14 @@ assert.equal(firstPage.nextOffset, 2)
 const lastPage = paginateDashboardWatchlist(ordered, 2, 2)
 assert.deepEqual(lastPage.items.map((item) => item.lsCode), ['B', 'D'])
 assert.equal(lastPage.nextOffset, null)
+
+const route = readFileSync('app/api/dashboard/watchlist/route.ts', 'utf8')
+assert.match(route, /getActor/)
+assert.match(route, /searchParams/)
+assert.match(route, /getDashboardWatchlistPage/)
+assert.match(route, /NextResponse\.json/)
+assert.match(route, /status:\s*401/)
+assert.match(route, /limit/)
+assert.match(route, /offset/)
 
 console.log('dashboard watchlist pagination: ok')
