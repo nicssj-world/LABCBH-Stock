@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { BanknoteIcon, WalletIcon } from '@/components/dashboard/DashboardIcons'
-import type { ContractValueScope } from '@/lib/dashboard/contracts'
+import type { ContractValueScope } from '@/lib/dashboard/types'
 
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',

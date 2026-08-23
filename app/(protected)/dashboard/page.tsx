@@ -8,7 +8,8 @@ import {
   RequisitionIcon,
 } from '@/components/dashboard/DashboardIcons'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
-import { getExecutiveDashboard, type ExecutiveDashboard } from '@/lib/dashboard/contracts'
+import { getExecutiveDashboard } from '@/lib/dashboard/contracts'
+import type { ExecutiveDashboard } from '@/lib/dashboard/types'
 
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',

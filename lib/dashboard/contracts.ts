@@ -13,6 +13,15 @@ import {
   monthsLeft,
 } from '@/lib/contracts/budget'
 import { effectiveContractStatus } from '@/lib/contracts/presenter'
+import {
+  DEFAULT_WATCHLIST_LIMIT,
+  paginateDashboardWatchlist,
+} from '@/lib/dashboard/watchlist'
+import type {
+  DashboardLeaseWatchItem,
+  DashboardWatchItem,
+  ExecutiveDashboard,
+} from '@/lib/dashboard/types'
 import { createClient } from '@/lib/supabase/server'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).pipe(z.number().finite())
@@ -40,57 +49,13 @@ const dashboardRowSchema = z.object({
   contract_usage: z.array(z.object({ amount: numeric })).nullable().default([]),
 })
 
-export interface DashboardWatchItem {
-  contractId: number
-  contractName: string
-  fiscalYear: number | null
-  lsCode: string
-  name: string
-  unit: string
-  contractedQuantity: number
-  allocatedQuantity: number
-  remainingQuantity: number
-  remainingPercent: number
-  remainingValue: number
-}
-
-/** A lease is watched by money and by time, never by stock level. */
-export interface DashboardLeaseWatchItem {
-  contractId: number
-  contractName: string
-  fiscalYear: number | null
-  total: number | null
-  used: number
-  remaining: number | null
-  remainingPercent: number | null
-  endDate: string | null
-  monthsLeft: number
-  expiring: boolean
-  lowBudget: boolean
-}
-
-export interface ContractValueScope {
-  total: number
-  remaining: number
-}
-
-export interface ExecutiveDashboard {
-  activeContracts: number
-  pendingContracts: number
-  totalContractValue: number
-  remainingContractValue: number
-  // Same totals split by contractMode(), so the dashboard can offer a
-  // "รวม / เช่า / อื่นๆ" scope without a second read.
-  leaseContractValue: ContractValueScope
-  supplyContractValue: ContractValueScope
-  pipeline: Array<{ stage: ProcurementStage; count: number }>
-  typeMix: Array<{ type: ContractType; count: number; value: number }>
-  watchlist: DashboardWatchItem[]
-  leaseWatchlist: DashboardLeaseWatchItem[]
-  contractCount: number
-}
-
-export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
+export async function getExecutiveDashboard({
+  watchlistOffset = 0,
+  watchlistLimit = DEFAULT_WATCHLIST_LIMIT,
+}: {
+  watchlistOffset?: number
+  watchlistLimit?: number
+} = {}): Promise<ExecutiveDashboard> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('contracts')
@@ -229,6 +194,8 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
     }
   }
 
+  const watchlistPage = paginateDashboardWatchlist(watchlist, watchlistOffset, watchlistLimit)
+
   return {
     activeContracts: rows.filter(
       (contract) => effectiveContractStatus(contract.status, contract.end_date) === 'active',
@@ -244,9 +211,34 @@ export async function getExecutiveDashboard(): Promise<ExecutiveDashboard> {
     typeMix: CONTRACT_TYPES
       .filter((type) => typeMix.has(type))
       .map((type) => ({ type, ...typeMix.get(type)! })),
-    watchlist: watchlist.sort((left, right) => left.remainingPercent - right.remainingPercent),
+    watchlist: watchlistPage.items,
+    watchlistTotal: watchlistPage.totalCount,
+    watchlistOffset: watchlistPage.offset,
+    watchlistLimit: watchlistPage.limit,
+    watchlistNextOffset: watchlistPage.nextOffset,
     // Soonest to expire first; a contract with no end date sorts last.
     leaseWatchlist: leaseWatchlist.sort((left, right) => left.monthsLeft - right.monthsLeft),
     contractCount: rows.length,
+  }
+}
+
+export async function getDashboardWatchlistPage({
+  offset,
+  limit,
+}: {
+  offset: number
+  limit: number
+}) {
+  const dashboard = await getExecutiveDashboard({
+    watchlistOffset: offset,
+    watchlistLimit: limit,
+  })
+
+  return {
+    items: dashboard.watchlist,
+    totalCount: dashboard.watchlistTotal,
+    offset: dashboard.watchlistOffset,
+    limit: dashboard.watchlistLimit,
+    nextOffset: dashboard.watchlistNextOffset,
   }
 }
