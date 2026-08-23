@@ -235,7 +235,7 @@ assert.match(review, /วันที่ส่งพัสดุ/, 'the stock of
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
 assert.match(
   review,
-  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ \(PO\)/,
+  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')

@@ -235,7 +235,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
               there is nothing here for a PO number to record. */}
           {!contractType && (
             <label className="field-row pr-review__identifier-field">
-              เลขที่ใบสั่งซื้อ (PO) (บันทึกภายหลังได้ ไม่กระทบยอดที่ตัดไปแล้ว)
+              เลขที่ใบสั่งซื้อ (PO)
               <input
                 type="text"
                 readOnly={!isEditingPoNumber}
