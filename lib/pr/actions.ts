@@ -26,6 +26,7 @@ import type {
 import { getPurchaseRequest } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
+import { formatPurchaseRequestMutationError } from './errors'
 
 const purchaseRequestIdSchema = z.string().uuid()
 
@@ -33,7 +34,7 @@ function unwrapMutation(
   operation: string,
   result: { data: unknown; error: { message: string } | null },
 ) {
-  if (result.error) throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
+  if (result.error) throw new Error(formatPurchaseRequestMutationError(operation, result.error.message))
   return z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
 }
 
@@ -207,7 +208,7 @@ export async function setPurchaseOrderNumber(
     p_po_number: parsed.poNumber,
   })
 
-  const updated = unwrapMutation('บันทึกเลขที่ใบสั่งซื้อ', result)
+  const updated = unwrapMutation('บันทึกเลขที่ใบสั่งซื้อ (PO)', result)
   revalidatePurchaseRequest(parsedId)
   return updated
 }

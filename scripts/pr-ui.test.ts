@@ -232,13 +232,13 @@ assert.match(review, /วันที่ส่งพัสดุ/, 'the stock of
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
 assert.match(
   review,
-  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ/,
+  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ \(PO\)/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
 assert.match(review, /ยืนยันโดย.*acknowledgedByName/, 'a completed or reversed PR must name who confirmed it')
 assert.match(review, /กลับรายการโดย.*reversedByName/, 'a reversed PR must name who reversed it, distinct from who confirmed it')
-assert.match(review, /บันทึกเลขที่ใบสั่งซื้อโดย.*updatedByName/, 'recording a PO number must be attributed too')
+assert.match(review, /บันทึกเลขที่ใบสั่งซื้อ \(PO\) โดย.*updatedByName/, 'recording a PO number must be attributed too')
 assert.match(review, /pr-review__meta/, 'audit lines live inside the officer action panel, not the requester-facing method detail')
 assert.match(review, /const \[isEditingPoNumber, setIsEditingPoNumber\] = useState\(!request\.poNumber\)/, 'a saved PO number starts locked')
 assert.match(review, /readOnly=\{!isEditingPoNumber\}/, 'a saved PO number must be read-only until edit is requested')

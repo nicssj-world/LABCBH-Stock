@@ -59,7 +59,7 @@ export default async function ReceiptDetailPage({ params, searchParams }: Receip
 
         <div className="contract-detail-heading__body">
           <div className="contract-detail-heading__identity">
-            <h1 className="identifier">{receipt.poNumber ?? 'ไม่ระบุเลขที่ใบสั่งซื้อ'}</h1>
+            <h1 className="identifier">{receipt.poNumber ?? 'ไม่ระบุเลขที่ใบสั่งซื้อ (PO)'}</h1>
             <p>รับเมื่อ {formatThaiDate(receipt.receivedDate)}</p>
           </div>
           <dl className="contract-detail-heading__value">

@@ -34,7 +34,7 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
   })
   if (!parsedMethod.success) redirect(`/purchase-requests/${request.id}`)
 
-  const options = await loadPurchaseRequestFormOptions()
+  const options = await loadPurchaseRequestFormOptions(request.id)
   const initialValues: PurchaseRequestFormInitialValues = {
     requestId: request.id,
     requestedDate: request.requestedDate,
@@ -49,7 +49,9 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
       unit: item.unit,
       requestedQuantity: item.requestedQuantity,
       unitPrice: item.unitPrice,
-      contractRemaining: item.contractRemaining,
+      contractRemaining:
+        options.contractLines.find((line) => line.contractItemId === item.contractItemId)?.contractRemaining ??
+        item.contractRemaining,
       monthlyUsageSnapshot: item.monthlyUsageSnapshot,
     })),
   }

@@ -98,7 +98,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
         <div className="contract-detail-heading__body">
           <div className="contract-detail-heading__identity">
             <h1 className="identifier">{request.documentNumber}</h1>
-            <p>{request.poNumber ? `ใบสั่งซื้อเลขที่ ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</p>
+            <p>{request.poNumber ? `เลขที่ใบสั่งซื้อ (PO) ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}</p>
           </div>
           <dl className="contract-detail-heading__value">
             <dt>มูลค่ารวม</dt>
@@ -110,7 +110,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <div><dt>ผู้ขอ</dt><dd>{request.requesterName ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{request.department}</dd></div>
           <div><dt>วันที่ขอ</dt><dd>{formatThaiDate(request.requestedDate)}</dd></div>
-          <div><dt>ใบสั่งซื้อ</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
+          <div><dt>เลขที่ใบสั่งซื้อ (PO)</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
         </dl>
       </header>
 

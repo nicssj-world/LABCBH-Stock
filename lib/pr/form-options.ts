@@ -47,10 +47,10 @@ export interface PurchaseRequestFormOptions {
  * choices. Keeping the loader here also prevents an edit screen from drifting
  * away from the safeguards on the new-PR screen.
  */
-export async function loadPurchaseRequestFormOptions(): Promise<PurchaseRequestFormOptions> {
+export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: string): Promise<PurchaseRequestFormOptions> {
   const [inventoryItems, contractItems, allContracts] = await Promise.all([
     listInventoryItems({}),
-    listContractItemOptions(),
+    listContractItemOptions(undefined, excludePurchaseRequestId),
     listContracts({}),
   ])
 

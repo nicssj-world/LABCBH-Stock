@@ -126,7 +126,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>เลขที่ใบสั่งซื้อ</th>
+                    <th>เลขที่ใบสั่งซื้อ (PO)</th>
                     <th>วันที่รับ</th>
                     <th>ผู้รับของ</th>
                     <th className="numeric-cell">จำนวนล็อต</th>

@@ -77,7 +77,7 @@ export function PurchaseRequestSummaryDialog({ request, variant = 'table' }: Pur
           <div className="app-dialog__body list-summary-dialog__body">
             <dl className="list-summary-dialog__facts">
               <div>
-                <dt>เลขที่ใบสั่งซื้อ</dt>
+                <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
                 <dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd>
               </div>
               <div>

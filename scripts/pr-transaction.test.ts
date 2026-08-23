@@ -5,9 +5,11 @@ import { join } from 'node:path'
 /**
  * Contract test for the atomic allocation path.
  *
- * The scenario this protects: a contract item holds 100 units, two PRs for 70
- * and 40 sit pending, and both are confirmed at once. Exactly one must succeed
- * and active allocations must never exceed 100.
+ * The scenario this protects: a contract item holds 100 units, and two
+ * pre-existing pending PRs for 70 and 40 are confirmed at once. Exactly one
+ * must succeed and active allocations must never exceed 100. New PRs are now
+ * reservation-checked before they can enter this state; this final allocation
+ * guard still protects legacy rows and the confirmation race itself.
  *
  * NOTE: proving that against a live Postgres needs `npx supabase db reset` and
  * two concurrent sessions, which the plan schedules for the staging pass in

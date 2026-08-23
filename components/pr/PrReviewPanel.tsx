@@ -235,7 +235,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
               there is nothing here for a PO number to record. */}
           {!contractType && (
             <label className="field-row pr-review__identifier-field">
-              เลขที่ใบสั่งซื้อ (บันทึกภายหลังได้ ไม่กระทบยอดที่ตัดไปแล้ว)
+              เลขที่ใบสั่งซื้อ (PO) (บันทึกภายหลังได้ ไม่กระทบยอดที่ตัดไปแล้ว)
               <input
                 type="text"
                 readOnly={!isEditingPoNumber}
@@ -259,12 +259,12 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
                     }
                     run(
                       () => setPurchaseOrderNumber(request.id, { poNumber }),
-                      'บันทึกเลขที่ใบสั่งซื้อไม่สำเร็จ',
+                      'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
                       () => setIsEditingPoNumber(false),
                     )
                   }}
                 >
-                  {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ' : 'แก้ไขเลขที่ใบสั่งซื้อ'}
+                  {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
                 </Button>
               )}
               {!reversing && !receiptBlocksReversal && (
@@ -278,7 +278,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
                 ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
               </p>
               {request.poNumber && request.updatedByName && (
-                <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อโดย {request.updatedByName}</p>
+                <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
               )}
               {hasDraftReceipt && (
                 <p className="pr-review__intro">ต้องยกเลิกใบรับเข้าฉบับร่างก่อน จึงจะกลับรายการใบ PR ได้</p>

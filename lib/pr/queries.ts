@@ -462,13 +462,27 @@ const contractItemOptionRowSchema = z.object({
   unit_price: numericSchema,
   contracts: z.object({ display_name: z.string().nullable(), product: z.string() }).nullable(),
   contract_item_allocations: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
+  purchase_request_items: z
+    .array(
+      z.object({
+        requested_quantity: numericSchema,
+        purchase_requests: z
+          .object({ id: z.string().uuid(), status: z.enum(PURCHASE_REQUEST_STATUSES) })
+          .nullable(),
+      }),
+    )
+    .nullable()
+    .default([]),
 })
 
 /**
  * Contract lines with quantity still available, for the PR item picker. Omit
  * the contract to load every active contract's lines for the picker at once.
  */
-export async function listContractItemOptions(contractId?: number): Promise<ContractItemOption[]> {
+export async function listContractItemOptions(
+  contractId?: number,
+  excludePurchaseRequestId?: string,
+): Promise<ContractItemOption[]> {
   const supabase = await createClient()
   let query = supabase
     .from('contract_items')
@@ -481,7 +495,11 @@ export async function listContractItemOptions(contractId?: number): Promise<Cont
       quantity,
       unit_price,
       contracts (display_name, product),
-      contract_item_allocations (quantity)
+      contract_item_allocations (quantity),
+      purchase_request_items (
+        requested_quantity,
+        purchase_requests (id, status)
+      )
     `)
     .order('line_number')
 
@@ -499,6 +517,13 @@ export async function listContractItemOptions(contractId?: number): Promise<Cont
         (sum, allocation) => sum + allocation.quantity,
         0,
       )
+      const pendingReserved = (row.purchase_request_items ?? [])
+        .filter(
+          (item) =>
+            item.purchase_requests?.status === 'pending' &&
+            item.purchase_requests.id !== excludePurchaseRequestId,
+        )
+        .reduce((sum, item) => sum + item.requested_quantity, 0)
       return {
         id: row.id,
         contractId: row.contract_id,
@@ -508,7 +533,7 @@ export async function listContractItemOptions(contractId?: number): Promise<Cont
         unit: row.unit,
         unitPrice: row.unit_price,
         contractedQuantity: row.quantity,
-        remainingQuantity: roundQuantity(row.quantity - allocated),
+        remainingQuantity: roundQuantity(row.quantity - allocated - pendingReserved),
       }
     })
 }

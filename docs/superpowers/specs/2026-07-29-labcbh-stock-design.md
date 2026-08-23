@@ -15,7 +15,7 @@ The application shares the existing Supabase project with `lab-management-portal
 
 - A manager can create a PR or requisition without retyping catalog, contract, price, stock, or monthly-usage information.
 - A stock officer can acknowledge a PR, receive PO-linked lots, and fulfill a requisition with atomic, auditable stock changes.
-- Contract-item remaining quantity is reduced only when a stock officer confirms a PR.
+- Contract-item committed quantity is reduced only when a stock officer confirms a PR; pending PRs reserve the available quantity so a later PR cannot overbook the line.
 - Inventory on hand is derived from immutable movements and cannot become negative.
 - Executives can see contract workflow, low balances, minimum-stock breaches, expiring lots, and operational queues in one Dashboard.
 - Existing contract records remain usable throughout migration, and non-contract portal modules remain unaffected.
@@ -47,8 +47,8 @@ Add normalized children:
 
 - `contract_items`: one row per contract line with line number, LS/catalog item, contracted quantity, unit, unit price, and source/import metadata.
 - `contract_stage_history`: append-only from/to stage, effective date, actor, note, and source.
-- `contract_item_allocations`: immutable PR commitments that reduce the available contract quantity; reversals reference the original allocation.
-- Contract remaining quantity and percentage are derived from contracted quantity minus active allocations.
+- `contract_item_allocations`: immutable confirmed PR commitments that reduce the available contract quantity; pending PR lines reserve quantity until confirmation or cancellation, and reversals reference the original allocation.
+- Contract committed quantity and percentage are derived from active allocations; quantity available for a new PR also subtracts pending reservations.
 
 ### Inventory and procurement entities
 

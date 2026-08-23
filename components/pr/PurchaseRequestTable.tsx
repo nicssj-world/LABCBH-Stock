@@ -59,7 +59,7 @@ export function PurchaseRequestTable({ requests }: { requests: PurchaseRequestRe
               <tr key={request.id}>
                 <td>
                   <PurchaseRequestSummaryDialog request={request} />
-                  <small>{request.poNumber ? `PO ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ'}</small>
+                  <small>{request.poNumber ? `PO ${request.poNumber}` : 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}</small>
                 </td>
                 <td className="identifier">{request.ephisPrNumber ?? 'ยังไม่มี'}</td>
                 <td>{formatThaiDate(request.requestedDate)}</td>

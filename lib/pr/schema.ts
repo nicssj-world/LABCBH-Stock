@@ -304,7 +304,7 @@ export const purchaseRequestInputSchema = z
   })
 
 export const purchaseOrderNumberSchema = z
-  .object({ poNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่ใบสั่งซื้อ') })
+  .object({ poNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่ใบสั่งซื้อ (PO)') })
   .strict()
 
 export const ephisPrNumberSchema = z
