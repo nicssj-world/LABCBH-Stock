@@ -143,6 +143,11 @@ assert.match(queries, /createClient/)
 assert.match(queries, /department\?: string/, 'receipt queries accept a department filter')
 assert.match(queries, /filters\.department/, 'receipt queries apply the department filter')
 assert.match(queries, /purchase_request_items/, 'receivable PRs include their line items')
+assert.match(
+  queries,
+  /purchase_requests!goods_receipts_purchase_request_id_fkey\s*\(/,
+  'receipt reads must disambiguate the PR relationship after PR-owned PO audit FKs exist',
+)
 assert.match(queries, /from\('goods_receipts'\)[\s\S]*?purchase_request_id/, 'receivable PRs check existing receipt references')
 assert.match(queries, /\.in\('status', \['completed', 'partially_received'\]\)/, 'confirmed and partially received PRs remain receivable')
 assert.match(queries, /\.eq\('status', 'draft'\)/, 'only an open draft temporarily locks a PR')

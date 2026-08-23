@@ -237,7 +237,17 @@ assert.match(review, /วันที่ส่งพัสดุ/, 'the stock of
 assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate\)/)
 assert.match(
   review,
-  /!contractType && \(\s*<label className="field-row(?: [^"]*)?">\s*เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
+  /\['completed', 'partially_received'\]\.includes\(request\.status\)/,
+  'a partially received PR must still expose the PO number field so its PR-owned PO record can be completed',
+)
+assert.match(
+  review,
+  /const canEditPoNumber = !contractType && \['completed', 'partially_received'\]\.includes\(request\.status\)/,
+  'only open purchase-order PR states can edit the PO number',
+)
+assert.match(
+  review,
+  /\{canEditPoNumber && \([\s\S]*?เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')

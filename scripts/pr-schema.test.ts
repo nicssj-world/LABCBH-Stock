@@ -25,11 +25,15 @@ const partialReceivingTriggerScopeNames = readdirSync(migrationsDir).filter((nam
 const partialReceivingShortCloseNames = readdirSync(migrationsDir).filter((name) =>
   name.endsWith('_partial_receiving_short_close.sql'),
 )
+const partialReceivingPoNumberNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_allow_po_number_on_partial_receiving.sql'),
+)
 assert.equal(partialReceivingCompatibilityNames.length, 1, 'partial receiving needs one compatibility migration')
 assert.equal(partialReceivingAcknowledgementNames.length, 1, 'partial receiving must extend the PR acknowledgement invariant')
 assert.equal(partialReceivingTriggerScopeNames.length, 1, 'partial receiving must scope unrelated PR item updates out of contract validation')
 assert.equal(partialReceivingBackfillNames.length, 1, 'partial receiving backfill must be a separate migration')
 assert.equal(partialReceivingShortCloseNames.length, 1, 'short close must be a separate audited migration')
+assert.equal(partialReceivingPoNumberNames.length, 1, 'PO number updates on partial PRs must be a forward migration')
 assert.ok(
   partialReceivingCompatibilityNames[0] < partialReceivingAcknowledgementNames[0]
     && partialReceivingAcknowledgementNames[0] < partialReceivingTriggerScopeNames[0]
@@ -40,6 +44,12 @@ const partialReceivingSql = readFileSync(join(migrationsDir, partialReceivingCom
 const partialReceivingAcknowledgementSql = readFileSync(join(migrationsDir, partialReceivingAcknowledgementNames[0]), 'utf8')
 const partialReceivingTriggerScopeSql = readFileSync(join(migrationsDir, partialReceivingTriggerScopeNames[0]), 'utf8')
 const partialReceivingBackfillSql = readFileSync(join(migrationsDir, partialReceivingBackfillNames[0]), 'utf8')
+const partialReceivingPoNumberSql = readFileSync(join(migrationsDir, partialReceivingPoNumberNames[0]), 'utf8')
+assert.match(
+  partialReceivingPoNumberSql,
+  /status in \('completed', 'partially_received'\)/i,
+  'the PO number RPC must allow both open receiving states',
+)
 
 const TABLES = ['purchase_requests', 'purchase_request_items']
 

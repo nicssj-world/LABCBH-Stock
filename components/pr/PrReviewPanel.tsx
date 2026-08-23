@@ -61,6 +61,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
   const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
+  const canEditPoNumber = !contractType && ['completed', 'partially_received'].includes(request.status)
   const hasDraftReceipt = request.receiptHistory.some((receipt) => receipt.status === 'draft')
   const hasPostedReceipt = request.receiptHistory.some((receipt) => receipt.status === 'posted')
   const receiptBlocksReversal = hasDraftReceipt || hasPostedReceipt
@@ -110,6 +111,46 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
       </Button>
       {request.ephisPrNumber && request.updatedByName && (
         <p className="pr-review__intro">บันทึกเลข PR จาก E-Phis โดย {request.updatedByName}</p>
+      )}
+
+      {canEditPoNumber && (
+        <>
+          <label className="field-row pr-review__identifier-field">
+            เลขที่ใบสั่งซื้อ (PO)
+            <input
+              type="text"
+              readOnly={!isEditingPoNumber}
+              value={poNumber}
+              onChange={(event) => setPoNumber(event.target.value)}
+            />
+          </label>
+          <div className="pr-review__actions">
+            <div className="pr-review__actions-buttons">
+              <Button
+                variant="secondary"
+                type="button"
+                className="pr-review__number-action"
+                disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
+                onClick={() => {
+                  if (!isEditingPoNumber) {
+                    setIsEditingPoNumber(true)
+                    return
+                  }
+                  run(
+                    () => setPurchaseOrderNumber(request.id, { poNumber }),
+                    'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
+                    () => setIsEditingPoNumber(false),
+                  )
+                }}
+              >
+                {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
+              </Button>
+            </div>
+            {request.poNumber && request.updatedByName && (
+              <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
+            )}
+          </div>
+        </>
       )}
 
       {request.status === 'pending' && contractType && contractDraft && (
@@ -230,43 +271,8 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
       {request.status === 'completed' && (
         <>
-          {/* A contract-originating PR (specific_contract/e_bidding/equipment_lease)
-              never becomes a purchase order — it opens a contract directly, so
-              there is nothing here for a PO number to record. */}
-          {!contractType && (
-            <label className="field-row pr-review__identifier-field">
-              เลขที่ใบสั่งซื้อ (PO)
-              <input
-                type="text"
-                readOnly={!isEditingPoNumber}
-                value={poNumber}
-                onChange={(event) => setPoNumber(event.target.value)}
-              />
-            </label>
-          )}
           <div className="pr-review__actions">
             <div className="pr-review__actions-buttons">
-              {!contractType && (
-                <Button
-                  variant="secondary"
-                  type="button"
-                  className="pr-review__number-action"
-                  disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
-                  onClick={() => {
-                    if (!isEditingPoNumber) {
-                      setIsEditingPoNumber(true)
-                      return
-                    }
-                    run(
-                      () => setPurchaseOrderNumber(request.id, { poNumber }),
-                      'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
-                      () => setIsEditingPoNumber(false),
-                    )
-                  }}
-                >
-                  {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
-                </Button>
-              )}
               {!reversing && !receiptBlocksReversal && (
                 <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
                   กลับรายการใบ PR
@@ -277,9 +283,6 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
               <p className="pr-review__intro">
                 ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
               </p>
-              {request.poNumber && request.updatedByName && (
-                <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
-              )}
               {hasDraftReceipt && (
                 <p className="pr-review__intro">ต้องยกเลิกใบรับเข้าฉบับร่างก่อน จึงจะกลับรายการใบ PR ได้</p>
               )}

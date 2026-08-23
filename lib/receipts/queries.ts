@@ -60,7 +60,7 @@ const RECEIPT_SELECT = `
   cancelled_at,
   cancellation_note,
   created_at,
-  purchase_requests (document_number, po_number),
+  purchase_requests!goods_receipts_purchase_request_id_fkey (document_number, po_number),
   poster:profiles!goods_receipts_posted_by_fkey (name),
   canceller:profiles!goods_receipts_cancelled_by_fkey (name),
   goods_receipt_items (
