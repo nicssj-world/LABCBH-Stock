@@ -261,6 +261,28 @@ export function PurchaseRequestChecklistFields({
     onAssignmentsChange(profileId ? [...retained, { kind, seat, profileId }] : retained)
   }
   const committeeErrors = validateCommitteeAssignments(policy, assignments)
+  const attachmentItems = policy.attachments.map((requirement) => {
+    const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
+    const file = files[key]
+    const existing = existingBySlot.get(key)
+    const mimeType = file ? purchaseRequestFileMime(file) : ''
+    const errors = file
+      ? validatePurchaseRequestAttachment({ kind: requirement.kind, mimeType, sizeBytes: file.size })
+      : []
+    return {
+      requirement,
+      key,
+      file,
+      existing,
+      errors,
+      complete: errors.length === 0 && Boolean(file || existing),
+      isDragging: draggingSlotKey === key,
+      dropzoneHintId: `pr-checklist-${requirement.kind}-${requirement.slot}-hint`,
+    }
+  })
+  const primaryAttachments = attachmentItems.filter((item) => item.requirement.kind !== 'quotation')
+  const quotationAttachments = attachmentItems.filter((item) => item.requirement.kind === 'quotation')
+  const completeAttachmentCount = attachmentItems.filter((item) => item.complete).length
 
   const handleFileDragOver = (event: DragEvent<HTMLLabelElement>, slotKey: string) => {
     event.preventDefault()
@@ -294,6 +316,72 @@ export function PurchaseRequestChecklistFields({
     return ids
   }
 
+  const renderAttachmentCard = (item: (typeof attachmentItems)[number]) => {
+    const { requirement, key, file, existing, errors, complete, isDragging, dropzoneHintId } = item
+    const visibleLabel = requirement.kind === 'quotation'
+      ? `บริษัทที่ ${item.requirement.slot}`
+      : requirement.label
+
+    return (
+      <article className={`pr-checklist__file${complete ? ' is-complete' : ''}`} key={key}>
+        <div className="pr-checklist__file-copy">
+          <div>
+            <strong>{visibleLabel}</strong>
+            <small>{requirement.kind === 'tor' ? 'PDF เท่านั้น' : 'PDF, JPG, PNG หรือ WEBP'} · สูงสุด 20 MB</small>
+          </div>
+          <span className={`pr-checklist__file-state${complete ? ' is-complete' : ''}`}>
+            {complete && (
+              <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                <path d="m2.25 6.25 2.2 2.2 5.3-5.3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+              </svg>
+            )}
+            {complete ? 'แนบแล้ว' : 'รอแนบ'}
+          </span>
+        </div>
+        {(file || existing) && (
+          <p className="pr-checklist__file-name">
+            {file?.name ?? existing?.fileName} · {formatFileSize(file?.size ?? existing?.sizeBytes ?? 0)}
+            {file && existing && <small>จะแทนที่ไฟล์เดิมเมื่อบันทึก</small>}
+          </p>
+        )}
+        {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
+        <div className="pr-checklist__file-actions">
+          <label
+            className={`pr-checklist__dropzone${isDragging ? ' is-dragging' : ''}`}
+            aria-disabled={disabled}
+            onDragEnter={(event) => handleFileDragOver(event, key)}
+            onDragOver={(event) => handleFileDragOver(event, key)}
+            onDragLeave={(event) => handleFileDragLeave(event, key)}
+            onDrop={(event) => handleFileDrop(event, key)}
+          >
+            <svg className="pr-checklist__dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+              <path d="M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+            </svg>
+            <span className="pr-checklist__dropzone-copy">
+              <strong>{isDragging ? 'วางไฟล์ที่นี่' : file || existing ? 'ลากไฟล์ใหม่มาวางเพื่อเปลี่ยน' : 'ลากไฟล์มาวางที่นี่'}</strong>
+              <small id={dropzoneHintId}>หรือคลิกเลือกไฟล์ · {requirement.kind === 'tor' ? 'PDF เท่านั้น' : 'PDF, JPG, PNG หรือ WEBP'}</small>
+            </span>
+            <input
+              key={file ? checklistFileFingerprint(file) : 'empty'}
+              type="file"
+              accept={requirement.accept.join(',')}
+              disabled={disabled}
+              aria-label={`แนบ ${requirement.label}`}
+              aria-describedby={dropzoneHintId}
+              onChange={(event) => onFileChange(key, event.target.files?.[0])}
+            />
+          </label>
+          {file && (
+            <Button variant="ghost" type="button" disabled={disabled} onClick={() => onFileChange(key, undefined)}>
+              ยกเลิกไฟล์ที่เลือก
+            </Button>
+          )}
+        </div>
+      </article>
+    )
+  }
+
   return (
     <section className="bench-panel pr-checklist" aria-labelledby="pr-checklist-title">
       <div className="bench-panel__header pr-checklist__header">
@@ -310,70 +398,31 @@ export function PurchaseRequestChecklistFields({
       <div className="pr-checklist__section">
         <div className="pr-checklist__section-heading">
           <h3>เอกสารแนบ</h3>
-          <span>{policy.attachments.length} ไฟล์</span>
+          <span aria-live="polite">แนบแล้ว {completeAttachmentCount}/{policy.attachments.length} ไฟล์</span>
         </div>
-        <div className="pr-checklist__files">
-          {policy.attachments.map((requirement) => {
-            const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
-            const file = files[key]
-            const existing = existingBySlot.get(key)
-            const mimeType = file ? purchaseRequestFileMime(file) : ''
-            const errors = file ? validatePurchaseRequestAttachment({ kind: requirement.kind, mimeType, sizeBytes: file.size }) : []
-            const complete = errors.length === 0 && Boolean(file || existing)
-            const isDragging = draggingSlotKey === key
-            const dropzoneHintId = `pr-checklist-${requirement.kind}-${requirement.slot}-hint`
-            return (
-              <article className={`pr-checklist__file${complete ? ' is-complete' : ''}`} key={key}>
-                <div className="pr-checklist__file-copy">
-                  <span aria-hidden="true">{complete ? '✓' : requirement.slot}</span>
-                  <div>
-                    <strong>{requirement.label}</strong>
-                    <small>{requirement.kind === 'tor' ? 'PDF เท่านั้น' : 'PDF, JPG, PNG หรือ WEBP'} · สูงสุด 20 MB</small>
-                  </div>
-                </div>
-                {(file || existing) && (
-                  <p className="pr-checklist__file-name">
-                    {file?.name ?? existing?.fileName} · {formatFileSize(file?.size ?? existing?.sizeBytes ?? 0)}
-                    {file && existing && <small>จะแทนที่ไฟล์เดิมเมื่อบันทึก</small>}
-                  </p>
-                )}
-                {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
-                <div className="pr-checklist__file-actions">
-                  <label
-                    className={`pr-checklist__dropzone${isDragging ? ' is-dragging' : ''}`}
-                    aria-disabled={disabled}
-                    onDragEnter={(event) => handleFileDragOver(event, key)}
-                    onDragOver={(event) => handleFileDragOver(event, key)}
-                    onDragLeave={(event) => handleFileDragLeave(event, key)}
-                    onDrop={(event) => handleFileDrop(event, key)}
-                  >
-                    <svg className="pr-checklist__dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-                      <path d="M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-                    </svg>
-                    <span className="pr-checklist__dropzone-copy">
-                      <strong>{isDragging ? 'วางไฟล์ที่นี่' : file || existing ? 'ลากไฟล์ใหม่มาวางเพื่อเปลี่ยน' : 'ลากไฟล์มาวางที่นี่'}</strong>
-                      <small id={dropzoneHintId}>หรือคลิกเลือกไฟล์ · {requirement.kind === 'tor' ? 'PDF เท่านั้น' : 'PDF, JPG, PNG หรือ WEBP'}</small>
-                    </span>
-                    <input
-                      key={file ? checklistFileFingerprint(file) : 'empty'}
-                      type="file"
-                      accept={requirement.accept.join(',')}
-                      disabled={disabled}
-                      aria-label={`แนบ ${requirement.label}`}
-                      aria-describedby={dropzoneHintId}
-                      onChange={(event) => onFileChange(key, event.target.files?.[0])}
-                    />
-                  </label>
-                  {file && (
-                    <Button variant="ghost" type="button" disabled={disabled} onClick={() => onFileChange(key, undefined)}>
-                      ยกเลิกไฟล์ที่เลือก
-                    </Button>
-                  )}
-                </div>
-              </article>
-            )
-          })}
+        <div className="pr-checklist__attachment-groups">
+          {primaryAttachments.length > 0 && (
+            <section className="pr-checklist__file-group" aria-labelledby="pr-checklist-primary-files">
+              <div className="pr-checklist__file-group-heading">
+                <h4 id="pr-checklist-primary-files">เอกสารหลัก</h4>
+                <span>แนบแล้ว {primaryAttachments.filter((item) => item.complete).length}/{primaryAttachments.length}</span>
+              </div>
+              <div className="pr-checklist__file-grid pr-checklist__file-grid--primary">
+                {primaryAttachments.map(renderAttachmentCard)}
+              </div>
+            </section>
+          )}
+          {quotationAttachments.length > 0 && (
+            <section className="pr-checklist__file-group" aria-labelledby="pr-checklist-quotation-files">
+              <div className="pr-checklist__file-group-heading">
+                <h4 id="pr-checklist-quotation-files">ใบเสนอราคาจากบริษัท</h4>
+                <span>แนบแล้ว {quotationAttachments.filter((item) => item.complete).length}/{quotationAttachments.length}</span>
+              </div>
+              <div className="pr-checklist__file-grid pr-checklist__file-grid--quotation">
+                {quotationAttachments.map(renderAttachmentCard)}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
