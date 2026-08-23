@@ -16,8 +16,12 @@ import type {
 interface PurchaseRequestChecklistPanelProps {
   requestId: string
   checklist: PurchaseRequestChecklistRecord
-  stockAccess: boolean
   canRetryCleanup: boolean
+}
+
+interface PurchaseRequestChecklistActionsProps {
+  requestId: string
+  checklist: PurchaseRequestChecklistRecord
 }
 
 const COMMITTEE_ORDER: PurchaseRequestCommitteeKind[] = ['specification', 'result', 'inspection']
@@ -32,16 +36,82 @@ function formatSize(value: number) {
   return value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(value / 1024)} KB`
 }
 
+export function PurchaseRequestChecklistActions({ requestId, checklist }: PurchaseRequestChecklistActionsProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = `pr-committee-pdf-preview-title-${useId().replaceAll(':', '')}`
+  const [isCommitteePdfOpen, setIsCommitteePdfOpen] = useState(false)
+  const activeAttachmentCount = checklist.attachments.filter((attachment) => !attachment.deletedAt).length
+
+  const openCommitteePdf = () => {
+    setIsCommitteePdfOpen(true)
+    dialogRef.current?.showModal()
+  }
+  const closeCommitteePdf = () => {
+    dialogRef.current?.close()
+    setIsCommitteePdfOpen(false)
+  }
+
+  return (
+    <>
+      <div className="pr-stock-officer__actions">
+        {activeAttachmentCount > 0 && !checklist.downloadsBlocked && (
+          <a className="lab-button lab-button--primary" href={`/api/purchase-requests/${requestId}/checklist/download-all`}>
+            ดาวน์โหลดทั้งหมด
+          </a>
+        )}
+        {checklist.canDownloadCommitteePdf ? (
+          <Button type="button" variant="primary" onClick={openCommitteePdf}>
+            เปิดดู PDF กรรมการ
+          </Button>
+        ) : (
+          <button className="lab-button lab-button--primary" type="button" disabled title="ต้องมีตำแหน่งบุคลากรครบทุกคน">
+            เปิดดู PDF กรรมการ
+          </button>
+        )}
+      </div>
+
+      <dialog
+        ref={dialogRef}
+        className="app-dialog file-preview-dialog"
+        aria-labelledby={titleId}
+        onCancel={(event) => {
+          event.preventDefault()
+          closeCommitteePdf()
+        }}
+        onClose={() => setIsCommitteePdfOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeCommitteePdf()
+        }}
+      >
+        <header className="app-dialog__header">
+          <div>
+            <h2 id={titleId}>PDF รายชื่อกรรมการ</h2>
+            <p>แสดงเอกสารจากที่จัดเก็บส่วนตัวในหน้ารายละเอียดใบ PR</p>
+          </div>
+          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่าง PDF รายชื่อกรรมการ" onClick={closeCommitteePdf}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </header>
+        <div className="app-dialog__body file-preview-dialog__body">
+          {isCommitteePdfOpen && (
+            <iframe title="ตัวอย่าง PDF รายชื่อกรรมการ" src={`/api/purchase-requests/${requestId}/checklist/committee-pdf`} />
+          )}
+        </div>
+      </dialog>
+    </>
+  )
+}
+
 export function PurchaseRequestChecklistPanel({
   requestId,
   checklist,
-  stockAccess,
   canRetryCleanup,
 }: PurchaseRequestChecklistPanelProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const previewTitleId = `pr-checklist-preview-title-${useId().replaceAll(':', '')}`
   const [preview, setPreview] = useState<PurchaseRequestChecklistAttachmentRecord | null>(null)
-  const [isCommitteePdfOpen, setIsCommitteePdfOpen] = useState(false)
   const [cleanupError, setCleanupError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const activeAttachments = checklist.attachments
@@ -58,12 +128,6 @@ export function PurchaseRequestChecklistPanel({
   const closePreview = () => {
     dialogRef.current?.close()
     setPreview(null)
-    setIsCommitteePdfOpen(false)
-  }
-  const openCommitteePdf = () => {
-    setPreview(null)
-    setIsCommitteePdfOpen(true)
-    dialogRef.current?.showModal()
   }
   const renderAttachment = (attachment: PurchaseRequestChecklistAttachmentRecord) => (
     <article key={attachment.id}>
@@ -83,35 +147,13 @@ export function PurchaseRequestChecklistPanel({
         <div>
           <strong>เอกสารประกอบ</strong>
         </div>
-        {stockAccess && (
-          <div className="pr-checklist-detail__actions">
-            {activeAttachments.length > 0 && !checklist.downloadsBlocked && (
-              <a className="lab-button lab-button--primary" href={`/api/purchase-requests/${requestId}/checklist/download-all`}>
-                ดาวน์โหลดทั้งหมด
-              </a>
-            )}
-            {checklist.canDownloadCommitteePdf ? (
-              <Button type="button" variant="primary" onClick={openCommitteePdf}>
-                เปิดดู PDF กรรมการ
-              </Button>
-            ) : (
-              <button className="lab-button lab-button--primary" type="button" disabled title="ต้องมีตำแหน่งบุคลากรครบทุกคน">
-                เปิดดู PDF กรรมการ
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {checklist.downloadsBlocked && (
         <p className="pr-checklist-detail__notice">ไฟล์ต้นฉบับครบอายุงานและถูกปิดการเข้าถึงแล้ว เหลือ metadata สำหรับตรวจสอบย้อนหลัง</p>
       )}
 
-      <section className="pr-checklist-detail__group" aria-labelledby="pr-checklist-detail-files-title">
-        <div className="pr-checklist-detail__group-heading">
-          <h3 id="pr-checklist-detail-files-title">เอกสารแนบ</h3>
-          <span>{activeAttachments.length} ไฟล์</span>
-        </div>
+      <section className="pr-checklist-detail__group" aria-label="เอกสารแนบ">
         <div className="pr-checklist-detail__file-groups">
           {primaryAttachments.length > 0 && (
             <section className="pr-checklist-detail__file-group" aria-labelledby="pr-checklist-detail-primary-files-title">
@@ -142,7 +184,6 @@ export function PurchaseRequestChecklistPanel({
       <section className="pr-checklist-detail__group" aria-labelledby="pr-checklist-detail-committees-title">
         <div className="pr-checklist-detail__group-heading">
           <h3 id="pr-checklist-detail-committees-title">รายชื่อคณะกรรมการ</h3>
-          <span>{checklist.committees.length} รายชื่อ</span>
         </div>
         <div className="pr-checklist-detail__committees">
           {COMMITTEE_ORDER.map((kind) => {
@@ -208,22 +249,16 @@ export function PurchaseRequestChecklistPanel({
         aria-labelledby={previewTitleId}
         onClose={() => {
           setPreview(null)
-          setIsCommitteePdfOpen(false)
         }}
       >
         <div className="pr-checklist-preview__header">
           <div>
-            <strong id={previewTitleId}>{isCommitteePdfOpen ? 'PDF รายชื่อกรรมการ' : preview?.fileName ?? 'ตัวอย่างเอกสาร'}</strong>
+            <strong id={previewTitleId}>{preview?.fileName ?? 'ตัวอย่างเอกสาร'}</strong>
             <span>เปิดดูในหน้านี้</span>
           </div>
           <Button type="button" variant="ghost" onClick={closePreview}>ปิด</Button>
         </div>
-        {isCommitteePdfOpen ? (
-          <iframe
-            title="PDF รายชื่อกรรมการ"
-            src={`/api/purchase-requests/${requestId}/checklist/committee-pdf`}
-          />
-        ) : preview && (
+        {preview && (
           preview.mimeType.startsWith('image/') ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/purchase-requests/${requestId}/checklist/${preview.id}`} alt={preview.fileName} />

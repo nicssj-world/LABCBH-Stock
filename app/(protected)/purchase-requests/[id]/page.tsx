@@ -4,7 +4,10 @@ import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseReques
 import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
-import { PurchaseRequestChecklistPanel } from '@/components/pr/PurchaseRequestChecklistPanel'
+import {
+  PurchaseRequestChecklistActions,
+  PurchaseRequestChecklistPanel,
+} from '@/components/pr/PurchaseRequestChecklistPanel'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
@@ -367,7 +370,6 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <PurchaseRequestChecklistPanel
             requestId={request.id}
             checklist={checklist}
-            stockAccess={false}
             canRetryCleanup={canRetryChecklistCleanup}
           />
         </section>
@@ -378,17 +380,22 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           className={request.status === 'pending' ? 'bench-panel bench-panel--decision' : 'bench-panel'}
           aria-labelledby="pr-review-title"
         >
-          <div className="bench-panel__header">
+          <div className="bench-panel__header pr-stock-officer__header">
             <div>
               <p className="section-kicker">STOCK OFFICER</p>
               <h2 id="pr-review-title">การดำเนินการของเจ้าหน้าที่คลัง</h2>
             </div>
+            {checklist && (
+              <PurchaseRequestChecklistActions
+                requestId={request.id}
+                checklist={checklist}
+              />
+            )}
           </div>
           {checklist ? (
             <PurchaseRequestChecklistPanel
               requestId={request.id}
               checklist={checklist}
-              stockAccess
               canRetryCleanup={canRetryChecklistCleanup}
             />
           ) : request.checklistPolicyVersion === null ? (
