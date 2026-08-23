@@ -14,6 +14,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  *
  * The dialog stays mounted after its first open, so anything typed into it
  * survives closing and reopening exactly as it did when it was always mounted.
+ * Consumers that need to release the native top layer immediately (for
+ * example, a row summary that is duplicated in two responsive layouts) can
+ * use `unmount`, which closes and removes the element in the same render.
  */
 export function useDeferredDialog() {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -30,6 +33,11 @@ export function useDeferredDialog() {
 
   const close = useCallback(() => dialogRef.current?.close(), [])
 
+  const unmount = useCallback(() => {
+    dialogRef.current?.close()
+    setIsRendered(false)
+  }, [])
+
   useEffect(() => {
     // First open only: the element does not exist yet when the click handler
     // runs, so showModal() has to wait until React has committed it.
@@ -38,5 +46,5 @@ export function useDeferredDialog() {
     }
   }, [isRendered])
 
-  return { dialogRef, isRendered, open, close }
+  return { dialogRef, isRendered, open, close, unmount }
 }

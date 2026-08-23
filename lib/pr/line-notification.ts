@@ -36,7 +36,7 @@ export function buildPurchaseRequestLineFlexMessage(
 ): LineFlexMessage {
   return {
     type: 'flex',
-    altText: `มีเอกสาร PO ${snapshot.poNumber} สำหรับ PR ${snapshot.documentNumber}`,
+    altText: `PO ${snapshot.poNumber} สำหรับ PR ${snapshot.documentNumber}`,
     contents: {
       type: 'bubble',
       size: 'kilo',
@@ -47,7 +47,7 @@ export function buildPurchaseRequestLineFlexMessage(
         paddingAll: '16px',
         contents: [
           { type: 'text', text: 'เอกสารใบสั่งซื้อ (PO)', color: '#ccfbf1', size: 'sm' },
-          { type: 'text', text: 'มีเอกสาร PO พร้อมดำเนินการ', color: '#ffffff', weight: 'bold', size: 'lg', wrap: true, margin: 'sm' },
+          { type: 'text', text: 'พร้อมดำเนินการ', color: '#ffffff', weight: 'bold', size: 'lg', wrap: true, margin: 'sm' },
         ],
       },
       body: {

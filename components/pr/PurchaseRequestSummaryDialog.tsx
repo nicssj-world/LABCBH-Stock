@@ -43,7 +43,7 @@ export function PurchaseRequestSummaryDialog({
 }: PurchaseRequestSummaryDialogProps) {
   // One of these renders per row, in both the table and the card layout,
   // so the dialog body is built only once someone opens it.
-  const { dialogRef, isRendered, open: openDialog, close: closeDialog } = useDeferredDialog()
+  const { dialogRef, isRendered, open: openDialog, unmount: unmountDialog } = useDeferredDialog()
   const dialogId = `pr-summary-dialog-${request.id}-${variant}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
@@ -70,10 +70,10 @@ export function PurchaseRequestSummaryDialog({
           aria-describedby={descriptionId}
           onCancel={(event) => {
             event.preventDefault()
-            closeDialog()
+            unmountDialog()
           }}
           onClick={(event) => {
-            if (event.target === event.currentTarget) closeDialog()
+            if (event.target === event.currentTarget) unmountDialog()
           }}
         >
           <header className="app-dialog__header">
@@ -81,7 +81,7 @@ export function PurchaseRequestSummaryDialog({
               <h2 id={titleId}>{request.documentNumber}</h2>
               <p id={descriptionId}>ข้อมูลใบ PR แบบย่อ · {PURCHASE_METHOD_LABELS[request.purchaseMethod]}</p>
             </div>
-            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลใบ PR แบบย่อ" onClick={closeDialog}>
+            <button type="button" className="app-dialog__close" aria-label="ปิดข้อมูลใบ PR แบบย่อ" onClick={unmountDialog}>
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -156,7 +156,7 @@ export function PurchaseRequestSummaryDialog({
                 <div className="list-summary-dialog__fact--wide">
                   <dt>สัญญาที่สร้าง</dt>
                   <dd>
-                    <Link className="identifier" href={`/contracts/${request.createdContractId}`} onClick={closeDialog}>
+                    <Link className="identifier" href={`/contracts/${request.createdContractId}`} onClick={unmountDialog}>
                       เปิดสัญญา →
                     </Link>
                   </dd>
@@ -211,9 +211,9 @@ export function PurchaseRequestSummaryDialog({
               label={`เปิดรายละเอียดเต็มใบ PR ${request.documentNumber}`}
               title="เปิดรายละเอียดเต็มใบ PR"
               icon="open"
-              onClick={closeDialog}
+              onClick={unmountDialog}
             />
-            <Button variant="secondary" onClick={closeDialog}>ปิด</Button>
+            <Button variant="secondary" onClick={unmountDialog}>ปิด</Button>
           </footer>
         </dialog>
       )}
