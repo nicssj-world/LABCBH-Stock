@@ -32,6 +32,18 @@ export interface PurchaseRequestPoFileRecord {
   deletedReceiptId: string | null
 }
 
+export type PurchaseRequestLineNotificationStatus = 'pending' | 'succeeded' | 'failed' | 'unknown'
+
+export interface PurchaseRequestLineNotificationSummary {
+  id: string
+  status: PurchaseRequestLineNotificationStatus
+  sentByName: string | null
+  createdAt: string
+  completedAt: string | null
+  poNumber: string
+  errorMessage: string | null
+}
+
 export interface PurchaseRequestItemRecord {
   id: string
   lineNumber: number
@@ -120,4 +132,6 @@ export interface PurchaseRequestRecord {
   items: PurchaseRequestItemRecord[]
   receiptHistory: PurchaseRequestReceiptRecord[]
   total: number
+  /** Loaded separately for the STOCK OFFICER LINE notification workbench. */
+  lineNotification?: PurchaseRequestLineNotificationSummary | null
 }

@@ -9,6 +9,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
+import { getLineNotificationConfig } from '@/lib/line/config'
 import { receivePurchaseRequestOutsideStock } from '@/lib/pr/actions'
 import {
   GOODS_RECEIPT_STATUS_LABELS,
@@ -25,6 +26,7 @@ import {
   canReceivePurchaseRequestOutsideStock,
 } from '@/lib/pr/authorization'
 import { getPurchaseRequest } from '@/lib/pr/queries'
+import { getLatestPurchaseRequestLineNotification } from '@/lib/pr/line-notification-queries'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { isPurchaseRequestOutsideStockEligible } from '@/lib/pr/schema'
 
@@ -60,6 +62,8 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   if (!request) notFound()
 
   const canReview = canOperateStock(actor)
+  const lineNotification = canReview ? await getLatestPurchaseRequestLineNotification(id, actor) : null
+  const lineNotificationConfigured = canReview && Boolean(getLineNotificationConfig())
   const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
   const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
   const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
@@ -354,7 +358,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               <h2 id="pr-review-title">การดำเนินการของเจ้าหน้าที่คลัง</h2>
             </div>
           </div>
-          <PrReviewPanel request={request} />
+          <PrReviewPanel
+            request={request}
+            lineNotification={lineNotification}
+            lineNotificationConfigured={lineNotificationConfigured}
+          />
         </section>
       )}
     </div>

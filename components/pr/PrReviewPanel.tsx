@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { PurchaseRequestLineNotifyButton } from '@/components/pr/PurchaseRequestLineNotifyButton'
 import {
   PurchaseRequestRemainingClosePanel,
   PurchaseRequestShortClosedAudit,
@@ -21,7 +22,7 @@ import {
 } from '@/lib/pr/actions'
 import { formatBaht } from '@/lib/pr/presenter'
 import { contractTypeForMethod } from '@/lib/pr/schema'
-import type { PurchaseRequestRecord } from '@/lib/pr/types'
+import type { PurchaseRequestLineNotificationSummary, PurchaseRequestRecord } from '@/lib/pr/types'
 
 interface ContractDraftDetails {
   fiscalYear: number
@@ -46,7 +47,15 @@ function readContractDraft(methodDetails: Record<string, unknown>): ContractDraf
   }
 }
 
-export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
+export function PrReviewPanel({
+  request,
+  lineNotification = null,
+  lineNotificationConfigured = false,
+}: {
+  request: PurchaseRequestRecord
+  lineNotification?: PurchaseRequestLineNotificationSummary | null
+  lineNotificationConfigured?: boolean
+}) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
@@ -63,6 +72,10 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
   const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
   const canEditPoNumber = !contractType && ['completed', 'partially_received'].includes(request.status)
+  const hasActivePoFile = Boolean(request.poNumber && request.poFile.path && !request.poFile.deletedAt)
+  const showPoWorkbench =
+    (!contractType && ['completed', 'partially_received', 'received', 'closed_short'].includes(request.status)) ||
+    hasActivePoFile
   const hasDraftReceipt = request.receiptHistory.some((receipt) => receipt.status === 'draft')
   const hasPostedReceipt = request.receiptHistory.some((receipt) => receipt.status === 'posted')
   const receiptBlocksReversal = hasDraftReceipt || hasPostedReceipt
@@ -114,7 +127,7 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
         <p className="pr-review__intro">บันทึกเลข PR จาก E-Phis โดย {request.updatedByName}</p>
       )}
 
-      {!contractType && ['completed', 'partially_received', 'received', 'closed_short'].includes(request.status) && (
+      {showPoWorkbench && (
         <div className="pr-review__po-workbench">
           {canEditPoNumber && (
             <div className="pr-review__po-number">
@@ -158,8 +171,19 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
 
           <div className="pr-review__po-file">
             <div className="pr-review__po-file-heading">
-              <strong>เอกสารใบสั่งซื้อ (PO)</strong>
-              <span>PDF, JPG, PNG หรือ WEBP · ไม่เกิน 10 MB</span>
+              <div className="pr-review__po-file-heading-copy">
+                <strong>เอกสารใบสั่งซื้อ (PO)</strong>
+                <span>PDF, JPG, PNG หรือ WEBP · ไม่เกิน 10 MB</span>
+              </div>
+              {request.poNumber && request.poFile.path && !request.poFile.deletedAt && (
+                <PurchaseRequestLineNotifyButton
+                  requestId={request.id}
+                  documentNumber={request.documentNumber}
+                  poNumber={request.poNumber}
+                  latest={lineNotification}
+                  configured={lineNotificationConfigured}
+                />
+              )}
             </div>
             <PurchaseRequestPoFileCard
               requestId={request.id}

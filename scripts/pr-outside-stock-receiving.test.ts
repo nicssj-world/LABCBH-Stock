@@ -107,6 +107,7 @@ const errors = read('lib/pr/errors.ts')
 const control = read('components/pr/PurchaseRequestOutsideStockReceiveControl.tsx')
 const summary = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 const table = read('components/pr/PurchaseRequestTable.tsx')
+const styles = read('app/globals.css')
 const listPage = read('app/(protected)/purchase-requests/page.tsx')
 const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 
@@ -167,6 +168,16 @@ assert.match(summary, /หมายเหตุจากผู้ขอ/)
 assert.match(summary, /หมายเหตุระบบ/)
 assert.match(summary, /outsideStockReceivedNote/)
 assert.match(summary, /หน่วยงานรับของเอง · ไม่เข้าคลัง/)
+assert.match(
+  styles,
+  /\.list-summary-dialog\s*\{[\s\S]*?display:\s*grid[\s\S]*?grid-template-rows:\s*auto auto minmax\(0, 1fr\) auto/,
+  'a long item list must keep the summary footer in a dedicated visible row',
+)
+assert.match(
+  styles,
+  /\.list-summary-dialog__body\s*\{[\s\S]*?max-height:\s*none[\s\S]*?overflow-y:\s*auto/,
+  'the summary body must shrink and scroll instead of covering the footer',
+)
 
 assert.match(table, /canReceivePurchaseRequestOutsideStock/)
 assert.match(table, /outsideStockReceivedAt/)
