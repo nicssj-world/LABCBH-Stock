@@ -105,6 +105,6 @@ Run `npm run verify` and record any environment-skipped E2E tests without changi
 Run `node C:\Users\User\.agents\skills\impeccable\scripts\detect.mjs --json components/pr/PrReviewPanel.tsx components/pr/PurchaseRequestChecklistPanel.tsx app/globals.css`.
 Expected: no findings.
 
-- [ ] **Step 4: Commit on main**
+- [x] **Step 4: Commit on main**
 
 Run `git diff --check`, confirm `git status --short` contains only intended files, then commit with `feat: refine stock officer workbench`.

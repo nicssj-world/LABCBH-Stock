@@ -103,6 +103,7 @@ assert.ok(
 assert.match(styles, /\.pr-checklist-detail\s*\{[^}]*border-bottom:\s*2px solid/, 'checklist and review need a visible divider')
 assert.match(styles, /\.pr-checklist-detail__group \+ \.pr-checklist-detail__group\s*\{[^}]*border-top:\s*2px solid/, 'attachment and committee groups need a visible divider')
 assert.match(styles, /\.pr-checklist-detail__committees section\s*\{[^}]*border-left:\s*3px solid/, 'committee sets should use a flat accent lane instead of a nested box border')
+assert.match(styles, /\.pr-checklist-detail__files article\s*\{[^}]*border: 1px solid color-mix/, 'attachment cards need a slightly stronger rectangular border')
 assert.match(styles, /@media \(max-width: 800px\) \{[\s\S]*?\.pr-checklist-detail__toolbar/, 'the checklist toolbar must stack before tablet width')
 
 console.log('purchase request checklist UI: ok')

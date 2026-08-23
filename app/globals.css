@@ -4016,7 +4016,7 @@ body {
 .pr-checklist-detail__group-heading h3 { margin: 0; color: var(--lab-navy-strong); font-size: 15px; }
 .pr-checklist-detail__group-heading span { color: var(--lab-muted); font-size: 12px; }
 .pr-checklist-detail__files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.pr-checklist-detail__files article { display: flex; min-width: 0; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--lab-background); border: 1px solid var(--lab-border); border-radius: 10px; }
+.pr-checklist-detail__files article { display: flex; min-width: 0; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--lab-background); border: 1px solid color-mix(in srgb, var(--lab-border-strong) 72%, var(--lab-border)); border-radius: 10px; }
 .pr-checklist-detail__files article > div { display: grid; min-width: 0; gap: 3px; }
 .pr-checklist-detail__files article span { overflow-wrap: anywhere; color: var(--lab-muted); font-size: 12px; }
 .pr-checklist-detail__committees { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
