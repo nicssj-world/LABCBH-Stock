@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://127.0.0.1:3000",
+          "https://labcbh-stock.vercel.app",
+          "https://labcbh-stock-git-main-nics-sj-s-projects.vercel.app",
+          "https://labcbh-stock-nicssj-world-nics-sj-s-projects.vercel.app",
+          "https://labcbh-stock-nics-sj-s-projects.vercel.app",
+          "https://labcbh-stock-bicd4b6x2-nics-sj-s-projects.vercel.app",
+          "https://labcbh-stock-pdtnc81su-nics-sj-s-projects.vercel.app",
+          "https://labcbh-stock-ljwc6my4l-nics-sj-s-projects.vercel.app"
+        ],
+        "methods": ["PUT"],
+        "headers": ["Content-Type", "If-None-Match"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
