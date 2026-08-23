@@ -24,6 +24,7 @@ const read = (suffix: string) => {
 const ledgerSql = read('_lab_stock_inventory_ledger.sql')
 const partialReceivingSql = read('_partial_receiving_compatibility.sql')
 const partialReceivingBackfillSql = read('_partial_receiving_backfill.sql')
+const poLifecycleSql = read('_purchase_request_po_file_lifecycle.sql')
 
 // 1. Idempotency comes from the ledger's unique index on the source document
 //    plus item plus lot, so a retry collides instead of double-counting.
@@ -151,6 +152,23 @@ assert.match(partialReceivingSql, /purchase request already has an open draft go
 assert.match(partialReceivingSql, /left join public\.purchase_request_items pr_item/i)
 assert.match(partialReceivingSql, /pr_item\.id is null/i)
 assert.match(partialReceivingSql, /purchase request belongs to a different department/i)
+
+const lifecycleCreateGoodsReceipt = poLifecycleSql.match(
+  /create or replace function public\.create_goods_receipt[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(lifecycleCreateGoodsReceipt, 'the PO lifecycle migration must replace create_goods_receipt')
+assert.match(
+  lifecycleCreateGoodsReceipt,
+  /field_name not in \([\s\S]*?'purchaseRequestId',[\s\S]*?'department',[\s\S]*?'receivedDate',[\s\S]*?'receiverName',[\s\S]*?'note'/i,
+  'receipt creation must reject client-owned PO number fields',
+)
+assert.doesNotMatch(lifecycleCreateGoodsReceipt, /'poNumber'/i)
+assert.match(lifecycleCreateGoodsReceipt, /locked_request\.po_number/i)
+assert.match(
+  lifecycleCreateGoodsReceipt,
+  /case[\s\S]*?when parsed_purchase_request_id is not null[\s\S]*?else null/i,
+  'unlinked receipts must not receive a client-supplied PO snapshot',
+)
 
 assert.match(post, /from public\.purchase_requests[\s\S]*?for update/i, 'posting must also lock the PR')
 assert.ok((post.match(/set received_quantity = coalesce/gi) ?? []).length >= 2, 'posting reconciles received quantity before and after posting')

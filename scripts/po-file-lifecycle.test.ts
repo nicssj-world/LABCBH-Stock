@@ -25,8 +25,24 @@ assert.match(cleanup, /received|closed_short/)
 assert.match(prCard, /เปิดไฟล์ PO/)
 assert.match(prCard, /ลบไฟล์แล้วหลังบันทึกเข้าคลัง/)
 assert.match(sql, /po_file_path/)
+for (const field of [
+  'po_file_name',
+  'po_file_mime_type',
+  'po_file_size_bytes',
+  'po_file_checksum',
+  'po_file_uploaded_by',
+  'po_file_uploaded_at',
+  'po_file_deleted_by',
+  'po_file_deleted_at',
+  'po_file_deletion_reason',
+  'po_file_deleted_receipt_id',
+]) {
+  assert.match(sql, new RegExp(`\\b${field}\\b`))
+}
 assert.match(sql, /set_purchase_request_po_file/)
 assert.match(sql, /clear_purchase_request_po_file/)
+assert.match(sql, /grant execute on function public\.set_purchase_request_po_file[\s\S]*?to service_role/i)
+assert.match(sql, /grant execute on function public\.clear_purchase_request_po_file[\s\S]*?to service_role/i)
 assert.match(sql, /poNumber.*unexpected|unexpected.*poNumber/i)
 assert.match(sql, /locked_request\.po_number/)
 assert.match(sql, /closed_short/)

@@ -15,6 +15,11 @@ const partialReceivingNames = readdirSync(migrationsDir).filter((name) =>
 )
 assert.equal(partialReceivingNames.length, 1, 'exactly one partial-receiving compatibility migration must exist')
 const partialReceivingSql = readFileSync(join(migrationsDir, partialReceivingNames[0]), 'utf8')
+const poLifecycleNames = readdirSync(migrationsDir).filter((name) =>
+  name.includes('purchase_request_po_file_lifecycle') && name.endsWith('.sql'),
+)
+assert.equal(poLifecycleNames.length, 1, 'exactly one PR PO lifecycle migration must exist')
+const poLifecycleSql = readFileSync(join(migrationsDir, poLifecycleNames[0]), 'utf8')
 
 const TABLES = ['goods_receipts', 'goods_receipt_items']
 
@@ -97,6 +102,39 @@ assert.match(
   'one PR may have many posted receipts but only one open draft',
 )
 assert.match(partialReceivingSql, /drop index if exists public\.goods_receipts_po_number_key/i)
+
+for (const column of [
+  'po_file_path',
+  'po_file_name',
+  'po_file_mime_type',
+  'po_file_size_bytes',
+  'po_file_checksum',
+  'po_file_uploaded_by',
+  'po_file_uploaded_at',
+  'po_file_deleted_by',
+  'po_file_deleted_at',
+  'po_file_deletion_reason',
+  'po_file_deleted_receipt_id',
+]) {
+  assert.match(poLifecycleSql, new RegExp(`\\b${column}\\b`), `PR PO audit metadata must include ${column}`)
+}
+assert.match(poLifecycleSql, /create or replace function public\.set_purchase_request_po_file/i)
+assert.match(poLifecycleSql, /create or replace function public\.clear_purchase_request_po_file/i)
+assert.match(poLifecycleSql, /lab-stock-po/i, 'the PR PO file RPCs must remain compatible with the private PO bucket')
+assert.match(poLifecycleSql, /closed_short/i, 'terminal cleanup must support short-close PRs')
+for (const fn of ['set_purchase_request_po_file', 'clear_purchase_request_po_file']) {
+  for (const role of ['public', 'anon', 'authenticated']) {
+    assert.match(
+      poLifecycleSql,
+      new RegExp(`revoke execute on function public\\.${fn}\\([^)]*\\)\\s+from[\\s\\S]*?${role}`, 'i'),
+      `${fn} must not be callable by ${role}`,
+    )
+  }
+  assert.match(
+    poLifecycleSql,
+    new RegExp(`grant execute on function public\\.${fn}\\([^)]*\\)\\s+[\\s\\S]*?to service_role`, 'i'),
+  )
+}
 
 // Posting is atomic, idempotent, and service-role only.
 const postFunction = partialReceivingSql.match(
