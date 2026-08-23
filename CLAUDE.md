@@ -75,8 +75,8 @@ without the others moves the failure rather than fixing it.
 | `presenter.ts` | display labels and derived strings |
 
 A `'use server'` file may only export async functions. Pure helpers need their
-own module — see `lib/contracts/files.ts` next to `file-actions.ts`, and
-`lib/receipts/storage.ts` next to `actions.ts`.
+own module — see `lib/contracts/files.ts` next to `file-actions.ts`, and the
+cross-domain PO helpers in `lib/po/file.ts` and `lib/po/storage.ts`.
 
 ## Testing
 
