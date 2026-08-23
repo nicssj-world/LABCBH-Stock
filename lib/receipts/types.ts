@@ -1,7 +1,6 @@
 import type { z } from 'zod'
 import type {
   GoodsReceiptStatus,
-  goodsReceiptImageSchema,
   goodsReceiptInputSchema,
   cancelGoodsReceiptSchema,
   receiptLineInputSchema,
@@ -9,7 +8,6 @@ import type {
 
 export type GoodsReceiptInput = z.infer<typeof goodsReceiptInputSchema>
 export type ReceiptLineInput = z.infer<typeof receiptLineInputSchema>
-export type GoodsReceiptImageInput = z.infer<typeof goodsReceiptImageSchema>
 export type CancelGoodsReceiptInput = z.infer<typeof cancelGoodsReceiptSchema>
 
 export interface GoodsReceiptItemRecord {
@@ -35,7 +33,6 @@ export interface GoodsReceiptRecord {
   department: string
   receivedDate: string
   receiverName: string
-  poImagePath: string | null
   status: GoodsReceiptStatus
   note: string | null
   postedAt: string | null

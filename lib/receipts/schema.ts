@@ -19,7 +19,6 @@ export const receiptLineInputSchema = z
 export const goodsReceiptInputSchema = z
   .object({
     purchaseRequestId: z.string().uuid().nullable(),
-    poNumber: z.string().trim().max(100).nullable(),
     department: z.string().trim().min(1, 'กรุณาระบุหน่วยงานที่รับของ'),
     receivedDate: isoDateSchema,
     receiverName: z.string().trim().min(1, 'กรุณาระบุชื่อผู้รับของ'),
@@ -37,10 +36,6 @@ export const goodsReceiptInputSchema = z
       })
     }
   })
-
-export const goodsReceiptImageSchema = z
-  .object({ poImagePath: z.string().trim().min(1) })
-  .strict()
 
 export const cancelGoodsReceiptSchema = z
   .object({ note: z.string().trim().max(1000).nullable() })

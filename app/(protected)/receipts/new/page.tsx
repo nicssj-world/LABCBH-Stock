@@ -33,7 +33,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
           <Link className="back-link" href="/receipts">← รับเข้าคลัง</Link>
           <p className="section-kicker">NEW RECEIPT</p>
           <h1>สร้างใบรับเข้า</h1>
-          <p>บันทึกฉบับร่างก่อน จากนั้นแนบไฟล์ PO และตรวจทานก่อนลงบัญชีคลัง</p>
+          <p>เลือกใบ PR ที่เกี่ยวข้องเพื่อดึงเลข PO จาก PR แล้วตรวจทานก่อนลงบัญชีคลัง</p>
         </div>
       </header>
 

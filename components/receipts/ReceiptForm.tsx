@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition, type FormEvent } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { PoFileDropzone } from '@/components/po/PoFileDropzone'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
@@ -13,8 +13,7 @@ import {
   type CatalogChoice,
   type ReceiptDraftLine,
 } from '@/components/receipts/ReceiptLinesEditor'
-import { createGoodsReceipt, uploadPoImage } from '@/lib/receipts/actions'
-import { preparePoFile } from '@/lib/po/file'
+import { createGoodsReceipt } from '@/lib/receipts/actions'
 import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
 import type {
   ReceivablePurchaseRequest,
@@ -41,8 +40,6 @@ export function ReceiptForm({
   const router = useRouter()
   const initialRequest = purchaseRequests.find((request) => request.id === initialPurchaseRequestId)
   const [purchaseRequestId, setPurchaseRequestId] = useState(initialRequest?.id ?? '')
-  const [poNumber, setPoNumber] = useState(initialRequest?.poNumber ?? '')
-  const [poFile, setPoFile] = useState<File | null>(null)
   const [department, setDepartment] = useState(initialDepartment ?? initialRequest?.department ?? '')
   const [receivedDate, setReceivedDate] = useState(() => bangkokIsoDate())
   const [receiverName, setReceiverName] = useState(initialReceiver)
@@ -111,7 +108,6 @@ export function ReceiptForm({
   const selectPurchaseRequest = (id: string) => {
     const request = departmentPurchaseRequests.find((candidate) => candidate.id === id)
     setPurchaseRequestId(request?.id ?? '')
-    setPoNumber(request?.poNumber ?? '')
     setLines([])
   }
 
@@ -147,7 +143,6 @@ export function ReceiptForm({
       try {
         const created = await createGoodsReceipt({
           purchaseRequestId: purchaseRequestId || null,
-          poNumber: poNumber.trim() || null,
           department,
           receivedDate,
           receiverName,
@@ -161,20 +156,6 @@ export function ReceiptForm({
             storageLocation: line.storageLocation.trim() || null,
           })),
         })
-        // The draft exists before the evidence upload. If resizing or uploading
-        // fails, the officer can retry from the receipt detail without losing
-        // the lines already entered.
-        if (poFile) {
-          try {
-            const preparedFile = await preparePoFile(poFile)
-            const formData = new FormData()
-            formData.set('file', preparedFile, preparedFile.name)
-            await uploadPoImage(created.id, formData)
-          } catch {
-            router.push(`/receipts/${created.id}?poUpload=failed`)
-            return
-          }
-        }
         router.push(`/receipts/${created.id}`)
         router.refresh()
       } catch (caught) {
@@ -223,13 +204,15 @@ export function ReceiptForm({
                   : 'เลือกใบ PR แล้วระบบจะแสดงยอดขอซื้อ รับสะสม และคงเหลือ'}
             </small>
           </label>
-          <label className="field-row">
-            เลขที่ใบสั่งซื้อ (PO)
-            <input type="text" value={poNumber} onChange={(event) => setPoNumber(event.target.value)} />
-          </label>
-          <div className="field-row form-grid__wide">
-            <span>ไฟล์ PO</span>
-            <PoFileDropzone file={poFile} onChange={setPoFile} disabled={isPending} />
+          <div className="field-row">
+            <span>เลขที่ใบสั่งซื้อ (PO)</span>
+            {selectedRequest ? (
+              <Link className="identifier text-link" href={`/purchase-requests/${selectedRequest.id}`}>
+                {selectedRequest.poNumber ?? 'ยังไม่มีเลขที่ใบสั่งซื้อ (PO)'}
+              </Link>
+            ) : (
+              <span className="receipt-pr-hint">เลือกใบ PR ที่เกี่ยวข้องเพื่อแสดงเลข PO</span>
+            )}
           </div>
           <label className="field-row">
             วันที่รับของ
