@@ -2792,12 +2792,13 @@ input[type="number"] {
 .po-dropzone__surface { display: grid; place-items: center; gap: 4px; min-height: 112px; padding: 16px; color: var(--lab-ink); background: var(--lab-surface-muted); border: 1.5px dashed var(--lab-border-strong); border-radius: var(--radius-control); text-align: center; cursor: pointer; transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out, border-color var(--motion-fast) ease-out; }
 .po-dropzone__surface:hover,
 .po-dropzone__surface[data-dragging="true"] { color: var(--lab-primary-strong); background: var(--lab-primary-soft); border-color: var(--lab-primary); }
+.po-dropzone__surface:focus-within { outline: 3px solid color-mix(in srgb, var(--lab-focus) 28%, transparent); outline-offset: 2px; }
 .po-dropzone__surface strong { font-size: 13px; }
 .po-dropzone__surface span,
 .po-dropzone__surface small { color: var(--lab-muted); font-size: 11px; font-weight: 500; }
 .po-dropzone__surface small { line-height: 1.4; }
 .po-dropzone--compact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-.po-dropzone--compact .po-dropzone__surface { display: inline-flex; min-height: 44px; padding: 8px 12px; }
+.po-dropzone--compact .po-dropzone__surface { display: inline-flex; min-height: 44px; padding: 8px 12px; background: var(--lab-surface); border-style: solid; font-size: 12px; }
 .po-dropzone--compact .po-dropzone__surface span,
 .po-dropzone--compact .po-dropzone__surface small { display: none; }
 .po-dropzone--compact .po-dropzone__file { max-width: min(320px, 100%); padding: 8px 10px; }
@@ -2830,6 +2831,7 @@ input[type="number"] {
 .po-file-card__inline-controls,
 .po-file-card__inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .po-file-card__inline-summary { gap: 6px 8px; }
+.po-file-card__inline-status { display: inline-flex; }
 .po-file-card__inline-file { min-width: 0; overflow: hidden; color: var(--lab-muted); font-size: 11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
 .po-file-card__inline-form { flex: 1 1 420px; }
 .po-file-card__inline-form .po-dropzone { flex: 1 1 220px; }
@@ -3219,7 +3221,14 @@ input[type="number"] {
 .access-toggle__saved { color: var(--lab-green); font-weight: 700; }
 
 .pr-review { display: grid; gap: 16px; padding: 8px 22px 20px; }
-.pr-review__po-file { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--lab-border); }
+.pr-review__po-workbench { display: grid; grid-template-columns: minmax(220px, .82fr) minmax(340px, 1.18fr); gap: 16px; padding: 16px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.pr-review__po-number,
+.pr-review__po-file { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.pr-review__po-file { padding-left: 16px; border-left: 1px solid var(--lab-border); }
+.pr-review__po-file:only-child { padding-left: 0; border-left: 0; }
+.pr-review__po-file-heading { display: grid; gap: 3px; }
+.pr-review__po-file-heading strong { color: var(--lab-ink); font-size: 13px; }
+.pr-review__po-file-heading span { color: var(--lab-muted); font-size: 11px; line-height: 1.4; }
 .pr-review__identifier-field { width: min(100%, 520px); }
 .pr-review__identifier-field input { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .pr-review__identifier-field input:read-only { color: var(--lab-ink); background: color-mix(in srgb, var(--lab-surface-muted) 72%, var(--lab-border-strong)); border-color: var(--lab-border-strong); font-weight: 500; }
@@ -3308,6 +3317,8 @@ input[type="number"] {
   .expense-form__secondary { grid-template-columns: 1fr 1fr; }
   .expense-history__toolbar { align-items: flex-start; flex-direction: column; }
   .expense-history__controls { justify-content: space-between; width: 100%; }
+  .pr-review__po-workbench { grid-template-columns: 1fr; }
+  .pr-review__po-file { padding: 14px 0 0; border-top: 1px solid var(--lab-border); border-left: 0; }
   .contract-file-card { grid-template-columns: 1fr; }
   .contract-file-card__controls { justify-content: flex-start; }
   .po-file-card__facts { grid-template-columns: 1fr; }

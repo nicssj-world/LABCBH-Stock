@@ -4,6 +4,7 @@ import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { PoFileDropzone } from '@/components/po/PoFileDropzone'
 import { Button } from '@/components/ui/Button'
+import { StatusChip } from '@/components/ui/StatusChip'
 import { formatPoFileSize, preparePoFile } from '@/lib/po/file'
 import {
   getPurchaseRequestPoFileUrl,
@@ -52,6 +53,11 @@ export function PurchaseRequestPoFileCard({
       : hasActiveFile
         ? 'แนบไฟล์ PO แล้ว'
         : 'ยังไม่ได้แนบไฟล์ PO'
+  const statusTone: 'neutral' | 'attention' | 'success' = isCleanupPending
+    ? 'attention'
+    : hasActiveFile
+      ? 'success'
+      : 'neutral'
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -128,9 +134,11 @@ export function PurchaseRequestPoFileCard({
           <PoFileDropzone file={selectedFile} onChange={setSelectedFile} disabled={isPending} />
         </div>
       )}
-      <Button type="submit" variant="secondary" disabled={isPending || !selectedFile}>
-        {pendingAction === 'upload' ? 'กำลังอัปโหลด…' : hasActiveFile ? 'อัปโหลดแทนไฟล์เดิม' : 'แนบไฟล์ PO'}
-      </Button>
+      {(!isInline || selectedFile) && (
+        <Button type="submit" variant="secondary" disabled={isPending || !selectedFile}>
+          {pendingAction === 'upload' ? 'กำลังอัปโหลด…' : hasActiveFile ? 'อัปโหลดแทนไฟล์เดิม' : 'แนบไฟล์ PO'}
+        </Button>
+      )}
     </form>
   ) : null
 
@@ -172,7 +180,11 @@ export function PurchaseRequestPoFileCard({
     </>
   )
 
-  const fileStatus = (
+  const fileStatus = isInline ? (
+    <span className="po-file-card__inline-status" role={state === 'pending' ? 'status' : undefined}>
+      <StatusChip tone={statusTone}>{statusLabel}</StatusChip>
+    </span>
+  ) : (
     <p className="po-file-card__status" role={state === 'pending' ? 'status' : undefined}>
       {statusLabel}
     </p>

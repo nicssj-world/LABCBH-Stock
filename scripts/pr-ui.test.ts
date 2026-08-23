@@ -243,6 +243,7 @@ assert.match(review, /confirmPurchaseRequest\(request\.id, sentToProcurementDate
 assert.match(review, /PurchaseRequestPoFileCard/, 'PO file controls belong in the stock officer panel')
 assert.match(review, /variant="inline"/, 'the PO file controls use the inline treatment beside PO controls')
 assert.match(review, /request\.poFile/, 'the stock officer panel passes the PR PO file audit record to the card')
+assert.match(review, /pr-review__po-workbench/, 'the PO number and PO document controls share one officer workbench')
 assert.match(review, /pr-review__po-file/, 'the PO file controls sit beside the officer PO controls')
 assert.match(
   review,

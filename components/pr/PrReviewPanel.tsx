@@ -114,60 +114,66 @@ export function PrReviewPanel({ request }: { request: PurchaseRequestRecord }) {
         <p className="pr-review__intro">บันทึกเลข PR จาก E-Phis โดย {request.updatedByName}</p>
       )}
 
-      {canEditPoNumber && (
-        <>
-          <label className="field-row pr-review__identifier-field">
-            เลขที่ใบสั่งซื้อ (PO)
-            <input
-              type="text"
-              readOnly={!isEditingPoNumber}
-              value={poNumber}
-              onChange={(event) => setPoNumber(event.target.value)}
-            />
-          </label>
-          <div className="pr-review__actions">
-            <div className="pr-review__actions-buttons">
-              <Button
-                variant="secondary"
-                type="button"
-                className="pr-review__number-action"
-                disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
-                onClick={() => {
-                  if (!isEditingPoNumber) {
-                    setIsEditingPoNumber(true)
-                    return
-                  }
-                  run(
-                    () => setPurchaseOrderNumber(request.id, { poNumber }),
-                    'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
-                    () => setIsEditingPoNumber(false),
-                  )
-                }}
-              >
-                {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
-              </Button>
-            </div>
-            {request.poNumber && request.updatedByName && (
-              <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
-            )}
-          </div>
-        </>
-      )}
-
       {!contractType && ['completed', 'partially_received', 'received', 'closed_short'].includes(request.status) && (
-        <div className="pr-review__po-file">
-          <PurchaseRequestPoFileCard
-            requestId={request.id}
-            poNumber={request.poNumber}
-            file={request.poFile}
-            variant="inline"
-            canEdit={canEditPoNumber}
-            canRetryCleanup={
-              ['received', 'closed_short'].includes(request.status) &&
-              !request.poFile.deletedAt &&
-              Boolean(request.poFile.path)
-            }
-          />
+        <div className="pr-review__po-workbench">
+          {canEditPoNumber && (
+            <div className="pr-review__po-number">
+              <label className="field-row pr-review__identifier-field">
+                เลขที่ใบสั่งซื้อ (PO)
+                <input
+                  type="text"
+                  readOnly={!isEditingPoNumber}
+                  value={poNumber}
+                  onChange={(event) => setPoNumber(event.target.value)}
+                />
+              </label>
+              <div className="pr-review__actions">
+                <div className="pr-review__actions-buttons">
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    className="pr-review__number-action"
+                    disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
+                    onClick={() => {
+                      if (!isEditingPoNumber) {
+                        setIsEditingPoNumber(true)
+                        return
+                      }
+                      run(
+                        () => setPurchaseOrderNumber(request.id, { poNumber }),
+                        'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
+                        () => setIsEditingPoNumber(false),
+                      )
+                    }}
+                  >
+                    {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
+                  </Button>
+                </div>
+                {request.poNumber && request.updatedByName && (
+                  <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="pr-review__po-file">
+            <div className="pr-review__po-file-heading">
+              <strong>เอกสารใบสั่งซื้อ (PO)</strong>
+              <span>PDF, JPG, PNG หรือ WEBP · ไม่เกิน 10 MB</span>
+            </div>
+            <PurchaseRequestPoFileCard
+              requestId={request.id}
+              poNumber={request.poNumber}
+              file={request.poFile}
+              variant="inline"
+              canEdit={canEditPoNumber}
+              canRetryCleanup={
+                ['received', 'closed_short'].includes(request.status) &&
+                !request.poFile.deletedAt &&
+                Boolean(request.poFile.path)
+              }
+            />
+          </div>
         </div>
       )}
 
