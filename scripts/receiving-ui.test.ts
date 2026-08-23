@@ -45,7 +45,7 @@ assert.match(newPage, /canOperateStock/, 'only stock officers and admins receive
 
 const detailPage = read('app/(protected)/receipts/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</)
-assert.match(detailPage, /PoImageUploader/)
+assert.doesNotMatch(detailPage, /PO EVIDENCE|PoImageUploader|poUpload=failed/)
 assert.match(detailPage, /ReceiptLinesEditor|ReceiptPostPanel/)
 assert.match(detailPage, /formatThaiDateTime\(receipt\.cancelledAt\)/, 'the cancellation audit must show its time, not just its date')
 assert.match(detailPage, /inline-alert--info/, 'posted receipts must explain the immutable correction path')
@@ -54,8 +54,9 @@ assert.match(detailPage, /inventory\/\$\{item\.inventoryItemId\}/, 'posted recei
 const form = read('components/receipts/ReceiptForm.tsx')
 assert.match(form, /^['"]use client['"]/m)
 assert.match(form, /createGoodsReceipt/)
-assert.match(form, /PoFileDropzone/, 'new receipts must accept PO attachments')
-assert.match(form, /uploadPoImage/, 'the selected PO is uploaded after the draft is created')
+assert.doesNotMatch(form, /PoFileDropzone|uploadPoImage|preparePoFile|poFile/)
+assert.match(form, /purchase-requests\/\$\{selectedRequest\.id\}/, 'the selected PR PO must link back to PR detail')
+assert.match(form, /selectedRequest\.poNumber/, 'receipt creation derives the PO number from the selected PR')
 assert.match(form, /ReceiptLinesEditor/)
 assert.match(form, /setLines\(\[\]\)/, 'selecting a PR starts with no actual receipt lines')
 assert.match(form, /receipt-pr-balance/, 'the selected PR must show a separate balance table')
@@ -121,25 +122,6 @@ assert.match(
   'switching department must clear a PR selection that no longer belongs to it',
 )
 
-const uploader = read('components/receipts/PoImageUploader.tsx')
-assert.match(uploader, /^['"]use client['"]/m)
-assert.match(uploader, /uploadPoImage/)
-assert.match(uploader, /PoFileDropzone/, 'existing receipts must support drag-and-drop replacement')
-assert.match(uploader, /preparePoFile/, 'PO images are prepared before upload')
-assert.match(
-  uploader,
-  /ยังไม่ได้แนบไฟล์ PO|แนบไฟล์ PO/,
-  'the uploader must state whether evidence is attached',
-)
-
-const dropzone = read('components/receipts/PoFileDropzone.tsx')
-assert.match(dropzone, /onDrop/, 'PO files can be dragged onto the dropzone')
-assert.match(dropzone, /application\/pdf/, 'PO uploads accept PDFs')
-assert.match(dropzone, /ลากไฟล์ PO มาวางที่นี่/, 'the dropzone explains the drag-and-drop affordance')
-const poFile = read('lib/receipts/po-file.ts')
-assert.match(poFile, /canvas\.toBlob/, 'images are resized and recompressed in the browser')
-assert.match(poFile, /application\/pdf/, 'PDFs bypass image resizing')
-
 const postPanel = read('components/receipts/ReceiptPostPanel.tsx')
 assert.match(postPanel, /^['"]use client['"]/m)
 assert.match(postPanel, /postGoodsReceipt/)
@@ -152,16 +134,8 @@ assert.match(actions, /^['"]use server['"]/m)
 assert.match(actions, /supabaseAdmin\.rpc\('create_goods_receipt'/)
 assert.match(actions, /supabaseAdmin\.rpc\('post_goods_receipt'/)
 assert.match(actions, /supabaseAdmin\.rpc\('cancel_goods_receipt'/)
-assert.match(actions, /supabaseAdmin\.rpc\('set_goods_receipt_image'/)
 assert.match(actions, /assertStockOperator/)
-assert.match(actions, /isPoFileTypeAllowed/, 'the server validates PO MIME types')
-assert.match(actions, /PO_MAX_FILE_SIZE_BYTES/, 'the server enforces the PO size limit')
-assert.match(actions, /isPoImagePathAllowed/, 'the server re-checks the upload path')
-assert.match(
-  actions,
-  /createSignedUrl/,
-  'private PO images are read through a short-lived signed URL',
-)
+assert.doesNotMatch(actions, /uploadPoImage|getPoImageUrl|set_goods_receipt_image|isPoFileTypeAllowed|PO_MAX_FILE_SIZE_BYTES|isPoImagePathAllowed/)
 
 const queries = read('lib/receipts/queries.ts')
 assert.match(queries, /server-only/)

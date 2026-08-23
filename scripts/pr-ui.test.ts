@@ -54,6 +54,8 @@ assert.match(detailPage, /item\.lotNumber/, 'receipt history must show the lot f
 assert.match(detailPage, /item\.quantity/, 'receipt history must show the quantity for each received line')
 assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expiry date for each received line')
 assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
+assert.match(detailPage, /PurchaseRequestPoFileCard/, 'PO file ownership belongs on PR detail')
+assert.match(detailPage, /request\.poFile/, 'PR detail passes its PO file audit record to the card')
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /params:\s*Promise</)
