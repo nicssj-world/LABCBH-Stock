@@ -3915,6 +3915,8 @@ body {
 .pr-checklist__file-copy small { margin-top: 5px; color: var(--lab-muted); line-height: 1.45; }
 .pr-checklist__file-name { margin: 0; padding: 10px 12px; overflow-wrap: anywhere; color: var(--lab-ink); background: var(--lab-surface); border-radius: 8px; font-size: 13px; }
 .pr-checklist__file-name small { display: block; margin-top: 3px; color: var(--lab-attention); }
+.pr-checklist__file-errors { display: grid; gap: 4px; }
+.pr-checklist__file-errors .field-error { margin: 0; }
 .pr-checklist__file-actions { display: grid; gap: 10px; align-items: stretch; }
 .pr-checklist__file-actions > button { justify-self: start; }
 .pr-checklist__dropzone {

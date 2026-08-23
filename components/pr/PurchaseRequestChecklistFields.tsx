@@ -278,6 +278,7 @@ export function PurchaseRequestChecklistFields({
       complete: errors.length === 0 && Boolean(file || existing),
       isDragging: draggingSlotKey === key,
       dropzoneHintId: `pr-checklist-${requirement.kind}-${requirement.slot}-hint`,
+      dropzoneErrorId: `pr-checklist-${requirement.kind}-${requirement.slot}-error`,
     }
   })
   const primaryAttachments = attachmentItems.filter((item) => item.requirement.kind !== 'quotation')
@@ -317,7 +318,7 @@ export function PurchaseRequestChecklistFields({
   }
 
   const renderAttachmentCard = (item: (typeof attachmentItems)[number]) => {
-    const { requirement, key, file, existing, errors, complete, isDragging, dropzoneHintId } = item
+    const { requirement, key, file, existing, errors, complete, isDragging, dropzoneHintId, dropzoneErrorId } = item
     const visibleLabel = requirement.kind === 'quotation'
       ? `บริษัทที่ ${item.requirement.slot}`
       : requirement.label
@@ -344,7 +345,11 @@ export function PurchaseRequestChecklistFields({
             {file && existing && <small>จะแทนที่ไฟล์เดิมเมื่อบันทึก</small>}
           </p>
         )}
-        {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
+        {errors.length > 0 && (
+          <div id={dropzoneErrorId} className="pr-checklist__file-errors" aria-live="polite">
+            {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
+          </div>
+        )}
         <div className="pr-checklist__file-actions">
           <label
             className={`pr-checklist__dropzone${isDragging ? ' is-dragging' : ''}`}
@@ -368,7 +373,8 @@ export function PurchaseRequestChecklistFields({
               accept={requirement.accept.join(',')}
               disabled={disabled}
               aria-label={`แนบ ${requirement.label}`}
-              aria-describedby={dropzoneHintId}
+              aria-invalid={errors.length > 0}
+              aria-describedby={errors.length > 0 ? `${dropzoneHintId} ${dropzoneErrorId}` : dropzoneHintId}
               onChange={(event) => onFileChange(key, event.target.files?.[0])}
             />
           </label>
