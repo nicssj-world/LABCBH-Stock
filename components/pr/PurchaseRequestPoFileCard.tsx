@@ -273,3 +273,77 @@ export function PurchaseRequestPoFileCard({
     </>
   )
 }
+
+export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: string }) {
+  const previewDialogRef = useRef<HTMLDialogElement>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const open = () => {
+    setError(null)
+    startTransition(async () => {
+      try {
+        const signedUrl = await getPurchaseRequestPoFileUrl(requestId)
+        if (!signedUrl) throw new Error('ไม่พบไฟล์ PO ที่เปิดดูได้')
+        setPreviewUrl(signedUrl)
+        previewDialogRef.current?.showModal()
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'เปิดไฟล์ PO ไม่สำเร็จ')
+      }
+    })
+  }
+
+  const closePreview = () => {
+    previewDialogRef.current?.close()
+    setPreviewUrl(null)
+  }
+
+  return (
+    <>
+      <div className="po-file-open-action">
+        <Button
+          variant="secondary"
+          className="po-file-open-button"
+          onClick={open}
+          disabled={isPending}
+        >
+          <svg className="po-file-open-button__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M5 3.5h9l5 5v12H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {isPending ? 'กำลังเปิด…' : 'เปิดไฟล์ PO'}
+        </Button>
+        {error && <p className="form-error po-file-open-action__error" role="alert">{error}</p>}
+      </div>
+
+      <dialog
+        ref={previewDialogRef}
+        className="app-dialog file-preview-dialog"
+        aria-labelledby="pr-po-file-open-preview-title"
+        onCancel={(event) => {
+          event.preventDefault()
+          closePreview()
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closePreview()
+        }}
+      >
+        <header className="app-dialog__header">
+          <div>
+            <h2 id="pr-po-file-open-preview-title">ไฟล์ PO</h2>
+            <p>แสดงเอกสารจากที่จัดเก็บส่วนตัวในหน้ารายละเอียดใบ PR</p>
+          </div>
+          <button type="button" className="app-dialog__close" aria-label="ปิดตัวอย่างไฟล์ PO" onClick={closePreview}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </header>
+        <div className="app-dialog__body file-preview-dialog__body">
+          {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
+        </div>
+      </dialog>
+    </>
+  )
+}

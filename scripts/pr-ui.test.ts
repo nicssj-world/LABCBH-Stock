@@ -54,13 +54,15 @@ assert.match(detailPage, /item\.lotNumber/, 'receipt history must show the lot f
 assert.match(detailPage, /item\.quantity/, 'receipt history must show the quantity for each received line')
 assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expiry date for each received line')
 assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
-assert.doesNotMatch(detailPage, /PurchaseRequestPoFileCard/, 'the PO file action belongs in the stock officer panel, not the PR header')
-assert.doesNotMatch(detailPage, /request\.poFile/, 'the PR header must not own PO file controls')
-assert.doesNotMatch(detailPage, /contract-facts__po/, 'the PO fact grid must stay focused on summary information')
+assert.doesNotMatch(detailPage, /<PurchaseRequestPoFileCard/, 'the PR header must not own PO upload controls')
+assert.match(detailPage, /PurchaseRequestPoFileOpenButton/, 'the PR summary exposes the open action for an attached PO')
+assert.match(detailPage, /request\.poFile\.path && !request\.poFile\.deletedAt/, 'the PR summary only exposes active attached PO files')
+assert.match(detailPage, /contract-facts__po-value/, 'the PO open action stays beside the PO number in the summary fact')
 
 const poFileCard = read('components/pr/PurchaseRequestPoFileCard.tsx')
 assert.match(poFileCard, /po-file-card--inline/, 'the PO file card supports the inline PR fact treatment')
 assert.match(poFileCard, /compact/, 'the inline PO file action uses a compact dropzone')
+assert.match(poFileCard, /export function PurchaseRequestPoFileOpenButton/, 'the PO open action owns its private preview dialog')
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /params:\s*Promise</)
@@ -245,6 +247,7 @@ assert.match(review, /variant="inline"/, 'the PO file controls use the inline tr
 assert.match(review, /request\.poFile/, 'the stock officer panel passes the PR PO file audit record to the card')
 assert.match(review, /pr-review__po-workbench/, 'the PO number and PO document controls share one officer workbench')
 assert.match(review, /pr-review__po-file/, 'the PO file controls sit beside the officer PO controls')
+assert.doesNotMatch(review, /showOpenAction/, 'the STOCK OFFICER PO document controls keep their existing placement and actions')
 assert.match(
   review,
   /\['completed', 'partially_received'\]\.includes\(request\.status\)/,

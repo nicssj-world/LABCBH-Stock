@@ -1842,6 +1842,9 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-facts > div:last-child { border-right: 0; }
 .contract-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
 .contract-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; }
+.contract-facts__po-value { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.contract-facts__po-value > .po-file-open-action { display: contents; }
+.contract-facts__po-value .po-file-open-button { min-width: 142px; }
 .contract-facts__vendor dd { color: var(--lab-navy-strong); font-size: 16px; }
 .contract-facts__period dd { display: grid; gap: 8px; }
 .contract-expiry-chip { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--lab-border); border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.2; }
@@ -3229,6 +3232,10 @@ input[type="number"] {
 .pr-review__po-file-heading { display: grid; gap: 3px; }
 .pr-review__po-file-heading strong { color: var(--lab-ink); font-size: 13px; }
 .pr-review__po-file-heading span { color: var(--lab-muted); font-size: 11px; line-height: 1.4; }
+.po-file-open-action { display: grid; justify-items: start; gap: 6px; }
+.po-file-open-button { min-width: 156px; gap: 8px; border-radius: var(--radius-control); }
+.po-file-open-button__icon { flex: 0 0 auto; }
+.po-file-open-action__error { margin: 0; }
 .pr-review__identifier-field { width: min(100%, 520px); }
 .pr-review__identifier-field input { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .pr-review__identifier-field input:read-only { color: var(--lab-ink); background: color-mix(in srgb, var(--lab-surface-muted) 72%, var(--lab-border-strong)); border-color: var(--lab-border-strong); font-weight: 500; }
@@ -3319,6 +3326,7 @@ input[type="number"] {
   .expense-history__controls { justify-content: space-between; width: 100%; }
   .pr-review__po-workbench { grid-template-columns: 1fr; }
   .pr-review__po-file { padding: 14px 0 0; border-top: 1px solid var(--lab-border); border-left: 0; }
+  .po-file-open-button { width: 100%; }
   .contract-file-card { grid-template-columns: 1fr; }
   .contract-file-card__controls { justify-content: flex-start; }
   .po-file-card__facts { grid-template-columns: 1fr; }

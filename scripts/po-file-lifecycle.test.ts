@@ -75,7 +75,7 @@ assert.match(form, /selectedRequest\.poNumber/)
 
 const prPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 const prReview = read('components/pr/PrReviewPanel.tsx')
-assert.doesNotMatch(prPage, /PurchaseRequestPoFileCard/, 'PO file controls must not render above the stock officer panel')
+assert.doesNotMatch(prPage, /<PurchaseRequestPoFileCard/, 'PO file controls must not render above the stock officer panel')
 assert.match(prReview, /PurchaseRequestPoFileCard/)
 assert.match(prReview, /request\.poFile/)
 

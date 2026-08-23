@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
+import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileCard'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
@@ -110,7 +111,15 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           <div><dt>ผู้ขอ</dt><dd>{request.requesterName ?? 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{request.department}</dd></div>
           <div><dt>วันที่ขอ</dt><dd>{formatThaiDate(request.requestedDate)}</dd></div>
-          <div><dt>เลขที่ใบสั่งซื้อ (PO)</dt><dd className="identifier">{request.poNumber ?? 'ยังไม่มี'}</dd></div>
+          <div className="contract-facts__po">
+            <dt>เลขที่ใบสั่งซื้อ (PO)</dt>
+            <dd className="identifier contract-facts__po-value">
+              <span>{request.poNumber ?? 'ยังไม่มี'}</span>
+              {request.poFile.path && !request.poFile.deletedAt && (
+                <PurchaseRequestPoFileOpenButton requestId={request.id} />
+              )}
+            </dd>
+          </div>
         </dl>
       </header>
 
