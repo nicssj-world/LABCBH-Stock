@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { assertOutLabEditor } from '@/lib/out-lab/authorization'
+import { assertOutLabCreator, assertOutLabEditor } from '@/lib/out-lab/authorization'
 import {
   outLabArchiveInputSchema,
   outLabCreateInputSchema,
@@ -35,6 +35,12 @@ async function requireOutLabEditor() {
   return actor
 }
 
+async function requireOutLabCreator() {
+  const actor = await requireActor()
+  assertOutLabCreator(actor)
+  return actor
+}
+
 function unwrapMutation(
   operation: string,
   result: { data: unknown; error: { message: string } | null },
@@ -53,7 +59,7 @@ function revalidateContract(contractId: string) {
 }
 
 export async function createOutLabContract(input: OutLabCreateInput) {
-  const actor = await requireOutLabEditor()
+  const actor = await requireOutLabCreator()
   const parsed = outLabCreateInputSchema.parse(input)
   const { contractNumber, effectiveDate, ...contract } = parsed
 

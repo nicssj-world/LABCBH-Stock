@@ -58,6 +58,7 @@ assert.match(
 )
 assert.match(vercelConfig, /crons\s*:/, 'storage cleanup must have a scheduled worker')
 assert.match(vercelConfig, /\/api\/internal\/storage-cleanup/, 'the scheduled worker path must be explicit')
+assert.match(vercelConfig, /schedule:\s*'0 3 \* \* \*'/, 'the cleanup schedule must remain valid for the linked Hobby project')
 
 // Vercel CLI does not inherit every project-specific Git ignore. Keep database
 // dumps and local import inputs out of the upload manifest explicitly.

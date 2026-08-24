@@ -17,6 +17,29 @@ for (const route of [
 const shell = read('components/ui/AppShell.tsx')
 const css = read('app/globals.css')
 
+const register = read('app/(protected)/out-lab/page.tsx')
+const newPage = read('app/(protected)/out-lab/new/page.tsx')
+const authorization = read('lib/out-lab/authorization.ts')
+const actions = read('lib/out-lab/actions.ts')
+
+// Creating a contract is a stock-operation responsibility. Heads may still
+// edit an existing Out Lab contract, but must not be offered the create link
+// or be able to reach the create form directly.
+assert.match(
+  authorization,
+  /export function canCreateOutLabContract\(actor: Actor\): boolean\s*\{\s*return canOperateStock\(actor\)/,
+  'Out Lab creation must use the admin/stock-officer policy',
+)
+assert.match(register, /const canCreate = canCreateOutLabContract\(actor\)/)
+assert.match(
+  register,
+  /\{canCreate && \(\s*<Link[\s\S]*href="\/out-lab\/new"[\s\S]*เพิ่มสัญญา Out Lab/,
+  'only creators may see the Out Lab create link',
+)
+assert.match(newPage, /if \(!canCreateOutLabContract\(actor\)\) redirect\('\/access-denied'\)/)
+assert.match(actions, /async function requireOutLabCreator\(\)[\s\S]*assertOutLabCreator\(actor\)/)
+assert.match(actions, /export async function createOutLabContract[\s\S]*const actor = await requireOutLabCreator\(\)/)
+
 // The register needs its own place in the rail, with a tone that is not shared
 // with another module — the tone is a location cue, so a duplicate would read
 // as the same destination.

@@ -1,4 +1,4 @@
-import { hasAppRole } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import type { Actor } from '@/lib/auth/actor'
 import { canRecordContractExpense } from '@/lib/contracts/authorization'
 
@@ -11,6 +11,15 @@ export class OutLabAuthorizationError extends Error {
 
 export function canEditOutLabContract(actor: Actor): boolean {
   return hasAppRole(actor, 'admin', 'head')
+}
+
+/** Only stock operators may originate a new Out Lab contract. */
+export function canCreateOutLabContract(actor: Actor): boolean {
+  return canOperateStock(actor)
+}
+
+export function assertOutLabCreator(actor: Actor): void {
+  if (!canCreateOutLabContract(actor)) throw new OutLabAuthorizationError()
 }
 
 export function assertOutLabEditor(actor: Actor): void {

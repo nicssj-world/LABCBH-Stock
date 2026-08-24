@@ -24,7 +24,10 @@ const config = {
   crons: [
     {
       path: '/api/internal/storage-cleanup',
-      schedule: '*/10 * * * *',
+      // The linked Vercel project is on Hobby, which permits one Cron run per
+      // day. Normal lifecycle cleanup remains synchronous; this is the durable
+      // safety-net for orphaned/failed cleanup jobs.
+      schedule: '0 3 * * *',
     },
   ],
 } as const

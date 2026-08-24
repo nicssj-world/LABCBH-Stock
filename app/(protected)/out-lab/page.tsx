@@ -12,6 +12,7 @@ import {
   OUT_LAB_KIND_LABELS,
   presentOutLabContract,
 } from '@/lib/out-lab/presenter'
+import { canCreateOutLabContract } from '@/lib/out-lab/authorization'
 import { listOutLabContracts } from '@/lib/out-lab/queries'
 import { OUT_LAB_CADENCES, OUT_LAB_DEPARTMENTS, OUT_LAB_KINDS } from '@/lib/out-lab/schema'
 
@@ -24,7 +25,7 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 export default async function OutLabPage({ searchParams }: OutLabPageProps) {
   const actor = await requireActor()
   const isAdmin = hasAppRole(actor, 'admin')
-  const canCreate = hasAppRole(actor, 'admin', 'head')
+  const canCreate = canCreateOutLabContract(actor)
   const params = await searchParams
 
   const fiscalYearValue = first(params.fiscalYear)

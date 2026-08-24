@@ -21,6 +21,18 @@ assert.equal(names.length, 1, 'exactly one Out Lab RPC migration must exist')
 const sql = readFileSync(join(migrationsDir, names[0]), 'utf8')
 const compact = sql.replace(/\s+/g, ' ')
 
+// The create link is intentionally narrower than the editor role. Keep the
+// database guard aligned with the UI so a direct Server Action/RPC call cannot
+// let a head create a new Out Lab contract.
+const createAccessNames = readdirSync(migrationsDir).filter((n) => n.endsWith('_out_lab_create_access.sql'))
+assert.equal(createAccessNames.length, 1, 'an Out Lab create-access migration must exist')
+const createAccessSql = readFileSync(join(migrationsDir, createAccessNames[0]), 'utf8')
+const createAccessFn = createAccessSql.slice(
+  createAccessSql.search(/create or replace function public\.create_out_lab_contract/i),
+)
+assert.match(createAccessFn, /perform public\.assert_stock_officer_actor\(p_actor_id\)/i)
+assert.doesNotMatch(createAccessFn, /perform public\.assert_contract_editor_actor\(p_actor_id\)/i)
+
 const recordFn = compact.slice(
   compact.search(/create or replace function public\.record_out_lab_monthly_usage/i),
   compact.search(/create or replace function public\.delete_out_lab_monthly_usage/i),

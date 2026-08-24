@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OutLabContractForm } from '@/components/out-lab/OutLabContractForm'
-import { hasAppRole, isAdministrator } from '@/lib/auth/access'
+import { isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
+import { canCreateOutLabContract } from '@/lib/out-lab/authorization'
 
 export default async function NewOutLabContractPage() {
   const actor = await requireActor()
-  if (!hasAppRole(actor, 'admin', 'head')) redirect('/access-denied')
+  if (!canCreateOutLabContract(actor)) redirect('/access-denied')
 
   return (
     <div className="route-stack">

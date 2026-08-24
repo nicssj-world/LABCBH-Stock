@@ -10,7 +10,7 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Confirm a maintenance window, rollback owner, and business acceptance owner.
 - [ ] Confirm the stock and portal branches have passed their full verification suites.
 - [ ] Confirm production secrets exist in Vercel and are not present in Git or terminal output.
-- [ ] Confirm `CRON_SECRET` exists in Vercel Production and the storage cleanup Cron is visible in the deployment configuration.
+- [ ] Confirm `CRON_SECRET` exists in Vercel Production and the daily (`03:00 UTC`) storage cleanup Cron is visible in the deployment configuration. Normal lifecycle cleanup is synchronous; the daily worker is the failure/orphan safety-net on the linked Hobby plan.
 - [ ] Create and verify a restorable database backup. Record backup ID and restore rehearsal evidence.
 - [ ] Export immutable pre-cutover reconciliation snapshots from the legacy contract and inventory sources.
 - [ ] Confirm the source workbooks are final, read-only copies in `.secure-import/` and are excluded from Git.

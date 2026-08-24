@@ -50,8 +50,12 @@ after expiry/cancellation. Audit metadata remains in Supabase.
 
 The worker requires `CRON_SECRET` in the deployment environment and runs
 `POST /api/internal/storage-cleanup`. It retries failed R2/Supabase Storage
-deletes and terminal PO or checklist cleanup. A worker response with
-`failed > 0` is an operational alert, not a successful cleanup.
+deletes and terminal PO or checklist cleanup. The linked Vercel Hobby project
+permits one Cron run per day (`03:00 UTC`), so normal lifecycle cleanup remains
+synchronous and the queue is the durable safety-net for failures and abandoned
+uploads. Upgrade the project plan or move the worker to an approved scheduler
+if a sub-day cleanup SLA is required. A worker response with `failed > 0` is an
+operational alert, not a successful cleanup.
 
 ## Deployment order
 
