@@ -35,6 +35,7 @@ assert.doesNotMatch(summaryDialog, /toDataURL|<img/, 'the popup must not render 
 assert.match(summaryDialog, /รายการน้ำยา/, 'the requisition popup must show its reagent section')
 assert.match(summaryDialog, /requisition\.items\.map/, 'the requisition popup must list every requested reagent')
 assert.match(summaryDialog, /formatQuantity\(item\.requestedQuantity, item\.unit\)/, 'the requisition popup must show each requested quantity')
+assert.doesNotMatch(summaryDialog, /totalRequested|รวมที่ขอ/, 'the requisition popup must not show a mixed-unit sum')
 assert.match(newPage, /RequisitionForm/)
 assert.match(newPage, /DEPARTMENTS/)
 assert.match(newPage, /requesterDepartment=\{requesterDepartment\}/)
@@ -59,13 +60,12 @@ assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หร
 // The item picker only offers the requester's work unit plus the two shared
 // stock units. Unassigned and unrelated items must stay out of the picker.
 
-// Zero-on-hand items never reach the picker: the store cannot fill a line
-// with no lot behind it, so offering one only produces a requisition that
-// fails at fulfillment.
+// Items with no currently available quantity never reach the picker. Physical
+// on-hand can exist while another waiting requisition has already reserved it.
 assert.match(
   form,
-  /inStockCatalog = catalog\.filter\(\(item\) => item\.onHand > 0\)/,
-  'the picker must only offer items that still have stock',
+  /availableCatalog = catalog\.filter\(\(item\) => item\.availableToRequest > 0\)/,
+  'the picker must only offer items with available-to-request stock',
 )
 
 assert.match(
@@ -79,16 +79,21 @@ assert.match(
   'the item picker must include only assigned items in eligible departments',
 )
 assert.match(form, /departmentCatalog\.map/, 'the picker options must come from the department-filtered catalog')
-assert.match(form, /ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง/)
+assert.match(form, /ยังไม่มีรายการน้ำยาที่เบิกได้ในขณะนี้/)
 
 // The requester picks straight from the dropdown, so the option itself must
 // carry the total on hand. Lot detail belongs to the officer choosing FIFO
 // lots at fulfillment, not to the person asking for a quantity.
 assert.match(
   form,
-  /\{item\.lsCode\} · \{item\.name\} · คงเหลือ \{formatQuantity\(item\.onHand, item\.unit\)\}/,
-  'the dropdown option must show the total on-hand quantity',
+  /\{item\.lsCode\} · \{item\.name\} · เบิกได้อีก \{formatQuantity\(item\.availableToRequest, item\.unit\)\}/,
+  'the dropdown option must show the available-to-request quantity',
 )
+assert.match(form, /availableToRequest: number/, 'form lines must carry reservation-aware availability')
+assert.match(form, /max=\{line\.availableToRequest\}/, 'quantity input must cap at available-to-request stock')
+assert.match(form, /line\.requestedQuantity > line\.availableToRequest/, 'the form must block stale over-requests')
+assert.match(form, /disabled=\{isPending \|\| lines\.length === 0 \|\| hasAvailabilityError\}/)
+assert.match(form, /เบิกได้อีก/, 'the line must explain the reservation-aware quantity')
 assert.doesNotMatch(form, /showingUnfilteredCatalog|scopedCatalog/, 'the picker must not fall back to unrelated inventory')
 
 assert.deepEqual(
@@ -105,12 +110,17 @@ assert.match(form, /CatalogItemCombobox/, 'the search combobox must remain avail
 const queries = read('lib/requisitions/queries.ts')
 assert.match(queries, /department\?: string/, 'requisition queries accept a department filter')
 assert.match(queries, /filters\.department/, 'requisition queries apply the department filter')
+assert.match(queries, /inventory_item_requisition_availability/, 'requisition catalog reads reservation-aware availability')
 
 // The detail page shows current on-hand stock per line, so the officer can
 // judge fulfillment without switching to the inventory catalog.
 const detailPage = read('app/(protected)/requisitions/[id]/page.tsx')
 assert.match(detailPage, /listOnHand/, 'the detail page must read current on-hand stock for its lines')
 assert.match(detailPage, /คงเหลือในคลัง/)
+assert.match(detailPage, /รายการที่ต้องหยิบ|รายการที่จ่าย/, 'the detail header must show a useful line-count workload, not mixed-unit totals')
+assert.doesNotMatch(detailPage, /totalRequested|รวมที่ขอ/, 'the detail header must not show a mixed-unit sum')
+
+assert.doesNotMatch(listPage, /รวมที่ขอ/, 'the requisition register must not show a mixed-unit sum')
 
 const inventoryQueries = read('lib/inventory/queries.ts')
 assert.match(inventoryQueries, /export async function listOnHand/)

@@ -2,7 +2,8 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { bangkokToday } from '@/lib/inventory/queries'
+import { bangkokToday, listInventoryItems } from '@/lib/inventory/queries'
+import type { InventoryItemRecord } from '@/lib/inventory/types'
 import { isLotSelectable, rankLotsForFifo } from '@/lib/requisitions/fifo'
 import { REQUISITION_STATUSES } from './schema'
 import type {
@@ -12,6 +13,13 @@ import type {
 } from './types'
 
 const numericSchema = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
+
+const requisitionAvailabilityRowSchema = z.object({
+  inventory_item_id: z.string().uuid(),
+  usable_on_hand: numericSchema,
+  waiting_reserved: numericSchema,
+  available_to_request: numericSchema,
+})
 
 const allocationRowSchema = z.object({
   id: z.string().uuid(),
@@ -142,6 +150,50 @@ export interface RequisitionFilters {
   status?: (typeof REQUISITION_STATUSES)[number]
   search?: string
   department?: string
+}
+
+export type RequisitionCatalogItem = InventoryItemRecord & {
+  usableOnHand: number
+  waitingReserved: number
+  availableToRequest: number
+}
+
+/**
+ * Catalogue for the requisition form. Physical on-hand remains useful for
+ * context, but the picker must use the reservation-aware amount so one waiting
+ * requisition cannot silently consume another requester's stock.
+ */
+export async function listRequisitionCatalog(): Promise<RequisitionCatalogItem[]> {
+  const supabase = await createClient()
+  const [{ data, error }, inventoryItems] = await Promise.all([
+    supabase
+      .from('inventory_item_requisition_availability')
+      .select('inventory_item_id, usable_on_hand, waiting_reserved, available_to_request'),
+    listInventoryItems({}),
+  ])
+
+  if (error) throw new Error(`อ่านยอดที่เบิกได้ไม่สำเร็จ: ${error.message}`)
+
+  const availabilityByItem = new Map(
+    requisitionAvailabilityRowSchema
+      .array()
+      .parse(data ?? [])
+      .map((row) => [
+        row.inventory_item_id,
+        {
+          usableOnHand: row.usable_on_hand,
+          waitingReserved: row.waiting_reserved,
+          availableToRequest: row.available_to_request,
+        },
+      ] as const),
+  )
+
+  return inventoryItems.map((item) => ({
+    ...item,
+    usableOnHand: availabilityByItem.get(item.id)?.usableOnHand ?? 0,
+    waitingReserved: availabilityByItem.get(item.id)?.waitingReserved ?? 0,
+    availableToRequest: availabilityByItem.get(item.id)?.availableToRequest ?? 0,
+  }))
 }
 
 export async function listRequisitions(

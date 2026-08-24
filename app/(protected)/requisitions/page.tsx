@@ -4,7 +4,7 @@ import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { ListPagination } from '@/components/ui/ListPagination'
 import { requireActor } from '@/lib/auth/actor'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 import { RequisitionSummaryDialog } from '@/components/requisitions/RequisitionSummaryDialog'
@@ -130,7 +130,6 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                     <th>ต้องการรับ</th>
                     <th>ผู้ขอเบิก</th>
                     <th className="numeric-cell">รายการ</th>
-                    <th className="numeric-cell">รวมที่ขอ</th>
                     <th>สถานะ</th>
                     <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
                   </tr>
@@ -145,11 +144,6 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                         <small>{requisition.department}</small>
                       </td>
                       <td className="numeric-cell identifier">{requisition.items.length}</td>
-                      <td className="numeric-cell identifier">
-                        {formatQuantity(
-                          requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0),
-                        )}
-                      </td>
                       <td>
                         <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
                           {REQUISITION_STATUS_LABELS[requisition.status]}

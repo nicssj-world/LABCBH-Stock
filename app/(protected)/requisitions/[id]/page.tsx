@@ -57,7 +57,16 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots
   }
 
-  const totalRequested = requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0)
+  const workloadLabel = requisition.status === 'fulfilled'
+    ? 'รายการที่จ่าย'
+    : requisition.status === 'waiting'
+      ? 'รายการที่ต้องหยิบ'
+      : 'รายการในใบเบิก'
+  const reservationLabel = requisition.status === 'waiting'
+    ? 'กันยอดแล้ว'
+    : requisition.status === 'fulfilled'
+      ? 'ใช้ยอดกันแล้ว'
+      : 'คืนยอดแล้ว'
 
   return (
     <div className="route-stack">
@@ -94,15 +103,15 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
             <p>ผู้ขอเบิก {requisition.requesterName} · ต้องการรับ {formatThaiDate(requisition.desiredDate)}</p>
           </div>
           <dl className="contract-detail-heading__value">
-            <dt>รวมที่ขอ</dt>
-            <dd>{formatQuantity(totalRequested)}</dd>
+            <dt>{workloadLabel}</dt>
+            <dd>{requisition.items.length} รายการ</dd>
           </dl>
         </div>
 
         <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบเบิก">
           <div><dt>ผู้ขอเบิก</dt><dd>{requisition.requesterName}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{requisition.department}</dd></div>
-          <div><dt>จำนวนรายการ</dt><dd className="identifier">{requisition.items.length}</dd></div>
+          <div><dt>การกันยอด</dt><dd>{reservationLabel}</dd></div>
           <div>
             <dt>การจ่ายของ</dt>
             <dd>

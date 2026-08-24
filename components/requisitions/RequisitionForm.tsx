@@ -20,6 +20,9 @@ export interface RequisitionCatalogItem {
   unit: string
   note: string | null
   onHand: number
+  usableOnHand: number
+  waitingReserved: number
+  availableToRequest: number
   minimumStock: number
   responsibleDepartment: string | null
 }
@@ -48,6 +51,7 @@ interface DraftLine {
   unit: string
   note: string
   onHand: number
+  availableToRequest: number
   minimumStock: number
   requestedQuantity: number
 }
@@ -78,11 +82,17 @@ export function RequisitionForm({
   const [note, setNote] = useState(initialValues?.note ?? '')
   const [lines, setLines] = useState<DraftLine[]>(() =>
     (initialValues?.items ?? []).map((item, index) => {
-      // The picker below only offers items with stock on hand. An existing
-      // line whose item has since gone to zero is therefore missing from it,
+      // The picker below only offers items with available stock. An existing
+      // line whose item has since become unavailable is therefore missing from it,
       // and must be carried over from the saved requisition instead —
       // rebuilding lines from the picker alone would silently drop it.
       const stocked = catalog.find((entry) => entry.inventoryItemId === item.inventoryItemId)
+      const availableToRequest = stocked
+        ? Math.max(
+            stocked.usableOnHand - Math.max(stocked.waitingReserved - item.requestedQuantity, 0),
+            0,
+          )
+        : 0
       return {
         key: `${item.inventoryItemId}-${index}`,
         inventoryItemId: item.inventoryItemId,
@@ -91,6 +101,7 @@ export function RequisitionForm({
         unit: item.unit,
         note: item.note ?? '',
         onHand: stocked?.onHand ?? 0,
+        availableToRequest,
         minimumStock: stocked?.minimumStock ?? 0,
         requestedQuantity: item.requestedQuantity,
       }
@@ -99,16 +110,23 @@ export function RequisitionForm({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  // Only what the store can actually hand over belongs in the picker: an item
-  // sitting at zero on hand would create a line no FIFO lot could fill.
-  const inStockCatalog = catalog.filter((item) => item.onHand > 0)
+  // A waiting requisition reserves stock, so physical on-hand can be positive
+  // while the item is no longer available for a new request.
+  const availableCatalog = catalog.filter((item) => item.availableToRequest > 0)
 
   // The selected requesting department can draw from its work unit and the two
   // shared stock units. Do not fall back to the whole catalogue: an unassigned
   // or unrelated item must stay out of the requisition picker.
   const eligibleDepartments = getRequisitionItemDepartments(department)
-  const departmentCatalog = inStockCatalog.filter(
+  const departmentCatalog = availableCatalog.filter(
     (item) => item.responsibleDepartment !== null && eligibleDepartments.includes(item.responsibleDepartment),
+  )
+
+  const hasAvailabilityError = lines.some(
+    (line) =>
+      !Number.isFinite(line.requestedQuantity) ||
+      line.requestedQuantity <= 0 ||
+      line.requestedQuantity > line.availableToRequest,
   )
 
   const addLine = (item: RequisitionCatalogItem) => {
@@ -122,6 +140,7 @@ export function RequisitionForm({
         unit: item.unit,
         note: item.note ?? '',
         onHand: item.onHand,
+        availableToRequest: item.availableToRequest,
         minimumStock: item.minimumStock,
         requestedQuantity: 1,
       },
@@ -139,6 +158,11 @@ export function RequisitionForm({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+
+    if (hasAvailabilityError) {
+      setError('มีรายการที่ขอเกินยอดที่เบิกได้ กรุณาตรวจสอบจำนวนอีกครั้ง')
+      return
+    }
 
     const payload = {
       department,
@@ -231,7 +255,7 @@ export function RequisitionForm({
               <option value="" disabled>เลือกน้ำยา…</option>
               {departmentCatalog.map((item) => (
                 <option key={item.inventoryItemId} value={item.inventoryItemId}>
-                  {item.lsCode} · {item.name} · คงเหลือ {formatQuantity(item.onHand, item.unit)}
+                  {item.lsCode} · {item.name} · เบิกได้อีก {formatQuantity(item.availableToRequest, item.unit)}
                 </option>
               ))}
             </select>
@@ -243,7 +267,7 @@ export function RequisitionForm({
             options={departmentCatalog.map((item) => ({
               id: item.inventoryItemId,
               label: `${item.lsCode} · ${item.name}`,
-              hint: `คงเหลือ ${formatQuantity(item.onHand, item.unit)} · ขั้นต่ำ ${formatQuantity(item.minimumStock, item.unit)}`,
+              hint: `เบิกได้อีก ${formatQuantity(item.availableToRequest, item.unit)} · คงเหลือจริง ${formatQuantity(item.onHand, item.unit)}`,
               searchText: `${item.lsCode} ${item.name}`,
             }))}
             onSelect={(id) => {
@@ -252,7 +276,7 @@ export function RequisitionForm({
             }}
           />
           {departmentCatalog.length === 0 && (
-            <p className="empty-state">ยังไม่มีรายการน้ำยาที่มีของคงเหลือในคลัง</p>
+            <p className="empty-state">ยังไม่มีรายการน้ำยาที่เบิกได้ในขณะนี้</p>
           )}
 
           {lines.length === 0 ? (
@@ -260,8 +284,8 @@ export function RequisitionForm({
           ) : (
             <ul className="requisition-line-list">
               {lines.map((line) => {
-                // A warning, never a block: an urgent requisition must still go
-                // through even when it dips below the minimum.
+                // Falling below the minimum is still only a warning. Exceeding
+                // the reservation-aware available quantity is a hard block.
                 const willBreachMinimum = isProjectedBelowMinimum({
                   onHand: line.onHand,
                   minimum: line.minimumStock,
@@ -272,6 +296,7 @@ export function RequisitionForm({
                 // ran out. It has to stand out, because keeping it means asking
                 // for something the store cannot hand over.
                 const isDepleted = line.onHand <= 0
+                const isOverAvailable = line.requestedQuantity > line.availableToRequest
 
                 return (
                   <li key={line.key} data-depleted={isDepleted || undefined}>
@@ -283,6 +308,7 @@ export function RequisitionForm({
                           <span className={isDepleted ? 'requisition-line__depleted' : undefined}>
                             คงเหลือ {formatQuantity(line.onHand, line.unit)}
                           </span>
+                          {' · '}เบิกได้อีก {formatQuantity(line.availableToRequest, line.unit)}
                           {' · '}ขั้นต่ำ {formatQuantity(line.minimumStock, line.unit)}
                         </small>
                       </div>
@@ -294,6 +320,7 @@ export function RequisitionForm({
                         <input
                           type="number"
                           min="0.001"
+                          max={line.availableToRequest}
                           step="0.001"
                           required
                           value={line.requestedQuantity}
@@ -323,6 +350,10 @@ export function RequisitionForm({
                       <p className="requisition-line__warning requisition-line__warning--depleted" role="status">
                         {OUT_OF_STOCK_WARNING}
                       </p>
+                    ) : isOverAvailable ? (
+                      <p className="requisition-line__warning requisition-line__warning--unavailable" role="alert">
+                        ขอเกินยอดที่เบิกได้ ขณะนี้เบิกได้อีก {formatQuantity(line.availableToRequest, line.unit)}
+                      </p>
                     ) : willBreachMinimum ? (
                       <p className="requisition-line__warning" role="status">{MINIMUM_STOCK_WARNING}</p>
                     ) : null}
@@ -341,8 +372,8 @@ export function RequisitionForm({
       <div className="form-action-bar">
         <p>
           {isEditing
-            ? 'แก้ไขได้จนกว่าเจ้าหน้าที่คลังจะจ่ายของ ยอดคงคลังยังไม่ถูกตัดจนกว่าจะจ่ายจริง'
-            : 'ส่งแล้วใบเบิกจะอยู่ในสถานะรอจ่าย เจ้าหน้าที่คลังจะเลือกล็อตตามลำดับ FIFO'}
+            ? 'แก้ไขได้จนกว่าเจ้าหน้าที่คลังจะจ่ายของ ระบบจะคำนวณและกันยอดตามรายการใหม่ทันทีเมื่อบันทึก'
+            : 'ส่งแล้วระบบจะกันยอดไว้ทันทีในสถานะรอจ่าย และตัดยอดจริงเมื่อเจ้าหน้าที่คลังจ่ายของ'}
         </p>
         <div className="form-action-bar__buttons">
           <Button
@@ -354,7 +385,7 @@ export function RequisitionForm({
           >
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || lines.length === 0}>
+          <Button type="submit" disabled={isPending || lines.length === 0 || hasAvailabilityError}>
             {isPending
               ? (isEditing ? 'กำลังบันทึก…' : 'กำลังส่ง…')
               : (isEditing ? 'บันทึกการแก้ไข' : 'ส่งใบเบิก')}

@@ -25,6 +25,7 @@ const read = (path: string) => readFileSync(path, 'utf8')
 
 const requisitionSql = readMigration('_lab_stock_requisitions.sql')
 const editCancelSql = readMigration('_requisition_edit_cancel.sql')
+const reservationSql = readMigration('_requisition_stock_reservation.sql')
 
 const fn = (sql: string, name: string) => {
   const body = sql.match(
@@ -42,6 +43,13 @@ assert.doesNotMatch(
   /stock_movements/i,
   'creating a requisition must not write to the stock ledger — if it ever does, editing and cancelling must start compensating for it',
 )
+const reservedCreate = fn(reservationSql, 'create_requisition')
+assert.doesNotMatch(
+  reservedCreate,
+  /stock_movements/i,
+  'the reservation-aware create RPC must still leave the immutable ledger untouched',
+)
+assert.match(reservedCreate, /assert_requisition_stock_available/i)
 assert.match(
   fn(requisitionSql, 'fulfill_requisition'),
   /insert into public\.stock_movements/i,
@@ -53,8 +61,8 @@ assert.equal(
       readFileSync(join(migrationsDir, name), 'utf8'),
     ),
   ).length,
-  1,
-  'only the base migration may define create_requisition, so the no-ledger-write claim above covers the live definition',
+  2,
+  'the base and reservation migrations define create_requisition; the latest definition must be checked above',
 )
 
 // 2. Both new RPCs lock the row before trusting its status, so an edit or a
@@ -251,7 +259,10 @@ assert.match(
 
 const css = read('app/globals.css')
 assert.match(css, /\.requisition-line-list li\[data-depleted\] \{[^}]*var\(--lab-red-soft\)/)
-assert.match(css, /\.requisition-line__warning--depleted \{ color: var\(--lab-red\); \}/)
+assert.match(
+  css,
+  /\.requisition-line__warning--depleted,\s*\.requisition-line__warning--unavailable \{ color: var\(--lab-red\); \}/,
+)
 assert.doesNotMatch(
   form,
   /#[0-9a-fA-F]{3,6}/,

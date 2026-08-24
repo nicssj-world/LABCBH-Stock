@@ -2,15 +2,15 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { RequisitionForm } from '@/components/requisitions/RequisitionForm'
 import { requireActor } from '@/lib/auth/actor'
-import { listInventoryItems } from '@/lib/inventory/queries'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
+import { listRequisitionCatalog } from '@/lib/requisitions/queries'
 
 export default async function NewRequisitionPage() {
   const actor = await requireActor()
   if (!canRequestPurchase(actor)) redirect('/requisitions')
 
-  const inventoryItems = await listInventoryItems({})
+  const inventoryItems = await listRequisitionCatalog()
   const requesterDepartment = actor.department?.trim() || null
   // Keep an out-of-band profile department visible and selected as well. This
   // matters for shared/staging profiles while still letting the picker use the
@@ -26,7 +26,7 @@ export default async function NewRequisitionPage() {
           <Link className="back-link" href="/requisitions">← ใบเบิกน้ำยา</Link>
           <p className="section-kicker">NEW REQUISITION</p>
           <h1>สร้างใบเบิก</h1>
-          <p>ระบบเตือนเมื่อยอดคงเหลือหลังเบิกจะต่ำกว่าขั้นต่ำ แต่ไม่ปิดกั้นการเบิกเร่งด่วน</p>
+          <p>ระบบกันยอดตามใบเบิกที่รอจ่าย และตัดยอดจริงเมื่อเจ้าหน้าที่คลังจ่ายของ</p>
         </div>
       </header>
 
@@ -38,6 +38,9 @@ export default async function NewRequisitionPage() {
           unit: item.baseUnit,
           note: item.note,
           onHand: item.onHand,
+          usableOnHand: item.usableOnHand,
+          waitingReserved: item.waitingReserved,
+          availableToRequest: item.availableToRequest,
           minimumStock: item.minimumStock,
           responsibleDepartment: item.responsibleDepartment,
         }))}

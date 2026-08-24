@@ -3140,7 +3140,8 @@ input[type="number"] {
 }
 
 .requisition-line__warning { grid-column: 1 / -1; margin: 0; color: var(--lab-amber); font-size: 12px; font-weight: 700; }
-.requisition-line__warning--depleted { color: var(--lab-red); }
+.requisition-line__warning--depleted,
+.requisition-line__warning--unavailable { color: var(--lab-red); }
 
 /* A line whose item has run out. The red carries no meaning on its own — the
    quantity still reads 0 and the warning below spells it out — but the tinted

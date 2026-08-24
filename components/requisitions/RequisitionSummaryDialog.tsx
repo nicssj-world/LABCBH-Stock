@@ -15,7 +15,6 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
   const dialogId = `requisition-summary-dialog-${requisition.id}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
-  const totalRequested = requisition.items.reduce((sum, item) => sum + item.requestedQuantity, 0)
 
   return (
     <>
@@ -75,15 +74,21 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 <dd className="identifier">{requisition.items.length}</dd>
               </div>
               <div className="list-summary-dialog__fact--wide">
-                <dt>รวมที่ขอ</dt>
-                <dd className="identifier">{formatQuantity(totalRequested)}</dd>
-              </div>
-              <div className="list-summary-dialog__fact--wide">
                 <dt>สถานะ</dt>
                 <dd>
                   <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
                     {REQUISITION_STATUS_LABELS[requisition.status]}
                   </StatusChip>
+                </dd>
+              </div>
+              <div className="list-summary-dialog__fact--wide">
+                <dt>การกันยอด</dt>
+                <dd>
+                  {requisition.status === 'waiting'
+                    ? 'กันยอดแล้ว รอเจ้าหน้าที่คลังจ่าย'
+                    : requisition.status === 'fulfilled'
+                      ? 'ใช้ยอดกันแล้ว'
+                      : 'คืนยอดแล้ว'}
                 </dd>
               </div>
               {requisition.status === 'fulfilled' && requisition.fulfilledAt && (

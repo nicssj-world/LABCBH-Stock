@@ -5,10 +5,9 @@ import {
   type RequisitionFormInitialValues,
 } from '@/components/requisitions/RequisitionForm'
 import { requireActor } from '@/lib/auth/actor'
-import { listInventoryItems } from '@/lib/inventory/queries'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canManageRequisition } from '@/lib/requisitions/authorization'
-import { getRequisition } from '@/lib/requisitions/queries'
+import { getRequisition, listRequisitionCatalog } from '@/lib/requisitions/queries'
 
 interface RequisitionEditPageProps {
   params: Promise<{ id: string }>
@@ -29,7 +28,7 @@ export default async function RequisitionEditPage({ params }: RequisitionEditPag
   // behind a fulfilled one is append-only and cannot be re-cut from a form.
   if (requisition.status !== 'waiting') redirect(`/requisitions/${requisition.id}`)
 
-  const inventoryItems = await listInventoryItems({})
+  const inventoryItems = await listRequisitionCatalog()
   const initialValues: RequisitionFormInitialValues = {
     requisitionId: requisition.id,
     department: requisition.department,
@@ -53,7 +52,7 @@ export default async function RequisitionEditPage({ params }: RequisitionEditPag
           <Link className="back-link" href={`/requisitions/${requisition.id}`}>← รายละเอียดใบเบิก</Link>
           <p className="section-kicker">EDIT REQUISITION</p>
           <h1>แก้ไขใบเบิก</h1>
-          <p>แก้ไขได้จนกว่าเจ้าหน้าที่คลังจะจ่ายของ ยอดคงคลังจะถูกตัดตอนจ่ายจริงเท่านั้น</p>
+          <p>แก้ไขได้จนกว่าเจ้าหน้าที่คลังจะจ่ายของ ระบบจะคำนวณยอดที่พร้อมให้เบิกและกันยอดใหม่ทันทีเมื่อบันทึก</p>
         </div>
       </header>
 
@@ -65,6 +64,9 @@ export default async function RequisitionEditPage({ params }: RequisitionEditPag
           unit: item.baseUnit,
           note: item.note,
           onHand: item.onHand,
+          usableOnHand: item.usableOnHand,
+          waitingReserved: item.waitingReserved,
+          availableToRequest: item.availableToRequest,
           minimumStock: item.minimumStock,
           responsibleDepartment: item.responsibleDepartment,
         }))}
