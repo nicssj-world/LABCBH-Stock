@@ -44,6 +44,7 @@ export async function resolvePurchaseRequestCommitteePdfInput(purchaseRequestId:
         kind: member.kind,
         seat: member.seat,
         name: member.name,
+        namePrefix: member.namePrefix,
         positionTitle: member.positionTitle,
       })),
     },

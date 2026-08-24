@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 export interface PurchaseRequestCommitteeCandidate {
   id: string
   name: string
+  namePrefix?: string | null
   ephisId: string | null
   positionTitle: string | null
 }
@@ -63,7 +64,7 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     listContractFormOptions(),
     supabaseAdmin
       .from('profiles')
-      .select('id, name, ephis_id, position_title')
+      .select('id, name, name_prefix, ephis_id, position_title')
       .eq('status', 'active')
       .is('deleted_at', null)
       .not('name', 'is', null)
@@ -171,6 +172,7 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     committeeCandidates: (profileResult.data ?? []).map((profile) => ({
       id: profile.id,
       name: profile.name?.trim() || profile.ephis_id || profile.id,
+      namePrefix: profile.name?.trim() ? profile.name_prefix?.trim() || null : null,
       ephisId: profile.ephis_id ?? null,
       positionTitle: profile.position_title?.trim() || null,
     })),

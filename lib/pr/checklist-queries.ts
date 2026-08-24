@@ -91,7 +91,7 @@ export async function getPurchaseRequestChecklist(
       .order('slot'),
     supabaseAdmin
       .from('purchase_request_committees')
-      .select('id, committee_kind, seat, profile_id, name_snapshot, position_snapshot, source_contract_id, profile:profiles!purchase_request_committees_profile_id_fkey(name, position_title, status, deleted_at)')
+      .select('id, committee_kind, seat, profile_id, name_snapshot, position_snapshot, source_contract_id, profile:profiles!purchase_request_committees_profile_id_fkey(name, name_prefix, position_title, status, deleted_at)')
       .eq('purchase_request_id', access.request.id)
       .order('committee_kind')
       .order('seat'),
@@ -127,6 +127,7 @@ export async function getPurchaseRequestChecklist(
       seat: Number(row.seat),
       profileId: String(row.profile_id),
       name: profile?.name?.trim() || String(row.name_snapshot),
+      namePrefix: profile?.name_prefix?.trim() || null,
       positionTitle: profile?.position_title?.trim() || null,
       profileActive: active,
       sourceContractId: row.source_contract_id === null ? null : Number(row.source_contract_id),

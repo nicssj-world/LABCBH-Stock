@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { CommitteeMemberCombobox } from '@/components/pr/PurchaseRequestChecklistFields'
 import { setContractCommittees } from '@/lib/contracts/actions'
+import { formatProfileName } from '@/lib/profiles/name'
 import type { ContractCommitteeMember } from '@/lib/contracts/committee-queries'
 import type { ContractType } from '@/lib/contracts/types'
 import {
@@ -80,7 +81,7 @@ export function ContractCommitteeRoster({
                 <h3>{PR_COMMITTEE_KIND_LABELS[kind]}</h3>
                 <ol>
                   {kindMembers.length > 0 ? kindMembers.map((member) => (
-                    <li key={member.id}><span>{member.name}</span><small>{member.positionTitle ?? 'ยังไม่ระบุตำแหน่ง'}</small></li>
+                    <li key={member.id}><span>{formatProfileName(member.name, member.namePrefix)}</span><small>{member.positionTitle ?? 'ยังไม่ระบุตำแหน่ง'}</small></li>
                   )) : <li className="contract-committee-roster__empty">ยังไม่ได้กำหนดกรรมการ</li>}
                 </ol>
               </section>

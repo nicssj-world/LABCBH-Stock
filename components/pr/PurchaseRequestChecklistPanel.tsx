@@ -8,6 +8,7 @@ import {
   type PurchaseRequestCommitteeKind,
 } from '@/lib/pr/checklist'
 import { retryPurchaseRequestChecklistCleanup } from '@/lib/pr/checklist-actions'
+import { formatProfileName } from '@/lib/profiles/name'
 import type {
   PurchaseRequestChecklistAttachmentRecord,
   PurchaseRequestChecklistRecord,
@@ -195,7 +196,7 @@ export function PurchaseRequestChecklistPanel({
                 <ol>
                   {members.map((member) => (
                     <li key={member.id}>
-                      <span>{member.name}</span>
+                      <span>{formatProfileName(member.name, member.namePrefix)}</span>
                       <small className={member.positionTitle ? '' : 'field-error'}>{member.positionTitle ?? 'ยังไม่ระบุตำแหน่งในข้อมูลบุคลากร'}</small>
                     </li>
                   ))}

@@ -10,6 +10,7 @@ export interface ContractCommitteeMember {
   seat: number
   profileId: string
   name: string
+  namePrefix?: string | null
   positionTitle: string | null
   sourcePurchaseRequestId: string | null
 }
@@ -17,7 +18,7 @@ export interface ContractCommitteeMember {
 export async function getContractCommitteeRoster(contractId: number): Promise<ContractCommitteeMember[]> {
   const result = await supabaseAdmin
     .from('contract_committees')
-    .select('id, committee_kind, seat, profile_id, name_snapshot, position_snapshot, source_purchase_request_id, profile:profiles!contract_committees_profile_id_fkey(name, position_title)')
+    .select('id, committee_kind, seat, profile_id, name_snapshot, position_snapshot, source_purchase_request_id, profile:profiles!contract_committees_profile_id_fkey(name, name_prefix, position_title)')
     .eq('contract_id', contractId)
     .order('committee_kind')
     .order('seat')
@@ -30,6 +31,7 @@ export async function getContractCommitteeRoster(contractId: number): Promise<Co
       seat: Number(row.seat),
       profileId: row.profile_id,
       name: profile?.name?.trim() || row.name_snapshot,
+      namePrefix: profile?.name_prefix?.trim() || null,
       positionTitle: profile?.position_title?.trim() || null,
       sourcePurchaseRequestId: row.source_purchase_request_id ?? null,
     }
@@ -39,7 +41,7 @@ export async function getContractCommitteeRoster(contractId: number): Promise<Co
 export async function listContractCommitteeCandidates(): Promise<PurchaseRequestCommitteeCandidate[]> {
   const result = await supabaseAdmin
     .from('profiles')
-    .select('id, name, ephis_id, position_title')
+    .select('id, name, name_prefix, ephis_id, position_title')
     .eq('status', 'active')
     .is('deleted_at', null)
     .not('name', 'is', null)
@@ -48,6 +50,7 @@ export async function listContractCommitteeCandidates(): Promise<PurchaseRequest
   return (result.data ?? []).map((profile) => ({
     id: profile.id,
     name: profile.name?.trim() || profile.ephis_id || profile.id,
+    namePrefix: profile.name?.trim() ? profile.name_prefix?.trim() || null : null,
     ephisId: profile.ephis_id ?? null,
     positionTitle: profile.position_title?.trim() || null,
   }))

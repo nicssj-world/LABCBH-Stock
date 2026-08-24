@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type DragEvent } from 'react'
 import { Button } from '@/components/ui/Button'
+import { formatProfileName } from '@/lib/profiles/name'
 import {
   derivePurchaseRequestChecklist,
   PR_MAX_ATTACHMENT_SIZE_BYTES,
@@ -159,8 +160,11 @@ export function CommitteeMemberCombobox({
   const matches = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase('th')
     return candidates
-      .filter((candidate) => !needle || [candidate.name, candidate.ephisId, candidate.positionTitle]
-        .some((value) => value?.toLocaleLowerCase('th').includes(needle)))
+      .filter((candidate) => {
+        const displayName = formatProfileName(candidate.name, candidate.namePrefix)
+        return !needle || [displayName, candidate.ephisId, candidate.positionTitle]
+          .some((value) => value?.toLocaleLowerCase('th').includes(needle))
+      })
       .slice(0, 12)
   }, [candidates, query])
   const listId = `committee-${kind}-${seat}-options`
@@ -177,7 +181,7 @@ export function CommitteeMemberCombobox({
           aria-autocomplete="list"
           autoComplete="off"
           disabled={disabled}
-          value={open ? query : selected?.name ?? ''}
+          value={open ? query : selected ? formatProfileName(selected.name, selected.namePrefix) : ''}
           placeholder="พิมพ์ชื่อหรือรหัส E-Phis เพื่อค้นหา"
           onFocus={() => { setQuery(''); setOpen(true) }}
           onBlur={() => window.setTimeout(() => setOpen(false), 120)}
@@ -187,7 +191,7 @@ export function CommitteeMemberCombobox({
           onChange={(event) => { setQuery(event.target.value); setOpen(true) }}
         />
         {selected && !disabled && (
-          <button type="button" aria-label={`ลบ ${selected.name}`} onClick={() => onSelect(null)}>×</button>
+          <button type="button" aria-label={`ลบ ${formatProfileName(selected.name, selected.namePrefix)}`} onClick={() => onSelect(null)}>×</button>
         )}
       </div>
       {open && (
@@ -202,7 +206,7 @@ export function CommitteeMemberCombobox({
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => { onSelect(candidate.id); setOpen(false); setQuery('') }}
                 >
-                  <strong>{candidate.name}</strong>
+                  <strong>{formatProfileName(candidate.name, candidate.namePrefix)}</strong>
                   <small>{candidate.ephisId ? `E-Phis ${candidate.ephisId}` : 'ไม่มีรหัส E-Phis'} · {candidate.positionTitle ?? 'ยังไม่ระบุตำแหน่ง'}</small>
                 </button>
               </li>

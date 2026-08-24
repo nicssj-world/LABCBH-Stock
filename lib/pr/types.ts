@@ -43,6 +43,7 @@ export interface PurchaseRequestCommitteeMemberRecord {
   seat: number
   profileId: string
   name: string
+  namePrefix?: string | null
   positionTitle: string | null
   profileActive: boolean
   sourceContractId: number | null

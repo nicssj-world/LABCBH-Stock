@@ -7,11 +7,13 @@ import {
   PR_COMMITTEE_KIND_LABELS,
   type PurchaseRequestCommitteeKind,
 } from './checklist'
+import { formatProfileName } from '@/lib/profiles/name'
 
 export interface CommitteePdfMember {
   kind: PurchaseRequestCommitteeKind
   seat: number
   name: string
+  namePrefix?: string | null
   positionTitle: string | null
 }
 
@@ -64,7 +66,7 @@ export function buildPurchaseRequestCommitteePdfModel(
       .sort((left, right) => left.seat - right.seat)
       .map((member) => ({
         seat: member.seat,
-        name: member.name.trim(),
+        name: formatProfileName(member.name, member.namePrefix),
         positionTitle: member.positionTitle?.trim() ?? '',
       }))
     return members.length > 0
