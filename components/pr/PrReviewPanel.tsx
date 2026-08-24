@@ -106,7 +106,12 @@ export function PrReviewPanel({
         </div>
         <div className="pr-review__identifier-row">
           <label className="field-row pr-review__identifier-field">
-            <span>เลข PR จาก E-Phis</span>
+            <span className="pr-review__identifier-label">
+              <span>เลข PR จาก E-Phis</span>
+              {request.ephisPrNumber && request.updatedByName && (
+                <span className="pr-review__intro pr-review__identifier-audit">บันทึกโดย {request.updatedByName}</span>
+              )}
+            </span>
             <input
               type="text"
               readOnly={!isEditingEphisPrNumber}
@@ -134,9 +139,6 @@ export function PrReviewPanel({
             >
               {isEditingEphisPrNumber ? 'บันทึกเลข PR จาก E-Phis' : 'แก้เลข PR จาก E-Phis'}
             </Button>
-            {request.ephisPrNumber && request.updatedByName && (
-              <p className="pr-review__intro">บันทึกโดย {request.updatedByName}</p>
-            )}
           </div>
         </div>
       </section>

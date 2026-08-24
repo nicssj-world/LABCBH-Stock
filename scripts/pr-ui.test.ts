@@ -64,6 +64,11 @@ assert.match(detailPage, /<DocumentOpenIcon/, 'the created contract action uses 
 const reviewPanel = read('components/pr/PrReviewPanel.tsx')
 assert.match(reviewPanel, /pr-review__section/, 'stock officer actions need named working regions')
 assert.match(reviewPanel, /pr-review__identifier-row/, 'E-Phis input and action need one aligned working row')
+assert.match(
+  reviewPanel,
+  /<label className="field-row pr-review__identifier-field">[\s\S]*?className="[^"]*pr-review__identifier-label[^"]*"[\s\S]*?เลข PR จาก E-Phis[\s\S]*?className="[^"]*pr-review__identifier-audit[^"]*"[\s\S]*?<\/label>\s*<div className="pr-review__identifier-actions">/,
+  'the saved-by attribution must continue after the E-Phis label while the action keeps its existing column',
+)
 assert.match(reviewPanel, /pr-review__confirm-zone/, 'confirmation needs a distinct action zone')
 assert.match(reviewPanel, /pr-review__blocker/, 'confirmation blockers need to sit beside the action')
 assert.match(reviewPanel, /!checklistReadyForConfirmation/, 'the existing checklist readiness guard must remain in place')

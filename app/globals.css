@@ -3259,7 +3259,8 @@ input[type="number"] {
 .pr-review__section-heading .pr-review__intro { margin-top: 4px; max-width: 72ch; }
 .pr-review__identifier-row { display: grid; grid-template-columns: minmax(0, 520px) auto; gap: 16px; align-items: end; }
 .pr-review__identifier-actions { display: grid; gap: 4px; align-content: end; justify-items: start; min-width: 0; }
-.pr-review__identifier-actions .pr-review__intro { overflow-wrap: anywhere; }
+.pr-review__identifier-label { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.pr-review__identifier-audit { font-weight: 500; overflow-wrap: anywhere; }
 .pr-review__confirm-zone { display: grid; gap: 12px; margin-top: 2px; padding-top: 16px; border-top: 1px solid var(--lab-border); }
 .pr-review__confirm-zone > .lab-button { justify-self: end; min-width: 220px; }
 .pr-review__blocker { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 14px; color: var(--lab-red); background: var(--lab-red-soft); border: 1px solid color-mix(in srgb, var(--lab-red) 28%, var(--lab-border)); border-radius: var(--radius-control); }
