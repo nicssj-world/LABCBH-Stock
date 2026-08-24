@@ -309,7 +309,6 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                   <th>วันที่รับ</th>
                   <th>เลขที่ PO</th>
                   <th>รายการ / LOT / จำนวน</th>
-                  <th className="numeric-cell">จำนวนในใบรับ</th>
                   <th>สถานะ</th>
                   <th><span className="visually-hidden">เปิดใบรับเข้า</span></th>
                 </tr>
@@ -341,7 +340,6 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                         )}
                       </div>
                     </td>
-                    <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
                     <td>
                       <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>
                         {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}

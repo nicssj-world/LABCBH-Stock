@@ -117,7 +117,6 @@ export interface PurchaseRequestReceiptRecord {
   postedAt: string | null
   cancellationNote: string | null
   items: PurchaseRequestReceiptItemRecord[]
-  totalQuantity: number
 }
 
 export interface PurchaseRequestReceiptItemRecord {

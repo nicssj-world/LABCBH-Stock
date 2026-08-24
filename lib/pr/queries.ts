@@ -439,7 +439,6 @@ export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRec
         postedAt: receipt.posted_at,
         cancellationNote: receipt.cancellation_note,
         items,
-        totalQuantity: roundQuantity(items.reduce((sum, item) => sum + item.quantity, 0)),
       }
     })
 

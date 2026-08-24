@@ -5,7 +5,7 @@ import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { ListPagination } from '@/components/ui/ListPagination'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { GoodsReceiptSummaryDialog } from '@/components/receipts/GoodsReceiptSummaryDialog'
 import { GOODS_RECEIPT_STATUS_LABELS, GOODS_RECEIPT_STATUS_TONES } from '@/lib/receipts/presenter'
@@ -123,35 +123,44 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
             <p className="empty-state">ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก</p>
           ) : (
             <div className="detail-items-table">
-              <table className="data-table">
+              <table className="data-table receipt-register-table">
+                <colgroup>
+                  <col className="receipt-register-table__reference" />
+                  <col className="receipt-register-table__date" />
+                  <col className="receipt-register-table__department" />
+                  <col className="receipt-register-table__receiver" />
+                  <col className="receipt-register-table__status" />
+                  <col className="receipt-register-table__action" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>เลขที่ใบสั่งซื้อ (PO)</th>
+                    <th>อ้างอิง PO / PR</th>
                     <th>วันที่รับ</th>
+                    <th>หน่วยงาน</th>
                     <th>ผู้รับของ</th>
-                    <th className="numeric-cell">จำนวนล็อต</th>
-                    <th className="numeric-cell">รวมที่รับ</th>
-                    <th>สถานะ</th>
-                    <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
+                    <th className="receipt-register-table__cell--center">สถานะการลงคลัง</th>
+                    <th className="receipt-register-table__cell--center">รายละเอียด</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedReceipts.items.map((receipt) => (
                     <tr key={receipt.id}>
-                      <td>
+                      <td className="receipt-register-table__reference-cell">
                         <GoodsReceiptSummaryDialog receipt={receipt} />
                         <small>{receipt.purchaseRequestNumber ?? 'ไม่อ้างอิงใบ PR'}</small>
                       </td>
-                      <td>{formatThaiDate(receipt.receivedDate)}</td>
+                      <td className="receipt-register-table__date-cell">{formatThaiDate(receipt.receivedDate)}</td>
+                      <td className="receipt-register-table__department-cell">{receipt.department}</td>
                       <td>{receipt.receiverName}</td>
-                      <td className="numeric-cell identifier">{receipt.items.length}</td>
-                      <td className="numeric-cell identifier">{formatQuantity(receipt.totalQuantity)}</td>
-                      <td>
+                      <td className="receipt-register-table__cell--center receipt-register-table__status-cell">
                         <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>
                           {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}
                         </StatusChip>
+                        {receipt.status === 'draft' && <small>รอบันทึกเข้าคลัง</small>}
+                        {receipt.status === 'posted' && receipt.postedAt && <small>บันทึก {formatThaiDateTime(receipt.postedAt)}</small>}
+                        {receipt.status === 'cancelled' && receipt.cancelledAt && <small>ยกเลิก {formatThaiDateTime(receipt.cancelledAt)}</small>}
                       </td>
-                      <td>
+                      <td className="receipt-register-table__cell--center receipt-register-table__action-cell">
                         <div className="detail-actions">
                           <DetailIconLink
                             href={`/receipts/${receipt.id}`}

@@ -57,7 +57,7 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
           </div>
         </div>
 
-        <div className="contract-detail-heading__body">
+        <div className="contract-detail-heading__body contract-detail-heading__body--single">
           <div className="contract-detail-heading__identity">
             <h1 className="identifier">
               {receipt.purchaseRequestId && receipt.poNumber ? (
@@ -70,16 +70,11 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
             </h1>
             <p>รับเมื่อ {formatThaiDate(receipt.receivedDate)}</p>
           </div>
-          <dl className="contract-detail-heading__value">
-            <dt>จำนวนล็อต</dt>
-            <dd>{receipt.items.length.toLocaleString('th-TH')}</dd>
-          </dl>
         </div>
 
-        <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบรับเข้า">
+        <dl className="contract-facts contract-facts--receipt" aria-label="ข้อมูลสรุปใบรับเข้า">
           <div><dt>หน่วยงาน</dt><dd>{receipt.department}</dd></div>
           <div><dt>ผู้รับของ</dt><dd>{receipt.receiverName}</dd></div>
-          <div><dt>รวมที่รับเข้า</dt><dd className="identifier">{formatQuantity(receipt.totalQuantity)}</dd></div>
           <div>
             <dt>บันทึกเข้าคลัง</dt>
             <dd>{receipt.postedAt ? `${formatThaiDateTime(receipt.postedAt)} · ${receipt.postedByName ?? ''}` : 'ยังไม่บันทึก'}</dd>
@@ -106,8 +101,8 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
       <section className="bench-panel" aria-labelledby="receipt-detail-lines-title">
         <div className="bench-panel__header">
           <div>
-            <p className="section-kicker">LOTS RECEIVED</p>
-            <h2 id="receipt-detail-lines-title">ล็อตในใบรับนี้</h2>
+            <p className="section-kicker">RECEIVING DETAILS</p>
+            <h2 id="receipt-detail-lines-title">รายการรับเข้า</h2>
           </div>
         </div>
         <div className="detail-items-table">

@@ -14,6 +14,11 @@ assert.doesNotMatch(listPage, /^['"]use client['"]/m)
 assert.match(listPage, /GoodsReceiptSummaryDialog receipt=\{receipt\}/, 'the list row must open the mini summary popup, not a plain PO cell')
 assert.match(listPage, /DetailIconLink/, 'the receipt detail action must use the shared icon link')
 assert.match(listPage, /GOODS_RECEIPT_STATUS_LABELS|GOODS_RECEIPT_STATUS_TONES/, 'the list page must use the shared receipts presenter, not a local status map')
+assert.match(listPage, /className="data-table receipt-register-table"/, 'the receipt register must use a deliberate audit-and-queue layout')
+assert.match(listPage, /<colgroup>[\s\S]*receipt-register-table__reference[\s\S]*receipt-register-table__action/, 'the receipt register must declare stable column widths')
+assert.match(listPage, /สถานะการลงคลัง/, 'the register must make the next stock action visible')
+assert.match(listPage, /formatThaiDateTime\(receipt\.postedAt\)/, 'posted receipts must show the stock-posting time in the queue')
+assert.doesNotMatch(listPage, /totalQuantity|รวมที่รับ|จำนวนล็อต/, 'the register must not show mixed-unit totals or redundant lot counts')
 
 const receiptPresenter = read('lib/receipts/presenter.ts')
 assert.match(receiptPresenter, /GOODS_RECEIPT_STATUS_LABELS/)
@@ -32,9 +37,10 @@ assert.match(read('components/ui/useDeferredDialog.ts'), /showModal\(\)/, 'the s
 assert.match(summaryDialog, /list-summary-dialog/)
 assert.match(summaryDialog, /StatusChip tone=\{GOODS_RECEIPT_STATUS_TONES/, 'status must never be a bare colored word')
 assert.match(summaryDialog, /DetailIconLink/, 'the receipt popup detail route must use the shared icon link')
-assert.match(summaryDialog, /รายการน้ำยา/, 'the receipt popup must show its reagent section')
+assert.match(summaryDialog, /รายการรับเข้า/, 'the receipt popup must show its receiving section')
 assert.match(summaryDialog, /receipt\.items\.map/, 'the receipt popup must list every received reagent lot')
 assert.match(summaryDialog, /ล็อต \{item\.lotNumber\}/, 'the receipt popup must keep the lot identity with each reagent')
+assert.doesNotMatch(summaryDialog, /totalQuantity|รวมที่รับ|จำนวนล็อต/, 'the receipt popup must not show mixed-unit totals or redundant lot counts')
 
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)
@@ -49,6 +55,9 @@ assert.doesNotMatch(detailPage, /PO EVIDENCE|PoImageUploader|poUpload=failed/)
 assert.match(detailPage, /ReceiptLinesEditor|ReceiptPostPanel/)
 assert.match(detailPage, /formatThaiDateTime\(receipt\.cancelledAt\)/, 'the cancellation audit must show its time, not just its date')
 assert.match(detailPage, /inline-alert--info/, 'posted receipts must explain the immutable correction path')
+assert.match(detailPage, /contract-detail-heading__body--single/, 'the receipt detail header must not reserve space for a useless aggregate metric')
+assert.match(detailPage, /รายการรับเข้า/, 'the receipt detail must name the actionable line-item section')
+assert.doesNotMatch(detailPage, /totalQuantity|รวมที่รับเข้า|จำนวนล็อต/, 'the receipt detail must not show mixed-unit totals or redundant lot counts')
 assert.match(
   detailPage,
   /ใบรับเข้านี้บันทึกเข้าคลังแล้ว จึงแก้ไขประวัติเดิมไม่ได้ หากยอดไม่ตรง ให้คลิกชื่อน้ำยาด้านล่าง แล้วเลือก “ปรับยอดคงคลัง” เพื่อเพิ่มหรือลดยอด พร้อมระบุเหตุผลทุกครั้ง/,

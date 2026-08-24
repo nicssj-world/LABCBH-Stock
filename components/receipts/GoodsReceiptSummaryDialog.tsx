@@ -74,14 +74,6 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
                 <dt>ผู้รับของ</dt>
                 <dd>{receipt.receiverName}</dd>
               </div>
-              <div>
-                <dt>จำนวนล็อต</dt>
-                <dd className="identifier">{receipt.items.length}</dd>
-              </div>
-              <div>
-                <dt>รวมที่รับ</dt>
-                <dd className="identifier">{formatQuantity(receipt.totalQuantity)}</dd>
-              </div>
               <div className="list-summary-dialog__fact--wide">
                 <dt>สถานะ</dt>
                 <dd>
@@ -102,8 +94,7 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
 
             <section className="list-summary-dialog__items" aria-labelledby={`${dialogId}-items-title`}>
               <div className="list-summary-dialog__items-heading">
-                <h3 id={`${dialogId}-items-title`}>รายการน้ำยา</h3>
-                <span>{receipt.items.length} รายการ</span>
+                <h3 id={`${dialogId}-items-title`}>รายการรับเข้า</h3>
               </div>
               {receipt.items.length > 0 ? (
                 <ol className="list-summary-dialog__item-list">

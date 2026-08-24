@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { formatQuantity } from '@/lib/inventory/presenter'
 import { cancelGoodsReceipt, postGoodsReceipt } from '@/lib/receipts/actions'
 import type { GoodsReceiptRecord } from '@/lib/receipts/types'
 
@@ -52,8 +51,7 @@ export function ReceiptPostPanel({ receipt }: { receipt: GoodsReceiptRecord }) {
   return (
     <div className="receipt-post">
       <p className="receipt-post__intro">
-        บันทึกแล้วระบบจะสร้างล็อตและลงบัญชีรับเข้า {formatQuantity(receipt.totalQuantity)} หน่วย จาก{' '}
-        {receipt.items.length} รายการ · กดซ้ำจะไม่ทำให้ยอดเพิ่มซ้ำ
+        บันทึกแล้วระบบจะสร้างล็อตและลงบัญชีรับเข้าตามรายการด้านล่าง · กดซ้ำจะไม่ทำให้ยอดเพิ่มซ้ำ
       </p>
       {isCancelling && (
         <label className="field-row receipt-post__cancel-note">

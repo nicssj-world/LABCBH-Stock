@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { detectDuplicateLots, findOverRequestedItems, summarizeReceiptLines } from '../lib/receipts/schema'
+import { detectDuplicateLots, findOverRequestedItems } from '../lib/receipts/schema'
 
 /**
  * Contract test for posting a receipt.
@@ -77,8 +77,6 @@ const lines = [
 ]
 assert.deepEqual(detectDuplicateLots(lines), ['a::L1'], 'lot numbers match case- and space-insensitively')
 assert.deepEqual(detectDuplicateLots([lines[0], lines[2]]), [])
-
-assert.deepEqual(summarizeReceiptLines(lines), { lineCount: 3, totalQuantity: 10 })
 
 // 8. Receiving more of a reagent than the referenced PR requested is caught,
 //    even when split across two lots (two lines share one inventoryItemId).

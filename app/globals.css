@@ -1547,6 +1547,23 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .pr-receiving-summary small { color: var(--lab-muted); font-size: 10px; white-space: nowrap; }
 .pr-receiving-summary__empty { color: var(--lab-muted); }
 .pr-receiving-summary--card { color: var(--lab-ink); font-size: 12px; }
+.receipt-register-table {
+  min-width: 1040px;
+  table-layout: fixed;
+}
+.receipt-register-table__reference { width: 22%; }
+.receipt-register-table__date { width: 14%; }
+.receipt-register-table__department { width: 23%; }
+.receipt-register-table__receiver { width: 16%; }
+.receipt-register-table__status { width: 16%; }
+.receipt-register-table__action { width: 9%; }
+.receipt-register-table__reference-cell,
+.receipt-register-table__date-cell,
+.receipt-register-table__status-cell { white-space: nowrap; }
+.receipt-register-table__status-cell small { white-space: nowrap; }
+.receipt-register-table__action-cell .detail-actions { justify-content: center; }
+.data-table th.receipt-register-table__cell--center,
+.data-table td.receipt-register-table__cell--center { text-align: center; }
 .status-filter-link {
   display: inline-flex;
   align-items: center;
@@ -1863,6 +1880,7 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-edit-dialog__body .contract-form { gap: 16px; }
 .contract-edit-dialog__body .form-action-bar { bottom: 0; margin: 0; }
 .contract-detail-heading__body { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr); min-height: 168px; }
+.contract-detail-heading__body--single { grid-template-columns: 1fr; }
 .contract-detail-heading__identity { display: grid; align-content: center; padding: 28px 32px 30px; }
 .contract-detail-heading__number { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; color: var(--lab-muted); }
 .contract-detail-heading__number span { font-size: 11px; font-weight: 700; }
@@ -1880,6 +1898,7 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 /* Shares __body's exact 1.55fr : .65fr split (same minmax floor on the last
    column) so its divider lines land under __identity/__value's, not just near them. */
 .contract-facts--split-with-value { grid-template-columns: minmax(0, .55fr) minmax(0, .5fr) minmax(0, .5fr) minmax(300px, .65fr); }
+.contract-facts--receipt { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /* Same alignment fix as above, but keeps this page's own vendor/period bias
    (1.1 : .55 : .95 scaled down) instead of flattening every column to equal width. */
 .contract-facts--vendor-split-with-value { grid-template-columns: minmax(0, .66fr) minmax(0, .33fr) minmax(0, .56fr) minmax(300px, .65fr); }

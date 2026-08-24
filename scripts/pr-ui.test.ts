@@ -52,6 +52,7 @@ assert.match(detailPage, /GOODS_RECEIPT_STATUS_LABELS/, 'receipt history must id
 assert.match(detailPage, /receipt\.items\.map/, 'receipt history must show every received line')
 assert.match(detailPage, /item\.lotNumber/, 'receipt history must show the lot for each received line')
 assert.match(detailPage, /item\.quantity/, 'receipt history must show the quantity for each received line')
+assert.doesNotMatch(detailPage, /totalQuantity|จำนวนในใบรับ|รวมที่รับ/, 'PR receipt history must avoid mixed-unit aggregate totals')
 assert.match(detailPage, /item\.expiryDate/, 'receipt history must show the expiry date for each received line')
 assert.match(detailPage, /pr-receipt-history__items/, 'receipt lines must be grouped inside each receipt history row')
 assert.doesNotMatch(detailPage, /<PurchaseRequestPoFileCard/, 'the PR header must not own PO upload controls')

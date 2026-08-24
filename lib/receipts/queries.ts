@@ -1,7 +1,6 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { roundQuantity } from '@/lib/inventory/balance'
 import { PURCHASE_METHODS_BY_PURPOSE } from '@/lib/pr/schema'
 import { createClient } from '@/lib/supabase/server'
 import { GOODS_RECEIPT_STATUSES } from './schema'
@@ -122,7 +121,6 @@ function mapReceipt(row: z.infer<typeof receiptRowSchema>): GoodsReceiptRecord {
     cancellationNote: row.cancellation_note,
     createdAt: row.created_at,
     items,
-    totalQuantity: roundQuantity(items.reduce((sum, item) => sum + item.quantity, 0)),
   }
 }
 

@@ -157,10 +157,6 @@ export function ReceiptLinesEditor({
         </>
       )}
 
-      <p className="items-editor__grand-total">
-        <span>รวมที่รับเข้า</span>
-        <strong>{formatQuantity(lines.reduce((sum, line) => sum + line.quantity, 0))}</strong>
-      </p>
     </div>
   )
 }

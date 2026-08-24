@@ -42,7 +42,6 @@ export interface GoodsReceiptRecord {
   cancellationNote: string | null
   createdAt: string
   items: GoodsReceiptItemRecord[]
-  totalQuantity: number
 }
 
 export interface ReceivablePurchaseRequestItem {

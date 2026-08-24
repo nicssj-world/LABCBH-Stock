@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { roundQuantity } from '@/lib/inventory/balance'
 import { isoDateSchema } from '@/lib/validation/date'
 
 export const GOODS_RECEIPT_STATUSES = ['draft', 'posted', 'cancelled'] as const
@@ -81,13 +80,4 @@ export function findOverRequestedItems(
       (itemId in requestedByItem && total > requestedByItem[itemId]),
     )
     .map(([itemId]) => itemId)
-}
-
-export function summarizeReceiptLines(
-  lines: Array<{ quantity: number }>,
-): { lineCount: number; totalQuantity: number } {
-  return {
-    lineCount: lines.length,
-    totalQuantity: roundQuantity(lines.reduce((sum, line) => sum + line.quantity, 0)),
-  }
 }
