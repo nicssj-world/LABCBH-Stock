@@ -33,7 +33,6 @@ export default function LoginPage() {
     }
 
     router.replace('/dashboard')
-    router.refresh()
   }
 
   return (
