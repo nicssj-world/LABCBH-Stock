@@ -1,5 +1,5 @@
 import { effectiveContractStatus } from '@/lib/contracts/presenter'
-import { listContracts } from '@/lib/contracts/queries'
+import { listContractFormOptions } from '@/lib/contracts/queries'
 import { listInventoryItems } from '@/lib/inventory/queries'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { listContractItemOptions, listNextContractPurchaseSequences } from '@/lib/pr/queries'
@@ -58,10 +58,9 @@ export interface PurchaseRequestFormOptions {
  * away from the safeguards on the new-PR screen.
  */
 export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: string): Promise<PurchaseRequestFormOptions> {
-  const [inventoryItems, contractItems, allContracts, profileResult] = await Promise.all([
-    listInventoryItems({}),
-    listContractItemOptions(undefined, excludePurchaseRequestId),
-    listContracts({}),
+  const [inventoryItems, allContracts, profileResult] = await Promise.all([
+    listInventoryItems({}, { includeAlertScope: false }),
+    listContractFormOptions(),
     supabaseAdmin
       .from('profiles')
       .select('id, name, ephis_id, position_title')
@@ -92,12 +91,17 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
       contract.contractNumber ? ` · ${contract.contractNumber}` : ''
     }`,
   }))
-  const committeeResult = contracts.length === 0
-    ? { data: [], error: null }
-    : await supabaseAdmin
-        .from('contract_committees')
-        .select('contract_id, committee_kind, seat')
-        .in('contract_id', contracts.map((contract) => contract.id))
+  const contractIds = contracts.map((contract) => contract.id)
+  const [contractItems, committeeResult, nextPurchaseSequenceByContract] = await Promise.all([
+    listContractItemOptions(undefined, excludePurchaseRequestId, contractIds),
+    contracts.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : supabaseAdmin
+          .from('contract_committees')
+          .select('contract_id, committee_kind, seat')
+          .in('contract_id', contractIds),
+    listNextContractPurchaseSequences(contractIds),
+  ])
   if (committeeResult.error) throw new Error(`อ่านรายชื่อกรรมการสัญญาไม่สำเร็จ: ${committeeResult.error.message}`)
   const committeesByContract = new Map<number, Array<{ committee_kind: string; seat: number }>>()
   for (const row of committeeResult.data ?? []) {
@@ -105,8 +109,6 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     rows.push({ committee_kind: row.committee_kind, seat: Number(row.seat) })
     committeesByContract.set(Number(row.contract_id), rows)
   }
-  const nextPurchaseSequenceByContract = await listNextContractPurchaseSequences(contracts.map((contract) => contract.id))
-
   const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
 
   const catalog = inventoryItems.map((item) => ({

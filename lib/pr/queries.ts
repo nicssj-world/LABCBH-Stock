@@ -539,7 +539,10 @@ const contractItemOptionRowSchema = z.object({
 export async function listContractItemOptions(
   contractId?: number,
   excludePurchaseRequestId?: string,
+  contractIds?: readonly number[],
 ): Promise<ContractItemOption[]> {
+  if (contractIds && contractIds.length === 0) return []
+
   const supabase = await createClient()
   let query = supabase
     .from('contract_items')
@@ -561,6 +564,7 @@ export async function listContractItemOptions(
     .order('line_number')
 
   if (contractId !== undefined) query = query.eq('contract_id', contractId)
+  else if (contractIds) query = query.in('contract_id', [...contractIds])
 
   const { data, error } = await query
 

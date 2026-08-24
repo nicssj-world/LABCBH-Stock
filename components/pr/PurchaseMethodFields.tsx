@@ -41,9 +41,8 @@ export interface PurchaseMethodFieldsProps {
   onChange: (method: PurchaseMethod) => void
 }
 
-const PURPOSE_CONSEQUENCE: Record<PurchasePurpose, string> = {
+const PURPOSE_CONSEQUENCE: Partial<Record<PurchasePurpose, string>> = {
   purchase_order: 'ตัดยอดในสัญญา (ถ้ามี) และออกใบสั่งซื้อ',
-  new_contract: 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที',
 }
 
 function todayIso(): string {
@@ -144,7 +143,9 @@ export function PurchaseMethodFields({
                 />
                 {PURCHASE_PURPOSE_LABELS[purposeOption]}
               </span>
-              <p className="purpose-option__consequence">{PURPOSE_CONSEQUENCE[purposeOption]}</p>
+              {PURPOSE_CONSEQUENCE[purposeOption] && (
+                <p className="purpose-option__consequence">{PURPOSE_CONSEQUENCE[purposeOption]}</p>
+              )}
             </label>
           ))}
         </div>

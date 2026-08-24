@@ -135,6 +135,30 @@ const CONTRACT_READ_SELECT = `
   ${CONTRACT_STAGE_HISTORY_READ_SELECT}
 `
 
+const CONTRACT_FORM_OPTION_READ_SELECT = `
+  id,
+  product,
+  contract_type,
+  department,
+  procurement_stage,
+  status,
+  display_name,
+  contract_number,
+  end_date
+`
+
+const contractFormOptionReadRowSchema = z.object({
+  id: numericSchema.pipe(z.number().int().positive()),
+  product: z.string(),
+  contract_type: z.enum(CONTRACT_TYPES).nullable(),
+  department: z.enum(CONTRACT_DEPARTMENTS).nullable(),
+  procurement_stage: z.enum(PROCUREMENT_STAGES).nullable(),
+  status: z.enum(['active', 'expired', 'cancelled', 'pending']).nullable(),
+  display_name: z.string().nullable(),
+  contract_number: z.string().nullable(),
+  end_date: z.string().nullable(),
+})
+
 export interface ContractFilters {
   fiscalYear?: number
   contractType?: (typeof CONTRACT_TYPES)[number]
@@ -142,6 +166,18 @@ export interface ContractFilters {
   procurementStage?: (typeof PROCUREMENT_STAGES)[number]
   search?: string
   includeArchived?: boolean
+}
+
+export interface ContractFormOption {
+  id: number
+  product: string
+  contractType: (typeof CONTRACT_TYPES)[number] | null
+  department: (typeof CONTRACT_DEPARTMENTS)[number] | null
+  procurementStage: (typeof PROCUREMENT_STAGES)[number] | null
+  status: 'active' | 'expired' | 'cancelled' | 'pending' | null
+  displayName: string | null
+  contractNumber: string | null
+  endDate: string | null
 }
 
 function mapContractRow(
@@ -291,6 +327,34 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
   if (error) throw new Error(`อ่านรายการสัญญาไม่สำเร็จ: ${error.message}`)
 
   return contractReadRowSchema.array().parse(data ?? []).map((row) => mapContractRow(row))
+}
+
+/**
+ * The PR form only needs contract identity and lifecycle fields. Do not load
+ * every contract's line items and usage ledger just to populate its selectors.
+ */
+export async function listContractFormOptions(): Promise<ContractFormOption[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contracts')
+    .select(CONTRACT_FORM_OPTION_READ_SELECT)
+    .or('is_archived.eq.false,is_archived.is.null')
+    .order('fiscal_year', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false })
+
+  if (error) throw new Error(`อ่านรายการสัญญาสำหรับใบ PR ไม่สำเร็จ: ${error.message}`)
+
+  return contractFormOptionReadRowSchema.array().parse(data ?? []).map((row) => ({
+    id: row.id,
+    product: row.product,
+    contractType: row.contract_type,
+    department: row.department,
+    procurementStage: row.procurement_stage,
+    status: row.status,
+    displayName: row.display_name,
+    contractNumber: row.contract_number,
+    endDate: row.end_date,
+  }))
 }
 
 export async function getContract(

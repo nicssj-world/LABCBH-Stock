@@ -57,7 +57,8 @@ assert.match(queries, /pendingReserved/i)
 
 const formOptions = read('lib/pr/form-options.ts')
 assert.match(formOptions, /loadPurchaseRequestFormOptions\(excludePurchaseRequestId\?: string\)/)
-assert.match(formOptions, /listContractItemOptions\(undefined, excludePurchaseRequestId\)/)
+assert.match(formOptions, /const contractIds = contracts\.map\(\(contract\) => contract\.id\)/)
+assert.match(formOptions, /listContractItemOptions\(undefined, excludePurchaseRequestId, contractIds\)/)
 
 const editPage = read('app/(protected)/purchase-requests/[id]/edit/page.tsx')
 assert.match(editPage, /loadPurchaseRequestFormOptions\(request\.id\)/)

@@ -103,6 +103,7 @@ assert.match(form, /createPurchaseRequest/)
 assert.match(form, /updatePurchaseRequest/)
 assert.match(form, /initialValues/)
 assert.match(form, /mode === 'edit'/)
+assert.doesNotMatch(form, /เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที/, 'the new PR page must not show the contract-creation helper sentence')
 assert.match(form, /PurchaseMethodFields/)
 assert.match(form, /ContractItemPicker/)
 assert.match(form, /departments: readonly string\[\]/)
@@ -220,6 +221,7 @@ assert.match(styles, /\.pr-register-table__receiving\s*\{[^}]*width:/, 'the PR r
 const methodFields = read('components/pr/PurchaseMethodFields.tsx')
 assert.match(methodFields, /PURCHASE_METHOD_LABELS/, 'the six methods come from the shared presenter')
 assert.match(methodFields, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork has its own labels')
+assert.doesNotMatch(methodFields, /เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที/, 'the new PR page must not show the contract-creation consequence sentence')
 // Without a purpose there is no method list to show, so the panel has to say
 // what to do instead of rendering an empty radio group.
 assert.match(

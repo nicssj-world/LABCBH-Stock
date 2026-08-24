@@ -229,6 +229,7 @@ export interface PurchaseRequestChecklistFieldsProps {
   checklistComplete: boolean
   overallProgress: number | null
   disabled?: boolean
+  showCommitteeValidationErrors?: boolean
   onFileChange: (slotKey: string, file: File | undefined) => void
   onAssignmentsChange: (assignments: CommitteeAssignmentInput[]) => void
 }
@@ -244,6 +245,7 @@ export function PurchaseRequestChecklistFields({
   checklistComplete,
   overallProgress,
   disabled = false,
+  showCommitteeValidationErrors = true,
   onFileChange,
   onAssignmentsChange,
 }: PurchaseRequestChecklistFieldsProps) {
@@ -465,7 +467,7 @@ export function PurchaseRequestChecklistFields({
               </fieldset>
             ))}
           </div>
-          {committeeErrors.length > 0 && (
+          {showCommitteeValidationErrors && committeeErrors.length > 0 && (
             <ul className="pr-checklist__errors" aria-live="polite">
               {committeeErrors.map((message) => <li key={message}>{message}</li>)}
             </ul>

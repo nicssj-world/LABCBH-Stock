@@ -746,6 +746,7 @@ export function PurchaseRequestForm({
           checklistComplete={checklistComplete}
           overallProgress={overallProgress}
           disabled={isPending}
+          showCommitteeValidationErrors={isEditMode}
           onFileChange={changeChecklistFile}
           onAssignmentsChange={setCommitteeAssignments}
         />
@@ -764,7 +765,7 @@ export function PurchaseRequestForm({
           {isEditMode
             ? 'แก้ไขได้เฉพาะใบ PR ที่ยังรอเจ้าหน้าที่คลังยืนยัน'
             : purpose === 'new_contract'
-            ? 'เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที'
+            ? null
             : 'ยอดในสัญญาจะถูกตัดเมื่อเจ้าหน้าที่คลังยืนยันเท่านั้น'}
           {!isLease && lines.length > 0 && ` · ${formatQuantity(lines.length)} รายการ · รวม ${formatBaht(total)}`}
           {method === null && ' · เลือกจุดประสงค์และวิธีจัดซื้อก่อนจึงจะส่งได้'}

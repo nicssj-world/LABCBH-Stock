@@ -300,6 +300,7 @@ export async function listInventoryCatalog(): Promise<InventoryCatalogEntry[]> {
 
 export async function listInventoryItems(
   filters: InventoryFilters = {},
+  options: { includeAlertScope?: boolean } = {},
 ): Promise<InventoryItemRecord[]> {
   const supabase = await createClient()
   let query = supabase.from('inventory_items').select(ITEM_SELECT).order('ls_code')
@@ -312,15 +313,22 @@ export async function listInventoryItems(
     query = query.or(`ls_code.ilike.%${search}%,name.ilike.%${search}%`)
   }
 
-  // All three run together. Feeding the item ids into the balance read would
+  // All reads run together. Feeding the item ids into the balance read would
   // force it to wait for the item query to come back first, and that second
   // serial round-trip was most of the delay behind every keystroke in the
   // list's search box.
+  // The PR form only needs stock metrics for its advisory picker. The
+  // movement/open-request scope is used by the inventory restock worklist and
+  // can be skipped until that page is rendered.
+  const alertScopePromise = options.includeAlertScope === false
+    ? Promise.resolve({ moved: new Set<string>(), requested: new Set<string>() })
+    : readAlertScope(supabase)
+
   const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, alertScope, minimumStockMonths] =
     await Promise.all([
       query,
       readBalancesAndIssues(supabase),
-      readAlertScope(supabase),
+      alertScopePromise,
       getInventoryMinimumStockMonths(),
     ])
 
