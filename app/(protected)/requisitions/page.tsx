@@ -137,8 +137,8 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                     <th>เลขที่ใบเบิก</th>
                     <th>ต้องการรับ</th>
                     <th>ผู้ขอเบิก</th>
-                    <th className="requisition-register-table__items-cell">รายการ</th>
-                    <th>สถานะ</th>
+                    <th className="requisition-register-table__cell--center requisition-register-table__items-cell">รายการ</th>
+                    <th className="requisition-register-table__cell--center">สถานะ</th>
                     <th className="requisition-register-table__cell--center">รายละเอียด</th>
                   </tr>
                 </thead>
@@ -151,8 +151,8 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                         {requisition.requesterName}
                         <small>{requisition.department}</small>
                       </td>
-                      <td className="numeric-cell identifier requisition-register-table__items-cell">{requisition.items.length}</td>
-                      <td className="requisition-register-table__status-cell">
+                      <td className="identifier requisition-register-table__cell--center requisition-register-table__items-cell">{requisition.items.length}</td>
+                      <td className="requisition-register-table__cell--center requisition-register-table__status-cell">
                         <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
                           {REQUISITION_STATUS_LABELS[requisition.status]}
                         </StatusChip>

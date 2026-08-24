@@ -1540,8 +1540,6 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .requisition-register-table__status-cell { white-space: nowrap; }
 .requisition-register-table__requester-cell { overflow-wrap: anywhere; }
 .requisition-register-table__action-cell .detail-actions { justify-content: center; }
-.data-table th.requisition-register-table__items-cell,
-.data-table td.requisition-register-table__items-cell { text-align: right; }
 .data-table th.requisition-register-table__cell--center,
 .data-table td.requisition-register-table__cell--center { text-align: center; }
 .pr-receiving-summary { display: grid; gap: 2px; line-height: 1.25; }
