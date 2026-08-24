@@ -10,6 +10,7 @@ import {
   isContractFilePathAllowed,
 } from '@/lib/contracts/files'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
 function unwrap(operation: string, result: { error: { message: string } | null }) {
   if (result.error) throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
@@ -56,6 +57,12 @@ export async function storeContractFile(contractId: number, file: File) {
 
     if (cleanupError) {
       console.error(`ล้างไฟล์สัญญาที่บันทึกไม่สำเร็จไม่ได้: ${cleanupError.message}`, { path })
+      await enqueueStorageCleanupJobBestEffort({
+        storageBackend: 'supabase_storage',
+        bucketName: CONTRACT_FILE_BUCKET,
+        storageKey: path,
+        jobKind: 'storage_upload_rollback',
+      })
     }
 
     throw new Error(`บันทึกไฟล์สัญญาไม่สำเร็จ: ${result.error.message}`)

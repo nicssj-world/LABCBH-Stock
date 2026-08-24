@@ -101,7 +101,7 @@ export function PurchaseRequestOutsideStockReceiveControl({
       {portalReady && createPortal(
         <dialog
           ref={dialogRef}
-          className="app-dialog"
+          className="app-dialog outside-stock-dialog"
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
           onCancel={(event) => {
@@ -129,7 +129,7 @@ export function PurchaseRequestOutsideStockReceiveControl({
               </svg>
             </button>
           </header>
-          <div className="app-dialog__body">
+          <div className="app-dialog__body outside-stock-dialog__body">
             <div className="decision-panel">
               <strong>รายการนี้จะไม่ผ่านคลัง</strong>
               <p>
@@ -139,7 +139,7 @@ export function PurchaseRequestOutsideStockReceiveControl({
               </p>
             </div>
             {error?.action === 'receive' && <p className="form-error" role="alert">{error.message}</p>}
-            <div className="decision-panel__actions">
+            <div className="decision-panel__actions outside-stock-dialog__actions">
               <Button variant="secondary" type="button" onClick={closeDialog} disabled={isPending}>
                 กลับไปตรวจสอบ
               </Button>

@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = new Set(['/login', '/access-denied', '/auth/confirm'])
+const AUTH_BYPASS_PATHS = new Set(['/api/internal/storage-cleanup'])
 
 function copyResponseState(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie))
@@ -13,6 +14,12 @@ function copyResponseState(source: NextResponse, target: NextResponse) {
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
+  const path = request.nextUrl.pathname
+
+  // Internal cron routes authenticate themselves with a service secret. They
+  // must reach the route handler without a browser session so Vercel Cron can
+  // invoke them, while the handler still rejects every missing/invalid secret.
+  if (AUTH_BYPASS_PATHS.has(path)) return response
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +43,6 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims()
   const isAuthenticated = Boolean(data?.claims?.sub)
-  const path = request.nextUrl.pathname
 
   if (!isAuthenticated && !PUBLIC_PATHS.has(path)) {
     const loginUrl = new URL('/login', request.url)

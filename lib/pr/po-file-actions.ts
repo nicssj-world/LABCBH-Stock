@@ -17,6 +17,7 @@ import {
 import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
 const purchaseRequestIdSchema = z.string().uuid()
 
@@ -124,6 +125,12 @@ export async function uploadPurchaseRequestPoFile(
       .remove([path])
     if (cleanupError) {
       console.error(`ล้างไฟล์ PO ที่บันทึกไม่สำเร็จไม่ได้: ${cleanupError.message}`, { path })
+      await enqueueStorageCleanupJobBestEffort({
+        storageBackend: 'supabase_storage',
+        bucketName: PO_IMAGE_BUCKET,
+        storageKey: path,
+        jobKind: 'storage_upload_rollback',
+      })
     }
     throw new Error(`บันทึกไฟล์ PO ไม่สำเร็จ: ${result.error.message}`)
   }

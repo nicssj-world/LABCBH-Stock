@@ -21,6 +21,12 @@ const config = {
   If the database is ever moved, this has to move with it.
   */
   regions: ['syd1'],
+  crons: [
+    {
+      path: '/api/internal/storage-cleanup',
+      schedule: '*/10 * * * *',
+    },
+  ],
 } as const
 
 export default config

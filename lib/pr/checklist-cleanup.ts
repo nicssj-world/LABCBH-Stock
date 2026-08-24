@@ -5,6 +5,7 @@ import { purchaseMethodPurpose } from '@/lib/pr/schema'
 import { isPurchaseRequestChecklistStorageKey } from '@/lib/pr/checklist-storage'
 import { getR2BucketName, getR2Client } from '@/lib/r2/client'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
 export type PurchaseRequestChecklistDeletionReason =
   | 'replaced'
@@ -33,6 +34,20 @@ async function markDeleted(
     p_reason: reason,
   })
   if (result.error) throw new Error(`บันทึกผลการลบเอกสาร checklist ไม่สำเร็จ: ${result.error.message}`)
+}
+
+async function queueChecklistLifecycleRetry(
+  purchaseRequestId: string,
+  reason: PurchaseRequestChecklistDeletionReason,
+) {
+  await enqueueStorageCleanupJobBestEffort({
+    storageBackend: 'r2',
+    bucketName: null,
+    storageKey: null,
+    jobKind: 'checklist_lifecycle_retry',
+    resourceId: purchaseRequestId,
+    metadata: { reason },
+  })
 }
 
 export async function cleanupPurchaseRequestChecklistObjects(
@@ -81,11 +96,17 @@ export async function cleanupPurchaseRequestChecklistObjects(
       deletedByReason.set(recordedReason, ids)
     } catch (error) {
       failures.push(`${attachment.id}: ${error instanceof Error ? error.message : 'ลบไฟล์จาก R2 ไม่สำเร็จ'}`)
+      await queueChecklistLifecycleRetry(purchaseRequestId, reason)
     }
   }
 
   for (const [recordedReason, attachmentIds] of deletedByReason) {
-    await markDeleted(purchaseRequestId, actorId, recordedReason, attachmentIds)
+    try {
+      await markDeleted(purchaseRequestId, actorId, recordedReason, attachmentIds)
+    } catch (error) {
+      await queueChecklistLifecycleRetry(purchaseRequestId, recordedReason)
+      throw error
+    }
   }
   if (failures.length > 0) throw new Error(failures.join(' · '))
   return { deletedCount: [...deletedByReason.values()].reduce((sum, ids) => sum + ids.length, 0) }

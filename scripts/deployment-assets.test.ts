@@ -56,6 +56,8 @@ assert.match(
   /regions:\s*\['syd1'\]/,
   'serverless functions must stay co-located with the ap-southeast-2 database',
 )
+assert.match(vercelConfig, /crons\s*:/, 'storage cleanup must have a scheduled worker')
+assert.match(vercelConfig, /\/api\/internal\/storage-cleanup/, 'the scheduled worker path must be explicit')
 
 // Vercel CLI does not inherit every project-specific Git ignore. Keep database
 // dumps and local import inputs out of the upload manifest explicitly.
@@ -111,5 +113,6 @@ for (const key of [
 ]) {
   assert.match(envExample, new RegExp(`^${key}=`, 'm'), `.env.example must document ${key}`)
 }
+assert.match(envExample, /^CRON_SECRET=/m, 'the cleanup route secret must be documented')
 
 console.log('deployment assets contract tests passed')

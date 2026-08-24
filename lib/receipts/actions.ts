@@ -71,7 +71,7 @@ export async function postGoodsReceipt(receiptId: string) {
     // not pretend that it rolled back; surface a retryable cleanup warning.
     revalidateReceipt(parsedId)
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-    throw new Error(`บันทึกรับเข้าคลังสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ: ${message}`)
+    throw new Error(`บันทึกรับเข้าคลังสำเร็จ แต่การล้างไฟล์หลังรับเข้าไม่สำเร็จ: ${message}`)
   }
   revalidateReceipt(parsedId)
   return posted

@@ -252,7 +252,7 @@ export async function closePurchaseRequestRemaining(
   } catch (error) {
     revalidatePurchaseRequest(parsedId)
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-    throw new Error(`ปิดยอดคงเหลือสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ: ${message}`)
+    throw new Error(`ปิดยอดคงเหลือสำเร็จ แต่การล้างเอกสารหลังปิดยอดไม่สำเร็จ: ${message}`)
   }
   revalidatePurchaseRequest(parsedId)
   return closed
@@ -282,7 +282,7 @@ export async function receivePurchaseRequestOutsideStock(purchaseRequestId: stri
   } catch (error) {
     revalidatePurchaseRequest(parsedId)
     const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-    throw new Error(`รับของโดยหน่วยงานสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ: ${message}`)
+    throw new Error(`รับของโดยหน่วยงานสำเร็จ แต่การล้างเอกสารหลังรับของไม่สำเร็จ: ${message}`)
   }
 
   revalidatePurchaseRequest(parsedId)

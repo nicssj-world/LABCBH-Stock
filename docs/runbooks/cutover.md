@@ -10,6 +10,7 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Confirm a maintenance window, rollback owner, and business acceptance owner.
 - [ ] Confirm the stock and portal branches have passed their full verification suites.
 - [ ] Confirm production secrets exist in Vercel and are not present in Git or terminal output.
+- [ ] Confirm `CRON_SECRET` exists in Vercel Production and the storage cleanup Cron is visible in the deployment configuration.
 - [ ] Create and verify a restorable database backup. Record backup ID and restore rehearsal evidence.
 - [ ] Export immutable pre-cutover reconciliation snapshots from the legacy contract and inventory sources.
 - [ ] Confirm the source workbooks are final, read-only copies in `.secure-import/` and are excluded from Git.
@@ -43,6 +44,7 @@ This is an approval-gated production checklist. A preview deployment is not appr
 - [ ] Smoke receipt posting, inventory balance, FIFO requisition fulfillment, and A4 print/signature layout.
 - [ ] Smoke dashboard watchlist, access settings, audit records, and denied actions for each role.
 - [ ] Confirm browser console, server logs, and Supabase logs contain no new errors or secret values.
+- [ ] Run the protected storage cleanup route in Staging and confirm zero failed jobs; do not call it with a missing or incorrect bearer token.
 
 ## Production promotion and portal handoff
 

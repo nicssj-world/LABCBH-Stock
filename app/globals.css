@@ -1767,6 +1767,14 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .app-dialog__close { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--lab-muted); background: transparent; border: 1px solid transparent; border-radius: var(--radius-control); }
 .app-dialog__close:hover { color: var(--lab-ink); background: var(--lab-surface-muted); }
 .app-dialog__body { padding: 20px 24px 24px; overflow-y: auto; }
+.outside-stock-dialog { width: min(720px, calc(100vw - 32px)); }
+.outside-stock-dialog__body { display: grid; gap: 20px; max-height: calc(min(84dvh, 760px) - 92px); padding: 24px; }
+.outside-stock-dialog .decision-panel { gap: 10px; padding: 20px; background: color-mix(in srgb, var(--lab-amber-soft) 54%, var(--lab-surface)); border-color: color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border-strong)); }
+.outside-stock-dialog .decision-panel > strong { color: var(--lab-ink); font-size: 16px; line-height: 1.4; }
+.outside-stock-dialog .decision-panel p { max-width: 70ch; margin: 0; font-size: 13px; line-height: 1.65; }
+.outside-stock-dialog__actions { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--lab-border); }
+.outside-stock-dialog__actions .lab-button { min-width: 172px; }
+.outside-stock-dialog__actions .lab-button--primary { min-width: 250px; }
 .responsible-dialog { width: min(680px, calc(100vw - 32px)); }
 .responsible-dialog__body { max-height: calc(min(84dvh, 760px) - 92px); }
 .responsible-dialog .responsible-picker { padding: 0; }
@@ -3487,6 +3495,10 @@ input[type="number"] {
   .app-dialog__body,
   .responsible-dialog__body,
   .contract-edit-dialog__body { max-height: calc(100dvh - 108px); padding: 18px; }
+  .outside-stock-dialog__body { gap: 16px; }
+  .outside-stock-dialog__actions { display: grid; grid-template-columns: 1fr; gap: 8px; padding-top: 16px; }
+  .outside-stock-dialog__actions .lab-button,
+  .outside-stock-dialog__actions .lab-button--primary { width: 100%; min-width: 0; }
   .stock-adjustment-dialog__body { max-height: calc(100dvh - 108px); }
   .stock-adjustment-dialog__facts { grid-template-columns: 1fr; }
   .stock-adjustment-dialog__facts > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }

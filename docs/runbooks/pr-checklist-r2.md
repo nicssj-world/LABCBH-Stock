@@ -43,9 +43,15 @@ content type, and `If-None-Match: *`.
 
 Replace the example domains with the deployed domains. Do not add a blanket
 R2 lifecycle expiration for `labcbh-stock/pr-checklists/uploads/`: active and
-expired checklist objects share that namespace, and the application performs
-the required lifecycle hard deletes while retaining audit metadata in
-Supabase.
+expired checklist objects share that namespace. Attached and replaced documents
+are hard-deleted by the application, while abandoned presigned uploads enter the
+service-role cleanup queue and are deleted by the protected Vercel Cron worker
+after expiry/cancellation. Audit metadata remains in Supabase.
+
+The worker requires `CRON_SECRET` in the deployment environment and runs
+`POST /api/internal/storage-cleanup`. It retries failed R2/Supabase Storage
+deletes and terminal PO or checklist cleanup. A worker response with
+`failed > 0` is an operational alert, not a successful cleanup.
 
 ## Deployment order
 
@@ -54,3 +60,6 @@ Supabase.
 3. Add the four server-only R2 environment variables to the deployment.
 4. Deploy the application and verify one upload, inline preview, Download all,
    committee PDF, and lifecycle deletion in Staging before Production.
+5. Invoke the protected cleanup route once in Staging and verify an
+   expired/cancelled upload ticket is marked with `object_deleted_at` and its
+   R2 object is gone.

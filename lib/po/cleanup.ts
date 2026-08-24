@@ -8,6 +8,7 @@ import {
   PO_IMAGE_BUCKET,
 } from './storage'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
 const purchaseRequestCleanupRowSchema = z.object({
   id: z.string().uuid(),
@@ -162,6 +163,14 @@ export async function cleanupTerminalPurchaseRequestPoFile(
   if (paths.size > 0) {
     const { error } = await supabaseAdmin.storage.from(PO_IMAGE_BUCKET).remove([...paths])
     if (error && !isMissingStorageObject(error)) {
+      await enqueueStorageCleanupJobBestEffort({
+        storageBackend: 'supabase_storage',
+        bucketName: null,
+        storageKey: null,
+        jobKind: 'po_lifecycle_retry',
+        resourceId: purchaseRequestId,
+        metadata: { reason: input.reason, receiptId: input.receiptId },
+      })
       throw new Error(`ล้างไฟล์ PO ไม่สำเร็จ: ${error.message}`)
     }
   }
@@ -172,7 +181,17 @@ export async function cleanupTerminalPurchaseRequestPoFile(
     p_deletion_reason: input.reason,
     p_receipt_id: input.receiptId,
   })
-  if (clearError) throw new Error(`บันทึกประวัติการล้างไฟล์ PO ไม่สำเร็จ: ${clearError.message}`)
+  if (clearError) {
+    await enqueueStorageCleanupJobBestEffort({
+      storageBackend: 'supabase_storage',
+      bucketName: null,
+      storageKey: null,
+      jobKind: 'po_lifecycle_retry',
+      resourceId: purchaseRequestId,
+      metadata: { reason: input.reason, receiptId: input.receiptId },
+    })
+    throw new Error(`บันทึกประวัติการล้างไฟล์ PO ไม่สำเร็จ: ${clearError.message}`)
+  }
 
   revalidateCleanupPaths(purchaseRequestId, input.receiptId)
 }

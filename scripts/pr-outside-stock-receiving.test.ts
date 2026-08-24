@@ -136,7 +136,7 @@ assert.match(actions, /supabaseAdmin\.rpc\('mark_purchase_request_received_outsi
 assert.match(actions, /cleanupTerminalPurchaseRequestPoFile/)
 assert.match(actions, /reason: 'received'/)
 assert.match(actions, /receiptId: null/)
-assert.match(actions, /รับของโดยหน่วยงานสำเร็จ แต่ล้างไฟล์ PO ไม่สำเร็จ/)
+assert.match(actions, /รับของโดยหน่วยงานสำเร็จ แต่การล้างเอกสารหลังรับของไม่สำเร็จ/)
 assert.match(errors, /only a confirmed purchase request can be received outside stock/)
 assert.match(errors, /cancel the open or posted goods receipt before receiving outside stock/)
 

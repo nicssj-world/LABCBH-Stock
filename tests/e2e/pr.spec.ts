@@ -14,9 +14,27 @@ test.describe('manager to stock PR workflow and concurrency guard', () => {
     await manager.goto('/purchase-requests/new')
     await expect(manager.getByRole('heading', { name: 'สร้างใบขอซื้อ' })).toBeVisible()
     await manager.getByLabel('หน่วยงานผู้ขอ').selectOption('สำนักงานกลุ่มงานเทคนิคการแพทย์')
+    await manager.getByRole('radio', { name: 'ทำใบ PR เพื่อสั่งซื้อ (ออก PO)' }).check()
+    await manager.getByRole('radio', { name: 'ซื้อนอกแผน' }).check()
     const itemSearch = manager.getByRole('searchbox', { name: 'ค้นหารายการ' })
     await itemSearch.fill('E2E-STOCK-001')
     await manager.getByRole('button', { name: 'เพิ่มลงใบ PR' }).first().click()
+
+    const pdfFixture = {
+      name: 'e2e-checklist.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n% E2E fixture\n'),
+    }
+    await manager.getByLabel('แนบ รายละเอียดคุณลักษณะเฉพาะ (TOR)').setInputFiles(pdfFixture)
+    await manager.getByLabel('แนบ ใบเสนอราคา บริษัทที่ 1').setInputFiles(pdfFixture)
+
+    const specificationSeat = manager.locator('#committee-specification-1')
+    await specificationSeat.fill('9495')
+    await manager.getByRole('option').filter({ hasText: 'E-Phis 9495' }).click()
+    const inspectionSeat = manager.locator('#committee-inspection-1')
+    await inspectionSeat.fill('99001')
+    await manager.getByRole('option').filter({ hasText: 'E-Phis 99001' }).click()
+    await expect(manager.getByText('ครบแล้ว')).toBeVisible()
     await manager.getByRole('button', { name: 'ส่งใบ PR' }).click()
     await expect(manager).toHaveURL(/\/purchase-requests\/[^/]+$/)
     await managerContext.close()
