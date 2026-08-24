@@ -13,6 +13,13 @@ assert.doesNotMatch(listPage, /แสดงผล/, 'requisition filters must no
 assert.match(listPage, /RequisitionSummaryDialog requisition=\{requisition\}/, 'the list row must open the mini summary popup, not a plain document-number cell')
 assert.match(listPage, /DetailIconLink/, 'the requisition detail action must use the shared icon link')
 assert.match(listPage, /REQUISITION_STATUS_LABELS|REQUISITION_STATUS_TONES/, 'the list page must use the shared requisitions presenter, not a local status map')
+assert.match(listPage, /className="data-table requisition-register-table"/, 'the requisition register must use its deliberate column layout')
+assert.match(listPage, /<colgroup>[\s\S]*requisition-register-table__document[\s\S]*requisition-register-table__action/, 'the register must declare stable column widths')
+assert.match(listPage, /numeric-cell identifier requisition-register-table__items-cell/, 'the item count column must retain numeric alignment')
+assert.match(listPage, /requisition-register-table__cell--center/, 'numeric and action columns must have an explicit alignment contract')
+const globalStyles = read('app/globals.css')
+assert.match(globalStyles, /\.requisition-register-table\s*\{[\s\S]*table-layout:\s*fixed/, 'the register must keep columns stable while requester text varies')
+assert.match(globalStyles, /\.requisition-register-table__requester-cell\s*\{[\s\S]*overflow-wrap:\s*anywhere/, 'long requester details must not force the table wider')
 
 const requisitionPresenter = read('lib/requisitions/presenter.ts')
 assert.match(requisitionPresenter, /REQUISITION_STATUS_LABELS/)

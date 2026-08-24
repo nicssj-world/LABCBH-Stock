@@ -123,33 +123,41 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
             <p className="empty-state">ไม่พบใบเบิกตามเงื่อนไขที่เลือก</p>
           ) : (
             <div className="detail-items-table">
-              <table className="data-table">
+              <table className="data-table requisition-register-table">
+                <colgroup>
+                  <col className="requisition-register-table__document" />
+                  <col className="requisition-register-table__date" />
+                  <col className="requisition-register-table__requester" />
+                  <col className="requisition-register-table__items" />
+                  <col className="requisition-register-table__status" />
+                  <col className="requisition-register-table__action" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>เลขที่ใบเบิก</th>
                     <th>ต้องการรับ</th>
                     <th>ผู้ขอเบิก</th>
-                    <th className="numeric-cell">รายการ</th>
+                    <th className="requisition-register-table__items-cell">รายการ</th>
                     <th>สถานะ</th>
-                    <th><span className="visually-hidden">เปิดรายละเอียด</span></th>
+                    <th className="requisition-register-table__cell--center">รายละเอียด</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedRequisitions.items.map((requisition) => (
                     <tr key={requisition.id}>
-                      <td className="identifier"><RequisitionSummaryDialog requisition={requisition} /></td>
-                      <td>{formatThaiDate(requisition.desiredDate)}</td>
-                      <td>
+                      <td className="identifier requisition-register-table__document-cell"><RequisitionSummaryDialog requisition={requisition} /></td>
+                      <td className="requisition-register-table__date-cell">{formatThaiDate(requisition.desiredDate)}</td>
+                      <td className="requisition-register-table__requester-cell">
                         {requisition.requesterName}
                         <small>{requisition.department}</small>
                       </td>
-                      <td className="numeric-cell identifier">{requisition.items.length}</td>
-                      <td>
+                      <td className="numeric-cell identifier requisition-register-table__items-cell">{requisition.items.length}</td>
+                      <td className="requisition-register-table__status-cell">
                         <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
                           {REQUISITION_STATUS_LABELS[requisition.status]}
                         </StatusChip>
                       </td>
-                      <td>
+                      <td className="requisition-register-table__cell--center requisition-register-table__action-cell">
                         <div className="detail-actions">
                           <DetailIconLink
                             href={`/requisitions/${requisition.id}`}
