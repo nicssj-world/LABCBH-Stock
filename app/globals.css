@@ -344,6 +344,19 @@ textarea {
     width: 100%;
   }
 
+  .bench-rail.is-collapsed .bench-nav__group--service {
+    width: 100%;
+  }
+
+  .bench-rail.is-collapsed .bench-nav__group-heading {
+    justify-content: center;
+  }
+
+  .bench-rail.is-collapsed .bench-nav__group-count,
+  .bench-rail.is-collapsed .bench-nav__group--service .bench-nav--nested {
+    display: none;
+  }
+
   .bench-rail.is-collapsed .bench-nav__link {
     justify-content: center;
     padding-inline: 7px;
@@ -440,6 +453,60 @@ textarea {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
+}
+
+.bench-nav__group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.bench-nav__group-count {
+  display: inline-grid;
+  min-width: 20px;
+  min-height: 20px;
+  place-items: center;
+  margin-right: 6px;
+  color: var(--lab-muted);
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: 999px;
+  font: 700 10px/1 var(--font-mono);
+}
+
+.bench-nav__group--service {
+  margin-top: 10px;
+  padding-top: 12px;
+}
+
+.bench-nav__group--service.is-active {
+  border-top-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border));
+}
+
+.bench-nav__group--service .bench-nav--nested {
+  margin-left: 9px;
+  padding-left: 8px;
+  border-left: 1px solid var(--lab-border);
+}
+
+.bench-nav__link--nested {
+  min-height: 44px;
+  font-size: 12px;
+}
+
+.bench-nav__link.bench-nav__link--parent-active {
+  color: var(--lab-primary-strong);
+  background: var(--lab-primary-soft);
+  border-color: color-mix(in srgb, var(--lab-primary) 24%, var(--lab-border));
+  font-weight: 700;
+}
+
+.bench-nav__link.bench-nav__link--parent-active .bench-nav__icon {
+  color: var(--lab-primary);
+  background: var(--lab-surface);
+  border-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border));
 }
 
 .bench-nav--nested .bench-nav__link { padding-left: 15px; }
@@ -5064,13 +5131,15 @@ body {
 }
 
 /* Service procurement — dense operational register with a mobile card fallback. */
-.service-procurement-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--lab-border); margin-bottom: 4px; }
-.service-procurement-tabs a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; color: var(--lab-muted); text-decoration: none; font-weight: 700; border-bottom: 3px solid transparent; }
-.service-procurement-tabs a:hover, .service-procurement-tabs a:focus-visible { color: var(--lab-primary); }
-.service-procurement-tabs a.is-active { color: var(--lab-primary); border-bottom-color: var(--lab-primary); }
-.service-register-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.service-register-toolbar .form-grid { flex: 1; }
-.service-register-toolbar__actions, .service-register-toolbar__note { margin: 0; color: var(--lab-muted); }
+.service-register-toolbar { padding: 20px; }
+.service-register-toolbar > form { display: grid; gap: 16px; }
+.service-register-toolbar .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  max-width: none;
+  margin-top: 0;
+}
+.service-register-toolbar__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
+.service-register-toolbar__note { margin: 0; color: var(--lab-muted); font-size: 12px; }
 .service-plan-table-wrap, .service-pr-table-wrap, .service-ledger-table-wrap { overflow-x: auto; }
 .service-plan-table, .service-pr-table { min-width: 880px; }
 .service-plan-table__number { text-align: right; white-space: nowrap; }

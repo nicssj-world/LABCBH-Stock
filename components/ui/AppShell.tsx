@@ -39,6 +39,11 @@ const navigation: NavigationItem[] = [
   { href: '/service-procurement', label: 'งานจ้าง', icon: 'service', tone: 'teal' },
 ]
 
+const serviceProcurementNavigation: NavigationItem[] = [
+  { href: '/service-procurement/plans', label: 'แผนงานจ้าง', icon: 'annual', tone: 'teal' },
+  { href: '/service-procurement/purchase-requests', label: 'ใบ PR (งานจ้าง)', icon: 'pr', tone: 'cyan' },
+]
+
 const stockOfficerNavigation = {
   label: 'เจ้าหน้าที่คลัง',
   items: [
@@ -95,9 +100,13 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
   const canManageMemberships = actor.appRoles.includes('admin') || actor.appRoles.includes('stock_officer')
   const visibleNavigation = [...navigation, ...(canManageMemberships ? stockOfficerNavigation.items : [])]
-  const currentItem = visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+  const isServiceProcurementActive = pathname === '/service-procurement' || pathname.startsWith('/service-procurement/')
+  const currentItem = serviceProcurementNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    ?? visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
 
-  const renderNavigationItem = (item: NavigationItem) => {
+  const renderNavigationItem = (item: NavigationItem, options: { nested?: boolean; parent?: boolean } = {}) => {
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+    const isCurrent = isActive && !options.parent
     const count = item.href === '/purchase-requests'
       ? notificationState.pendingPurchaseRequests
       : item.href === '/requisitions'
@@ -109,8 +118,9 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
       <Link
         key={item.href}
         href={item.href}
-        className="bench-nav__link"
-        aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+        className={`bench-nav__link${options.nested ? ' bench-nav__link--nested' : ''}${options.parent && isActive ? ' bench-nav__link--parent-active' : ''}`}
+        aria-current={isCurrent ? 'page' : undefined}
+        data-nav-parent-active={options.parent && isActive ? 'true' : undefined}
         aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
         title={collapsed ? item.label : undefined}
         onClick={() => setMobileOpen(false)}
@@ -200,13 +210,22 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
           </div>
           <p className="bench-nav__section">งานคลังและสัญญา</p>
           <nav className="bench-nav">
-            {navigation.map(renderNavigationItem)}
+            {navigation.map((item) => renderNavigationItem(item, { parent: item.href === '/service-procurement' }))}
           </nav>
+          <div className={`bench-nav__group bench-nav__group--service${isServiceProcurementActive ? ' is-active' : ''}`}>
+            <div className="bench-nav__group-heading">
+              <p className="bench-nav__group-label">โมดูลย่อยงานจ้าง</p>
+              <span className="bench-nav__group-count" aria-hidden="true">2</span>
+            </div>
+            <nav id="service-procurement-subnav" className="bench-nav bench-nav--nested" aria-label="โมดูลย่อยงานจ้าง">
+              {serviceProcurementNavigation.map((item) => renderNavigationItem(item, { nested: true }))}
+            </nav>
+          </div>
           {canManageMemberships && (
             <div className="bench-nav__group">
               <p className="bench-nav__group-label">{stockOfficerNavigation.label}</p>
               <nav className="bench-nav bench-nav--nested" aria-label={stockOfficerNavigation.label}>
-                {stockOfficerNavigation.items.map(renderNavigationItem)}
+                {stockOfficerNavigation.items.map((item) => renderNavigationItem(item, { nested: true }))}
               </nav>
             </div>
           )}
