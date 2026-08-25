@@ -26,6 +26,7 @@ export interface ManualItemInput {
   lsCode: string
   name: string
   unit: string
+  unitPrice?: string
 }
 
 export interface ContractItemPickerProps {
@@ -34,6 +35,10 @@ export interface ContractItemPickerProps {
   onAdd: (option: PickerOption) => void
   /** New catalogue rows are available for PR methods that do not draw down a contract. */
   onAddManual?: (input: ManualItemInput) => string | null
+  /** Service procurement shares the picker interaction but does not need inventory/contract facts. */
+  variant?: 'inventory' | 'service'
+  /** Service manual lines may capture a starting price before entering the request-line editor. */
+  manualUnitPrice?: boolean
 }
 
 /**
@@ -42,10 +47,21 @@ export interface ContractItemPickerProps {
  * gated behind a search box rather than dumped in full: some purchase methods
  * make every catalog item eligible, which can run into the hundreds.
  */
-export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }: ContractItemPickerProps) {
+export function ContractItemPicker({
+  options,
+  selectedIds,
+  onAdd,
+  onAddManual,
+  variant = 'inventory',
+  manualUnitPrice = false,
+}: ContractItemPickerProps) {
   const [query, setQuery] = useState('')
   const [manualItem, setManualItem] = useState<ManualItemInput>({ lsCode: '', name: '', unit: '' })
   const [manualError, setManualError] = useState<string | null>(null)
+  const isService = variant === 'service'
+  const itemCodeLabel = isService ? 'รหัส LS' : 'รหัสน้ำยา (LS)'
+  const itemNameLabel = isService ? 'ชื่อรายการ' : 'ชื่อน้ำยา'
+  const itemUnitLabel = isService ? 'หน่วย' : 'หน่วยนับ'
   const normalizedQuery = query.trim().toLocaleLowerCase('th')
   const matches = useMemo(() => {
     if (!normalizedQuery) return []
@@ -65,11 +81,12 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
       lsCode: manualItem.lsCode.trim(),
       name: manualItem.name.trim(),
       unit: manualItem.unit.trim(),
+      ...(manualUnitPrice ? { unitPrice: manualItem.unitPrice?.trim() ?? '' } : {}),
     }
     const missing = [
-      !input.lsCode && 'กรุณาระบุรหัสน้ำยา (LS)',
-      !input.name && 'กรุณาระบุชื่อน้ำยา',
-      !input.unit && 'กรุณาระบุหน่วยนับ',
+      !input.lsCode && `กรุณาระบุ${itemCodeLabel}`,
+      !input.name && `กรุณาระบุ${itemNameLabel}`,
+      !input.unit && `กรุณาระบุ${itemUnitLabel}`,
     ].find((message): message is string => Boolean(message))
     if (missing) {
       setManualError(missing)
@@ -87,7 +104,7 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
   }
 
   return (
-    <div className="item-picker-search">
+    <div className={variant === 'service' ? 'item-picker-search item-picker-search--service' : 'item-picker-search'}>
       {options.length > 0 && (
         <>
           <label className="field-row">
@@ -96,14 +113,14 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="พิมพ์รหัสน้ำยา (LS) หรือชื่อน้ำยา…"
+              placeholder={isService ? 'พิมพ์รหัส LS หรือชื่อรายการ…' : 'พิมพ์รหัสน้ำยา (LS) หรือชื่อน้ำยา…'}
               autoComplete="off"
               aria-controls="pr-item-picker-results"
             />
           </label>
 
           {!normalizedQuery && (
-            <p className="empty-state">พิมพ์รหัสน้ำยา (LS) หรือชื่อน้ำยาเพื่อค้นหาจาก {options.length} รายการ</p>
+            <p className="empty-state">{isService ? 'พิมพ์รหัส LS หรือชื่อรายการ' : 'พิมพ์รหัสน้ำยา (LS) หรือชื่อน้ำยา'}เพื่อค้นหาจาก {options.length} รายการ</p>
           )}
 
           {normalizedQuery && matches.length === 0 && (
@@ -112,7 +129,7 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
 
           {matches.length > 0 && (
             <>
-              <ul className="item-picker" id="pr-item-picker-results" aria-label="รายการน้ำยาที่เลือกได้">
+              <ul className="item-picker" id="pr-item-picker-results" aria-label={isService ? 'รายการที่เลือกได้' : 'รายการน้ำยาที่เลือกได้'}>
                 {matches.slice(0, RESULT_LIMIT).map((option) => {
                   const key = option.contractItemId ?? option.inventoryItemId
                   const alreadyAdded = selectedIds.includes(key)
@@ -128,26 +145,35 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
                       </div>
 
                       <dl className="item-picker__facts">
-                        <div>
-                          <dt>ยอดคงเหลือในคลัง</dt>
-                          <dd className="identifier">{formatQuantity(option.onHand, option.unit)}</dd>
-                        </div>
-                        <div>
-                          <dt>เบิกเฉลี่ยต่อเดือน</dt>
-                          <dd className="identifier">{formatQuantity(option.averageMonthlyUsage, option.unit)}</dd>
-                        </div>
-                        <div>
-                          <dt>คงเหลือในสัญญา</dt>
-                          <dd className="identifier">
-                            {option.contractRemaining === null
-                              ? 'ไม่ตัดยอดสัญญา'
-                              : formatQuantity(option.contractRemaining, option.unit)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>ราคาต่อหน่วย</dt>
-                          <dd className="identifier">{formatBaht(option.unitPrice)}</dd>
-                        </div>
+                        {variant === 'inventory' ? (
+                          <>
+                            <div>
+                              <dt>ยอดคงเหลือในคลัง</dt>
+                              <dd className="identifier">{formatQuantity(option.onHand, option.unit)}</dd>
+                            </div>
+                            <div>
+                              <dt>เบิกเฉลี่ยต่อเดือน</dt>
+                              <dd className="identifier">{formatQuantity(option.averageMonthlyUsage, option.unit)}</dd>
+                            </div>
+                            <div>
+                              <dt>คงเหลือในสัญญา</dt>
+                              <dd className="identifier">
+                                {option.contractRemaining === null
+                                  ? 'ไม่ตัดยอดสัญญา'
+                                  : formatQuantity(option.contractRemaining, option.unit)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>ราคาต่อหน่วย</dt>
+                              <dd className="identifier">{formatBaht(option.unitPrice)}</dd>
+                            </div>
+                          </>
+                        ) : (
+                          <div>
+                            <dt>หน่วย / ราคาต่อหน่วย</dt>
+                            <dd>{option.unit} · <span className="identifier">{formatBaht(option.unitPrice)}</span></dd>
+                          </div>
+                        )}
                       </dl>
 
                       <button
@@ -176,11 +202,13 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
         <fieldset className="item-picker__manual">
           <legend>เพิ่มรายการที่ยังไม่มีในคลัง</legend>
           <p className="item-picker__manual-note">
-            กรอกข้อมูลเองเมื่อค้นหาไม่พบ ระบบจะสร้างรายการน้ำยาในคงคลังให้อัตโนมัติพร้อมใบ PR (ยอดคงเหลือเริ่มต้น 0)
+            {isService
+              ? 'กรอกข้อมูลเองเมื่อค้นหาไม่พบรายการในคลัง แล้วแก้ไขจำนวนและราคาได้ในรายการใบ PR'
+              : 'กรอกข้อมูลเองเมื่อค้นหาไม่พบ ระบบจะสร้างรายการน้ำยาในคงคลังให้อัตโนมัติพร้อมใบ PR (ยอดคงเหลือเริ่มต้น 0)'}
           </p>
           <div className="item-picker__manual-fields">
             <label>
-              <span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemCodeLabel} <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 value={manualItem.lsCode}
@@ -190,7 +218,7 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
               />
             </label>
             <label>
-              <span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemNameLabel} <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 value={manualItem.name}
@@ -200,7 +228,7 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
               />
             </label>
             <label>
-              <span>หน่วยนับ <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemUnitLabel} <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 value={manualItem.unit}
@@ -209,6 +237,20 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
                 autoComplete="off"
               />
             </label>
+            {manualUnitPrice && (
+              <label>
+                <span>ราคาต่อหน่วย</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualItem.unitPrice ?? ''}
+                  onChange={(event) => setManualItem((current) => ({ ...current, unitPrice: event.target.value }))}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                />
+              </label>
+            )}
             <button className="lab-button lab-button--secondary" type="button" onClick={addManualItem}>
               เพิ่มรายการใหม่ลงใบ PR
             </button>

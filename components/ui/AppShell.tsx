@@ -102,6 +102,7 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
   const canManageMemberships = actor.appRoles.includes('admin') || actor.appRoles.includes('stock_officer')
   const visibleNavigation = [...navigation, ...(canManageMemberships ? stockOfficerNavigation.items : [])]
+  const serviceProcurementCount = notificationState.pendingServicePurchaseRequests
   const currentItem = serviceProcurementNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     ?? visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
 
@@ -109,6 +110,8 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
     const count = item.href === '/purchase-requests'
       ? notificationState.pendingPurchaseRequests
+      : item.href === '/service-procurement/purchase-requests'
+        ? notificationState.pendingServicePurchaseRequests
       : item.href === '/requisitions'
         ? notificationState.waitingRequisitions
         : 0
@@ -239,6 +242,11 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
                 <BenchIcon name="service" />
               </span>
               <span className="bench-nav__label">งานจ้าง</span>
+              {(!serviceProcurementOpen || collapsed) && serviceProcurementCount > 0 && (
+                <span className="bench-nav__count bench-nav__accordion-count" aria-label={`มี ${serviceProcurementCount} รายการรอดำเนินการ`}>
+                  {serviceProcurementCount > 99 ? '99+' : serviceProcurementCount}
+                </span>
+              )}
               <svg className="bench-nav__accordion-chevron" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="m7 5 5 5-5 5" />
               </svg>

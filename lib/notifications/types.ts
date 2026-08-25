@@ -19,6 +19,7 @@ export interface NotificationItem {
 export interface NotificationSnapshot {
   enabled: boolean
   pendingPurchaseRequests: number
+  pendingServicePurchaseRequests: number
   waitingRequisitions: number
   unreadCount: number
   notifications: NotificationItem[]
@@ -27,6 +28,7 @@ export interface NotificationSnapshot {
 export const EMPTY_NOTIFICATION_SNAPSHOT: NotificationSnapshot = {
   enabled: false,
   pendingPurchaseRequests: 0,
+  pendingServicePurchaseRequests: 0,
   waitingRequisitions: 0,
   unreadCount: 0,
   notifications: [],

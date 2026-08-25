@@ -150,10 +150,14 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
             ...current,
             notifications: [notification, ...current.notifications].slice(0, 12),
             unreadCount: notification.readAt ? current.unreadCount : current.unreadCount + 1,
-            pendingPurchaseRequests:
-              notification.eventType === 'purchase_request_created'
-                ? current.pendingPurchaseRequests + 1
-                : current.pendingPurchaseRequests,
+             pendingPurchaseRequests:
+               notification.eventType === 'purchase_request_created'
+                 ? current.pendingPurchaseRequests + 1
+                 : current.pendingPurchaseRequests,
+            pendingServicePurchaseRequests:
+              notification.eventType === 'service_purchase_request_created'
+                ? current.pendingServicePurchaseRequests + 1
+                : current.pendingServicePurchaseRequests,
             waitingRequisitions:
               notification.eventType === 'requisition_created'
                 ? current.waitingRequisitions + 1
@@ -196,6 +200,9 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
               pendingPurchaseRequests: notification.eventType === 'purchase_request_created'
                 ? Math.max(0, current.pendingPurchaseRequests + resolvedDelta)
                 : current.pendingPurchaseRequests,
+              pendingServicePurchaseRequests: notification.eventType === 'service_purchase_request_created'
+                ? Math.max(0, current.pendingServicePurchaseRequests + resolvedDelta)
+                : current.pendingServicePurchaseRequests,
               waitingRequisitions: notification.eventType === 'requisition_created'
                 ? Math.max(0, current.waitingRequisitions + resolvedDelta)
                 : current.waitingRequisitions,

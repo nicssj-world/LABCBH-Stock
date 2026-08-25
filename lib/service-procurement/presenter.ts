@@ -13,7 +13,7 @@ export function formatServiceBalance(balance: ServicePlanBalance): string {
 }
 
 export function serviceStatusLabel(status: ServicePurchaseRequestRecord['status']): string {
-  return ({ pending: 'รอคลังยืนยัน', confirmed: 'ยืนยันแล้ว', closed: 'ปิดแล้ว', cancelled: 'ยกเลิก' })[status]
+  return ({ pending: 'รอเจ้าหน้าที่คลังยืนยัน', confirmed: 'ยืนยันแล้ว', closed: 'ปิดแล้ว', cancelled: 'ยกเลิก' })[status]
 }
 
 export function servicePoStatusLabel(status: ServicePurchaseRequestRecord['poStatus']): string {

@@ -100,7 +100,8 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
   if (isNotificationTableMissing(notificationError)) {
     return {
       enabled: false,
-      pendingPurchaseRequests: (purchaseRequests.count ?? 0) + (servicePurchaseRequests.count ?? 0),
+      pendingPurchaseRequests: purchaseRequests.count ?? 0,
+      pendingServicePurchaseRequests: servicePurchaseRequests.count ?? 0,
       waitingRequisitions: requisitions.count ?? 0,
       unreadCount: 0,
       notifications: [],
@@ -112,7 +113,8 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
 
   return {
     enabled: true,
-    pendingPurchaseRequests: (purchaseRequests.count ?? 0) + (servicePurchaseRequests.count ?? 0),
+    pendingPurchaseRequests: purchaseRequests.count ?? 0,
+    pendingServicePurchaseRequests: servicePurchaseRequests.count ?? 0,
     waitingRequisitions: requisitions.count ?? 0,
     unreadCount: unread.count ?? 0,
     notifications: ((recent.data ?? []) as NotificationRow[]).map(parseNotification),
