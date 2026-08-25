@@ -54,5 +54,5 @@ export function canOperateStock(actor: Actor): boolean {
 }
 
 export function canCreateGoodsReceipt(actor: Actor): boolean {
-  return hasAppRole(actor, 'admin', 'head', 'stock_officer')
+  return hasAppRole(actor, 'admin', 'stock_officer')
 }

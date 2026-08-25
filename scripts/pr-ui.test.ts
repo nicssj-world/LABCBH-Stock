@@ -299,7 +299,7 @@ assert.match(
 )
 assert.match(
   review,
-  /\{canEditPoNumber && \([\s\S]*?เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
+  /canEditPoNumber\s*\?\s*\([\s\S]*?เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')

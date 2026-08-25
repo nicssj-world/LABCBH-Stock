@@ -51,6 +51,9 @@ const requestRowSchema = z.object({
   method_details: z.record(z.unknown()).nullable().default({}),
   status: z.enum(PURCHASE_REQUEST_STATUSES),
   po_number: z.string().nullable(),
+  po_number_released_by: z.string().uuid().nullable(),
+  po_number_released_at: z.string().nullable(),
+  po_number_release_reason: z.string().nullable(),
   po_file_path: z.string().nullable(),
   po_file_name: z.string().nullable(),
   po_file_mime_type: z.string().nullable(),
@@ -88,6 +91,7 @@ const requestRowSchema = z.object({
   updater: z.object({ name: z.string().nullable() }).nullable(),
   po_uploader: z.object({ name: z.string().nullable() }).nullable(),
   po_deleter: z.object({ name: z.string().nullable() }).nullable(),
+  po_number_releaser: z.object({ name: z.string().nullable() }).nullable(),
   purchase_request_items: z.array(itemRowSchema).nullable().default([]),
 })
 
@@ -126,6 +130,9 @@ const REQUEST_SELECT = `
   method_details,
   status,
   po_number,
+  po_number_released_by,
+  po_number_released_at,
+  po_number_release_reason,
   po_file_path,
   po_file_name,
   po_file_mime_type,
@@ -163,6 +170,7 @@ const REQUEST_SELECT = `
   updater:profiles!purchase_requests_updated_by_fkey (name),
   po_uploader:profiles!purchase_requests_po_file_uploaded_by_fkey (name),
   po_deleter:profiles!purchase_requests_po_file_deleted_by_fkey (name),
+  po_number_releaser:profiles!purchase_requests_po_number_released_by_fkey (name),
   purchase_request_items (
     id,
     line_number,
@@ -243,6 +251,10 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     methodDetails: row.method_details ?? {},
     status: row.status,
     poNumber: row.po_number,
+    poNumberReleasedBy: row.po_number_released_by,
+    poNumberReleasedByName: row.po_number_releaser?.name?.trim() || null,
+    poNumberReleasedAt: row.po_number_released_at,
+    poNumberReleaseReason: row.po_number_release_reason,
     poFile: {
       path: row.po_file_path,
       fileName: row.po_file_name,

@@ -316,6 +316,16 @@ export const purchaseOrderNumberSchema = z
   .object({ poNumber: z.string().trim().min(1, 'กรุณาระบุเลขที่ใบสั่งซื้อ (PO)') })
   .strict()
 
+export const purchaseOrderNumberReleaseSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1, 'กรุณาระบุเหตุผลที่ปลดเลข PO')
+      .max(1000, 'เหตุผลต้องไม่เกิน 1,000 ตัวอักษร'),
+  })
+  .strict()
+
 export const ephisPrNumberSchema = z
   .object({ ephisPrNumber: z.string().trim().min(1, 'กรุณาระบุเลข PR จาก E-Phis') })
   .strict()

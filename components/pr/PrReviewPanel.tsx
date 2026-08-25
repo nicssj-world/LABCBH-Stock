@@ -14,8 +14,10 @@ import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import type { ContractType } from '@/lib/contracts/types'
 import { formatQuantity, formatThaiDateTime } from '@/lib/inventory/presenter'
+import { isPurchaseRequestActionError } from '@/lib/pr/errors'
 import {
   confirmPurchaseRequest,
+  releasePurchaseOrderNumber,
   reversePurchaseRequest,
   setEphisPrNumber,
   setPurchaseOrderNumber,
@@ -60,8 +62,11 @@ export function PrReviewPanel({
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [poReleaseError, setPoReleaseError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
+  const [releasingPoNumber, setReleasingPoNumber] = useState(false)
   const [reason, setReason] = useState('')
+  const [poReleaseReason, setPoReleaseReason] = useState('')
   const [poNumber, setPoNumber] = useState(request.poNumber ?? '')
   const [ephisPrNumberInput, setEphisPrNumberInput] = useState(request.ephisPrNumber ?? '')
   // Once a number is saved, the field locks — "แก้ไข" is a deliberate second
@@ -74,23 +79,40 @@ export function PrReviewPanel({
   const contractType: ContractType | null = contractTypeForMethod(request.purchaseMethod)
   const contractDraft = contractType ? readContractDraft(request.methodDetails) : null
   const canEditPoNumber = !contractType && ['completed', 'partially_received'].includes(request.status)
+  const hasReleasedPoNumber = Boolean(request.poNumber && request.poNumberReleasedAt)
+  const canReleasePoNumber =
+    !contractType &&
+    ['cancelled', 'reversed'].includes(request.status) &&
+    Boolean(request.poNumber) &&
+    !request.poNumberReleasedAt
   const hasActivePoFile = Boolean(request.poNumber && request.poFile.path && !request.poFile.deletedAt)
   const showPoWorkbench =
     (!contractType && ['completed', 'partially_received', 'received', 'closed_short'].includes(request.status)) ||
-    hasActivePoFile
+    hasActivePoFile ||
+    canReleasePoNumber ||
+    hasReleasedPoNumber
   const hasDraftReceipt = request.receiptHistory.some((receipt) => receipt.status === 'draft')
   const hasPostedReceipt = request.receiptHistory.some((receipt) => receipt.status === 'posted')
   const receiptBlocksReversal = hasDraftReceipt || hasPostedReceipt
 
-  const run = (operation: () => Promise<unknown>, fallback: string, onSuccess?: () => void) => {
+  const run = (
+    operation: () => Promise<unknown>,
+    fallback: string,
+    onSuccess?: () => void,
+    onError: (message: string) => void = setError,
+  ) => {
     setError(null)
     startTransition(async () => {
       try {
-        await operation()
+        const result = await operation()
+        if (isPurchaseRequestActionError(result)) {
+          onError(result.message)
+          return
+        }
         onSuccess?.()
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : fallback)
+        onError(caught instanceof Error ? caught.message : fallback)
       }
     })
   }
@@ -152,75 +174,206 @@ export function PrReviewPanel({
             </div>
           </div>
           <div className="pr-review__po-workbench">
-          {canEditPoNumber && (
-            <div className="pr-review__po-number">
-              <label className="field-row pr-review__identifier-field">
-                เลขที่ใบสั่งซื้อ (PO)
-                <input
-                  type="text"
-                  readOnly={!isEditingPoNumber}
-                  value={poNumber}
-                  onChange={(event) => setPoNumber(event.target.value)}
-                />
-              </label>
-              <div className="pr-review__actions">
-                <div className="pr-review__actions-buttons">
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    className="pr-review__number-action"
-                    disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
-                    onClick={() => {
-                      if (!isEditingPoNumber) {
-                        setIsEditingPoNumber(true)
-                        return
-                      }
+            {(canEditPoNumber || canReleasePoNumber || hasReleasedPoNumber) && (
+              <div className="pr-review__po-number">
+                {canEditPoNumber ? (
+                  <>
+                    <label className="field-row pr-review__identifier-field">
+                      เลขที่ใบสั่งซื้อ (PO)
+                      <input
+                        type="text"
+                        readOnly={!isEditingPoNumber}
+                        value={poNumber}
+                        onChange={(event) => setPoNumber(event.target.value)}
+                      />
+                    </label>
+                    <div className="pr-review__actions">
+                      <div className="pr-review__actions-buttons">
+                        <Button
+                          variant="secondary"
+                          type="button"
+                          className="pr-review__number-action"
+                          disabled={isPending || (isEditingPoNumber && !poNumber.trim())}
+                          onClick={() => {
+                            if (!isEditingPoNumber) {
+                              setIsEditingPoNumber(true)
+                              return
+                            }
+                            run(
+                              () => setPurchaseOrderNumber(request.id, { poNumber }),
+                              'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
+                              () => setIsEditingPoNumber(false),
+                            )
+                          }}
+                        >
+                          {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
+                        </Button>
+                      </div>
+                      {request.poNumber && request.updatedByName && (
+                        <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="pr-review__po-number-summary">
+                    <span className="pr-review__po-number-label">เลขที่ใบสั่งซื้อ (PO)</span>
+                    <strong>{request.poNumber}</strong>
+                    <p className="pr-review__intro">
+                      {hasReleasedPoNumber
+                        ? 'เลขนี้ถูกปลดจาก PR เดิมแล้ว และสามารถนำไปใช้กับ PR ใหม่ได้'
+                        : 'เลขนี้ยังผูกกับ PR เดิมจนกว่าจะดำเนินการปลดเลข PO'}
+                    </p>
+                  </div>
+                )}
+
+                {canReleasePoNumber && !releasingPoNumber && (
+                  <div className="pr-review__po-release-trigger-zone">
+                    <Button
+                      variant="danger"
+                      type="button"
+                      className="pr-review__po-release-trigger"
+                      aria-expanded={releasingPoNumber}
+                      aria-controls={`pr-po-release-panel-${request.id}`}
+                      disabled={isPending}
+                      onClick={() => {
+                        setError(null)
+                        setPoReleaseError(null)
+                        setReleasingPoNumber(true)
+                      }}
+                    >
+                      ปลดเลข PO
+                    </Button>
+                    <p className="pr-review__intro">ใช้เมื่อ PR ยกเลิกแล้วและต้องการนำเลขนี้ไปใช้กับ PR ใหม่</p>
+                  </div>
+                )}
+
+                {canReleasePoNumber && releasingPoNumber && (
+                  <form
+                    id={`pr-po-release-panel-${request.id}`}
+                    className="decision-panel decision-panel--danger pr-review__cancel-panel pr-review__po-release-panel"
+                    aria-labelledby={`pr-po-release-title-${request.id}`}
+                    aria-describedby={`pr-po-release-description-${request.id}`}
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      if (isPending || !poReleaseReason.trim()) return
+                      setPoReleaseError(null)
                       run(
-                        () => setPurchaseOrderNumber(request.id, { poNumber }),
-                        'บันทึกเลขที่ใบสั่งซื้อ (PO) ไม่สำเร็จ',
-                        () => setIsEditingPoNumber(false),
+                        () => releasePurchaseOrderNumber(request.id, { reason: poReleaseReason }),
+                        'ปลดเลข PO ไม่สำเร็จ',
+                        () => {
+                          setReleasingPoNumber(false)
+                          setPoReleaseReason('')
+                        },
+                        setPoReleaseError,
                       )
                     }}
                   >
-                    {isEditingPoNumber ? 'บันทึกเลขที่ใบสั่งซื้อ (PO)' : 'แก้ไขเลขที่ใบสั่งซื้อ (PO)'}
-                  </Button>
-                </div>
-                {request.poNumber && request.updatedByName && (
-                  <p className="pr-review__intro">บันทึกเลขที่ใบสั่งซื้อ (PO) โดย {request.updatedByName}</p>
+                    <div className="pr-review__cancel-heading">
+                      <div>
+                        <h3 id={`pr-po-release-title-${request.id}`}>ยืนยันการปลดเลข PO</h3>
+                        <p id={`pr-po-release-description-${request.id}`}>
+                          เลข PO นี้จะยังแสดงอยู่ในประวัติ PR เดิม แต่จะกลับมาใช้กับ PR ใหม่ได้ การปลดจะทำไม่ได้หากมีเอกสาร PO ใบรับเข้า หรือประวัติแจ้งเตือน LINE แล้ว
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pr-review__po-release-fact" aria-label="เลข PO ที่ต้องการปลด">
+                      <span>เลข PO ที่ต้องการปลด</span>
+                      <strong>{request.poNumber}</strong>
+                    </div>
+
+                    <label>
+                      <span>เหตุผลที่ปลดเลข PO <span className="pr-review__required">(จำเป็น)</span></span>
+                      <small>ระบุเหตุผลเพื่อให้ตรวจสอบย้อนหลังได้ ไม่เกิน 1,000 ตัวอักษร</small>
+                      <textarea
+                        id={`pr-po-release-reason-${request.id}`}
+                        rows={4}
+                        maxLength={1000}
+                        value={poReleaseReason}
+                        placeholder="เช่น PR ถูกยกเลิกก่อนออกเอกสาร PO และต้องนำเลขไปใช้กับ PR ใหม่"
+                        aria-required="true"
+                        aria-invalid={Boolean(poReleaseError)}
+                        aria-describedby={`pr-po-release-description-${request.id} pr-po-release-reason-hint-${request.id}`}
+                        onChange={(event) => {
+                          setPoReleaseReason(event.target.value)
+                          if (poReleaseError) setPoReleaseError(null)
+                        }}
+                      />
+                    </label>
+
+                    <p id={`pr-po-release-reason-hint-${request.id}`} className="pr-review__cancel-hint" role="status">
+                      {poReleaseReason.trim()
+                        ? `${poReleaseReason.length.toLocaleString('th-TH')} / 1,000 ตัวอักษร`
+                        : 'กรุณาระบุเหตุผลก่อนกดยืนยันปลดเลข PO'}
+                    </p>
+
+                    {poReleaseError && (
+                      <p className="form-error pr-review__po-release-error" role="alert">
+                        {poReleaseError}
+                      </p>
+                    )}
+
+                    <div className="decision-panel__actions">
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => {
+                          setPoReleaseError(null)
+                          setReleasingPoNumber(false)
+                        }}
+                        disabled={isPending}
+                      >
+                        ยกเลิก
+                      </Button>
+                      <Button variant="danger" type="submit" disabled={isPending || !poReleaseReason.trim()}>
+                        {isPending ? 'กำลังปลดเลข PO…' : 'ยืนยันปลดเลข PO'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {hasReleasedPoNumber && request.poNumberReleasedAt && (
+                  <div className="pr-review__po-release-audit" role="status">
+                    <strong>ปลดเลข PO แล้ว</strong>
+                    <p>
+                      โดย {request.poNumberReleasedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.poNumberReleasedAt)}
+                    </p>
+                    {request.poNumberReleaseReason && <p>เหตุผล: {request.poNumberReleaseReason}</p>}
+                    <p>เลข PO นี้สามารถนำไปใช้กับ PR ใหม่ได้</p>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="pr-review__po-file">
-            <div className="pr-review__po-file-heading">
-              <div className="pr-review__po-file-heading-copy">
-                <strong>เอกสารใบสั่งซื้อ (PO)</strong>
-                <span>PDF, JPG, PNG หรือ WEBP · ไม่เกิน 10 MB</span>
+            <div className="pr-review__po-file">
+              <div className="pr-review__po-file-heading">
+                <div className="pr-review__po-file-heading-copy">
+                  <strong>เอกสารใบสั่งซื้อ (PO)</strong>
+                  <span>PDF, JPG, PNG หรือ WEBP · ไม่เกิน 10 MB</span>
+                </div>
+                {request.poNumber && request.poFile.path && !request.poFile.deletedAt && (
+                  <PurchaseRequestLineNotifyButton
+                    requestId={request.id}
+                    documentNumber={request.documentNumber}
+                    poNumber={request.poNumber}
+                    latest={lineNotification}
+                    configured={lineNotificationConfigured}
+                  />
+                )}
               </div>
-              {request.poNumber && request.poFile.path && !request.poFile.deletedAt && (
-                <PurchaseRequestLineNotifyButton
-                  requestId={request.id}
-                  documentNumber={request.documentNumber}
-                  poNumber={request.poNumber}
-                  latest={lineNotification}
-                  configured={lineNotificationConfigured}
-                />
-              )}
+              <PurchaseRequestPoFileCard
+                requestId={request.id}
+                poNumber={request.poNumber}
+                file={request.poFile}
+                variant="inline"
+                canEdit={canEditPoNumber}
+                canRetryCleanup={
+                  ['received', 'closed_short'].includes(request.status) &&
+                  !request.poFile.deletedAt &&
+                  Boolean(request.poFile.path)
+                }
+              />
             </div>
-            <PurchaseRequestPoFileCard
-              requestId={request.id}
-              poNumber={request.poNumber}
-              file={request.poFile}
-              variant="inline"
-              canEdit={canEditPoNumber}
-              canRetryCleanup={
-                ['received', 'closed_short'].includes(request.status) &&
-                !request.poFile.deletedAt &&
-                Boolean(request.poFile.path)
-              }
-            />
-          </div>
           </div>
         </section>
       )}

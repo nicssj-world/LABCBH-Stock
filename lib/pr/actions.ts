@@ -12,6 +12,7 @@ import {
 import {
   ephisPrNumberSchema,
   purchaseOrderNumberSchema,
+  purchaseOrderNumberReleaseSchema,
   purchaseRequestInputSchema,
   purchaseRequestReversalSchema,
   purchaseRequestShortCloseSchema,
@@ -23,6 +24,7 @@ import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
 import type {
   EphisPrNumberInput,
   PurchaseOrderNumberInput,
+  PurchaseOrderNumberReleaseInput,
   PurchaseRequestInput,
   PurchaseRequestReversalInput,
   PurchaseRequestShortCloseInput,
@@ -306,9 +308,43 @@ export async function setPurchaseOrderNumber(
     p_po_number: parsed.poNumber,
   })
 
+  if (result.error) {
+    return {
+      ok: false as const,
+      message: formatPurchaseRequestMutationError('บันทึกเลขที่ใบสั่งซื้อ (PO)', result.error.message),
+    }
+  }
+
   const updated = unwrapMutation('บันทึกเลขที่ใบสั่งซื้อ (PO)', result)
   revalidatePurchaseRequest(parsedId)
-  return updated
+  return { ok: true as const, data: updated }
+}
+
+export async function releasePurchaseOrderNumber(
+  purchaseRequestId: string,
+  input: PurchaseOrderNumberReleaseInput,
+) {
+  const actor = await requireActor()
+  assertStockOperator(actor)
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const parsed = purchaseOrderNumberReleaseSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('release_purchase_order_number', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+    p_reason: parsed.reason,
+  })
+
+  if (result.error) {
+    return {
+      ok: false as const,
+      message: formatPurchaseRequestMutationError('ปลดเลข PO', result.error.message),
+    }
+  }
+
+  const released = unwrapMutation('ปลดเลข PO', result)
+  revalidatePurchaseRequest(parsedId)
+  return { ok: true as const, data: released }
 }
 
 export async function setEphisPrNumber(

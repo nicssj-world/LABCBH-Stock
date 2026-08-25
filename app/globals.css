@@ -3367,6 +3367,19 @@ input[type="number"] {
 .pr-review__cancel-hint { margin: -6px 0 0; color: var(--lab-red); font-size: 11px; line-height: 1.4; }
 .pr-review__cancel-panel .decision-panel__actions { gap: 12px; padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--lab-red) 16%, var(--lab-border)); }
 .pr-review__cancel-panel .decision-panel__actions .lab-button { min-width: 168px; min-height: 46px; font-weight: 800; }
+.pr-review__po-number-summary { display: grid; gap: 6px; padding: 12px 14px; background: var(--lab-surface); border: 1px solid var(--lab-border-strong); border-radius: var(--radius-control); }
+.pr-review__po-number-summary strong { color: var(--lab-navy-strong); font-family: var(--font-mono); font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pr-review__po-number-label { color: var(--lab-muted); font-size: 12px; font-weight: 700; }
+.pr-review__po-release-trigger-zone { display: grid; gap: 7px; padding-top: 4px; }
+.pr-review__po-release-trigger { min-height: 44px; font-weight: 800; }
+.pr-review__po-release-panel { margin-top: 4px; }
+.pr-review__po-release-fact { display: grid; gap: 4px; padding: 12px 14px; background: color-mix(in srgb, var(--lab-surface) 70%, var(--lab-red-soft)); border: 1px solid color-mix(in srgb, var(--lab-red) 18%, var(--lab-border)); border-radius: var(--radius-control); }
+.pr-review__po-release-fact span { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.pr-review__po-release-fact strong { color: var(--lab-ink); font-family: var(--font-mono); font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pr-review__po-release-error { margin: -4px 0 0; }
+.pr-review__po-release-audit { display: grid; gap: 4px; padding: 12px 14px; color: var(--lab-green); background: color-mix(in srgb, var(--lab-green-soft) 70%, var(--lab-surface)); border: 1px solid color-mix(in srgb, var(--lab-green) 22%, var(--lab-border)); border-radius: var(--radius-control); }
+.pr-review__po-release-audit strong { font-size: 13px; }
+.pr-review__po-release-audit p { margin: 0; color: var(--lab-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .pr-review > .pr-review__actions,
 .pr-review > .pr-review__closed,
 .pr-review > .pr-short-close,

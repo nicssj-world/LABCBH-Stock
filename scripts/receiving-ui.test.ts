@@ -18,7 +18,7 @@ assert.match(listPage, /className="data-table receipt-register-table"/, 'the rec
 assert.match(listPage, /<colgroup>[\s\S]*receipt-register-table__reference[\s\S]*receipt-register-table__action/, 'the receipt register must declare stable column widths')
 assert.match(listPage, /สถานะการลงคลัง/, 'the register must make the next stock action visible')
 assert.match(listPage, /formatThaiDateTime\(receipt\.postedAt\)/, 'posted receipts must show the stock-posting time in the queue')
-assert.match(listPage, /canCreateGoodsReceipt/, 'heads may start a receipt draft from the register')
+assert.match(listPage, /canCreateGoodsReceipt/, 'only stock officers and admins may start a receipt draft from the register')
 assert.doesNotMatch(listPage, /totalQuantity|รวมที่รับ|จำนวนล็อต/, 'the register must not show mixed-unit totals or redundant lot counts')
 
 const receiptPresenter = read('lib/receipts/presenter.ts')
@@ -50,7 +50,7 @@ assert.match(newPage, /actor\.department/, 'the new receipt page must read the s
 assert.match(newPage, /initialDepartment \?\? actorDepartment/, 'the PR deep link may override the user department')
 assert.match(newPage, /departments=\{departments\}/)
 assert.match(newPage, /purchaseRequests=\{purchaseRequests\}/, 'the receipt form receives PR balances for partial receiving')
-assert.match(newPage, /canCreateGoodsReceipt/, 'heads may open the receipt draft form')
+assert.match(newPage, /canCreateGoodsReceipt/, 'only stock officers and admins may open the receipt draft form')
 
 const detailPage = read('app/(protected)/receipts/[id]/page.tsx')
 assert.match(detailPage, /params:\s*Promise</)
