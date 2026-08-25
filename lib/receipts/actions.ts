@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
+import { assertGoodsReceiptCreator } from '@/lib/receipts/authorization'
 import { cancelGoodsReceiptSchema, goodsReceiptInputSchema } from '@/lib/receipts/schema'
 import { cleanupPoFileAfterPostedReceipt } from '@/lib/po/cleanup'
 import { cleanupPurchaseRequestChecklistAfterPostedReceipt } from '@/lib/pr/checklist-cleanup'
@@ -35,7 +36,7 @@ function revalidateReceipt(id?: string) {
 
 export async function createGoodsReceipt(input: GoodsReceiptInput) {
   const actor = await requireActor()
-  assertStockOperator(actor)
+  assertGoodsReceiptCreator(actor)
   const parsed = goodsReceiptInputSchema.parse(input)
   const { items, ...receipt } = parsed
 

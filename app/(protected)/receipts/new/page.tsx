@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ReceiptForm } from '@/components/receipts/ReceiptForm'
-import { canOperateStock } from '@/lib/auth/access'
+import { canCreateGoodsReceipt } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { listInventoryCatalog } from '@/lib/inventory/queries'
 import { DEPARTMENTS } from '@/lib/organization/departments'
@@ -15,7 +15,7 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 
 export default async function NewReceiptPage({ searchParams }: NewReceiptPageProps) {
   const actor = await requireActor()
-  if (!canOperateStock(actor)) redirect('/receipts')
+  if (!canCreateGoodsReceipt(actor)) redirect('/receipts')
 
   const params = await searchParams
   const initialPurchaseRequestId = first(params.purchaseRequestId)?.trim() || undefined

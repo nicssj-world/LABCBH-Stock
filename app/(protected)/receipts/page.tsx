@@ -3,7 +3,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { ListPagination } from '@/components/ui/ListPagination'
-import { canOperateStock } from '@/lib/auth/access'
+import { canCreateGoodsReceipt } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
@@ -62,7 +62,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
           <StatusChip tone={draftCount ? 'attention' : 'success'}>
             {draftCount ? `${draftCount} ฉบับร่างรอบันทึก` : 'ไม่มีฉบับร่างค้าง'}
           </StatusChip>
-          {canOperateStock(actor) && (
+          {canCreateGoodsReceipt(actor) && (
             <Link className="lab-link-button lab-link-button--primary" href="/receipts/new">
               สร้างใบรับเข้า
             </Link>
