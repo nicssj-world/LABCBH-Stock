@@ -558,7 +558,7 @@ export function PurchaseRequestForm({
         </div>
         <div className="form-grid">
           <label className="field-row">
-            หน่วยงานผู้ขอ
+            <span>หน่วยงานผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
             <select required value={department} onChange={(event) => changeDepartment(event.target.value)}>
               {departments.map((department) => (
                 <option value={department} key={department}>{department}</option>
@@ -566,11 +566,11 @@ export function PurchaseRequestForm({
             </select>
           </label>
           <label className="field-row">
-            ชื่อผู้ขอ
+            <span>ชื่อผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
             <input type="text" required readOnly value={headName} title="ชื่อผู้สร้างใบขอซื้อ แก้ไขไม่ได้" />
           </label>
           <label className="field-row">
-            วันที่ขอซื้อ
+            <span>วันที่ขอซื้อ <span className="field-required" aria-hidden="true">*</span></span>
             <ThaiDateInput required value={requestedDate} onChange={setRequestedDate} />
           </label>
           <label className="field-row">
@@ -649,13 +649,13 @@ export function PurchaseRequestForm({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>รหัสน้ำยา (LS)</th>
-                  <th>ชื่อน้ำยา</th>
+                  <th><span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th><span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span></th>
                   <th className="pr-line-cell--center">คงเหลือในสัญญา</th>
                   <th className="pr-line-cell--center">อัตราใช้/เดือน</th>
-                  <th className="pr-line-cell--center">จำนวนที่ขอ</th>
-                  <th className="pr-line-cell--center">หน่วย</th>
-                  <th className="pr-line-cell--center">ราคาต่อหน่วย</th>
+                  <th className="pr-line-cell--center"><span>จำนวนที่ขอ <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th className="pr-line-cell--center"><span>หน่วย <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th className="pr-line-cell--center"><span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span></th>
                   <th className="pr-line-cell--center">รวม</th>
                   <th><span className="visually-hidden">นำออก</span></th>
                 </tr>
@@ -714,6 +714,7 @@ export function PurchaseRequestForm({
                         type="number"
                         min="0"
                         step="1"
+                        required
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}

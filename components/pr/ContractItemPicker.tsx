@@ -180,8 +180,9 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
           </p>
           <div className="item-picker__manual-fields">
             <label>
-              รหัสน้ำยา (LS)
+              <span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span>
               <input
+                required
                 value={manualItem.lsCode}
                 onChange={(event) => setManualItem((current) => ({ ...current, lsCode: event.target.value }))}
                 placeholder="เช่น LS046022"
@@ -189,8 +190,9 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
               />
             </label>
             <label>
-              ชื่อน้ำยา
+              <span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span>
               <input
+                required
                 value={manualItem.name}
                 onChange={(event) => setManualItem((current) => ({ ...current, name: event.target.value }))}
                 placeholder="ชื่อรายการน้ำยา"
@@ -198,8 +200,9 @@ export function ContractItemPicker({ options, selectedIds, onAdd, onAddManual }:
               />
             </label>
             <label>
-              หน่วยนับ
+              <span>หน่วยนับ <span className="field-required" aria-hidden="true">*</span></span>
               <input
+                required
                 value={manualItem.unit}
                 onChange={(event) => setManualItem((current) => ({ ...current, unit: event.target.value }))}
                 placeholder="เช่น ขวด"

@@ -102,22 +102,23 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             <legend>รายการที่ {index + 1}</legend>
             {item.id && <input type="hidden" name={`items.${index}.id`} value={item.id} />}
             <label>
-              รหัสน้ำยา (LS)
-              <input value={item.lsCode} onChange={(event) => update(index, 'lsCode', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.lsCode`])} />
+              <span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span>
+              <input required value={item.lsCode} onChange={(event) => update(index, 'lsCode', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.lsCode`])} />
               {errors[`items.${index}.lsCode`] && <small className="field-error">{errors[`items.${index}.lsCode`]}</small>}
             </label>
             <label className="item-edit-row__name">
-              ชื่อน้ำยา
-              <input value={item.name} onChange={(event) => update(index, 'name', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.name`])} />
+              <span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span>
+              <input required value={item.name} onChange={(event) => update(index, 'name', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.name`])} />
               {errors[`items.${index}.name`] && <small className="field-error">{errors[`items.${index}.name`]}</small>}
             </label>
             <label>
-              จำนวนในสัญญา
+              <span>จำนวนในสัญญา <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 type="number"
                 min="0.001"
                 step="0.001"
                 inputMode="decimal"
+                required
                 value={item.quantity}
                 onChange={(event) => {
                   const value = event.target.value
@@ -128,17 +129,18 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
               {errors[`items.${index}.quantity`] && <small className="field-error">{errors[`items.${index}.quantity`]}</small>}
             </label>
             <label>
-              หน่วย
-              <input value={item.unit} onChange={(event) => update(index, 'unit', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.unit`])} />
+              <span>หน่วย <span className="field-required" aria-hidden="true">*</span></span>
+              <input required value={item.unit} onChange={(event) => update(index, 'unit', event.target.value)} aria-invalid={Boolean(errors[`items.${index}.unit`])} />
               {errors[`items.${index}.unit`] && <small className="field-error">{errors[`items.${index}.unit`]}</small>}
             </label>
             <label>
-              ราคาต่อหน่วย
+              <span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 inputMode="decimal"
+                required
                 value={item.unitPrice}
                 onChange={(event) => {
                   const value = event.target.value

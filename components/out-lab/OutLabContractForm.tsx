@@ -166,8 +166,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
         </div>
         <div className="form-grid">
           <label>
-            รูปแบบงบ
+            <span>รูปแบบงบ <span className="field-required" aria-hidden="true">*</span></span>
             <select
+              required
               value={state.kind}
               onChange={(event) => patch('kind', event.target.value as OutLabKind)}
               disabled={mode === 'edit'}
@@ -182,8 +183,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
             )}
           </label>
           <label>
-            งวดการลงข้อมูล
+            <span>งวดการลงข้อมูล <span className="field-required" aria-hidden="true">*</span></span>
             <select
+              required
               value={state.entryCadence}
               onChange={(event) => patch('entryCadence', event.target.value as FormState['entryCadence'])}
             >
@@ -205,11 +207,12 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
         </div>
         <div className="form-grid">
           <label>
-            ปีงบประมาณ
+            <span>ปีงบประมาณ <span className="field-required" aria-hidden="true">*</span></span>
             <input
               type="number"
               min="2500"
               max="3000"
+              required
               value={state.fiscalYear}
               onChange={(event) => {
                 const value = event.target.value
@@ -239,8 +242,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
             {errors.total && <small className="field-error">{errors.total}</small>}
           </label>
           <label className="form-grid__wide">
-            ชื่อสัญญา
+            <span>ชื่อสัญญา <span className="field-required" aria-hidden="true">*</span></span>
             <input
+              required
               value={state.displayName}
               onChange={(event) => patch('displayName', event.target.value)}
               placeholder="เช่น จ้างบริการตรวจวิเคราะห์ทางห้องปฏิบัติการตรวจต่อพิเศษ"
@@ -283,8 +287,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
           ) : (
             <>
               <label>
-                วันเริ่มสัญญา
+                <span>วันเริ่มสัญญา <span className="field-required" aria-hidden="true">*</span></span>
                 <ThaiDateInput
+                  required
                   value={state.startDate}
                   onChange={(value) => patch('startDate', value)}
                   aria-invalid={Boolean(errors.startDate)}
@@ -292,8 +297,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
                 {errors.startDate && <small className="field-error">{errors.startDate}</small>}
               </label>
               <label>
-                วันสิ้นสุดสัญญา
+                <span>วันสิ้นสุดสัญญา <span className="field-required" aria-hidden="true">*</span></span>
                 <ThaiDateInput
+                  required
                   value={state.endDate}
                   onChange={(value) => patch('endDate', value)}
                   aria-invalid={Boolean(errors.endDate)}
@@ -334,8 +340,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
               </label>
             )}
             <label>
-              {state.startImmediately ? 'วันที่เริ่มสัญญา' : 'วันที่ส่งพัสดุ'}
+              <span>{state.startImmediately ? 'วันที่เริ่มสัญญา' : 'วันที่ส่งพัสดุ'} <span className="field-required" aria-hidden="true">*</span></span>
               <ThaiDateInput
+                required
                 value={state.effectiveDate}
                 onChange={(value) => patch('effectiveDate', value)}
                 aria-invalid={Boolean(errors.effectiveDate)}
@@ -344,8 +351,9 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
             </label>
             {state.startImmediately && (
               <label>
-                เลขที่สัญญา
+                <span>เลขที่สัญญา <span className="field-required" aria-hidden="true">*</span></span>
                 <input
+                  required
                   value={state.contractNumber}
                   onChange={(event) => patch('contractNumber', event.target.value)}
                   placeholder="เช่น 15/69"

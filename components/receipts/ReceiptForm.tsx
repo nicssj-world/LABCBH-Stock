@@ -185,7 +185,7 @@ export function ReceiptForm({
         </div>
         <div className="form-grid">
           <label className="field-row">
-            หน่วยงานที่รับของ
+            <span>หน่วยงานที่รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <select required value={department} onChange={(event) => changeDepartment(event.target.value)} disabled={isPending}>
               <option value="" disabled>เลือกหน่วยงานที่รับของก่อน</option>
               {departments.map((department) => <option value={department} key={department}>{department}</option>)}
@@ -225,11 +225,11 @@ export function ReceiptForm({
             )}
           </div>
           <label className="field-row">
-            วันที่รับของ
+            <span>วันที่รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <ThaiDateInput required value={receivedDate} onChange={setReceivedDate} />
           </label>
           <label className="field-row">
-            ผู้รับของ
+            <span>ผู้รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <input type="text" required value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
           </label>
           <label className="field-row form-grid__wide">

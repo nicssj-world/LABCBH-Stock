@@ -238,11 +238,12 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
         </div>
         <div className="form-grid">
           <label>
-            ปีงบประมาณ
+            <span>ปีงบประมาณ <span className="field-required" aria-hidden="true">*</span></span>
             <input
               type="number"
               min="2500"
               max="3000"
+              required
               value={state.fiscalYear}
               onChange={(event) => {
                 const value = event.target.value
@@ -253,14 +254,14 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
             {errors.fiscalYear && <small className="field-error">{errors.fiscalYear}</small>}
           </label>
           <label>
-            ประเภทสัญญา
-            <select value={state.contractType} onChange={(event) => patchState('contractType', event.target.value as FormState['contractType'])}>
+            <span>ประเภทสัญญา <span className="field-required" aria-hidden="true">*</span></span>
+            <select required value={state.contractType} onChange={(event) => patchState('contractType', event.target.value as FormState['contractType'])}>
               {CONTRACT_TYPES.map((type) => <option value={type} key={type}>{CONTRACT_TYPE_LABELS[type]}</option>)}
             </select>
           </label>
           <label className="form-grid__wide">
-            ชื่อสัญญา
-            <input value={state.displayName} onChange={(event) => patchState('displayName', event.target.value)} aria-invalid={Boolean(errors.displayName)} />
+            <span>ชื่อสัญญา <span className="field-required" aria-hidden="true">*</span></span>
+            <input required value={state.displayName} onChange={(event) => patchState('displayName', event.target.value)} aria-invalid={Boolean(errors.displayName)} />
             {errors.displayName && <small className="field-error">{errors.displayName}</small>}
           </label>
           <label className="form-grid__wide">
@@ -269,8 +270,8 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
             {errors.vendor && <small className="field-error">{errors.vendor}</small>}
           </label>
           <label>
-            หน่วยงาน
-            <select value={state.department} onChange={(event) => patchState('department', event.target.value as FormState['department'])}>
+            <span>หน่วยงาน <span className="field-required" aria-hidden="true">*</span></span>
+            <select required value={state.department} onChange={(event) => patchState('department', event.target.value as FormState['department'])}>
               {CONTRACT_DEPARTMENTS.map((department) => <option value={department} key={department}>{department}</option>)}
             </select>
           </label>
@@ -286,15 +287,15 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
           )}
           {mode === 'create' && (
             <label>
-              {state.startImmediately ? 'วันที่เริ่มสัญญา' : 'วันที่ส่งพัสดุ'}
-              <ThaiDateInput value={state.sentToProcurementDate} onChange={(value) => patchState('sentToProcurementDate', value)} aria-invalid={Boolean(errors.sentToProcurementDate)} />
+              <span>{state.startImmediately ? 'วันที่เริ่มสัญญา' : 'วันที่ส่งพัสดุ'} <span className="field-required" aria-hidden="true">*</span></span>
+              <ThaiDateInput required value={state.sentToProcurementDate} onChange={(value) => patchState('sentToProcurementDate', value)} aria-invalid={Boolean(errors.sentToProcurementDate)} />
               {errors.sentToProcurementDate && <small className="field-error">{errors.sentToProcurementDate}</small>}
             </label>
           )}
           {mode === 'create' && state.startImmediately && (
             <label>
-              เลขที่สัญญา
-              <input value={state.contractNumber} onChange={(event) => patchState('contractNumber', event.target.value)} aria-invalid={Boolean(errors.contractNumber)} />
+              <span>เลขที่สัญญา <span className="field-required" aria-hidden="true">*</span></span>
+              <input required value={state.contractNumber} onChange={(event) => patchState('contractNumber', event.target.value)} aria-invalid={Boolean(errors.contractNumber)} />
               {errors.contractNumber && <small className="field-error">{errors.contractNumber}</small>}
             </label>
           )}
@@ -320,7 +321,7 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
           </p>
           <div className="form-grid">
             <label className="form-grid__wide">
-              มูลค่าสัญญา
+              <span>มูลค่าสัญญา {requiresTotal && <span className="field-required" aria-hidden="true">*</span>}</span>
               <input
                 type="number"
                 min="0.01"
