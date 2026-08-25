@@ -11,6 +11,8 @@ assert.match(fields, /showCommitteeValidationErrors/, 'committee validation rema
 assert.match(fields, /showCommitteeValidationErrors && committeeErrors\.length > 0/, 'committee validation errors must be conditionally rendered')
 assert.match(fields, /overallProgress|overall progress/i, 'uploads need an overall progress indicator')
 assert.match(fields, /role="combobox"/, 'committee members must use a searchable combobox')
+assert.match(fields, /event\.key === 'Enter'/, 'a single committee search result should be selectable with Enter')
+assert.match(fields, /matches\.length === 1/, 'Enter should only auto-select when exactly one committee result remains')
 assert.match(fields, /positionTitle/, 'positions must be shown from personnel')
 assert.match(fields, /validateCommitteeAssignments/)
 assert.match(fields, /aria-live="polite"/)

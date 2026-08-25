@@ -46,7 +46,9 @@ assert.doesNotMatch(summaryDialog, /totalQuantity|รวมที่รับ|�
 const newPage = read('app/(protected)/receipts/new/page.tsx')
 assert.match(newPage, /ReceiptForm/)
 assert.match(newPage, /DEPARTMENTS/)
-assert.match(newPage, /departments=\{DEPARTMENTS\}/)
+assert.match(newPage, /actor\.department/, 'the new receipt page must read the signed-in user department')
+assert.match(newPage, /initialDepartment \?\? actorDepartment/, 'the PR deep link may override the user department')
+assert.match(newPage, /departments=\{departments\}/)
 assert.match(newPage, /purchaseRequests=\{purchaseRequests\}/, 'the receipt form receives PR balances for partial receiving')
 assert.match(newPage, /canCreateGoodsReceipt/, 'heads may open the receipt draft form')
 

@@ -187,6 +187,16 @@ export function CommitteeMemberCombobox({
           onBlur={() => window.setTimeout(() => setOpen(false), 120)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') setOpen(false)
+            if (event.key === 'Enter' && open && matches.length === 1) {
+              const candidate = matches[0]
+              const optionDisabled = disabledProfileIds.has(candidate.id) && candidate.id !== selectedProfileId
+              if (!optionDisabled) {
+                event.preventDefault()
+                onSelect(candidate.id)
+                setOpen(false)
+                setQuery('')
+              }
+            }
           }}
           onChange={(event) => { setQuery(event.target.value); setOpen(true) }}
         />

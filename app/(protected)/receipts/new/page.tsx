@@ -20,6 +20,9 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
   const params = await searchParams
   const initialPurchaseRequestId = first(params.purchaseRequestId)?.trim() || undefined
   const initialDepartment = first(params.department)?.trim() || undefined
+  const actorDepartment = actor.department?.trim() || undefined
+  const defaultDepartment = initialDepartment ?? actorDepartment
+  const departments = [...new Set([defaultDepartment, ...DEPARTMENTS].filter((value): value is string => Boolean(value)))]
 
   const [inventoryItems, purchaseRequests] = await Promise.all([
     listInventoryCatalog(),
@@ -44,11 +47,11 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
           name: item.name,
           unit: item.baseUnit,
         }))}
-        departments={DEPARTMENTS}
+        departments={departments}
         purchaseRequests={purchaseRequests}
         receiverName={actor.name ?? ''}
         initialPurchaseRequestId={initialPurchaseRequestId}
-        initialDepartment={initialDepartment}
+        initialDepartment={defaultDepartment}
       />
     </div>
   )
