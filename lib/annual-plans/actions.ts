@@ -9,6 +9,7 @@ import { assertAnnualPlanUploader } from './authorization'
 import {
   ANNUAL_PLAN_BUCKET,
   ANNUAL_PLAN_MIME_TYPE,
+  MAX_ANNUAL_PLAN_FILE_SIZE_BYTES,
   annualPlanFilePath,
   isAnnualPlanFilePathAllowed,
   validateAnnualPlanFile,
@@ -26,6 +27,17 @@ const annualPlanRpcResultSchema = z.object({
   previous_file_path: z.string().nullable(),
 })
 
+const annualPlanUploadPreparationSchema = annualPlanInputSchema.extend({
+  fileName: z.string().trim().min(1).max(255),
+  fileSizeBytes: z.number().int().positive().max(MAX_ANNUAL_PLAN_FILE_SIZE_BYTES),
+})
+
+const annualPlanFinalizeInputSchema = annualPlanInputSchema.extend({
+  filePath: z.string().trim().min(1),
+  fileName: z.string().trim().min(1).max(255),
+  fileSizeBytes: z.number().int().positive().max(MAX_ANNUAL_PLAN_FILE_SIZE_BYTES),
+})
+
 async function removeOrQueue(path: string) {
   const removed = await supabaseAdmin.storage.from(ANNUAL_PLAN_BUCKET).remove([path])
   if (removed.error) {
@@ -38,6 +50,123 @@ async function removeOrQueue(path: string) {
     return false
   }
   return true
+}
+
+function assertAnnualPlanPdfName(fileName: string) {
+  if (!fileName.toLowerCase().endsWith('.pdf')) {
+    throw new Error('รองรับเฉพาะไฟล์ PDF เท่านั้น')
+  }
+}
+
+function assertAnnualPlanPathMatchesInput(
+  filePath: string,
+  fiscalYear: number,
+  planType: AnnualPlanType,
+) {
+  const expectedPrefix = `annual-plans/${fiscalYear}/${planType}/`
+  if (!isAnnualPlanFilePathAllowed(filePath) || !filePath.startsWith(expectedPrefix)) {
+    throw new Error('เส้นทางไฟล์แผนประจำปีไม่ถูกต้อง')
+  }
+}
+
+/**
+ * Creates only a short-lived upload ticket. The PDF itself must go directly
+ * from the browser to Supabase Storage so it never crosses a Vercel Function
+ * request-body limit.
+ */
+export async function prepareAnnualPlanUpload(input: unknown) {
+  const actor = await requireActor()
+  assertAnnualPlanUploader(actor)
+  const parsed = annualPlanUploadPreparationSchema.parse(input)
+  assertAnnualPlanPdfName(parsed.fileName)
+
+  const path = annualPlanFilePath({
+    fiscalYear: parsed.fiscalYear,
+    planType: parsed.planType,
+    // Keep the path compatible with the database's lowercase .pdf check.
+    fileName: parsed.fileName.replace(/\.pdf$/i, '.pdf'),
+    id: crypto.randomUUID(),
+  })
+  assertAnnualPlanPathMatchesInput(path, parsed.fiscalYear, parsed.planType)
+
+  const signed = await supabaseAdmin
+    .storage
+    .from(ANNUAL_PLAN_BUCKET)
+    .createSignedUploadUrl(path, { upsert: false })
+  if (signed.error) throw new Error(`เตรียมอัปโหลดแผนประจำปีไม่สำเร็จ: ${signed.error.message}`)
+
+  return { path: signed.data.path, token: signed.data.token }
+}
+
+async function assertUploadedAnnualPlanObject(filePath: string, fileSizeBytes: number) {
+  const info = await supabaseAdmin.storage.from(ANNUAL_PLAN_BUCKET).info(filePath)
+  if (info.error || !info.data) {
+    throw new Error('ไม่พบไฟล์ที่อัปโหลด กรุณาลองใหม่')
+  }
+
+  const contentType = info.data.contentType ?? info.data.metadata?.mimetype
+  const size = info.data.size ?? info.data.metadata?.size
+  if (String(contentType ?? '').toLowerCase() !== ANNUAL_PLAN_MIME_TYPE) {
+    throw new Error('ไฟล์ที่อัปโหลดไม่ใช่ PDF ที่ถูกต้อง')
+  }
+  if (Number(size) !== fileSizeBytes) {
+    throw new Error('ขนาดไฟล์ที่อัปโหลดไม่ตรงกับข้อมูล กรุณาลองใหม่')
+  }
+}
+
+/**
+ * Records metadata after the browser has completed the direct Storage upload.
+ * The request body contains no file bytes and remains small.
+ */
+export async function finalizeAnnualPlanUpload(input: unknown) {
+  const actor = await requireActor()
+  assertAnnualPlanUploader(actor)
+  const parsed = annualPlanFinalizeInputSchema.parse(input)
+  assertAnnualPlanPdfName(parsed.fileName)
+  assertAnnualPlanPathMatchesInput(parsed.filePath, parsed.fiscalYear, parsed.planType)
+  try {
+    await assertUploadedAnnualPlanObject(parsed.filePath, parsed.fileSizeBytes)
+  } catch (error) {
+    await removeOrQueue(parsed.filePath)
+    throw error
+  }
+
+  let record: z.infer<typeof annualPlanRpcResultSchema>
+  try {
+    const result = await supabaseAdmin.rpc('upsert_lab_stock_annual_plan', {
+      p_fiscal_year: parsed.fiscalYear,
+      p_plan_type: parsed.planType,
+      p_actor_id: actor.id,
+      p_file_path: parsed.filePath,
+      p_file_name: parsed.fileName,
+      p_file_mime_type: ANNUAL_PLAN_MIME_TYPE,
+      p_file_size_bytes: parsed.fileSizeBytes,
+    })
+    if (result.error) throw new Error(result.error.message)
+    record = annualPlanRpcResultSchema.parse(result.data)
+    if (
+      record.fiscal_year !== parsed.fiscalYear
+      || record.plan_type !== parsed.planType
+      || record.file_path !== parsed.filePath
+      || !isAnnualPlanFilePathAllowed(record.file_path)
+    ) {
+      throw new Error('ข้อมูลแผนประจำปีที่บันทึกไม่ตรงกับไฟล์')
+    }
+  } catch (error) {
+    await removeOrQueue(parsed.filePath)
+    throw new Error(`บันทึกแผนประจำปีไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  if (record.previous_file_path) {
+    if (!isAnnualPlanFilePathAllowed(record.previous_file_path)) {
+      await removeOrQueue(parsed.filePath)
+      throw new Error('เส้นทางไฟล์แผนประจำปีเดิมไม่ถูกต้อง')
+    }
+    await removeOrQueue(record.previous_file_path)
+  }
+
+  revalidatePath('/annual-plans')
+  return { planId: record.id, previousFilePath: record.previous_file_path }
 }
 
 export async function storeAnnualPlan(

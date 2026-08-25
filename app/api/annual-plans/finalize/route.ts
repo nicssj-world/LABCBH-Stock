@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { prepareAnnualPlanUpload } from '@/lib/annual-plans/actions'
 import { ZodError } from 'zod'
+import { finalizeAnnualPlanUpload } from '@/lib/annual-plans/actions'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
-    const ticket = await prepareAnnualPlanUpload(await request.json())
-    return NextResponse.json(ticket, { status: 201 })
+    const result = await finalizeAnnualPlanUpload(await request.json())
+    return NextResponse.json({ planId: result.planId }, { status: 201 })
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       )
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'เตรียมอัปโหลดแผนประจำปีไม่สำเร็จ' },
+      { error: error instanceof Error ? error.message : 'บันทึกแผนประจำปีไม่สำเร็จ' },
       { status: 500 },
     )
   }
