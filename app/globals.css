@@ -2692,6 +2692,24 @@ input[type="number"] {
 .pr-task-cards h3 { margin: 12px 0 4px; font-size: 16px; }
 .pr-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; }
 
+.receipt-task-cards {
+  display: none;
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+}
+
+.receipt-task-cards li {
+  min-width: 0;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--lab-border);
+}
+
+.receipt-task-cards li:last-child { border-bottom: 0; }
+.receipt-task-cards h3 { min-width: 0; margin: 12px 0 4px; font-size: 16px; }
+.receipt-task-cards p { margin: 0; color: var(--lab-muted); font-size: 12px; overflow-wrap: anywhere; }
+.receipt-task-card__meta { margin-top: 5px !important; line-height: 1.45; }
+
 .method-stack { display: grid; gap: 4px; }
 
 .purpose-fieldset,
@@ -2842,6 +2860,24 @@ input[type="number"] {
 .data-table td.pr-line-cell--name.pr-line-cell--manual > input { width: 100%; text-align: left; font-variant-numeric: normal; }
 .pr-line-cell--manual:first-child > input { width: min(100%, 150px); font-family: var(--font-mono); }
 
+.pr-form-line-cards { display: none; margin: 0; padding: 16px 22px 20px; list-style: none; }
+.pr-form-line-card { display: grid; gap: 14px; min-width: 0; padding: 14px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.pr-form-line-card + .pr-form-line-card { margin-top: 12px; }
+.pr-form-line-card__heading { display: flex; min-width: 0; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.pr-form-line-card__identity { display: grid; min-width: 0; flex: 1 1 auto; gap: 5px; }
+.pr-form-line-card__identity > strong { overflow-wrap: anywhere; color: var(--lab-ink); font-size: 13px; line-height: 1.45; }
+.pr-form-line-card__identity > .identifier { color: var(--lab-primary); font-size: 11px; }
+.pr-form-line-card__identity .field-row { gap: 5px; }
+.pr-form-line-card__heading > .lab-button { flex: 0 0 auto; min-height: 44px; padding-inline: 10px; }
+.pr-form-line-card__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.pr-form-line-card__facts > div { min-width: 0; padding: 9px 10px; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 8px; }
+.pr-form-line-card__facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
+.pr-form-line-card__facts dd { display: grid; gap: 3px; margin: 4px 0 0; overflow-wrap: anywhere; color: var(--lab-ink); font-size: 12px; }
+.pr-form-line-card__facts dd small { overflow-wrap: anywhere; }
+.pr-form-line-card__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pr-form-line-card__fields > :last-child { grid-column: 1 / -1; }
+.pr-form-line-card__readonly-value { display: flex; align-items: center; min-height: 46px; padding: 9px 11px; color: var(--lab-muted); background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); font-weight: 400; }
+
 .item-picker {
   display: grid;
   gap: 12px;
@@ -2890,6 +2926,17 @@ input[type="number"] {
 .receipt-pr-balance__heading p { margin: 4px 0 0; color: var(--lab-muted); font-size: 11px; }
 .receipt-pr-balance .data-table td small { display: block; margin-top: 3px; color: var(--lab-muted); font-size: 10px; }
 .receipt-pr-balance .lab-button { white-space: nowrap; }
+.receipt-balance-cards { display: none; margin: 0; padding: 12px 22px 20px; list-style: none; }
+.receipt-balance-cards li { display: grid; gap: 14px; padding: 14px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.receipt-balance-card__identity { display: grid; min-width: 0; gap: 4px; }
+.receipt-balance-card__identity strong { overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; }
+.receipt-balance-card__identity small { color: var(--lab-muted); font: 11px/1.4 var(--font-mono); overflow-wrap: anywhere; }
+.receipt-balance-card__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.receipt-balance-card__facts > div { min-width: 0; padding: 9px 10px; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 8px; }
+.receipt-balance-card__facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
+.receipt-balance-card__facts dd { display: grid; gap: 3px; margin: 4px 0 0; color: var(--lab-ink); font-size: 12px; }
+.receipt-balance-card__facts dd small { color: var(--lab-muted); font: 10px/1.35 var(--font-sans); overflow-wrap: anywhere; }
+.receipt-balance-cards .lab-button { width: 100%; }
 
 .receipt-line-list {
   display: grid;
@@ -3511,6 +3558,12 @@ input[type="number"] {
   .inventory-task-cards { display: block; }
   .pr-table--desktop { display: none; }
   .pr-task-cards { display: block; }
+  .receipt-table--desktop { display: none; }
+  .receipt-task-cards { display: block; }
+  .receipt-balance-table--desktop { display: none; }
+  .receipt-balance-cards { display: grid; gap: 12px; }
+  .pr-form-lines-table--desktop { display: none; }
+  .pr-form-line-cards { display: block; }
   .purpose-options { grid-template-columns: 1fr; }
   .method-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .method-detail-grid { grid-template-columns: 1fr; }
@@ -3582,6 +3635,12 @@ input[type="number"] {
   .item-picker li { padding: 12px; }
   .item-picker__manual-fields { grid-template-columns: 1fr; }
   .receipt-line__fields { grid-template-columns: 1fr; }
+  .receipt-balance-cards { padding-inline: 16px; }
+  .receipt-balance-card__facts,
+  .pr-form-line-card__facts { grid-template-columns: 1fr; }
+  .pr-form-line-cards { padding-inline: 16px; }
+  .pr-form-line-card__fields { grid-template-columns: 1fr; }
+  .pr-form-line-card__fields > :last-child { grid-column: auto; }
   .requisition-line__fields { grid-template-columns: 1fr; }
   .lot-picker li { grid-template-columns: 1fr; }
   .print-meta { grid-template-columns: 1fr; }

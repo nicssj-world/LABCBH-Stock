@@ -123,7 +123,8 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
           {receipts.length === 0 ? (
             <p className="empty-state">ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก</p>
           ) : (
-            <StickyScroll className="detail-items-table" ariaLabel="ตารางใบรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
+            <>
+              <StickyScroll className="detail-items-table receipt-table--desktop" ariaLabel="ตารางใบรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table receipt-register-table">
                 <colgroup>
                   <col className="receipt-register-table__reference" />
@@ -174,7 +175,40 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                   ))}
               </tbody>
             </table>
-            </StickyScroll>
+              </StickyScroll>
+
+              <ul className="receipt-task-cards" aria-label="รายการใบรับเข้า">
+              {paginatedReceipts.items.map((receipt) => (
+                <li key={receipt.id}>
+                  <div className="task-card__topline">
+                    <StatusChip tone={GOODS_RECEIPT_STATUS_TONES[receipt.status]}>
+                      {GOODS_RECEIPT_STATUS_LABELS[receipt.status]}
+                    </StatusChip>
+                    <span className="identifier">{formatThaiDate(receipt.receivedDate)}</span>
+                  </div>
+                  <h3>
+                    <GoodsReceiptSummaryDialog receipt={receipt} variant="card" />
+                  </h3>
+                  <p>{receipt.department} · ผู้รับ {receipt.receiverName}</p>
+                  <p className="receipt-task-card__meta">
+                    {receipt.purchaseRequestNumber
+                      ? `อ้างอิง PR ${receipt.purchaseRequestNumber}`
+                      : 'ไม่อ้างอิงใบ PR'}
+                    {receipt.status === 'draft' && ' · รอลงคลัง'}
+                    {receipt.status === 'posted' && receipt.postedAt && ` · ลงคลัง ${formatThaiDateTime(receipt.postedAt)}`}
+                    {receipt.status === 'cancelled' && receipt.cancelledAt && ` · ยกเลิก ${formatThaiDateTime(receipt.cancelledAt)}`}
+                  </p>
+                  <div className="detail-actions task-card__action">
+                    <DetailIconLink
+                      href={`/receipts/${receipt.id}`}
+                      label={`ดูรายละเอียดใบรับเข้า ${receipt.poNumber ?? receipt.purchaseRequestNumber ?? receipt.id}`}
+                      title="ดูรายละเอียดใบรับเข้า"
+                    />
+                  </div>
+                </li>
+              ))}
+              </ul>
+            </>
           )}
           <ListPagination
             currentPage={paginatedReceipts.currentPage}

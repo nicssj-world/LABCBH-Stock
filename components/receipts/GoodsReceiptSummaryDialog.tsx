@@ -8,11 +8,17 @@ import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/invent
 import { GOODS_RECEIPT_STATUS_LABELS, GOODS_RECEIPT_STATUS_TONES } from '@/lib/receipts/presenter'
 import type { GoodsReceiptRecord } from '@/lib/receipts/types'
 
-export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRecord }) {
+export function GoodsReceiptSummaryDialog({
+  receipt,
+  variant = 'table',
+}: {
+  receipt: GoodsReceiptRecord
+  variant?: 'table' | 'card'
+}) {
   // One of these renders per row, in both the table and the card layout,
   // so the dialog body is built only once someone opens it.
   const { dialogRef, isRendered, open: openDialog, unmount: unmountDialog } = useDeferredDialog()
-  const dialogId = `receipt-summary-dialog-${receipt.id}`
+  const dialogId = `receipt-summary-dialog-${receipt.id}-${variant}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
   const title = receipt.poNumber ?? 'ไม่ระบุ PO'
@@ -21,12 +27,12 @@ export function GoodsReceiptSummaryDialog({ receipt }: { receipt: GoodsReceiptRe
     <>
       <button
         type="button"
-        className="list-summary-trigger"
+        className={`list-summary-trigger list-summary-trigger--${variant}`}
         aria-haspopup="dialog"
         aria-controls={isRendered ? dialogId : undefined}
         onClick={openDialog}
       >
-        <strong className="identifier">{title}</strong>
+        {variant === 'table' ? <strong className="identifier">{title}</strong> : title}
       </button>
 
       {isRendered && (

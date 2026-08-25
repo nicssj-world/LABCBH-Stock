@@ -256,7 +256,7 @@ export function ReceiptForm({
                 <p>ยอดส่วนนี้ยังไม่ใช่รายการรับเข้า จึงยังไม่ต้องระบุ LOT หรือวันหมดอายุ</p>
               </div>
             </div>
-            <StickyScroll className="detail-items-table" ariaLabel="รายการรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
+            <StickyScroll className="detail-items-table receipt-balance-table--desktop" ariaLabel="รายการรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -297,8 +297,48 @@ export function ReceiptForm({
                     )
                   })}
                 </tbody>
-              </table>
+            </table>
             </StickyScroll>
+
+            <ul className="receipt-balance-cards" aria-label="ยอดคงเหลือรายการในใบ PR">
+              {selectedRequest.items.map((item) => {
+                const stagedQuantity = stagedByItem[item.inventoryItemId] ?? 0
+                const availableQuantity = roundQuantity(item.remainingQuantity - stagedQuantity)
+                return (
+                  <li key={item.inventoryItemId}>
+                    <div className="receipt-balance-card__identity">
+                      <strong>{item.name}</strong>
+                      <small>{item.lsCode} · {item.unit}</small>
+                    </div>
+                    <dl className="receipt-balance-card__facts">
+                      <div>
+                        <dt>ขอซื้อ</dt>
+                        <dd className="identifier">{formatQuantity(item.requestedQuantity, item.unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>รับสะสม</dt>
+                        <dd className="identifier">{formatQuantity(item.receivedQuantity, item.unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>คงเหลือ</dt>
+                        <dd className="identifier">
+                          <strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong>
+                          {stagedQuantity > 0 && <small>เลือกรอบนี้ {formatQuantity(stagedQuantity, item.unit)}</small>}
+                        </dd>
+                      </div>
+                    </dl>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isPending || availableQuantity <= 0}
+                      onClick={() => addPurchaseRequestLine(item)}
+                    >
+                      {availableQuantity > 0 ? 'เพิ่มเข้ารับ' : 'เลือกครบแล้ว'}
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         )}
         <ReceiptLinesEditor

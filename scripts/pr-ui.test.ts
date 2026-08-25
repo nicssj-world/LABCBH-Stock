@@ -379,6 +379,11 @@ assert.match(table, /<PurchaseRequestSummaryDialog\s+request=\{request\}[\s\S]{0
 assert.match(table, /DetailIconLink/, 'the trailing detail action must use the shared icon link')
 assert.doesNotMatch(table, /<Link[^>]*>\s*ดูรายละเอียด/, 'the trailing detail action must not render a visible text label')
 
+const formLayout = read('components/pr/PurchaseRequestForm.tsx')
+assert.match(formLayout, /pr-form-lines-table--desktop/, 'the wide PR line table must have an explicit desktop-only presentation')
+assert.match(formLayout, /className="pr-form-line-cards"/, 'the PR form must provide phone-friendly line cards')
+assert.match(formLayout, /pr-form-line-card__fields/, 'phone PR cards must keep editable line fields')
+
 const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)
 assert.match(summaryDialog, /<dialog\b/, 'must use the native dialog element')
