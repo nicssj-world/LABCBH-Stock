@@ -17,9 +17,10 @@ export interface AccessMatrixProps {
   profiles: MembershipProfile[]
   search: string
   activeRole: LabStockRoleName | null
+  canManageAdminRole: boolean
 }
 
-export function AccessMatrix({ profiles, search: initialSearch, activeRole }: AccessMatrixProps) {
+export function AccessMatrix({ profiles, search: initialSearch, activeRole, canManageAdminRole }: AccessMatrixProps) {
   const router = useRouter()
   const [search, setSearch] = useState(initialSearch)
   const [savedKey, setSavedKey] = useState<string | null>(null)
@@ -137,11 +138,12 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole }: Ac
                           <input
                             type="checkbox"
                             checked={checked}
-                            disabled={isPending || intrinsic}
+                            disabled={isPending || intrinsic || (role === 'admin' && !canManageAdminRole)}
                             aria-label={`${ROLE_LABELS[role]} ของ ${profile.name ?? profile.ephisId ?? 'ผู้ใช้งาน'}`}
                             onChange={(event) => toggle(profile, role, event.target.checked)}
                           />
                           {intrinsic && <small>สิทธิ์ติดตัว</small>}
+                          {role === 'admin' && !canManageAdminRole && <small>เฉพาะผู้ดูแลระบบเท่านั้น</small>}
                           {savedKey === key && <small className="access-toggle__saved">บันทึกแล้ว</small>}
                         </label>
                       </td>

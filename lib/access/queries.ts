@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { assertMembershipAdministrator } from '@/lib/access/authorization'
+import { assertMembershipManager } from '@/lib/access/authorization'
 import type { Actor } from '@/lib/auth/actor'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { LAB_STOCK_ROLES } from './schema'
@@ -44,7 +44,7 @@ export async function listMemberships(
   // The shared portal's profiles RLS only exposes a user's own profile. This
   // directory is an admin-only server surface, so defend the service-role read
   // here as well as at the route boundary.
-  assertMembershipAdministrator(actor)
+  assertMembershipManager(actor)
 
   let query = supabaseAdmin
     .from('profiles')

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { assertMembershipAdministrator } from '@/lib/access/authorization'
+import { assertMembershipManager, canChangeMembershipRole } from '@/lib/access/authorization'
 import { membershipInputSchema } from '@/lib/access/schema'
 import type { MembershipInput } from '@/lib/access/schema'
 import { requireActor } from '@/lib/auth/actor'
@@ -10,10 +10,13 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function setMembership(input: MembershipInput) {
   const actor = await requireActor()
-  assertMembershipAdministrator(actor)
   const parsed = membershipInputSchema.parse(input)
+  assertMembershipManager(actor)
+  if (!canChangeMembershipRole(actor, parsed.role)) {
+    throw new Error('เฉพาะผู้ดูแลระบบเท่านั้นที่จัดการสิทธิ์ผู้ดูแลระบบได้')
+  }
 
-  // The RPC re-checks admin rights against the database, so this Server Action
+  // The RPC re-checks manager and admin-role rights against the database, so this Server Action
   // is a convenience gate rather than the security boundary.
   const result = await supabaseAdmin.rpc('set_lab_stock_membership', {
     p_profile_id: parsed.profileId,

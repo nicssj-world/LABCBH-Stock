@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccessMatrix } from '@/components/settings/AccessMatrix'
-import { canAdministerMemberships } from '@/lib/access/authorization'
+import { canAdministerMemberships, canManageMemberships } from '@/lib/access/authorization'
 import { listMemberships, type LabStockRoleName, type MembershipProfile } from '@/lib/access/queries'
 import { LAB_STOCK_ROLES } from '@/lib/access/schema'
 import { requireActor } from '@/lib/auth/actor'
@@ -14,7 +14,7 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 
 export default async function AccessSettingsPage({ searchParams }: AccessSettingsPageProps) {
   const actor = await requireActor()
-  if (!canAdministerMemberships(actor)) redirect('/dashboard')
+  if (!canManageMemberships(actor)) redirect('/dashboard')
 
   const params = await searchParams
   const search = first(params.search)?.trim() ?? ''
@@ -57,7 +57,12 @@ export default async function AccessSettingsPage({ searchParams }: AccessSetting
             </div>
             <p>{profiles.length} คน</p>
           </div>
-          <AccessMatrix profiles={profiles} search={search} activeRole={role ?? null} />
+          <AccessMatrix
+            profiles={profiles}
+            search={search}
+            activeRole={role ?? null}
+            canManageAdminRole={canAdministerMemberships(actor)}
+          />
         </section>
       )}
     </div>
