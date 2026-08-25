@@ -140,7 +140,7 @@ begin
       new.id,
       new.document_number,
       'มีใบเบิกใหม่รอจ่าย',
-      format('หน่วยงาน %s · ต้องการรับ %s', new.department, to_char(new.desired_date, 'DD/MM/YYYY')),
+      format('หน่วยงาน %s · วันที่ขอเบิก %s', new.department, to_char(new.desired_date, 'DD/MM/YYYY')),
       '/requisitions/' || new.id::text
     from public.profiles profile
     left join public.lab_stock_memberships membership

@@ -100,7 +100,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
         <div className="contract-detail-heading__body">
           <div className="contract-detail-heading__identity">
             <h1 className="identifier">{requisition.documentNumber}</h1>
-            <p>ผู้ขอเบิก {requisition.requesterName} · ต้องการรับ {formatThaiDate(requisition.desiredDate)}</p>
+            <p>ผู้ขอเบิก {requisition.requesterName} · วันที่ขอเบิก {formatThaiDate(requisition.desiredDate)}</p>
           </div>
           <dl className="contract-detail-heading__value">
             <dt>{workloadLabel}</dt>
@@ -138,8 +138,8 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                 <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอเบิก</th>
-                <th className="numeric-cell">คงเหลือในคลัง</th>
                 <th className="numeric-cell">จ่ายแล้ว</th>
+                <th className="numeric-cell" title="ยอดคงเหลือปัจจุบันของน้ำยา">คงเหลือในคลัง</th>
                 <th>ล็อตที่จ่าย</th>
               </tr>
             </thead>
@@ -153,10 +153,21 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                   </td>
                   <td className="numeric-cell identifier">{formatQuantity(item.requestedQuantity, item.unit)}</td>
                   <td className="numeric-cell identifier">
-                    {formatQuantity(onHandByItem[item.inventoryItemId] ?? 0, item.unit)}
+                    {item.fulfilledQuantity === null ? (
+                      'ยังไม่จ่าย'
+                    ) : (
+                      <span className="requisition-fulfilled-cell">
+                        <span>{formatQuantity(item.fulfilledQuantity, item.unit)}</span>
+                        {item.fulfilledQuantity === item.requestedQuantity && (
+                          <span className="requisition-fulfilled-cell__complete" aria-label="จ่ายครบตามจำนวนที่ขอ">
+                            ✓ ครบแล้ว
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td className="numeric-cell identifier">
-                    {item.fulfilledQuantity === null ? '—' : formatQuantity(item.fulfilledQuantity, item.unit)}
+                    {formatQuantity(onHandByItem[item.inventoryItemId] ?? 0, item.unit)}
                   </td>
                   <td>
                     {item.allocations.length === 0 ? '—' : (

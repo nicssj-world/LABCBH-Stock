@@ -26,6 +26,7 @@ const ledgerSql = read('_lab_stock_inventory_ledger.sql')
 const requisitionSql = read('_lab_stock_requisitions.sql')
 const fifoGuardSql = read('_requisition_fifo_guard.sql')
 const fulfillerNameSql = read('_requisition_fulfiller_name_snapshot.sql')
+const fulfillerAuditGuardSql = read('_requisition_fulfillment_audit_guard.sql')
 
 // The fulfilment actor's name is an immutable display snapshot. The source
 // profile is protected by RLS, so the UI must not depend on embedding it later.
@@ -34,6 +35,11 @@ assert.match(fulfillerNameSql, /update public\.requisitions[\s\S]*from public\.p
 assert.match(fulfillerNameSql, /create trigger requisitions_snapshot_fulfiller_name/i)
 assert.match(fulfillerNameSql, /before insert or update of fulfilled_by on public\.requisitions/i)
 assert.match(fulfillerNameSql, /nullif\(btrim\(profile\.name\), ''\)/i)
+assert.match(fulfillerAuditGuardSql, /stock_movements[\s\S]*requisition_issue/i)
+assert.match(fulfillerAuditGuardSql, /max\(movement\.created_at\)/i)
+assert.match(fulfillerAuditGuardSql, /requisitions_fulfilled_audit_check/i)
+assert.match(fulfillerAuditGuardSql, /fulfilled_at is not null[\s\S]*fulfilled_by is not null[\s\S]*fulfilled_by_name/i)
+assert.match(fulfillerAuditGuardSql, /before insert or update of fulfilled_by, fulfilled_by_name/i)
 
 const fulfil = requisitionSql.match(
   /create or replace function public\.fulfill_requisition[\s\S]*?\$function\$;/i,

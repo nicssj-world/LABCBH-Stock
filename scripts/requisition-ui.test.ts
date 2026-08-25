@@ -129,6 +129,13 @@ assert.match(detailPage, /listOnHand/, 'the detail page must read current on-han
 assert.match(detailPage, /คงเหลือในคลัง/)
 assert.match(detailPage, /รายการที่ต้องหยิบ|รายการที่จ่าย/, 'the detail header must show a useful line-count workload, not mixed-unit totals')
 assert.doesNotMatch(detailPage, /totalRequested|รวมที่ขอ/, 'the detail header must not show a mixed-unit sum')
+assert.match(
+  detailPage,
+  /<th className="numeric-cell">ขอเบิก<\/th>[\s\S]*?<th className="numeric-cell">จ่ายแล้ว<\/th>[\s\S]*?<th className="numeric-cell" title="ยอดคงเหลือปัจจุบันของน้ำยา">คงเหลือในคลัง<\/th>/,
+  'request detail columns must show requested, fulfilled, then on-hand quantity',
+)
+assert.match(detailPage, /item\.fulfilledQuantity === item\.requestedQuantity/, 'a fully paid line must be identifiable')
+assert.match(detailPage, /✓ ครบแล้ว/, 'a fully paid line must show a completion cue')
 
 assert.doesNotMatch(listPage, /รวมที่ขอ/, 'the requisition register must not show a mixed-unit sum')
 
@@ -136,6 +143,8 @@ const summaryDialogSource = read('components/requisitions/RequisitionSummaryDial
 const detailFulfillerDisplay = "requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'"
 assert.match(summaryDialogSource, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 assert.match(detailPage, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+assert.match(summaryDialogSource, /requisition\.status === 'fulfilled' && \(/, 'fulfilled requisitions must always show the payout row')
+assert.doesNotMatch(summaryDialogSource, /requisition\.status === 'fulfilled' && requisition\.fulfilledAt/, 'a missing timestamp must not hide the payout row')
 
 const inventoryQueries = read('lib/inventory/queries.ts')
 assert.match(inventoryQueries, /export async function listOnHand/)

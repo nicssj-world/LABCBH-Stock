@@ -66,7 +66,7 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 <dd>{requisition.department}</dd>
               </div>
               <div>
-                <dt>ต้องการรับ</dt>
+                <dt>วันที่ขอเบิก</dt>
                 <dd className="identifier">{formatThaiDate(requisition.desiredDate)}</dd>
               </div>
               <div>
@@ -91,7 +91,7 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                       : 'คืนยอดแล้ว'}
                 </dd>
               </div>
-              {requisition.status === 'fulfilled' && requisition.fulfilledAt && (
+              {requisition.status === 'fulfilled' && (
                 <div className="list-summary-dialog__fact--wide">
                   <dt>จ่ายของเมื่อ</dt>
                   <dd className="identifier">

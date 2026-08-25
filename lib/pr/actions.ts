@@ -262,7 +262,7 @@ export async function receivePurchaseRequestOutsideStock(purchaseRequestId: stri
   const actor = await requireActor()
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
   const existing = await getPurchaseRequest(parsedId)
-  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการรับของโดยหน่วยงาน')
+  if (!existing) throw new Error('ไม่พบใบ PR ของหน่วยงาน')
   assertPurchaseRequestOutsideStockReceiver(actor, existing.requesterId)
 
   const result = await supabaseAdmin.rpc('mark_purchase_request_received_outside_stock', {

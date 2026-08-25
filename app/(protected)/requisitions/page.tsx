@@ -135,7 +135,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                 <thead>
                   <tr>
                     <th>เลขที่ใบเบิก</th>
-                    <th>ต้องการรับ</th>
+                    <th>วันที่ขอเบิก</th>
                     <th>ผู้ขอเบิก</th>
                     <th className="requisition-register-table__cell--center requisition-register-table__items-cell">รายการ</th>
                     <th className="requisition-register-table__cell--center">สถานะ</th>

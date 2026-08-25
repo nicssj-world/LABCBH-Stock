@@ -1580,6 +1580,8 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .status-filter-link:hover,
 .status-filter-link[aria-current="page"] { color: var(--lab-ink); border-color: var(--lab-amber); }
 .numeric-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
+.requisition-fulfilled-cell { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.requisition-fulfilled-cell__complete { color: var(--lab-green); font-family: var(--font-sans); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .pr-line-cell--center { text-align: center !important; font-variant-numeric: tabular-nums; }
 
 /*
