@@ -72,6 +72,9 @@ assert.match(detail, /canDownloadCommitteePdf/)
 const committeePdfRoute = read('app/api/purchase-requests/[id]/checklist/committee-pdf/route.ts')
 assert.match(committeePdfRoute, /Content-Disposition.*inline/, 'committee PDF preview must render inline in the browser')
 
+const nextConfig = read('next.config.ts')
+assert.match(nextConfig, /X-Frame-Options', value: 'SAMEORIGIN'/, 'same-origin PDF previews must be allowed inside the app')
+
 const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 assert.match(detailPage, /getPurchaseRequestChecklist/)
 assert.match(detailPage, /PurchaseRequestChecklistPanel/)
