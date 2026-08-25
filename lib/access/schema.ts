@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const LAB_STOCK_ROLES = ['admin', 'head', 'stock_officer', 'viewer'] as const
+export type LabStockRoleName = (typeof LAB_STOCK_ROLES)[number]
 
 export const membershipInputSchema = z
   .object({

@@ -5,15 +5,26 @@ export interface AnnualPlanRecord {
   fiscalYear: number
   planType: AnnualPlanType
   fileName: string
-  filePath: string
   fileSize: number
   mimeType: string
   uploadedBy: string
+  uploadedByName: string | null
   uploadedAt: string
 }
 
-export interface AnnualPlanGroup {
-  fiscalYear: number
-  procurement: AnnualPlanRecord | null
-  hiring: AnnualPlanRecord | null
+export interface AnnualPlanStoredRecord extends AnnualPlanRecord {
+  filePath: string
 }
+
+export interface AnnualPlanSlot {
+  fiscalYear: number
+  planType: AnnualPlanType
+  plan: AnnualPlanRecord | null
+}
+
+export interface AnnualPlanYearGroup {
+  fiscalYear: number
+  slots: [AnnualPlanSlot, AnnualPlanSlot]
+}
+
+export type AnnualPlanGroup = AnnualPlanYearGroup

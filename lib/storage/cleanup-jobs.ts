@@ -8,6 +8,7 @@ export type StorageCleanupJobKind =
   | 'storage_upload_rollback'
   | 'checklist_lifecycle_retry'
   | 'po_lifecycle_retry'
+  | 'annual_plan_retention_retry'
 
 interface StorageCleanupJobInput {
   storageBackend: StorageCleanupBackend

@@ -1,5 +1,6 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { NextResponse } from 'next/server'
+import { cleanupExpiredAnnualPlans, retryAnnualPlanHardDelete } from '@/lib/annual-plans/cleanup'
 import { cleanupPurchaseRequestChecklistObjects } from '@/lib/pr/checklist-cleanup'
 import type { PurchaseRequestChecklistDeletionReason } from '@/lib/pr/checklist-cleanup'
 import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
@@ -13,6 +14,7 @@ type CleanupJobKind =
   | 'storage_upload_rollback'
   | 'checklist_lifecycle_retry'
   | 'po_lifecycle_retry'
+  | 'annual_plan_retention_retry'
 
 interface CleanupJob {
   id: string
@@ -128,6 +130,14 @@ async function processLifecycleRetry(job: CleanupJob) {
   throw new Error('ไม่รู้จัก lifecycle cleanup job')
 }
 
+async function processAnnualPlanRetentionRetry(job: CleanupJob) {
+  if (!job.resource_id) throw new Error('คิว cleanup แผนประจำปีไม่มี plan id')
+  const expectedPath = job.metadata.expectedFilePath
+  if (typeof expectedPath !== 'string') throw new Error('คิว cleanup แผนประจำปีไม่มีเส้นทางไฟล์')
+  const actorId = await findSystemActorId()
+  await retryAnnualPlanHardDelete(job.resource_id, expectedPath, actorId)
+}
+
 async function processJob(job: CleanupJob) {
   if (job.job_kind === 'checklist_upload_orphan') {
     await processChecklistUploadOrphan(job)
@@ -135,6 +145,10 @@ async function processJob(job: CleanupJob) {
   }
   if (job.job_kind === 'storage_upload_rollback') {
     await removeStorageObject(job)
+    return
+  }
+  if (job.job_kind === 'annual_plan_retention_retry') {
+    await processAnnualPlanRetentionRetry(job)
     return
   }
   await processLifecycleRetry(job)
@@ -145,6 +159,14 @@ export async function POST(request: Request) {
   if (!secret) return NextResponse.json({ error: 'cleanup secret is not configured' }, { status: 503 })
   if (request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'ไม่ได้รับอนุญาต' }, { status: 401 })
+  }
+
+  let annualPlanRetention = { deleted: 0, queued: 0 }
+  let annualPlanRetentionError: string | null = null
+  try {
+    annualPlanRetention = await cleanupExpiredAnnualPlans(await findSystemActorId())
+  } catch (error) {
+    annualPlanRetentionError = error instanceof Error ? error.message : String(error)
   }
 
   const claimed = await supabaseAdmin.rpc('claim_storage_cleanup_jobs', { p_limit: 25 })
@@ -178,7 +200,15 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { ok: failures.length === 0, claimed: jobs.length, completed, failed: failures.length, failures },
-    { status: failures.length === 0 ? 200 : 500 },
+    {
+      ok: failures.length === 0 && annualPlanRetentionError === null,
+      claimed: jobs.length,
+      completed,
+      failed: failures.length,
+      failures,
+      annualPlanRetention,
+      annualPlanRetentionError,
+    },
+    { status: failures.length === 0 && annualPlanRetentionError === null ? 200 : 500 },
   )
 }
