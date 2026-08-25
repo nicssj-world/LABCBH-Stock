@@ -4186,6 +4186,12 @@ body {
 
 .list-summary-dialog__body {
   gap: 14px;
+  /* Keep the facts card at its content height. Without explicit max-content
+     rows, the dialog's grid can shrink this card to share the available
+     height with the item list; the card then clips later audit rows because
+     it intentionally has overflow:hidden for rounded corners. */
+  grid-template-rows: max-content max-content;
+  align-content: start;
   min-height: 0;
   max-height: none;
   overflow-y: auto;
