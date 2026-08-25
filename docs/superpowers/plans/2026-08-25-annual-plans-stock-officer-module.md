@@ -51,6 +51,7 @@ Modify these existing files:
 - `app/api/internal/storage-cleanup/route.ts`, `lib/storage/cleanup-jobs.ts` — annual-plan retention retry
 - `supabase/migrations/20260825180000_lab_stock_membership_manager.sql` — RPC guard expansion
 - `supabase/migrations/20260825181000_lab_stock_annual_plans.sql` — annual plan table, audit, bucket, policies and RPCs
+- `supabase/migrations/20260825182000_annual_plan_cleanup_retry.sql` — forward-only cleanup job constraint/policy extension
 - `scripts/app-shell-contract.test.ts`, `scripts/access-ui.test.ts`, `scripts/access-policy.test.ts`, `scripts/storage-cleanup.test.ts`, `package.json`
 
 Create focused test files:
@@ -295,6 +296,7 @@ git commit -m "feat: let stock officers manage non-admin roles"
 - Create: `lib/annual-plans/cleanup.ts`
 - Create: `app/api/annual-plans/upload/route.ts`
 - Create: `scripts/annual-plans-action.test.ts`
+- Create: `supabase/migrations/20260825182000_annual_plan_cleanup_retry.sql`
 - Modify: `lib/storage/cleanup-jobs.ts`
 - Modify: `app/api/internal/storage-cleanup/route.ts`
 
@@ -351,6 +353,8 @@ Expected: FAIL because the domain actions/route do not exist.
 - [ ] **Step 6: Implement hard-delete retention and retries**
 
 `cleanupExpiredAnnualPlans` must use the system actor, call the expired-row RPC, delete each exact Storage object idempotently, call the hard-delete RPC only after the object deletion step, and enqueue an idempotent retry if the RPC or Storage operation fails. Do not add `deleted_at` or hide a failed deletion as success.
+
+Create `supabase/migrations/20260825182000_annual_plan_cleanup_retry.sql` as a forward-only migration that extends the existing `storage_cleanup_jobs.job_kind` check with `annual_plan_retention_retry`, permits `lab-stock-annual-plans` keys under `annual-plans/`, and keeps the existing unique/index/RLS constraints intact.
 
 Extend `StorageCleanupJobKind` and the SQL job check constraint with `annual_plan_retention_retry`. In `app/api/internal/storage-cleanup/route.ts`, route that job to `retryAnnualPlanHardDelete`, which rechecks plan id/path before deleting so a replacement cannot delete the new file. Run retention once per daily cron invocation before/after the existing queue batch and include counts in the JSON response without breaking existing jobs.
 
