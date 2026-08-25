@@ -36,9 +36,10 @@ interface AutoFilterBenchProps {
   fields: readonly AutoFilterField[]
   ariaLabel: string
   className?: string
+  showClear?: boolean
 }
 
-export function AutoFilterBench({ fields, ariaLabel, className = '' }: AutoFilterBenchProps) {
+export function AutoFilterBench({ fields, ariaLabel, className = '', showClear = true }: AutoFilterBenchProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -138,9 +139,11 @@ export function AutoFilterBench({ fields, ariaLabel, className = '' }: AutoFilte
           </label>
         )
       })}
-      <button className="lab-button lab-button--secondary filter-bench__clear" type="button" onClick={clearFilters}>
-        ล้างตัวกรอง
-      </button>
+      {showClear && (
+        <button className="lab-button lab-button--secondary filter-bench__clear" type="button" onClick={clearFilters}>
+          ล้างตัวกรอง
+        </button>
+      )}
       <p className="filter-bench__status" aria-live="polite">{isPending ? 'กำลังกรองรายการ…' : 'ตัวกรองอัปเดตอัตโนมัติ'}</p>
     </form>
   )

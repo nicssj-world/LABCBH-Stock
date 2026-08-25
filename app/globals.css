@@ -5132,14 +5132,26 @@ body {
 
 /* Service procurement — dense operational register with a mobile card fallback. */
 .service-register-toolbar { padding: 20px; }
-.service-register-toolbar > form { display: grid; gap: 16px; }
-.service-register-toolbar .form-grid {
+.service-register-toolbar > .filter-bench {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  max-width: none;
-  margin-top: 0;
+  gap: 16px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
-.service-register-toolbar__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
-.service-register-toolbar__note { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.service-register-toolbar .filter-bench__search {
+  grid-column: auto;
+}
+.service-register-toolbar .filter-bench__status {
+  margin: 0;
+}
+.service-register-toolbar__note {
+  margin: 12px 0 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+}
 .service-plan-table-wrap, .service-pr-table-wrap, .service-ledger-table-wrap { overflow-x: auto; }
 .service-plan-table, .service-pr-table { min-width: 880px; }
 .service-plan-table__number { text-align: right; white-space: nowrap; }
