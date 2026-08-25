@@ -1,5 +1,5 @@
-export type NotificationEventType = 'purchase_request_created' | 'requisition_created'
-export type NotificationEntityType = 'purchase_request' | 'requisition'
+export type NotificationEventType = 'purchase_request_created' | 'requisition_created' | 'service_purchase_request_created' | 'service_purchase_order_cancelled'
+export type NotificationEntityType = 'purchase_request' | 'requisition' | 'service_purchase_request'
 
 export interface NotificationItem {
   id: string

@@ -64,7 +64,6 @@ assert.match(vercelConfig, /\/api\/internal\/storage-cleanup/)
 for (const source of [
   read('lib/pr/po-file-actions.ts'),
   read('lib/contracts/file-actions.ts'),
-  read('lib/out-lab/file-actions.ts'),
 ]) {
   assert.match(source, /enqueueStorageCleanupJob/, 'storage rollback failures must enter the cleanup queue')
 }

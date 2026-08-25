@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { markAllNotificationsRead, markNotificationRead } from '@/lib/notifications/actions'
-import type { NotificationItem, NotificationSnapshot } from '@/lib/notifications/types'
+import type { NotificationEntityType, NotificationEventType, NotificationItem, NotificationSnapshot } from '@/lib/notifications/types'
 
 interface NotificationCenterProps {
   actorId: string
@@ -50,8 +50,8 @@ function toNotification(row: Record<string, unknown>): NotificationItem | null {
   const createdAt = asString(row.created_at)
 
   if (
-    (eventType !== 'purchase_request_created' && eventType !== 'requisition_created') ||
-    (entityType !== 'purchase_request' && entityType !== 'requisition') ||
+    !['purchase_request_created', 'requisition_created', 'service_purchase_request_created', 'service_purchase_order_cancelled'].includes(String(eventType)) ||
+    !['purchase_request', 'requisition', 'service_purchase_request'].includes(String(entityType)) ||
     !id ||
     !entityId ||
     !documentNumber ||
@@ -65,8 +65,8 @@ function toNotification(row: Record<string, unknown>): NotificationItem | null {
 
   return {
     id,
-    eventType,
-    entityType,
+    eventType: eventType as NotificationEventType,
+    entityType: entityType as NotificationEntityType,
     entityId,
     documentNumber,
     title,

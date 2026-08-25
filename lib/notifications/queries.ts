@@ -62,9 +62,13 @@ function isNotificationTableMissing(error: QueryError | null): boolean {
 export async function getNotificationSnapshot(actor: Actor): Promise<NotificationSnapshot> {
   if (!canOperateStock(actor)) return EMPTY_NOTIFICATION_SNAPSHOT
 
-  const [purchaseRequests, requisitions, unread, recent] = await Promise.all([
+  const [purchaseRequests, servicePurchaseRequests, requisitions, unread, recent] = await Promise.all([
     supabaseAdmin
       .from('purchase_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabaseAdmin
+      .from('service_purchase_requests')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending'),
     supabaseAdmin
@@ -89,13 +93,14 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
   ])
 
   throwQueryError('อ่านจำนวน PR ที่รอดำเนินการ', purchaseRequests.error)
+  throwQueryError('อ่านจำนวน PR งานจ้างที่รอดำเนินการ', servicePurchaseRequests.error)
   throwQueryError('อ่านจำนวนใบเบิกที่รอจ่าย', requisitions.error)
 
   const notificationError = unread.error ?? recent.error
   if (isNotificationTableMissing(notificationError)) {
     return {
       enabled: false,
-      pendingPurchaseRequests: purchaseRequests.count ?? 0,
+      pendingPurchaseRequests: (purchaseRequests.count ?? 0) + (servicePurchaseRequests.count ?? 0),
       waitingRequisitions: requisitions.count ?? 0,
       unreadCount: 0,
       notifications: [],
@@ -107,7 +112,7 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
 
   return {
     enabled: true,
-    pendingPurchaseRequests: purchaseRequests.count ?? 0,
+    pendingPurchaseRequests: (purchaseRequests.count ?? 0) + (servicePurchaseRequests.count ?? 0),
     waitingRequisitions: requisitions.count ?? 0,
     unreadCount: unread.count ?? 0,
     notifications: ((recent.data ?? []) as NotificationRow[]).map(parseNotification),

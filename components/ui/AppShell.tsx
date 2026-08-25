@@ -17,7 +17,7 @@ import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
 import { EMPTY_NOTIFICATION_SNAPSHOT, type NotificationSnapshot } from '@/lib/notifications/types'
 
-type BenchIconName = 'overview' | 'contract' | 'outlab' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual'
+type BenchIconName = 'overview' | 'contract' | 'service' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual'
 type NavTone = 'blue' | 'violet' | 'teal' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
 const PORTAL_DASHBOARD_URL = 'https://lab-management-cbh.vercel.app/staff/dashboard'
 
@@ -36,7 +36,7 @@ const navigation: NavigationItem[] = [
   { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },
   { href: '/requisitions', label: 'เบิกจ่าย', icon: 'issue', tone: 'rose' },
   { href: '/inventory', label: 'คงคลัง', icon: 'inventory', tone: 'green' },
-  { href: '/out-lab', label: 'Out Lab', icon: 'outlab', tone: 'teal' },
+  { href: '/service-procurement', label: 'งานจ้าง', icon: 'service', tone: 'teal' },
 ]
 
 const stockOfficerNavigation = {
@@ -50,7 +50,7 @@ function BenchIcon({ name }: { name: BenchIconName }) {
   const paths: Record<BenchIconName, ReactNode> = {
     overview: <><path d="M4 13h6V4H4v9Z" /><path d="M14 20h6V11h-6v9Z" /><path d="M4 20h6v-3H4v3Z" /><path d="M14 7h6V4h-6v3Z" /></>,
     contract: <><path d="M6 3h9l3 3v15H6V3Z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></>,
-    outlab: <><path d="M9 3h5M10 3v10.5a3 3 0 1 0 4 0V3" /><path d="M10 9h4" /><path d="M17 4h4v4" /><path d="M21 4l-4.5 4.5" /></>,
+    service: <><path d="M9 3h5M10 3v10.5a3 3 0 1 0 4 0V3" /><path d="M10 9h4" /><path d="M17 4h4v4" /><path d="M21 4l-4.5 4.5" /></>,
     pr: <><path d="M5 4h14v16H5V4Z" /><path d="M8 8h8M8 12h5M8 16h3" /></>,
     receipt: <><path d="M4 7h16v13H4V7Z" /><path d="M7 3h10v4H7V3Z" /><path d="M12 10v6m-3-3 3 3 3-3" /></>,
     issue: <><path d="M4 5h16v14H4V5Z" /><path d="M12 15V9m-3 3 3-3 3 3" /></>,

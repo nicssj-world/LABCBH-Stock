@@ -3113,12 +3113,6 @@ input[type="number"] {
 .expense-form__remaining-hint { color: var(--lab-muted); font-size: 11px; font-weight: 500; }
 .expense-form__secondary { display: grid; grid-template-columns: minmax(220px, .6fr) minmax(0, 1.4fr); gap: 14px; padding-top: 2px; }
 .expense-form__secondary label { display: grid; gap: 7px; color: var(--lab-muted); font-size: 12px; font-weight: 700; }
-/* Out Lab reminds about periods nobody filled in. It is an amber prompt, not a
-   failure: the cadence never blocks a write, so it must not read like an error. */
-.out-lab-missing-periods { margin: 0 22px 18px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--lab-amber) 26%, var(--lab-border)); border-radius: var(--radius-control); background: color-mix(in srgb, var(--lab-amber) 8%, var(--lab-surface)); }
-.out-lab-missing-periods > p { margin: 0 0 8px; color: var(--lab-text); font-size: 13px; font-weight: 600; line-height: 1.5; }
-.out-lab-missing-periods__list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-
 .expense-form__budget-alert { margin: 0; padding: 10px 12px; color: var(--lab-red); background: var(--lab-red-soft); border: 1px solid color-mix(in srgb, var(--lab-red) 28%, var(--lab-border)); border-radius: var(--radius-control); font-size: 12px; font-weight: 700; line-height: 1.5; }
 .expense-form__footer { display: flex; justify-content: flex-end; padding-top: 4px; }
 .expense-form__footer .lab-button { min-height: 48px; padding-inline: 18px; }
@@ -5067,4 +5061,93 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .annual-plan-dropzone__surface { transition: none; }
+}
+
+/* Service procurement — dense operational register with a mobile card fallback. */
+.service-procurement-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--lab-border); margin-bottom: 4px; }
+.service-procurement-tabs a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; color: var(--lab-muted); text-decoration: none; font-weight: 700; border-bottom: 3px solid transparent; }
+.service-procurement-tabs a:hover, .service-procurement-tabs a:focus-visible { color: var(--lab-primary); }
+.service-procurement-tabs a.is-active { color: var(--lab-primary); border-bottom-color: var(--lab-primary); }
+.service-register-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.service-register-toolbar .form-grid { flex: 1; }
+.service-register-toolbar__actions, .service-register-toolbar__note { margin: 0; color: var(--lab-muted); }
+.service-plan-table-wrap, .service-pr-table-wrap, .service-ledger-table-wrap { overflow-x: auto; }
+.service-plan-table, .service-pr-table { min-width: 880px; }
+.service-plan-table__number { text-align: right; white-space: nowrap; }
+.service-plan-table td small, .service-pr-table td small { display: block; margin-top: 3px; color: var(--lab-muted); font-size: 12px; }
+.service-plan-table .is-danger { color: var(--lab-red); }
+.service-plan-cards { display: none; list-style: none; margin: 0; padding: 0; }
+.service-plan-card { margin: 0; }
+.service-plan-card h3 { margin: 4px 0; }
+.service-plan-card__heading p { margin: 0; color: var(--lab-muted); }
+.service-plan-card__balance { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 0; }
+.service-plan-card__balance dt, .service-plan-card__balance dd { margin: 0; }
+.service-plan-card__balance dt { color: var(--lab-muted); font-size: 12px; }
+.service-plan-card__balance dd { margin-top: 4px; font-variant-numeric: tabular-nums; }
+.service-balance-grid, .service-pr-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.service-balance-grid article, .service-pr-summary-grid article { display: flex; flex-direction: column; gap: 6px; }
+.service-balance-grid small, .service-pr-summary-grid small { color: var(--lab-muted); }
+.service-balance-grid strong, .service-pr-summary-grid strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.service-responsible-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.service-responsible-option { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); cursor: pointer; }
+.service-responsible-option:hover, .service-responsible-option:focus-within { border-color: var(--lab-primary); background: var(--lab-hover); }
+.service-responsible-option input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--lab-primary); }
+.service-responsible-option span, .service-responsible-list li { display: flex; flex-direction: column; gap: 3px; }
+.service-responsible-option small, .service-responsible-list span { color: var(--lab-muted); font-size: 12px; }
+.service-responsible-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+.service-responsible-list li { padding: 12px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.service-ledger-table-wrap table { min-width: 760px; }
+.service-plan-controls, .service-pr-controls { display: grid; gap: 12px; }
+.service-plan-controls .lab-button { margin-top: 14px; }
+.service-plan-danger-zone { display: flex; justify-content: flex-end; padding: 8px 0; }
+.service-budget-callout { margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); color: var(--lab-text); background: var(--lab-surface-muted); }
+.service-budget-callout.is-danger { color: var(--lab-red); border-color: color-mix(in srgb, var(--lab-red) 42%, var(--lab-border)); background: color-mix(in srgb, var(--lab-red) 8%, var(--lab-surface)); }
+.service-item-results { list-style: none; margin: 12px 0; padding: 0; border: 1px solid var(--lab-border); border-radius: var(--radius-control); overflow: hidden; }
+.service-item-results li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--lab-border); }
+.service-item-results li:last-child { border-bottom: 0; }
+.service-item-results span { display: flex; flex-direction: column; gap: 3px; }
+.service-item-results small { color: var(--lab-muted); }
+.service-manual-item { margin: 18px 0 0; padding: 14px; border: 1px dashed var(--lab-border-strong); border-radius: var(--radius-control); }
+.service-manual-item legend { padding: 0 6px; font-weight: 700; }
+.service-lines { margin-top: 18px; }
+.service-lines table { min-width: 700px; }
+.service-lines input { max-width: 130px; }
+.service-committee-grid, .service-committee-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.service-committee-grid fieldset { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.service-committee-grid legend { padding: 0 6px; font-weight: 700; }
+.service-committee-grid label, .service-pr-fields, .service-po-upload, .service-usage-editor { display: grid; gap: 8px; }
+.service-pr-fields { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: end; margin-top: 14px; }
+.service-po-upload { grid-template-columns: minmax(0, 1fr) auto; align-items: end; margin-top: 14px; }
+.service-pr-action-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.service-usage-editor { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 16px 0; }
+.service-usage-editor label { display: grid; gap: 6px; }
+.service-document-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; list-style: none; margin: 0; padding: 0; }
+.service-document-list li { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.service-document-list span { color: var(--lab-muted); font-size: 12px; }
+.service-committee-summary h3 { font-size: 1rem; }
+.service-committee-summary ul { margin: 8px 0 0; padding-left: 20px; }
+.service-detail-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.service-detail-facts dt { color: var(--lab-muted); font-size: 12px; }
+.service-detail-facts dd { margin: 4px 0 0; }
+.status-chip--service { margin-right: 6px; }
+.service-pr-reversal { border-color: color-mix(in srgb, var(--lab-red) 30%, var(--lab-border)); }
+.service-pr-reversal p { color: var(--lab-muted); }
+.service-pr-reversal input { max-width: 520px; margin: 8px 0 14px; }
+.service-inline-hint { align-self: center; color: var(--lab-muted); font-size: 12px; }
+.service-po-history ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.service-po-history li { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 9px 0; border-bottom: 1px solid var(--lab-border); }
+.service-po-history li:last-child { border-bottom: 0; }
+.service-po-history span, .service-po-history small { color: var(--lab-muted); }
+
+@media (max-width: 800px) {
+  .service-register-toolbar, .service-po-upload { display: grid; align-items: stretch; }
+  .service-plan-table-wrap, .service-pr-table-wrap { display: none; }
+  .service-plan-cards { display: grid; gap: 12px; }
+  .service-balance-grid, .service-pr-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-plan-card__balance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-committee-grid, .service-committee-summary, .service-detail-facts { grid-template-columns: 1fr; }
+  .service-pr-fields { grid-template-columns: 1fr; }
+  .service-pr-fields .lab-button { width: 100%; }
+  .service-item-results li { align-items: flex-start; flex-direction: column; }
+  .service-item-results .lab-button { width: 100%; }
 }

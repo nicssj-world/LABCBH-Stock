@@ -1,0 +1,48 @@
+import Link from 'next/link'
+import { requireActor } from '@/lib/auth/actor'
+import { DEPARTMENTS } from '@/lib/organization/departments'
+import { bangkokIsoDate } from '@/lib/date/thai'
+import { fiscalYearFromDate } from '@/lib/service-procurement/domain'
+import { SERVICE_PLAN_TYPES, SERVICE_PLAN_TYPE_LABELS } from '@/lib/service-procurement/schema'
+import { listServicePlans } from '@/lib/service-procurement/queries'
+import { canManageServicePlans } from '@/lib/service-procurement/authorization'
+import { ServicePlanTable } from '@/components/service-procurement/ServicePlanTable'
+
+interface Props { searchParams: Promise<Record<string, string | string[] | undefined>> }
+const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value
+
+export default async function ServicePlansPage({ searchParams }: Props) {
+  const actor = await requireActor()
+  const params = await searchParams
+  const currentFiscalYear = fiscalYearFromDate(bangkokIsoDate())
+  const requestedYear = Number(first(params.fiscalYear) ?? currentFiscalYear)
+  const fiscalYear = Number.isInteger(requestedYear) && requestedYear >= 2500 && requestedYear <= 3000 ? requestedYear : currentFiscalYear
+  const search = first(params.search)?.trim() ?? ''
+  const department = first(params.department) ?? ''
+  const type = SERVICE_PLAN_TYPES.find((value) => value === first(params.type))
+  const legacyNotice = first(params.notice) === 'legacy-out-lab'
+  const plans = await listServicePlans({ fiscalYear, department: department || undefined, type, search })
+  const showingHistory = fiscalYear !== currentFiscalYear
+  const query = (next: Record<string, string | undefined>) => {
+    const values = new URLSearchParams()
+    Object.entries(next).forEach(([key, value]) => { if (value) values.set(key, value) })
+    const encoded = values.toString()
+    return encoded ? `/service-procurement/plans?${encoded}` : '/service-procurement/plans'
+  }
+
+  return (
+    <div className="route-stack">
+      <header className="page-heading page-heading--actions">
+        <div><p className="section-kicker">SERVICE PROCUREMENT · PLANS</p><h1>แผนงานจ้าง</h1><p>ติดตามวงเงิน ใช้จริง ยอดสำรอง และประวัติรายเดือนตามปีงบประมาณ</p></div>
+        <div className="page-heading__actions">
+          <Link className="lab-link-button lab-link-button--secondary" href="/service-procurement/purchase-requests">ใบ PR (งานจ้าง)</Link>
+          {canManageServicePlans(actor) && <Link className="lab-link-button lab-link-button--primary" href="/service-procurement/plans/new">เพิ่มแผนงานจ้าง</Link>}
+        </div>
+      </header>
+      <nav className="service-procurement-tabs" aria-label="เมนูงานจ้าง"><Link className="is-active" href="/service-procurement/plans">แผนงานจ้าง</Link><Link href="/service-procurement/purchase-requests">ใบ PR (งานจ้าง)</Link></nav>
+      {legacyNotice && <p className="service-budget-callout" role="status">โมดูลเดิมถูกแทนที่แล้ว ข้อมูล Out Lab เดิมไม่ถูกใช้งาน โปรดดำเนินการต่อใน “งานจ้าง”</p>}
+      <section className="bench-panel service-register-toolbar"><form method="get"><div className="form-grid"><label><span>ปีงบประมาณ</span><select name="fiscalYear" defaultValue={String(fiscalYear)}><option value={String(currentFiscalYear)}>{currentFiscalYear} (ปัจจุบัน)</option>{Array.from({ length: 7 }, (_, index) => currentFiscalYear - index - 1).map((year) => <option key={year} value={year}>{year}</option>)}</select></label><label><span>ค้นหาแผน</span><input name="search" defaultValue={search} placeholder="ชื่อแผน" /></label><label><span>หน่วยงาน</span><select name="department" defaultValue={department}><option value="">ทุกหน่วยงาน</option>{DEPARTMENTS.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>ประเภท</span><select name="type" defaultValue={type ?? ''}><option value="">ทุกประเภท</option>{SERVICE_PLAN_TYPES.map((value) => <option key={value} value={value}>{SERVICE_PLAN_TYPE_LABELS[value]}</option>)}</select></label></div><div className="service-register-toolbar__actions"><button className="lab-button lab-button--secondary" type="submit">กรองรายการ</button><Link className="lab-link-button lab-link-button--secondary" href={showingHistory ? query({ fiscalYear: String(currentFiscalYear), search: search || undefined, department: department || undefined, type: type || undefined }) : query({ fiscalYear: String(currentFiscalYear - 1) })}>{showingHistory ? `กลับปีปัจจุบัน ${currentFiscalYear}` : 'ดูปีย้อนหลัง'}</Link></div></form></section>
+      {plans.length === 0 ? <section className="empty-state empty-state--panel"><h2>{showingHistory ? `ยังไม่มีแผนในปีงบประมาณ ${fiscalYear}` : 'ยังไม่มีแผนงานจ้างในปีงบประมาณนี้'}</h2><p>{canManageServicePlans(actor) ? 'กด “เพิ่มแผนงานจ้าง” เพื่อเริ่มติดตามวงเงิน' : 'เมื่อมีการสร้างแผนแล้ว รายการจะแสดงที่หน้านี้'}</p></section> : <section className="bench-panel"><div className="bench-panel__header"><div><p className="section-kicker">FISCAL YEAR {fiscalYear}</p><h2>{showingHistory ? 'ประวัติแผนงานจ้าง' : 'แผนที่ใช้งานอยู่'}</h2></div><p>{plans.length} แผน</p></div><ServicePlanTable plans={plans} /></section>}
+    </div>
+  )
+}

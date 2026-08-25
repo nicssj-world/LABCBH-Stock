@@ -62,7 +62,6 @@ assert.equal(
 
 const tableSources = [
   'components/contracts/ContractTable.tsx',
-  'components/out-lab/OutLabTable.tsx',
   'components/pr/PurchaseRequestTable.tsx',
   'components/inventory/InventoryTable.tsx',
   'components/inventory/LotTable.tsx',
@@ -71,8 +70,6 @@ const tableSources = [
   'components/contracts/ContractPurchaseHistory.tsx',
   'components/contracts/ExpenseHistory.tsx',
   'components/contracts/OpeningBalanceDialog.tsx',
-  'components/out-lab/FiscalYearBreakdown.tsx',
-  'components/out-lab/MonthlyUsageHistory.tsx',
   'components/pr/PrReviewPanel.tsx',
   'components/pr/PurchaseRequestForm.tsx',
   'components/receipts/ReceiptForm.tsx',
