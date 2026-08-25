@@ -23,8 +23,8 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, strin
   partially_received: 'รับบางส่วน',
   received: 'รับครบ',
   closed_short: 'ปิดยอดไม่ครบ',
-  cancelled: 'ยกเลิก',
-  reversed: 'ยกเลิกแล้ว',
+  cancelled: 'ยกเลิก (ก่อนยืนยัน)',
+  reversed: 'ยกเลิก (หลังยืนยัน)',
 }
 
 export const PURCHASE_REQUEST_STATUS_TONES: Record<

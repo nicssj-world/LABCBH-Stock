@@ -328,6 +328,8 @@ assert.match(presenter, /เช่าเครื่อง/, 'a lease PR method 
 assert.match(presenter, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork needs its own labels, distinct from the method labels')
 assert.match(presenter, /partially_received:\s*'รับบางส่วน'/, 'partial receiving needs a Thai PR status label')
 assert.match(presenter, /received:\s*'รับครบ'/, 'fully received needs a Thai PR status label')
+assert.match(presenter, /cancelled:\s*'ยกเลิก \(ก่อนยืนยัน\)'/, 'pre-confirmation cancellation needs a clear Thai status label')
+assert.match(presenter, /reversed:\s*'ยกเลิก \(หลังยืนยัน\)'/, 'post-confirmation cancellation needs a clear Thai status label')
 assert.match(presenter, /ทำใบ PR เพื่อสั่งซื้อ/)
 assert.match(presenter, /ทำใบ PR เพื่อเริ่มสัญญาใหม่/)
 assert.match(presenter, /ต่ำกว่าขั้นต่ำ|ควรทำ PR/, 'minimum-stock warning wording lives with the labels')
