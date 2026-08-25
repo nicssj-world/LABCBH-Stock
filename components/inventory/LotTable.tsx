@@ -1,4 +1,5 @@
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import {
   LOT_EXPIRY_LABELS,
   LOT_EXPIRY_TONES,
@@ -13,7 +14,7 @@ export function LotTable({ lots, unit }: { lots: InventoryLotRecord[]; unit: str
   }
 
   return (
-    <div className="lot-table">
+    <StickyScroll className="lot-table" ariaLabel="ตารางล็อตน้ำยา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
       <table className="data-table">
         <caption className="visually-hidden">
           ล็อตเรียงตามลำดับการเบิกจ่ายแบบ FIFO คือหมดอายุก่อนและรับเข้าก่อน
@@ -46,6 +47,6 @@ export function LotTable({ lots, unit }: { lots: InventoryLotRecord[]; unit: str
           ))}
         </tbody>
       </table>
-    </div>
+    </StickyScroll>
   )
 }

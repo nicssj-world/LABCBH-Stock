@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -255,7 +256,7 @@ export function ReceiptForm({
                 <p>ยอดส่วนนี้ยังไม่ใช่รายการรับเข้า จึงยังไม่ต้องระบุ LOT หรือวันหมดอายุ</p>
               </div>
             </div>
-            <div className="detail-items-table">
+            <StickyScroll className="detail-items-table" ariaLabel="รายการรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -297,7 +298,7 @@ export function ReceiptForm({
                   })}
                 </tbody>
               </table>
-            </div>
+            </StickyScroll>
           </div>
         )}
         <ReceiptLinesEditor

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
 import type { PresentedOutLabContract } from '@/lib/out-lab/presenter'
 
@@ -38,7 +39,7 @@ export function OutLabTable({ contracts }: { contracts: OutLabTableRow[] }) {
 
   return (
     <>
-      <div className="contract-table--desktop">
+      <StickyScroll className="contract-table--desktop" ariaLabel="ตารางสัญญาส่งตรวจภายนอก เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
         <table className="data-table contract-register-table">
           <thead>
             <tr>
@@ -82,7 +83,7 @@ export function OutLabTable({ contracts }: { contracts: OutLabTableRow[] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </StickyScroll>
 
       <ul className="contract-task-cards" aria-label="รายการสัญญา Out Lab">
         {contracts.map((contract) => (

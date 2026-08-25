@@ -10,6 +10,7 @@ import {
 } from '@/components/pr/PurchaseRequestChecklistPanel'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
@@ -240,7 +241,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           </div>
           <p>{request.items.length} รายการ · {formatBaht(request.total)}</p>
         </div>
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="รายการในใบขอซื้อ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
             <thead>
               <tr>
@@ -284,7 +285,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               ))}
             </tbody>
           </table>
-        </div>
+        </StickyScroll>
       </section>
 
       <section className="bench-panel" aria-labelledby="pr-receipt-history-title">
@@ -302,7 +303,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               : 'ยังไม่มีใบรับเข้าที่อ้างอิง PR นี้'}
           </p>
         ) : (
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="ประวัติรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead>
                 <tr>
@@ -351,9 +352,9 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
+          </StickyScroll>
         )}
       </section>
 

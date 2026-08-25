@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ReceiptPostPanel } from '@/components/receipts/ReceiptPostPanel'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
@@ -105,7 +106,7 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
             <h2 id="receipt-detail-lines-title">รายการรับเข้า</h2>
           </div>
         </div>
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="รายการรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
             <thead>
               <tr>
@@ -134,7 +135,7 @@ export default async function ReceiptDetailPage({ params }: ReceiptDetailPagePro
               ))}
             </tbody>
           </table>
-        </div>
+        </StickyScroll>
       </section>
 
       {canEdit && (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import type { ContractOpeningBalanceHistoryEntry } from '@/lib/contracts/types'
 
@@ -17,7 +18,7 @@ export function ContractOpeningBalanceHistory({ entries }: { entries: ContractOp
   const hiddenCount = entries.length - VISIBLE_LIMIT
 
   return (
-    <div className="detail-items-table">
+    <StickyScroll className="detail-items-table" ariaLabel="ประวัติยอดยกมา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
       <table className="data-table">
         <thead>
           <tr>
@@ -49,6 +50,6 @@ export function ContractOpeningBalanceHistory({ entries }: { entries: ContractOp
           {expanded ? 'ย่อรายการ' : `ดูเพิ่มอีก ${hiddenCount} รายการ`}
         </button>
       )}
-    </div>
+    </StickyScroll>
   )
 }

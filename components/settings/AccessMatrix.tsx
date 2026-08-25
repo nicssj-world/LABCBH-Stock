@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { setMembership } from '@/lib/access/actions'
 import { LAB_STOCK_ROLES } from '@/lib/access/schema'
 import type { LabStockRoleName, MembershipProfile } from '@/lib/access/queries'
@@ -103,7 +104,7 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole, canM
       {profiles.length === 0 ? (
         <p className="empty-state">ไม่พบผู้ใช้งานตามเงื่อนไขที่เลือก</p>
       ) : (
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="ตารางสิทธิ์ผู้ใช้งาน เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
             <thead>
               <tr>
@@ -153,7 +154,7 @@ export function AccessMatrix({ profiles, search: initialSearch, activeRole, canM
               ))}
             </tbody>
           </table>
-        </div>
+        </StickyScroll>
       )}
     </div>
   )

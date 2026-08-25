@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import type { ExpenseMonthlySeriesEntry } from '@/lib/contracts/budget'
 import { deleteOutLabMonthlyUsage } from '@/lib/out-lab/actions'
 import { outLabUsageCsv, outLabUsageFileBase, outLabUsageSheetXml } from '@/lib/out-lab/export'
@@ -142,7 +143,7 @@ export function MonthlyUsageHistory({
       {entries.length === 0 ? (
         <p className="empty-state">ยังไม่มีการบันทึกยอดใช้จ่ายในช่วงเวลาของสัญญานี้</p>
       ) : (
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="ประวัติยอดใช้งานรายเดือน เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
             <thead>
               <tr>
@@ -181,7 +182,7 @@ export function MonthlyUsageHistory({
               ))}
             </tbody>
           </table>
-        </div>
+        </StickyScroll>
       )}
     </div>
   )

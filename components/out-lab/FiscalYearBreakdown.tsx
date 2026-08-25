@@ -1,4 +1,5 @@
 import type { FiscalYearUsage } from '@/lib/out-lab/fiscal'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 
 const money = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 })
 
@@ -16,7 +17,7 @@ export function FiscalYearBreakdown({ usage }: { usage: FiscalYearUsage[] }) {
   const total = usage.reduce((sum, row) => sum + row.used, 0)
 
   return (
-    <div className="detail-items-table">
+    <StickyScroll className="detail-items-table" ariaLabel="สรุปยอดใช้จ่ายรายปีงบประมาณ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
       <table className="data-table">
         <thead>
           <tr>
@@ -37,6 +38,6 @@ export function FiscalYearBreakdown({ usage }: { usage: FiscalYearUsage[] }) {
           </tr>
         </tbody>
       </table>
-    </div>
+    </StickyScroll>
   )
 }

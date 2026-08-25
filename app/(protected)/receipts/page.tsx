@@ -3,6 +3,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { ListPagination } from '@/components/ui/ListPagination'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canCreateGoodsReceipt } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
@@ -122,7 +123,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
           {receipts.length === 0 ? (
             <p className="empty-state">ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก</p>
           ) : (
-            <div className="detail-items-table">
+            <StickyScroll className="detail-items-table" ariaLabel="ตารางใบรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table receipt-register-table">
                 <colgroup>
                   <col className="receipt-register-table__reference" />
@@ -173,7 +174,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
                   ))}
               </tbody>
             </table>
-            </div>
+            </StickyScroll>
           )}
           <ListPagination
             currentPage={paginatedReceipts.currentPage}

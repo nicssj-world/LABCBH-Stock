@@ -11,6 +11,7 @@ import {
   type ContractOption,
 } from '@/components/pr/PurchaseMethodFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -645,7 +646,7 @@ export function PurchaseRequestForm({
               : 'ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน'}
           </p>
         ) : (
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="รายการในใบขอซื้อ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead>
                 <tr>
@@ -768,7 +769,7 @@ export function PurchaseRequestForm({
                 })}
               </tbody>
             </table>
-          </div>
+          </StickyScroll>
         )}
 
         <p className="items-editor__grand-total">

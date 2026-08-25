@@ -10,6 +10,7 @@ import {
 } from '@/components/pr/PurchaseRequestRemainingClosePanel'
 import { PurchaseRequestPoFileCard } from '@/components/pr/PurchaseRequestPoFileCard'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import type { ContractType } from '@/lib/contracts/types'
@@ -468,7 +469,7 @@ export function PrReviewPanel({
               </p>
             </div>
           </div>
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="ผลกระทบต่อยอดคงเหลือในสัญญา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <caption className="visually-hidden">ผลกระทบต่อยอดคงเหลือในสัญญา</caption>
               <thead>
@@ -507,7 +508,7 @@ export function PrReviewPanel({
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyScroll>
           <div className="pr-review__confirm-zone">
             {!checklistReadyForConfirmation && (
               <div className="pr-review__blocker" role="status">

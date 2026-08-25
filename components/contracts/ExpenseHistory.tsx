@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { deleteContractExpense } from '@/lib/contracts/budget-actions'
 import type { ExpenseMonthlySeriesEntry } from '@/lib/contracts/budget'
 import type { ContractExpenseRecord } from '@/lib/contracts/budget-queries'
@@ -124,7 +125,7 @@ export function ExpenseHistory({
       )}
 
       {entries.length === 0 ? <p className="empty-state">ยังไม่มีการบันทึกค่าใช้จ่ายในช่วงเวลาสัญญา</p> : (
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="ประวัติค่าใช้จ่ายสัญญา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
           <thead>
             <tr>
@@ -169,7 +170,7 @@ export function ExpenseHistory({
             ))}
           </tbody>
           </table>
-        </div>
+        </StickyScroll>
       )}
     </div>
   )

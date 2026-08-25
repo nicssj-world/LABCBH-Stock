@@ -3,6 +3,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { ListPagination } from '@/components/ui/ListPagination'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { requireActor } from '@/lib/auth/actor'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
@@ -122,7 +123,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
           {requisitions.length === 0 ? (
             <p className="empty-state">ไม่พบใบเบิกตามเงื่อนไขที่เลือก</p>
           ) : (
-            <div className="detail-items-table">
+            <StickyScroll className="detail-items-table" ariaLabel="ตารางใบเบิก เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table requisition-register-table">
                 <colgroup>
                   <col className="requisition-register-table__document" />
@@ -170,7 +171,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                   ))}
               </tbody>
             </table>
-            </div>
+            </StickyScroll>
           )}
           <ListPagination
             currentPage={paginatedRequisitions.currentPage}

@@ -5,6 +5,7 @@ import { LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from
 import { LotTable } from '@/components/inventory/LotTable'
 import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import {
@@ -175,7 +176,7 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
         {item.recentMovements.length === 0 ? (
           <p className="empty-state">ยังไม่มีความเคลื่อนไหวของน้ำยารายการนี้</p>
         ) : (
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="ประวัติการเคลื่อนไหวของน้ำยา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead>
                 <tr>
@@ -200,7 +201,7 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyScroll>
         )}
       </section>
     </div>
