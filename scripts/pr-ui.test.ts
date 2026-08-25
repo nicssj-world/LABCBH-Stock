@@ -304,7 +304,7 @@ assert.match(
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
 assert.match(review, /ยืนยันโดย.*acknowledgedByName/, 'a completed or reversed PR must name who confirmed it')
-assert.match(review, /กลับรายการโดย.*reversedByName/, 'a reversed PR must name who reversed it, distinct from who confirmed it')
+assert.match(review, /ยกเลิกโดย.*reversedByName/, 'a reversed PR must name who cancelled it, distinct from who confirmed it')
 assert.match(review, /บันทึกเลขที่ใบสั่งซื้อ \(PO\) โดย.*updatedByName/, 'recording a PO number must be attributed too')
 assert.match(review, /pr-review__meta/, 'audit lines live inside the officer action panel, not the requester-facing method detail')
 assert.match(review, /const \[isEditingPoNumber, setIsEditingPoNumber\] = useState\(!request\.poNumber\)/, 'a saved PO number starts locked')
@@ -429,7 +429,7 @@ for (const path of [
 
 const lifecycleControls = read('components/pr/PurchaseRequestLifecycleControls.tsx')
 assert.match(lifecycleControls, /cancelPurchaseRequest/)
-assert.match(lifecycleControls, /ยืนยันการลบใบ PR/)
+assert.match(lifecycleControls, /ยืนยันการยกเลิก PR/)
 assert.match(lifecycleControls, /เก็บประวัติไว้/, 'deleting a PR keeps an audit trail')
 assert.match(lifecycleControls, /router\.push\('\/purchase-requests'\)/)
 

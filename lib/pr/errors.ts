@@ -11,6 +11,10 @@ const PURCHASE_REQUEST_ERROR_COPY: Record<string, string> = {
     'รับของโดยหน่วยงานได้เฉพาะใบ PR ที่ออก PO',
   'cancel the open or posted goods receipt before receiving outside stock':
     'ใบ PR นี้มีใบรับเข้าคลังอยู่แล้ว กรุณายกเลิกฉบับร่างหรือใช้ขั้นตอนรับเข้าคลังให้เสร็จ',
+  'a purchase request with posted goods receipts cannot be reversed':
+    'PR นี้มีใบรับเข้าแล้ว จึงยกเลิกไม่ได้',
+  'cancel the open draft goods receipt before reversing the purchase request':
+    'กรุณายกเลิกใบรับเข้าฉบับร่างก่อน แล้วจึงยกเลิก PR นี้',
 }
 
 export function formatPurchaseRequestMutationError(operation: string, message: string): string {

@@ -231,7 +231,7 @@ export function PrReviewPanel({
             <div>
               <h3 id="pr-review-contract-title">ยืนยันและสร้างสัญญา</h3>
               <p className="pr-review__intro">
-                ยืนยันแล้วระบบจะสร้างสัญญาใหม่ทันทีที่ขั้นตอน &quot;ส่งพัสดุ&quot; — ย้อนกลับไม่ได้ด้วยการกลับรายการ
+                ยืนยันแล้วระบบจะสร้างสัญญาใหม่ทันทีที่ขั้นตอน &quot;ส่งพัสดุ&quot; และไม่สามารถยกเลิก PR หลังจากนั้นได้
               </p>
             </div>
           </div>
@@ -311,7 +311,7 @@ export function PrReviewPanel({
             <div>
               <h3 id="pr-review-impact-title">ผลกระทบต่อยอดสัญญา</h3>
               <p className="pr-review__intro">
-                ยืนยันแล้วยอดในสัญญาจะถูกตัดทันทีและย้อนกลับได้ด้วยการกลับรายการเท่านั้น
+                ยืนยันแล้วยอดในสัญญาจะถูกตัดทันที หากต้องการยกเลิกภายหลัง ให้ใช้ปุ่ม “ยกเลิก PR” เท่านั้น
               </p>
             </div>
           </div>
@@ -384,8 +384,15 @@ export function PrReviewPanel({
           <div className="pr-review__actions">
             <div className="pr-review__actions-buttons">
               {!reversing && !receiptBlocksReversal && (
-                <Button variant="ghost" type="button" onClick={() => setReversing(true)}>
-                  กลับรายการใบ PR
+                <Button
+                  variant="danger"
+                  type="button"
+                  className="pr-review__cancel-trigger"
+                  aria-expanded={reversing}
+                  aria-controls={`pr-cancel-panel-${request.id}`}
+                  onClick={() => setReversing(true)}
+                >
+                  ยกเลิก PR
                 </Button>
               )}
             </div>
@@ -394,27 +401,61 @@ export function PrReviewPanel({
                 ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
               </p>
               {hasDraftReceipt && (
-                <p className="pr-review__intro">ต้องยกเลิกใบรับเข้าฉบับร่างก่อน จึงจะกลับรายการใบ PR ได้</p>
+                <p className="pr-review__intro">ต้องยกเลิกใบรับเข้าฉบับร่างก่อน จึงจะยกเลิก PR นี้ได้</p>
               )}
               {hasPostedReceipt && (
-                <p className="pr-review__intro">ไม่สามารถกลับรายการใบ PR ที่มีใบรับเข้า Posted แล้ว</p>
+                <p className="pr-review__intro">ไม่สามารถยกเลิก PR ที่มีใบรับเข้าแล้วได้</p>
               )}
             </div>
           </div>
 
           {reversing && (
-            <div className="decision-panel decision-panel--danger">
-              <div>
-                <strong>ยืนยันการกลับรายการ</strong>
-                <p>ระบบจะบันทึกรายการตรงข้ามเพื่อคืนยอดสัญญา โดยไม่ลบประวัติเดิม</p>
+            <section
+              id={`pr-cancel-panel-${request.id}`}
+              className="decision-panel decision-panel--danger pr-review__cancel-panel"
+              aria-labelledby={`pr-cancel-title-${request.id}`}
+              aria-describedby={`pr-cancel-description-${request.id}`}
+            >
+              <div className="pr-review__cancel-heading">
+                <div>
+                  <h3 id={`pr-cancel-title-${request.id}`}>ยืนยันการยกเลิก PR</h3>
+                  <p id={`pr-cancel-description-${request.id}`}>
+                    ใบ PR นี้ยืนยันแล้ว การยกเลิกจะคืนยอดที่ถูกตัดจาก PR นี้ (ถ้ามี) และเปลี่ยนสถานะเป็น “ยกเลิกแล้ว” โดยเก็บประวัติเดิมไว้
+                  </p>
+                </div>
               </div>
+
+              <div className="pr-review__cancel-impact" aria-label="ผลที่จะเกิดขึ้นจากการยกเลิก PR">
+                <div>
+                  <strong>ยอดสัญญา</strong>
+                  <span>คืนยอดที่ถูกตัดจาก PR นี้ หาก PR ผูกกับสัญญา</span>
+                </div>
+                <div>
+                  <strong>ข้อมูลเดิม</strong>
+                  <span>ไม่ลบเลข PR รายการสินค้า หรือประวัติการยืนยัน</span>
+                </div>
+              </div>
+
               <label>
-                เหตุผลในการกลับรายการ
-                <textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
+                <span>เหตุผลที่ยกเลิก PR <span className="pr-review__required">(จำเป็น)</span></span>
+                <small>ระบุเหตุผลสั้น ๆ เพื่อให้ตรวจสอบย้อนหลังได้</small>
+                <textarea
+                  id={`pr-cancel-reason-${request.id}`}
+                  rows={4}
+                  value={reason}
+                  placeholder="เช่น สั่งซื้อซ้ำ หรือเปลี่ยนรายการสินค้า"
+                  aria-required="true"
+                  onChange={(event) => setReason(event.target.value)}
+                />
               </label>
+
+              <p className="pr-review__cancel-hint" role="status">
+                {reason.trim() ? 'พร้อมยืนยันการยกเลิก PR' : 'กรุณาระบุเหตุผลก่อนกดยืนยันยกเลิก PR'}
+              </p>
+
               <div className="decision-panel__actions">
                 <Button variant="secondary" type="button" onClick={() => setReversing(false)} disabled={isPending}>
-                  กลับไปตรวจสอบ
+                  ไม่ยกเลิก
                 </Button>
                 <Button
                   variant="danger"
@@ -423,14 +464,14 @@ export function PrReviewPanel({
                   onClick={() =>
                     run(
                       () => reversePurchaseRequest(request.id, { reason }),
-                      'กลับรายการใบ PR ไม่สำเร็จ',
+                      'ยกเลิก PR ไม่สำเร็จ',
                     )
                   }
                 >
-                  {isPending ? 'กำลังดำเนินการ…' : 'ยืนยันกลับรายการ'}
+                  {isPending ? 'กำลังยกเลิก PR…' : 'ยืนยันยกเลิก PR'}
                 </Button>
               </div>
-            </div>
+            </section>
           )}
         </>
       )}
@@ -449,10 +490,10 @@ export function PrReviewPanel({
             ยืนยันโดย {request.acknowledgedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.acknowledgedAt)}
           </p>
           <p className="pr-review__intro">
-            กลับรายการโดย {request.reversedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.reversedAt)}
+            ยกเลิกโดย {request.reversedByName ?? 'เจ้าหน้าที่คลัง'} · {formatThaiDateTime(request.reversedAt)}
           </p>
           {request.reversalReason && (
-            <p className="pr-review__intro">เหตุผลที่กลับรายการ: {request.reversalReason}</p>
+            <p className="pr-review__intro">เหตุผลที่ยกเลิก PR: {request.reversalReason}</p>
           )}
         </div>
       )}

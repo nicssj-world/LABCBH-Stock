@@ -161,14 +161,14 @@ export async function updatePurchaseRequest(
 }
 
 /**
- * "ลบ" ในหน้าจอ PR คือการยกเลิกแบบเก็บประวัติไว้ ไม่ลบแถวหรือรายการสินค้า
+ * "ยกเลิก" ในหน้าจอ PR คือการยกเลิกแบบเก็บประวัติไว้ ไม่ลบแถวหรือรายการสินค้า
  * จริง เพื่อให้เลขเอกสารและการตรวจสอบย้อนหลังยังเชื่อถือได้
  */
 export async function cancelPurchaseRequest(purchaseRequestId: string) {
   const actor = await requireActor()
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
   const existing = await getPurchaseRequest(parsedId)
-  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการลบ')
+  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการยกเลิก')
   assertPurchaseRequestManager(actor, existing.requesterId)
 
   const result = await supabaseAdmin.rpc('cancel_purchase_request', {
@@ -176,7 +176,7 @@ export async function cancelPurchaseRequest(purchaseRequestId: string) {
     p_actor_id: actor.id,
   })
 
-  const cancelled = unwrapMutation('ลบใบ PR', result)
+  const cancelled = unwrapMutation('ยกเลิก PR', result)
   revalidatePurchaseRequest(parsedId)
   return cancelled
 }
@@ -220,7 +220,7 @@ export async function reversePurchaseRequest(
     p_reason: parsed.reason,
   })
 
-  const reversed = unwrapMutation('กลับรายการใบ PR', result)
+  const reversed = unwrapMutation('ยกเลิก PR', result)
   revalidatePurchaseRequest(parsedId)
   return reversed
 }

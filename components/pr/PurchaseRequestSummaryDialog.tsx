@@ -131,7 +131,7 @@ export function PurchaseRequestSummaryDialog({
               </div>
               {request.status === 'reversed' && request.reversalReason && (
                 <div className="list-summary-dialog__fact--wide">
-                  <dt>เหตุผลที่กลับรายการ</dt>
+                  <dt>เหตุผลที่ยกเลิก PR</dt>
                   <dd>{request.reversalReason}</dd>
                 </div>
               )}

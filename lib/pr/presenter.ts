@@ -24,7 +24,7 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, strin
   received: 'รับครบ',
   closed_short: 'ปิดยอดไม่ครบ',
   cancelled: 'ยกเลิก',
-  reversed: 'กลับรายการแล้ว',
+  reversed: 'ยกเลิกแล้ว',
 }
 
 export const PURCHASE_REQUEST_STATUS_TONES: Record<

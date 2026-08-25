@@ -53,6 +53,6 @@ export function assertPurchaseRequestOutsideStockReceiver(
 
 export function assertPurchaseRequestManager(actor: Actor, requesterId: string | null): void {
   if (!canManagePurchaseRequest(actor, requesterId)) {
-    throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือลบใบ PR นี้')
+    throw new PurchaseRequestAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือยกเลิกใบ PR นี้')
   }
 }

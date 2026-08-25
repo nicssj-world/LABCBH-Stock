@@ -40,7 +40,7 @@ export function PurchaseRequestLifecycleControls({
         router.push('/purchase-requests')
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'ลบใบ PR ไม่สำเร็จ กรุณาลองใหม่')
+        setError(caught instanceof Error ? caught.message : 'ยกเลิก PR ไม่สำเร็จ กรุณาลองใหม่')
       }
     })
   }
@@ -54,7 +54,7 @@ export function PurchaseRequestLifecycleControls({
         แก้ไขใบ PR
       </Link>
       <Button variant="danger" type="button" onClick={openDialog}>
-        ลบใบ PR
+        ยกเลิก PR
       </Button>
 
       <dialog
@@ -67,12 +67,12 @@ export function PurchaseRequestLifecycleControls({
       >
         <header className="app-dialog__header">
           <div>
-            <h2 id="cancel-pr-dialog-title">ยืนยันการลบใบ PR</h2>
+            <h2 id="cancel-pr-dialog-title">ยืนยันการยกเลิก PR</h2>
             <p id="cancel-pr-dialog-description">
               ใบ {documentNumber} จะถูกยกเลิกและเก็บประวัติไว้ ระบบจะไม่ตัดยอดสัญญา
             </p>
           </div>
-          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างลบใบ PR" onClick={closeDialog}>
+          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างยกเลิก PR" onClick={closeDialog}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -86,10 +86,10 @@ export function PurchaseRequestLifecycleControls({
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="decision-panel__actions">
             <Button variant="secondary" type="button" onClick={closeDialog} disabled={isPending}>
-              กลับไปตรวจสอบ
+              ไม่ยกเลิก
             </Button>
             <Button variant="danger" type="submit" disabled={isPending}>
-              {isPending ? 'กำลังลบ…' : 'ยืนยันลบใบ PR'}
+              {isPending ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิก PR'}
             </Button>
           </div>
         </form>

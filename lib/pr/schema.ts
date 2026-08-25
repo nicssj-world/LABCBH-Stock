@@ -321,7 +321,7 @@ export const ephisPrNumberSchema = z
   .strict()
 
 export const purchaseRequestReversalSchema = z
-  .object({ reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลในการกลับรายการ') })
+  .object({ reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลที่ยกเลิก PR') })
   .strict()
 
 export const purchaseRequestShortCloseSchema = z
