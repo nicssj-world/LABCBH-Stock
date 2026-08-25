@@ -25,8 +25,16 @@ export type ContractInput = z.infer<typeof contractInputSchema>
 export type ContractLineInput = z.infer<typeof contractLineInputSchema>
 export type ContractCreateLineInput = z.infer<typeof contractCreateLineInputSchema>
 export type ContractItemUpdateInput = z.infer<typeof contractItemUpdateInputSchema>
-/** Shared shape for the item-row editor: an existing/new line plus the create-only opening balance field. */
-export type ContractFormItemInput = ContractItemUpdateInput & { openingUsedQuantity?: number | null }
+/**
+ * Shared shape for the item-row editor: an existing/new line plus the
+ * create-only opening balance field. Empty numeric values are kept blank while
+ * the user edits the row and are validated before submission.
+ */
+export type ContractFormItemInput = Omit<ContractItemUpdateInput, 'quantity' | 'unitPrice'> & {
+  quantity: number | ''
+  unitPrice: number | ''
+  openingUsedQuantity?: number | null
+}
 export type CreateContractInput = z.infer<typeof createContractInputSchema>
 export type UpdateContractInput = z.infer<typeof updateContractInputSchema>
 export type ArchiveContractInput = z.infer<typeof archiveContractInputSchema>

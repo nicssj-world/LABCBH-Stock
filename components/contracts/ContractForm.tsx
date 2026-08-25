@@ -31,7 +31,7 @@ interface ContractFormProps {
 }
 
 interface FormState {
-  fiscalYear: number
+  fiscalYear: number | ''
   contractType: (typeof CONTRACT_TYPES)[number]
   department: (typeof CONTRACT_DEPARTMENTS)[number]
   displayName: string
@@ -239,7 +239,17 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
         <div className="form-grid">
           <label>
             ปีงบประมาณ
-            <input type="number" min="2500" max="3000" value={state.fiscalYear} onChange={(event) => patchState('fiscalYear', Number(event.target.value))} aria-invalid={Boolean(errors.fiscalYear)} />
+            <input
+              type="number"
+              min="2500"
+              max="3000"
+              value={state.fiscalYear}
+              onChange={(event) => {
+                const value = event.target.value
+                patchState('fiscalYear', value === '' ? '' : Number(value))
+              }}
+              aria-invalid={Boolean(errors.fiscalYear)}
+            />
             {errors.fiscalYear && <small className="field-error">{errors.fiscalYear}</small>}
           </label>
           <label>

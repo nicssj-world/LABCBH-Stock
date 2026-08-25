@@ -85,7 +85,7 @@ export async function getPurchaseRequestChecklist(
   const [attachmentResult, committeeResult] = await Promise.all([
     supabaseAdmin
       .from('purchase_request_attachments')
-      .select('id, attachment_kind, slot, file_name, mime_type, size_bytes, uploaded_at, deleted_at, deletion_reason, object_deleted_at, uploader:profiles!purchase_request_attachments_uploaded_by_fkey(name), deleter:profiles!purchase_request_attachments_deleted_by_fkey(name)')
+      .select('id, attachment_kind, slot, file_name, mime_type, size_bytes, storage_backend, source_contract_id, uploaded_at, deleted_at, deletion_reason, object_deleted_at, uploader:profiles!purchase_request_attachments_uploaded_by_fkey(name), deleter:profiles!purchase_request_attachments_deleted_by_fkey(name)')
       .eq('purchase_request_id', access.request.id)
       .order('attachment_kind')
       .order('slot'),
@@ -107,8 +107,10 @@ export async function getPurchaseRequestChecklist(
       kind: row.attachment_kind as PurchaseRequestChecklistRecord['attachments'][number]['kind'],
       slot: Number(row.slot),
       fileName: String(row.file_name),
-      mimeType: String(row.mime_type),
-      sizeBytes: Number(row.size_bytes),
+      mimeType: row.mime_type === null ? null : String(row.mime_type),
+      sizeBytes: row.size_bytes === null ? null : Number(row.size_bytes),
+      storageBackend: row.storage_backend as PurchaseRequestChecklistRecord['attachments'][number]['storageBackend'],
+      sourceContractId: row.source_contract_id === null ? null : Number(row.source_contract_id),
       uploadedAt: String(row.uploaded_at),
       uploadedByName: uploader?.name ?? null,
       deletedAt: row.deleted_at ?? null,
@@ -144,7 +146,7 @@ export async function getPurchaseRequestChecklist(
     canDownloadCommitteePdf:
       committees.length > 0 && committees.every((member) => member.profileActive && Boolean(member.positionTitle)),
     cleanupPendingCount: attachments.filter((attachment) =>
-      !attachment.objectDeletedAt && (downloadsBlocked || Boolean(attachment.deletedAt)),
+      !attachment.sourceContractId && !attachment.objectDeletedAt && (downloadsBlocked || Boolean(attachment.deletedAt)),
     ).length,
     downloadsBlocked,
   }
@@ -162,7 +164,7 @@ export async function getPurchaseRequestChecklistAttachment(
   const parsedAttachmentId = z.string().uuid().parse(attachmentId)
   const result = await supabaseAdmin
     .from('purchase_request_attachments')
-    .select('id, storage_key, file_name, mime_type, size_bytes')
+    .select('id, storage_key, file_name, mime_type, size_bytes, storage_backend, source_contract_id')
     .eq('id', parsedAttachmentId)
     .eq('purchase_request_id', access.request.id)
     .is('deleted_at', null)
@@ -181,7 +183,7 @@ export async function listPurchaseRequestChecklistDownloadObjects(
   if (await checklistMustBePurged(access.request)) return []
   const result = await supabaseAdmin
     .from('purchase_request_attachments')
-    .select('id, attachment_kind, slot, storage_key, file_name, mime_type, size_bytes')
+    .select('id, attachment_kind, slot, storage_key, file_name, mime_type, size_bytes, storage_backend, source_contract_id')
     .eq('purchase_request_id', access.request.id)
     .is('deleted_at', null)
     .is('object_deleted_at', null)

@@ -97,6 +97,11 @@ assert.match(purchaseHistoryComponent, /selected\.items\.length/, 'the popup mus
 assert.match(purchaseHistoryComponent, /formatBaht\(selected\.total\)/, 'the popup must show the purchase grand total')
 assert.match(purchaseHistoryComponent, /formatBaht\(item\.unitPrice\)/, 'the popup must show each line\'s unit price')
 assert.match(purchaseHistoryComponent, /formatBaht\(item\.lineTotal\)/, 'the popup must show each line\'s total')
+assert.match(
+  purchaseHistoryComponent,
+  /href=\{`\/purchase-requests\/\$\{entry\.id\}`\}/,
+  'each contract purchase row must expose a direct PR detail link for stock officers',
+)
 
 // Opening balance dialog: admin-only, started supply contracts only, and its
 // note/date fields must carry a dedicated body class — app-dialog__body alone

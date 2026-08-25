@@ -112,6 +112,9 @@ assert.match(form, /mode === 'edit'/)
 assert.doesNotMatch(form, /เจ้าหน้าที่คลังกดยืนยันแล้วสร้างสัญญาใหม่ทันที/, 'the new PR page must not show the contract-creation helper sentence')
 assert.match(form, /PurchaseMethodFields/)
 assert.match(form, /ContractItemPicker/)
+assert.match(form, /requestedQuantity: number \| ''/, 'PR quantity state must allow an empty value while editing')
+assert.match(form, /unitPrice: number \| ''/, 'PR unit-price state must allow an empty value while editing')
+assert.match(form, /value === '' \? '' : Number\(value\)/, 'clearing a PR numeric field must remain blank instead of becoming zero')
 assert.match(form, /departments: readonly string\[\]/)
 assert.match(form, /<select required value=\{department\}/)
 assert.match(form, /\{departments\.map\(\(department\)/)
@@ -142,7 +145,7 @@ assert.match(form, /isOverContractLimit/, 'requesting more than a contract line 
 assert.match(form, /isLowContractBalance/, 'a line under 30% remaining must be flagged, matching the dashboard watchlist threshold')
 assert.match(
   form,
-  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasOverLimitLine \|\| !checklistComplete\}/,
+  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasInvalidLine \|\| hasOverLimitLine \|\| !checklistComplete\}/,
   'submit must stay blocked for invalid contract quantities or an incomplete checklist, but a complete lease with zero lines must still be submittable',
 )
 assert.match(form, /const isLease = method\?\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')

@@ -97,8 +97,8 @@ interface DraftLine {
   lsCode: string
   name: string
   unit: string
-  unitPrice: number
-  requestedQuantity: number
+  unitPrice: number | ''
+  requestedQuantity: number | ''
   /** Null when the purchase does not draw down a contract. */
   contractRemaining: number | null
   contractedQuantity: number | null
@@ -106,9 +106,23 @@ interface DraftLine {
   averageMonthlyUsage: number
 }
 
+type DraftNumber = number | ''
+
+function draftNumberValue(value: DraftNumber): number {
+  return value === '' ? 0 : value
+}
+
+function isFiniteDraftNumber(value: DraftNumber): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
 /** Requesting more than the contract has left — the RPC would refuse it too, but the requester should see this before submitting, not after. */
 function isOverContractLimit(line: DraftLine): boolean {
-  return line.contractRemaining !== null && line.requestedQuantity > line.contractRemaining
+  return (
+    line.contractRemaining !== null &&
+    isFiniteDraftNumber(line.requestedQuantity) &&
+    line.requestedQuantity > line.contractRemaining
+  )
 }
 
 /** Mirrors the dashboard watchlist's own remaining/contracted < 30% check. */
@@ -370,9 +384,16 @@ export function PurchaseRequestForm({
     (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0)
 
   const hasOverLimitLine = lines.some(isOverContractLimit)
+  const hasInvalidLine = lines.some(
+    (line) =>
+      !isFiniteDraftNumber(line.requestedQuantity) ||
+      line.requestedQuantity <= 0 ||
+      !isFiniteDraftNumber(line.unitPrice) ||
+      line.unitPrice < 0,
+  )
 
   const total = lines.reduce(
-    (sum, line) => sum + calculateLineTotal(line.requestedQuantity, line.unitPrice),
+    (sum, line) => sum + calculateLineTotal(draftNumberValue(line.requestedQuantity), draftNumberValue(line.unitPrice)),
     0,
   )
 
@@ -385,6 +406,10 @@ export function PurchaseRequestForm({
       .filter((attachment) => !attachment.deletedAt)
       .map((attachment) => [purchaseRequestAttachmentSlotKey(attachment.kind, attachment.slot), attachment]),
   )
+  const selectedContract = method?.kind === 'contract'
+    ? contracts.find((contract) => contract.id === method.contractId) ?? null
+    : null
+  const selectedContractFileAvailable = Boolean(selectedContract?.fileUrl)
   const applicableAssignments = checklistPolicy?.committees.flatMap((requirement) =>
     Array.from({ length: requirement.seats }, (_, index) =>
       committeeAssignments.find(
@@ -401,6 +426,9 @@ export function PurchaseRequestForm({
     checklistPolicy.attachments.every((requirement) => {
       const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
       const file = checklistFiles[key]
+      if (requirement.kind === 'contract_page' && method?.kind === 'contract' && !file) {
+        return selectedContractFileAvailable || existingChecklistBySlot.has(key)
+      }
       if (!file) return existingChecklistBySlot.has(key)
       return validatePurchaseRequestAttachment({
         kind: requirement.kind,
@@ -445,15 +473,15 @@ export function PurchaseRequestForm({
           note: note.trim() || null,
           method,
           items: lines
-            .filter((line) => line.requestedQuantity > 0)
+            .filter((line) => isFiniteDraftNumber(line.requestedQuantity) && line.requestedQuantity > 0)
             .map((line) => ({
               inventoryItemId: line.inventoryItemId,
               lsCode: line.lsCode,
               name: line.name,
               contractItemId: line.contractItemId,
-              requestedQuantity: line.requestedQuantity,
+              requestedQuantity: draftNumberValue(line.requestedQuantity),
               unit: line.unit,
-              unitPrice: line.unitPrice,
+              unitPrice: draftNumberValue(line.unitPrice),
             })),
         }
         if (legacyChecklistExempt && isEditMode && initialValues) {
@@ -468,6 +496,7 @@ export function PurchaseRequestForm({
         const uploaded = await uploadChecklistFiles({
           uploadSessionId,
           method: method.kind,
+          contractFileAvailable: selectedContractFileAvailable,
           total: checklistTotal,
           policy: checklistPolicy,
           files: checklistFiles,
@@ -481,9 +510,19 @@ export function PurchaseRequestForm({
           const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
           const file = checklistFiles[key]
           const existing = existingChecklistBySlot.get(key)
+          if (requirement.kind === 'contract_page' && method.kind === 'contract') {
+            if (selectedContractFileAvailable) {
+              return { kind: requirement.kind, slot: requirement.slot, contractFile: true as const }
+            }
+          }
           if (file) {
             const uploadedFile = uploaded[key]
-            if (!uploadedFile || uploadedFile.fingerprint !== checklistFileFingerprint(file)) {
+            if (
+              !uploadedFile ||
+              uploadedFile.source !== 'r2' ||
+              !uploadedFile.uploadId ||
+              uploadedFile.fingerprint !== checklistFileFingerprint(file)
+            ) {
               throw new Error(`อัปโหลด ${requirement.label} ยังไม่สำเร็จ`)
             }
             return { kind: requirement.kind, slot: requirement.slot, uploadId: uploadedFile.uploadId }
@@ -678,9 +717,10 @@ export function PurchaseRequestForm({
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
-                        onChange={(event) =>
-                          updateLine(line.key, { requestedQuantity: Number(event.target.value) })
-                        }
+                        onChange={(event) => {
+                          const value = event.target.value
+                          updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
+                        }}
                       />
                       {overLimit && (
                         <small className="field-error">
@@ -710,11 +750,14 @@ export function PurchaseRequestForm({
                         aria-label={`ราคาต่อหน่วยของ ${line.name}`}
                         title={line.contractItemId !== null ? 'ราคากำหนดตามสัญญา แก้ไขไม่ได้' : undefined}
                         value={line.unitPrice}
-                        onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })
+                        }}
                       />
                     </td>
                     <td className="pr-line-cell--center identifier">
-                      <strong>{formatBaht(calculateLineTotal(line.requestedQuantity, line.unitPrice))}</strong>
+                      <strong>{formatBaht(calculateLineTotal(draftNumberValue(line.requestedQuantity), draftNumberValue(line.unitPrice)))}</strong>
                     </td>
                     <td>
                       <Button variant="ghost" onClick={() => removeLine(line.key)}>นำออก</Button>
@@ -737,6 +780,7 @@ export function PurchaseRequestForm({
       {method !== null && !legacyChecklistExempt && (
         <PurchaseRequestChecklistFields
           method={method.kind}
+          contractFileAvailable={selectedContractFileAvailable}
           total={checklistTotal}
           candidates={committeeCandidates}
           files={checklistFiles}
@@ -780,7 +824,7 @@ export function PurchaseRequestForm({
           >
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasOverLimitLine || !checklistComplete}>
+          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasInvalidLine || hasOverLimitLine || !checklistComplete}>
             {isPending ? (isEditMode ? 'กำลังบันทึก…' : 'กำลังส่ง…') : isEditMode ? 'บันทึกการแก้ไข' : 'ส่งใบ PR'}
           </Button>
         </div>

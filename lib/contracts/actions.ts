@@ -29,6 +29,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 import { cleanupPurchaseRequestChecklistForContract } from '@/lib/pr/checklist-cleanup'
 import { purchaseRequestCommitteeAssignmentSchema } from '@/lib/pr/checklist-schema'
+import { hardDeleteContractFiles } from '@/lib/contracts/file-actions'
 
 const mutationResultSchema = z.object({ id: z.coerce.number().int().positive() }).passthrough()
 
@@ -164,6 +165,7 @@ export async function expireContract(contractId: number, input: ExpireContractIn
   })
 
   const expired = unwrapMutation('เปลี่ยนสถานะสัญญา', result)
+  await hardDeleteContractFiles(parsedContractId, actor.id)
   revalidatePath('/contracts')
   revalidatePath(`/contracts/${parsedContractId}`)
   revalidatePath('/dashboard')

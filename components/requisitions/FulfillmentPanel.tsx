@@ -54,7 +54,7 @@ export function FulfillmentPanel({
     })
   }
 
-  const changeQuantity = (itemId: string, lotId: string, quantity: number) => {
+  const changeQuantity = (itemId: string, lotId: string, quantity: number | '') => {
     setSelections((current) => ({
       ...current,
       [itemId]: (current[itemId] ?? []).map((entry) =>
@@ -79,7 +79,10 @@ export function FulfillmentPanel({
     problems.push(
       ...validateLotAllocations({
         requestedQuantity: item.requestedQuantity,
-        allocations: chosen.map((entry) => ({ lotId: entry.inventoryLotId, quantity: entry.quantity })),
+        allocations: chosen.map((entry) => ({
+          lotId: entry.inventoryLotId,
+          quantity: entry.quantity === '' ? 0 : entry.quantity,
+        })),
         lotBalances: new Map(lots.map((lot) => [lot.id, lot.balance])),
       }).map((message) => `${item.name}: ${message}`),
     )
@@ -101,7 +104,7 @@ export function FulfillmentPanel({
             (selections[item.id] ?? []).map((entry) => ({
               requisitionItemId: item.id,
               inventoryLotId: entry.inventoryLotId,
-              quantity: entry.quantity,
+              quantity: entry.quantity === '' ? 0 : entry.quantity,
               overrideReason: overridesNeeded.has(item.id) ? reasons[item.id].trim() : null,
             })),
           ),

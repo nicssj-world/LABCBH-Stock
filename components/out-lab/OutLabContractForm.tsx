@@ -30,7 +30,7 @@ interface OutLabContractFormProps {
 interface FormState {
   kind: OutLabKind
   entryCadence: (typeof OUT_LAB_CADENCES)[number]
-  fiscalYear: number
+  fiscalYear: number | ''
   displayName: string
   vendor: string
   department: (typeof OUT_LAB_DEPARTMENTS)[number] | ''
@@ -81,7 +81,10 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
   // An annual plan's period is derived from its fiscal year rather than typed,
   // so the dates are shown read-only instead of being hidden: people need to
   // see what period they are budgeting before they commit to it.
-  const planPeriod = useMemo(() => fiscalYearBounds(state.fiscalYear), [state.fiscalYear])
+  const planPeriod = useMemo(
+    () => fiscalYearBounds(state.fiscalYear === '' ? currentThaiFiscalYear() : state.fiscalYear),
+    [state.fiscalYear],
+  )
 
   const buildPayload = () => {
     const shared = {
@@ -208,7 +211,10 @@ export function OutLabContractForm({ mode, contract, isAdmin = false }: OutLabCo
               min="2500"
               max="3000"
               value={state.fiscalYear}
-              onChange={(event) => patch('fiscalYear', Number(event.target.value))}
+              onChange={(event) => {
+                const value = event.target.value
+                patch('fiscalYear', value === '' ? '' : Number(value))
+              }}
               aria-invalid={Boolean(errors.fiscalYear)}
             />
             {errors.fiscalYear && <small className="field-error">{errors.fiscalYear}</small>}

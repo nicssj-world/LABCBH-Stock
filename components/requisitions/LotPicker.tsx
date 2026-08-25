@@ -6,14 +6,14 @@ import type { SelectableLot } from '@/lib/requisitions/types'
 
 export interface LotSelection {
   inventoryLotId: string
-  quantity: number
+  quantity: number | ''
 }
 
 export interface LotPickerProps {
   lots: SelectableLot[]
   selections: LotSelection[]
   onToggle: (lot: SelectableLot) => void
-  onQuantityChange: (lotId: string, quantity: number) => void
+  onQuantityChange: (lotId: string, quantity: number | '') => void
 }
 
 /**
@@ -70,7 +70,10 @@ export function LotPicker({ lots, selections, onToggle, onQuantityChange }: LotP
                   step="0.001"
                   disabled={!selection}
                   value={selection?.quantity ?? ''}
-                  onChange={(event) => onQuantityChange(lot.id, Number(event.target.value))}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    onQuantityChange(lot.id, value === '' ? '' : Number(value))
+                  }}
                 />
               </label>
             )}

@@ -7,6 +7,8 @@ import {
   PurchaseRequestChecklistAccessError,
 } from '@/lib/pr/checklist-queries'
 import { isPurchaseRequestChecklistStorageKey } from '@/lib/pr/checklist-storage'
+import { contractFileUrl } from '@/lib/contracts/file-actions'
+import { isContractFilePathAllowed } from '@/lib/contracts/files'
 import { getR2BucketName, getR2Client } from '@/lib/r2/client'
 
 interface RouteContext {
@@ -24,6 +26,16 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!actor) return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 })
     const { id, attachmentId } = await context.params
     const attachment = await getPurchaseRequestChecklistAttachment(id, attachmentId, actor)
+    if (attachment.storage_backend === 'supabase_storage') {
+      if (
+        attachment.source_contract_id === null ||
+        !isContractFilePathAllowed(attachment.storage_key, Number(attachment.source_contract_id))
+      ) {
+        return NextResponse.json({ error: 'เส้นทางไฟล์หน้าสัญญาไม่ถูกต้อง' }, { status: 422 })
+      }
+      const signedUrl = await contractFileUrl(Number(attachment.source_contract_id), attachment.storage_key)
+      return NextResponse.redirect(signedUrl)
+    }
     if (!isPurchaseRequestChecklistStorageKey(attachment.storage_key)) {
       return NextResponse.json({ error: 'เส้นทางเอกสารไม่ถูกต้อง' }, { status: 422 })
     }
@@ -32,7 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
       new GetObjectCommand({
         Bucket: getR2BucketName(),
         Key: attachment.storage_key,
-        ResponseContentType: attachment.mime_type,
+        ResponseContentType: attachment.mime_type ?? undefined,
         ResponseContentDisposition: contentDisposition(attachment.file_name),
       }),
       { expiresIn: 300 },

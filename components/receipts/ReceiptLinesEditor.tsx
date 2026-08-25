@@ -13,7 +13,7 @@ export interface ReceiptDraftLine {
   name: string
   lotNumber: string
   expiryDate: string
-  quantity: number
+  quantity: number | ''
   unit: string
   storageLocation: string
 }
@@ -53,7 +53,16 @@ export function ReceiptLinesEditor({
   // A reagent can be split across lots (several lines share one inventoryItemId);
   // this flags every line in a group whose combined quantity exceeds what the
   // referenced PR still has available for that item.
-  const overRequested = new Set(findOverRequestedItems(lines, requestedByItem, hasPurchaseRequest))
+  const overRequested = new Set(
+    findOverRequestedItems(
+      lines.map((line) => ({
+        inventoryItemId: line.inventoryItemId,
+        quantity: line.quantity === '' ? 0 : line.quantity,
+      })),
+      requestedByItem,
+      hasPurchaseRequest,
+    ),
+  )
   const isOverRequested = (line: ReceiptDraftLine) => overRequested.has(line.inventoryItemId)
   const isUnrequested = (line: ReceiptDraftLine) =>
     hasPurchaseRequest && !(line.inventoryItemId in requestedByItem)
@@ -136,7 +145,10 @@ export function ReceiptLinesEditor({
                       required
                       aria-invalid={isOverRequested(line)}
                       value={line.quantity}
-                      onChange={(event) => onChange(line.key, { quantity: Number(event.target.value) })}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        onChange(line.key, { quantity: value === '' ? '' : Number(value) })
+                      }}
                     />
                     {isUnrequested(line) ? (
                       <small className="field-error">

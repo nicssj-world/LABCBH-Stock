@@ -75,7 +75,7 @@ export function ReceiptForm({
     setLines((current) => {
       const stagedQuantity = current
         .filter((line) => line.inventoryItemId === item.inventoryItemId)
-        .reduce((sum, line) => sum + line.quantity, 0)
+        .reduce((sum, line) => sum + (line.quantity === '' ? 0 : line.quantity), 0)
       const availableQuantity = roundQuantity(item.remainingQuantity - stagedQuantity)
       if (availableQuantity <= 0) return current
 
@@ -127,13 +127,23 @@ export function ReceiptForm({
       item.inventoryItemId,
       roundQuantity(lines
         .filter((line) => line.inventoryItemId === item.inventoryItemId)
-        .reduce((sum, line) => sum + line.quantity, 0)),
+        .reduce((sum, line) => sum + (line.quantity === '' ? 0 : line.quantity), 0)),
     ]),
   )
 
   const hasDuplicates = detectDuplicateLots(lines).length > 0
   const hasIncompleteLot = lines.some((line) => !line.lotNumber.trim())
-  const hasOverRequestedLine = findOverRequestedItems(lines, requestedByItem, Boolean(purchaseRequestId)).length > 0
+  const hasInvalidQuantity = lines.some(
+    (line) => typeof line.quantity !== 'number' || !Number.isFinite(line.quantity) || line.quantity <= 0,
+  )
+  const hasOverRequestedLine = findOverRequestedItems(
+    lines.map((line) => ({
+      inventoryItemId: line.inventoryItemId,
+      quantity: line.quantity === '' ? 0 : line.quantity,
+    })),
+    requestedByItem,
+    Boolean(purchaseRequestId),
+  ).length > 0
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -151,7 +161,7 @@ export function ReceiptForm({
             inventoryItemId: line.inventoryItemId,
             lotNumber: line.lotNumber,
             expiryDate: line.expiryDate || null,
-            quantity: line.quantity,
+            quantity: line.quantity === '' ? 0 : line.quantity,
             unit: line.unit,
             storageLocation: line.storageLocation.trim() || null,
           })),
@@ -310,7 +320,7 @@ export function ReceiptForm({
           <Button variant="secondary" onClick={() => router.push('/receipts')} disabled={isPending}>
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || lines.length === 0 || hasDuplicates || hasIncompleteLot || hasOverRequestedLine}>
+          <Button type="submit" disabled={isPending || lines.length === 0 || hasDuplicates || hasIncompleteLot || hasInvalidQuantity || hasOverRequestedLine}>
             {isPending ? 'กำลังบันทึก…' : 'บันทึกฉบับร่าง'}
           </Button>
         </div>

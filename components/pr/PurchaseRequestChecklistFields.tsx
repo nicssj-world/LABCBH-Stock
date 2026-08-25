@@ -20,8 +20,9 @@ import type { PurchaseRequestChecklistAttachmentRecord } from '@/lib/pr/types'
 export type ChecklistFileSelections = Record<string, File | undefined>
 
 export interface UploadedChecklistFile {
-  uploadId: string
   fingerprint: string
+  source: 'r2'
+  uploadId: string
 }
 
 export type UploadedChecklistFiles = Record<string, UploadedChecklistFile | undefined>
@@ -70,6 +71,7 @@ function putFile(
 export async function uploadChecklistFiles(input: {
   uploadSessionId: string
   method: PurchaseMethodKind
+  contractFileAvailable?: boolean
   total: number | null
   policy: PurchaseRequestChecklistPolicy
   files: ChecklistFileSelections
@@ -80,7 +82,9 @@ export async function uploadChecklistFiles(input: {
   const selected = input.policy.attachments.flatMap((requirement) => {
     const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
     const file = input.files[key]
-    return file ? [{ requirement, key, file }] : []
+    return file && !(requirement.kind === 'contract_page' && input.contractFileAvailable)
+      ? [{ requirement, key, file }]
+      : []
   })
   const bytesByKey = new Map(selected.map(({ key }) => [key, 0]))
   const totalBytes = selected.reduce((sum, entry) => sum + entry.file.size, 0)
@@ -121,7 +125,7 @@ export async function uploadChecklistFiles(input: {
       report()
     })
     bytesByKey.set(key, file.size)
-    const uploaded = { uploadId: payload.uploadId, fingerprint }
+    const uploaded = { uploadId: payload.uploadId, fingerprint, source: 'r2' as const }
     nextUploaded[key] = uploaded
     input.onUploaded(key, uploaded)
     report()
@@ -132,6 +136,7 @@ export async function uploadChecklistFiles(input: {
 }
 
 function formatFileSize(size: number) {
+  if (!Number.isFinite(size)) return 'ไม่ระบุขนาด'
   return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(size / 1024)} KB`
 }
 
@@ -234,6 +239,7 @@ export function CommitteeMemberCombobox({
 
 export interface PurchaseRequestChecklistFieldsProps {
   method: PurchaseMethodKind
+  contractFileAvailable?: boolean
   total: number | null
   candidates: PurchaseRequestCommitteeCandidate[]
   files: ChecklistFileSelections
@@ -250,6 +256,7 @@ export interface PurchaseRequestChecklistFieldsProps {
 
 export function PurchaseRequestChecklistFields({
   method,
+  contractFileAvailable = false,
   total,
   candidates,
   files,
@@ -291,7 +298,11 @@ export function PurchaseRequestChecklistFields({
       file,
       existing,
       errors,
-      complete: errors.length === 0 && Boolean(file || existing),
+      complete: errors.length === 0 && Boolean(
+        file ||
+        existing ||
+        (requirement.kind === 'contract_page' && contractFileAvailable),
+      ),
       isDragging: draggingSlotKey === key,
       dropzoneHintId: `pr-checklist-${requirement.kind}-${requirement.slot}-hint`,
       dropzoneErrorId: `pr-checklist-${requirement.kind}-${requirement.slot}-error`,
@@ -361,12 +372,18 @@ export function PurchaseRequestChecklistFields({
             {file && existing && <small>จะแทนที่ไฟล์เดิมเมื่อบันทึก</small>}
           </p>
         )}
+        {!file && !existing && requirement.kind === 'contract_page' && contractFileAvailable && (
+          <p className="pr-checklist__file-name">ใช้ไฟล์สัญญาเต็มที่แนบไว้กับสัญญานี้แล้ว ไม่ต้องแนบซ้ำ</p>
+        )}
         {errors.length > 0 && (
           <div id={dropzoneErrorId} className="pr-checklist__file-errors" aria-live="polite">
             {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
           </div>
         )}
         <div className="pr-checklist__file-actions">
+          {requirement.kind === 'contract_page' && contractFileAvailable && !file && !existing ? (
+            <p className="pr-checklist__file-name">ไฟล์สัญญาเต็มจะถูกอ้างอิงโดยอัตโนมัติ</p>
+          ) : (
           <label
             className={`pr-checklist__dropzone${isDragging ? ' is-dragging' : ''}`}
             aria-disabled={disabled}
@@ -394,6 +411,7 @@ export function PurchaseRequestChecklistFields({
               onChange={(event) => onFileChange(key, event.target.files?.[0])}
             />
           </label>
+          )}
           {file && (
             <Button variant="ghost" type="button" disabled={disabled} onClick={() => onFileChange(key, undefined)}>
               ยกเลิกไฟล์ที่เลือก

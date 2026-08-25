@@ -13,11 +13,13 @@ export type PurchaseRequestChecklistDeletionReason =
   | 'received'
   | 'closed_short'
   | 'winner_announced'
+  | 'contract_closed'
 
 interface CleanupAttachmentRow {
   id: string
   storage_key: string
   deletion_reason: PurchaseRequestChecklistDeletionReason | null
+  source_contract_id: number | null
 }
 
 async function markDeleted(
@@ -69,7 +71,7 @@ export async function cleanupPurchaseRequestChecklistObjects(
 
   let query = supabaseAdmin
     .from('purchase_request_attachments')
-    .select('id, storage_key, deletion_reason')
+    .select('id, storage_key, deletion_reason, source_contract_id')
     .eq('purchase_request_id', purchaseRequestId)
     .is('object_deleted_at', null)
   if (reason === 'replaced' || reason === 'edit_removed') query = query.not('deleted_at', 'is', null)
@@ -77,10 +79,14 @@ export async function cleanupPurchaseRequestChecklistObjects(
   const attachmentResult = await query
   if (attachmentResult.error) throw new Error(`อ่านรายการเอกสารที่จะลบไม่สำเร็จ: ${attachmentResult.error.message}`)
   const attachments = (attachmentResult.data ?? []) as CleanupAttachmentRow[]
+  // Contract-page rows are references to the contract bucket, not owned R2
+  // objects of this PR. They remain available to later PRs until the contract
+  // close action performs the hard delete.
+  const ownedAttachments = attachments.filter((attachment) => attachment.source_contract_id === null)
   const deletedByReason = new Map<PurchaseRequestChecklistDeletionReason, string[]>()
   const failures: string[] = []
 
-  for (const attachment of attachments) {
+  for (const attachment of ownedAttachments) {
     if (!isPurchaseRequestChecklistStorageKey(attachment.storage_key)) {
       failures.push(`${attachment.id}: เส้นทางอยู่นอก namespace ของ PR`)
       continue

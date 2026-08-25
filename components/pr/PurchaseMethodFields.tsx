@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
@@ -19,6 +20,8 @@ export interface ContractOption {
   /** Used to filter this contract out once the requester picks a different department. */
   department: string
   nextPurchaseSequence: number
+  /** The full contract document, if the contract already has one. */
+  fileUrl: string | null
   committeeRosterReady?: boolean
 }
 
@@ -123,7 +126,13 @@ export function PurchaseMethodFields({
   onPurposeChange,
   onChange,
 }: PurchaseMethodFieldsProps) {
+  const [fiscalYearDrafts, setFiscalYearDrafts] = useState<Partial<Record<PurchaseMethodKind, string>>>({})
   const methodKinds = purpose === null ? [] : PURCHASE_METHODS_BY_PURPOSE[purpose]
+
+  const selectMethod = (next: PurchaseMethod) => {
+    setFiscalYearDrafts({})
+    onChange(next)
+  }
 
   return (
     <div className="method-stack">
@@ -166,7 +175,7 @@ export function PurchaseMethodFields({
                 name="purchaseMethod"
                 value={kind}
                 checked={method?.kind === kind}
-                onChange={() => onChange(emptyMethod(kind, contracts, awaitingContracts))}
+                onChange={() => selectMethod(emptyMethod(kind, contracts, awaitingContracts))}
               />
               <span>{PURCHASE_METHOD_LABELS[kind]}</span>
             </label>
@@ -184,8 +193,12 @@ export function PurchaseMethodFields({
                     min="2500"
                     max="3000"
                     required
-                    value={method.fiscalYear}
-                    onChange={(event) => onChange({ ...method, fiscalYear: Number(event.target.value) })}
+                    value={fiscalYearDrafts[method.kind] ?? method.fiscalYear}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setFiscalYearDrafts((current) => ({ ...current, [method.kind]: value }))
+                      if (value !== '') onChange({ ...method, fiscalYear: Number(value) })
+                    }}
                   />
                 </label>
                 <label className="field-row">
@@ -274,8 +287,12 @@ export function PurchaseMethodFields({
                       min="2500"
                       max="3000"
                       required
-                      value={method.contractDraft.fiscalYear}
-                      onChange={(event) => onChange(patchContractDraft(method, { fiscalYear: Number(event.target.value) }))}
+                      value={fiscalYearDrafts[method.kind] ?? method.contractDraft.fiscalYear}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setFiscalYearDrafts((current) => ({ ...current, [method.kind]: value }))
+                        if (value !== '') onChange(patchContractDraft(method, { fiscalYear: Number(value) }))
+                      }}
                     />
                   </label>
                   <label className="field-row">

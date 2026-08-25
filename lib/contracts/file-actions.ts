@@ -49,6 +49,9 @@ export async function storeContractFile(contractId: number, file: File) {
     p_actor_id: actor.id,
     p_contract_id: contractId,
     p_file_url: path,
+    p_file_name: file.name,
+    p_file_mime_type: file.type,
+    p_file_size_bytes: file.size,
   })
   if (result.error) {
     const { error: cleanupError } = await supabaseAdmin.storage
@@ -106,10 +109,95 @@ export async function removeContractFile(contractId: number) {
     p_actor_id: actor.id,
     p_contract_id: contractId,
     p_file_url: null,
+    p_file_name: null,
+    p_file_mime_type: null,
+    p_file_size_bytes: null,
   })
   unwrap('ลบไฟล์สัญญา', result)
 
   // The stored object is deliberately left in place. Detaching is reversible,
   // deleting is not, and an orphan in a private bucket is harmless.
   revalidatePath(`/contracts/${contractId}`)
+}
+
+/**
+ * Close-time deletion is deliberately separate from the reversible detach
+ * control above. The database pointer and every PR reference are invalidated
+ * first; Storage deletion then removes the canonical object and any replaced
+ * objects that were kept alive by older PR references.
+ */
+export async function hardDeleteContractFiles(contractId: number, actorId: string) {
+  const actor = await requireActor()
+  assertContractEditor(actor)
+  if (actor.id !== actorId) throw new Error('ผู้ดำเนินการลบไฟล์สัญญาไม่ตรงกับ session')
+
+  const contractResult = await supabaseAdmin
+    .from('contracts')
+    .select('file_url')
+    .eq('id', contractId)
+    .maybeSingle()
+  if (contractResult.error) throw new Error(`อ่านไฟล์สัญญาสำหรับลบไม่สำเร็จ: ${contractResult.error.message}`)
+  if (!contractResult.data) throw new Error('ไม่พบสัญญาสำหรับลบไฟล์')
+
+  const referencesResult = await supabaseAdmin
+    .from('purchase_request_attachments')
+    .select('storage_key')
+    .eq('source_contract_id', contractId)
+    .eq('storage_backend', 'supabase_storage')
+  if (referencesResult.error) throw new Error(`อ่านเอกสาร PR ที่อ้างอิงไฟล์สัญญาไม่สำเร็จ: ${referencesResult.error.message}`)
+
+  // A replacement or a reversible detach may have left an older object in
+  // the contract folder. Include the folder listing so closing the contract
+  // removes every object belonging to it, not only the current pointer.
+  const contractFolder = `contracts/${contractId}`
+  const listedResult = await supabaseAdmin.storage
+    .from(CONTRACT_FILE_BUCKET)
+    .list(contractFolder, { limit: 1000 })
+  if (listedResult.error) throw new Error(`อ่านรายการไฟล์สัญญาสำหรับลบไม่สำเร็จ: ${listedResult.error.message}`)
+
+  const paths = [...new Set([
+    contractResult.data.file_url,
+    ...(referencesResult.data ?? []).map((row) => row.storage_key),
+    ...(listedResult.data ?? [])
+      .filter((entry) => entry.id !== null)
+      .map((entry) => `${contractFolder}/${entry.name}`),
+  ].filter((path): path is string => typeof path === 'string' && path.length > 0))]
+
+  for (const path of paths) {
+    if (!isContractFilePathAllowed(path, contractId)) {
+      throw new Error('เส้นทางไฟล์สัญญาไม่ถูกต้อง')
+    }
+  }
+
+  const finalized = await supabaseAdmin.rpc('finalize_contract_file_hard_delete', {
+    p_contract_id: contractId,
+    p_actor_id: actor.id,
+    p_file_paths: paths,
+  })
+  if (finalized.error) throw new Error(`ปิดอายุไฟล์สัญญาไม่สำเร็จ: ${finalized.error.message}`)
+
+  const failedPaths: string[] = []
+  for (let index = 0; index < paths.length; index += 100) {
+    const batch = paths.slice(index, index + 100)
+    const removed = await supabaseAdmin.storage.from(CONTRACT_FILE_BUCKET).remove(batch)
+    if (removed.error) failedPaths.push(...batch)
+  }
+
+  for (const path of failedPaths) {
+    await enqueueStorageCleanupJobBestEffort({
+      storageBackend: 'supabase_storage',
+      bucketName: CONTRACT_FILE_BUCKET,
+      storageKey: path,
+      jobKind: 'storage_upload_rollback',
+    })
+  }
+
+  if (failedPaths.length > 0) {
+    throw new Error(`ปิดสัญญาแล้ว แต่ยังรอลบไฟล์ ${failedPaths.length} รายการ`)
+  }
+
+  revalidatePath(`/contracts/${contractId}`)
+  revalidatePath('/contracts')
+  revalidatePath('/purchase-requests/new')
+  return { deletedCount: paths.length }
 }

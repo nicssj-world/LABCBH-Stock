@@ -27,6 +27,10 @@ const money = new Intl.NumberFormat('th-TH', {
   minimumFractionDigits: 2,
 })
 
+function numericValue(value: number | ''): number {
+  return value === '' ? 0 : value
+}
+
 const emptyItem = (): ContractFormItemInput => ({
   id: null,
   lsCode: '',
@@ -58,7 +62,10 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
     onChange(items.length === 1 && isUntouchedRow(items[0]) ? [filled] : [...items, filled])
   }
 
-  const grandTotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const grandTotal = items.reduce(
+    (sum, item) => sum + numericValue(item.quantity) * numericValue(item.unitPrice),
+    0,
+  )
 
   return (
     <section className="items-editor" aria-labelledby="contract-items-title">
@@ -106,7 +113,18 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             </label>
             <label>
               จำนวนในสัญญา
-              <input type="number" min="0.001" step="0.001" inputMode="decimal" value={item.quantity} onChange={(event) => update(index, 'quantity', Number(event.target.value))} aria-invalid={Boolean(errors[`items.${index}.quantity`])} />
+              <input
+                type="number"
+                min="0.001"
+                step="0.001"
+                inputMode="decimal"
+                value={item.quantity}
+                onChange={(event) => {
+                  const value = event.target.value
+                  update(index, 'quantity', value === '' ? '' : Number(value))
+                }}
+                aria-invalid={Boolean(errors[`items.${index}.quantity`])}
+              />
               {errors[`items.${index}.quantity`] && <small className="field-error">{errors[`items.${index}.quantity`]}</small>}
             </label>
             <label>
@@ -116,7 +134,18 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             </label>
             <label>
               ราคาต่อหน่วย
-              <input type="number" min="0.01" step="0.01" inputMode="decimal" value={item.unitPrice} onChange={(event) => update(index, 'unitPrice', Number(event.target.value))} aria-invalid={Boolean(errors[`items.${index}.unitPrice`])} />
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={item.unitPrice}
+                onChange={(event) => {
+                  const value = event.target.value
+                  update(index, 'unitPrice', value === '' ? '' : Number(value))
+                }}
+                aria-invalid={Boolean(errors[`items.${index}.unitPrice`])}
+              />
               {errors[`items.${index}.unitPrice`] && <small className="field-error">{errors[`items.${index}.unitPrice`]}</small>}
             </label>
             {showOpeningBalance && (
@@ -125,20 +154,20 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
                 <input
                   type="number"
                   min="0"
-                  max={item.quantity}
+                  max={item.quantity === '' ? undefined : item.quantity}
                   step="0.001"
                   inputMode="decimal"
                   value={item.openingUsedQuantity ?? ''}
                   onChange={(event) => update(index, 'openingUsedQuantity', event.target.value === '' ? null : Number(event.target.value))}
                   aria-invalid={Boolean(errors[`items.${index}.openingUsedQuantity`])}
                 />
-                <small>คงเหลือจะเป็น {Math.max(item.quantity - (item.openingUsedQuantity ?? 0), 0)} {item.unit}</small>
+                <small>คงเหลือจะเป็น {Math.max(numericValue(item.quantity) - (item.openingUsedQuantity ?? 0), 0)} {item.unit}</small>
                 {errors[`items.${index}.openingUsedQuantity`] && <small className="field-error">{errors[`items.${index}.openingUsedQuantity`]}</small>}
               </label>
             )}
             <div className="item-edit-row__total">
               <span>ราคารวม</span>
-              <strong>{money.format(item.quantity * item.unitPrice)}</strong>
+              <strong>{money.format(numericValue(item.quantity) * numericValue(item.unitPrice))}</strong>
             </div>
             <Button
               variant="ghost"

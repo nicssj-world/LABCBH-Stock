@@ -53,7 +53,9 @@ interface DraftLine {
   onHand: number
   availableToRequest: number
   minimumStock: number
-  requestedQuantity: number
+  // Keep the input blank while the requester is editing it. Converting an
+  // empty number input with Number('') would turn it back into zero.
+  requestedQuantity: number | ''
 }
 
 export function RequisitionForm({
@@ -122,12 +124,15 @@ export function RequisitionForm({
     (item) => item.responsibleDepartment !== null && eligibleDepartments.includes(item.responsibleDepartment),
   )
 
-  const hasAvailabilityError = lines.some(
-    (line) =>
-      !Number.isFinite(line.requestedQuantity) ||
-      line.requestedQuantity <= 0 ||
-      line.requestedQuantity > line.availableToRequest,
-  )
+  const hasAvailabilityError = lines.some((line) => {
+    const quantity = line.requestedQuantity
+    return (
+      typeof quantity !== 'number' ||
+      !Number.isFinite(quantity) ||
+      quantity <= 0 ||
+      quantity > line.availableToRequest
+    )
+  })
 
   const addLine = (item: RequisitionCatalogItem) => {
     setLines((current) => [
@@ -171,7 +176,7 @@ export function RequisitionForm({
       note: note.trim() || null,
       items: lines.map((line) => ({
         inventoryItemId: line.inventoryItemId,
-        requestedQuantity: line.requestedQuantity,
+        requestedQuantity: line.requestedQuantity === '' ? 0 : line.requestedQuantity,
         unit: line.unit,
         note: line.note.trim() || null,
       })),
@@ -284,19 +289,20 @@ export function RequisitionForm({
           ) : (
             <ul className="requisition-line-list">
               {lines.map((line) => {
+                const requestedQuantity = line.requestedQuantity === '' ? 0 : line.requestedQuantity
                 // Falling below the minimum is still only a warning. Exceeding
                 // the reservation-aware available quantity is a hard block.
                 const willBreachMinimum = isProjectedBelowMinimum({
                   onHand: line.onHand,
                   minimum: line.minimumStock,
-                  issueQuantity: line.requestedQuantity,
+                  issueQuantity: requestedQuantity,
                 })
                 // Only reachable while editing: the picker never offers an item
                 // at zero, but a saved line can be carried in after its stock
                 // ran out. It has to stand out, because keeping it means asking
                 // for something the store cannot hand over.
                 const isDepleted = line.onHand <= 0
-                const isOverAvailable = line.requestedQuantity > line.availableToRequest
+                const isOverAvailable = requestedQuantity > line.availableToRequest
 
                 return (
                   <li key={line.key} data-depleted={isDepleted || undefined}>
@@ -324,9 +330,10 @@ export function RequisitionForm({
                           step="0.001"
                           required
                           value={line.requestedQuantity}
-                          onChange={(event) =>
-                            changeLine(line.key, { requestedQuantity: Number(event.target.value) })
-                          }
+                          onChange={(event) => {
+                            const value = event.target.value
+                            changeLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
+                          }}
                         />
                       </label>
                       <label className="field-row">

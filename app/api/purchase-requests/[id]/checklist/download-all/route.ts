@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { getActor } from '@/lib/auth/actor'
 import { generatePurchaseRequestCommitteePdf } from '@/lib/pr/committee-pdf'
 import { resolvePurchaseRequestCommitteePdfInput } from '@/lib/pr/committee-pdf-server'
+import { CONTRACT_FILE_BUCKET, isContractFilePathAllowed } from '@/lib/contracts/files'
 import {
   assertPurchaseRequestChecklistStockAccess,
   getPurchaseRequestChecklist,
@@ -14,6 +15,7 @@ import {
 import { PR_ATTACHMENT_KIND_LABELS } from '@/lib/pr/checklist'
 import { isPurchaseRequestChecklistStorageKey } from '@/lib/pr/checklist-storage'
 import { getR2BucketName, getR2Client } from '@/lib/r2/client'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 interface RouteContext { params: Promise<{ id: string }> }
 
@@ -38,6 +40,25 @@ export async function GET(_request: Request, context: RouteContext) {
     archive.pipe(output)
 
     for (const object of objects) {
+      if (object.storage_backend === 'supabase_storage') {
+        if (
+          object.source_contract_id === null ||
+          !isContractFilePathAllowed(object.storage_key, Number(object.source_contract_id))
+        ) {
+          throw new Error('พบเส้นทางไฟล์หน้าสัญญาที่อยู่นอกพื้นที่ที่อนุญาต')
+        }
+        const contractFile = await supabaseAdmin.storage
+          .from(CONTRACT_FILE_BUCKET)
+          .download(object.storage_key)
+        if (contractFile.error || !contractFile.data) {
+          throw new Error(`อ่านไฟล์ ${object.file_name} จากพื้นที่สัญญาไม่สำเร็จ`)
+        }
+        const label = PR_ATTACHMENT_KIND_LABELS[object.attachment_kind as keyof typeof PR_ATTACHMENT_KIND_LABELS]
+        archive.append(Buffer.from(await contractFile.data.arrayBuffer()), {
+          name: `${safeZipPart(label)}-${object.slot}-${safeZipPart(object.file_name)}`,
+        })
+        continue
+      }
       if (!isPurchaseRequestChecklistStorageKey(object.storage_key)) {
         throw new Error('พบเส้นทางเอกสารที่อยู่นอกพื้นที่ PR')
       }

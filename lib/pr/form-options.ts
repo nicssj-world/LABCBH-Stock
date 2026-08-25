@@ -19,6 +19,7 @@ export interface PurchaseRequestFormOptions {
     department: string
     label: string
     nextPurchaseSequence: number
+    fileUrl: string | null
     committeeRosterReady: boolean
   }>
   awaitingContracts: Array<{
@@ -88,6 +89,7 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     id: contract.id,
     contractType: contract.contractType,
     department: contract.department ?? '',
+    fileUrl: contract.fileUrl,
     label: `${contract.displayName?.trim() || contract.product}${
       contract.contractNumber ? ` · ${contract.contractNumber}` : ''
     }`,
@@ -153,6 +155,7 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
       department: contract.department,
       label: contract.label,
       nextPurchaseSequence: nextPurchaseSequenceByContract[contract.id] ?? 1,
+      fileUrl: contract.fileUrl,
       committeeRosterReady: (() => {
         const roster = committeesByContract.get(contract.id) ?? []
         const count = (kind: string) => roster.filter((row) => row.committee_kind === kind).length

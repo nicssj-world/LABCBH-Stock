@@ -144,7 +144,8 @@ const CONTRACT_FORM_OPTION_READ_SELECT = `
   status,
   display_name,
   contract_number,
-  end_date
+  end_date,
+  file_url
 `
 
 const contractFormOptionReadRowSchema = z.object({
@@ -157,6 +158,7 @@ const contractFormOptionReadRowSchema = z.object({
   display_name: z.string().nullable(),
   contract_number: z.string().nullable(),
   end_date: z.string().nullable(),
+  file_url: z.string().nullable(),
 })
 
 export interface ContractFilters {
@@ -178,6 +180,7 @@ export interface ContractFormOption {
   displayName: string | null
   contractNumber: string | null
   endDate: string | null
+  fileUrl: string | null
 }
 
 function mapContractRow(
@@ -354,6 +357,7 @@ export async function listContractFormOptions(): Promise<ContractFormOption[]> {
     displayName: row.display_name,
     contractNumber: row.contract_number,
     endDate: row.end_date,
+    fileUrl: row.file_url,
   }))
 }
 

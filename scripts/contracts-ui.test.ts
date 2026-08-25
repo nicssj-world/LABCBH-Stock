@@ -224,6 +224,8 @@ assert.match(expiryDialog, /เหตุผลที่สิ้นสุดส�
 
 assert.match(form, /^['"]use client['"]/m, 'only the interactive form is a client boundary')
 assert.match(form, /createContract|updateContract/, 'form must call typed Server Actions')
+assert.match(form, /fiscalYear: number \| ''/, 'contract fiscal-year state must allow an empty value while editing')
+assert.match(form, /value === '' \? '' : Number\(value\)/, 'clearing a contract numeric field must remain blank instead of becoming zero')
 assert.match(form, /total: number \| null/, 'lease forms must keep an explicit contract ceiling in state')
 assert.match(form, /value=\{state\.total \?\? ''\}/, 'lease forms must render the current contract ceiling')
 assert.match(form, /errors\.total/, 'lease ceiling validation must be shown beside its input')
@@ -234,6 +236,7 @@ assert.match(form, /beforeunload/, 'form must warn before leaving an unsaved dra
 assert.doesNotMatch(form, /createBrowserClient|supabase\.from/, 'browser form must not mutate Supabase')
 
 const itemsEditor = read('components/contracts/ContractItemsEditor.tsx')
+assert.match(itemsEditor, /value === '' \? '' : Number\(value\)/, 'clearing a contract item numeric field must remain blank instead of becoming zero')
 assert.match(itemsEditor, /ยอดรวมทั้งสัญญา/, 'item editor must expose a grand total')
 assert.match(itemsEditor, /item\.id/, 'edit rows must preserve stable item IDs')
 assert.match(itemsEditor, /CatalogItemCombobox/, 'reagent lines must be searchable by typing, matching receiving/requisition forms')

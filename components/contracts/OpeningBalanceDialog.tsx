@@ -17,7 +17,7 @@ function todayIso() {
 export function OpeningBalanceDialog({ contractId, items }: { contractId: number; items: ContractItemRecord[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const router = useRouter()
-  const [values, setValues] = useState<Record<string, number>>({})
+  const [values, setValues] = useState<Record<string, number | ''>>({})
   const [effectiveDate, setEffectiveDate] = useState(todayIso())
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +44,13 @@ export function OpeningBalanceDialog({ contractId, items }: { contractId: number
         await setContractOpeningBalances(contractId, {
           effectiveDate,
           note,
-          lines: items.map((item) => ({ contractItemId: item.id, usedQuantity: values[item.id] ?? item.openingUsedQuantity })),
+          lines: items.map((item) => {
+            const value = values[item.id]
+            return {
+              contractItemId: item.id,
+              usedQuantity: value === '' ? 0 : value ?? item.openingUsedQuantity,
+            }
+          }),
         })
         dialogRef.current?.close()
         router.refresh()
@@ -103,8 +109,14 @@ export function OpeningBalanceDialog({ contractId, items }: { contractId: number
                         max={item.quantity}
                         step="0.001"
                         inputMode="decimal"
-                        value={values[item.id] ?? 0}
-                        onChange={(event) => setValues((current) => ({ ...current, [item.id]: Number(event.target.value) }))}
+                        value={values[item.id] ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          setValues((current) => ({
+                            ...current,
+                            [item.id]: value === '' ? '' : Number(value),
+                          }))
+                        }}
                       />
                     </td>
                   </tr>

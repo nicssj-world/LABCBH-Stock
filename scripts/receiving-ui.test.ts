@@ -111,9 +111,11 @@ assert.match(linesEditor, /ล็อตซ้ำ/)
 assert.match(form, /findOverRequestedItems/, 'the form must know when any line exceeds what the PR requested')
 assert.match(
   form,
-  /disabled=\{isPending \|\| lines\.length === 0 \|\| hasDuplicates \|\| hasIncompleteLot \|\| hasOverRequestedLine\}/,
+  /disabled=\{isPending \|\| lines\.length === 0 \|\| hasDuplicates \|\| hasIncompleteLot \|\| hasInvalidQuantity \|\| hasOverRequestedLine\}/,
   'submit must stay blocked while any line exceeds its PR-requested quantity',
 )
+assert.match(linesEditor, /quantity: number \| ''/, 'receipt quantity state must allow an empty value while editing')
+assert.match(linesEditor, /value === '' \? '' : Number\(value\)/, 'clearing a receipt quantity must remain blank instead of becoming zero')
 assert.match(linesEditor, /findOverRequestedItems/)
 assert.match(linesEditor, /เกินยอดคงเหลือที่รับได้/, 'the offending line must say it exceeds the current remainder')
 assert.match(linesEditor, /ไม่มีอยู่ในใบ PR/, 'a linked receipt must flag an item that was not requested')

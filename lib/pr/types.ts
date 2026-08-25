@@ -27,13 +27,15 @@ export interface PurchaseRequestChecklistAttachmentRecord {
   kind: PurchaseRequestAttachmentKind
   slot: number
   fileName: string
-  mimeType: string
-  sizeBytes: number
+  mimeType: string | null
+  sizeBytes: number | null
+  storageBackend: 'r2' | 'supabase_storage'
+  sourceContractId: number | null
   uploadedAt: string
   uploadedByName: string | null
   deletedAt: string | null
   deletedByName: string | null
-  deletionReason: 'replaced' | 'edit_removed' | 'received' | 'closed_short' | 'winner_announced' | null
+  deletionReason: 'replaced' | 'edit_removed' | 'received' | 'closed_short' | 'winner_announced' | 'contract_closed' | null
   objectDeletedAt: string | null
 }
 

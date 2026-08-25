@@ -98,8 +98,10 @@ assert.match(
   'the dropdown option must show the available-to-request quantity',
 )
 assert.match(form, /availableToRequest: number/, 'form lines must carry reservation-aware availability')
+assert.match(form, /requestedQuantity: number \| ''/, 'quantity input state must allow an empty value while editing')
+assert.match(form, /value === '' \? '' : Number\(value\)/, 'clearing the quantity input must remain blank instead of becoming zero')
 assert.match(form, /max=\{line\.availableToRequest\}/, 'quantity input must cap at available-to-request stock')
-assert.match(form, /line\.requestedQuantity > line\.availableToRequest/, 'the form must block stale over-requests')
+assert.match(form, /quantity > line\.availableToRequest/, 'the form must block stale over-requests')
 assert.match(form, /disabled=\{isPending \|\| lines\.length === 0 \|\| hasAvailabilityError\}/)
 assert.match(form, /เบิกได้อีก/, 'the line must explain the reservation-aware quantity')
 assert.doesNotMatch(form, /showingUnfilteredCatalog|scopedCatalog/, 'the picker must not fall back to unrelated inventory')

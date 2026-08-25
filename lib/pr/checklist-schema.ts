@@ -21,6 +21,7 @@ const checklistSlotSchema = z.object({
 export const purchaseRequestChecklistAttachmentReferenceSchema = z.union([
   checklistSlotSchema.extend({ attachmentId: z.string().uuid() }).strict(),
   checklistSlotSchema.extend({ uploadId: z.string().uuid() }).strict(),
+  checklistSlotSchema.extend({ contractFile: z.literal(true) }).strict(),
 ])
 
 export const purchaseRequestChecklistSubmissionSchema = z

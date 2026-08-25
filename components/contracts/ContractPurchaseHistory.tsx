@@ -50,6 +50,7 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
             <th>สถานะ</th>
             <th className="numeric-cell">มูลค่า</th>
             <th>เลขที่ PO</th>
+            <th>รายละเอียด PR</th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +76,13 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
               </td>
               <td className="numeric-cell identifier">{formatBaht(entry.total)}</td>
               <td className="identifier">{entry.poNumber ?? '—'}</td>
+              <td>
+                <DetailIconLink
+                  href={`/purchase-requests/${entry.id}`}
+                  label={`เปิดรายละเอียด PR ${entry.documentNumber}`}
+                  title="เปิดหน้ารายละเอียด PR สำหรับเจ้าหน้าที่คลัง"
+                />
+              </td>
             </tr>
           ))}
         </tbody>

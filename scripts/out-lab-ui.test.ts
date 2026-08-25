@@ -110,6 +110,8 @@ assert.match(history, /outLabUsageCsv\(entries\)/)
 assert.match(history, /outLabUsageSheetXml\(\{ contractNumber, displayName \}, entries\)/)
 
 const form = read('components/out-lab/OutLabContractForm.tsx')
+assert.match(form, /fiscalYear: number \| ''/, 'out-lab fiscal-year state must allow an empty value while editing')
+assert.match(form, /value === '' \? '' : Number\(value\)/, 'clearing an out-lab numeric field must remain blank instead of becoming zero')
 // Changing kind after creation would swap the rule an existing balance is
 // judged by, so the control is disabled and the reason is stated.
 assert.match(form, /disabled=\{mode === 'edit'\}/)

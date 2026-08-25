@@ -33,7 +33,8 @@ const attachmentKindOrder: Record<PurchaseRequestChecklistAttachmentRecord['kind
   quotation: 3,
 }
 
-function formatSize(value: number) {
+function formatSize(value: number | null) {
+  if (value === null) return 'ไม่ระบุขนาด'
   return value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(value / 1024)} KB`
 }
 
@@ -134,7 +135,7 @@ export function PurchaseRequestChecklistPanel({
     <article key={attachment.id}>
       <div>
         <strong>{attachment.kind === 'quotation' ? `บริษัทที่ ${attachment.slot}` : PR_ATTACHMENT_KIND_LABELS[attachment.kind]}</strong>
-        <span>{attachment.fileName} · {formatSize(attachment.sizeBytes)}</span>
+        <span>{attachment.fileName} · {formatSize(attachment.sizeBytes)}{attachment.sourceContractId ? ' · ไฟล์กลางจากสัญญา' : ''}</span>
       </div>
       {!checklist.downloadsBlocked && !attachment.objectDeletedAt && (
         <Button type="button" variant="primary" onClick={() => openPreview(attachment)}>เปิดดู</Button>
@@ -260,7 +261,7 @@ export function PurchaseRequestChecklistPanel({
           <Button type="button" variant="ghost" onClick={closePreview}>ปิด</Button>
         </div>
         {preview && (
-          preview.mimeType.startsWith('image/') ? (
+          preview.mimeType?.startsWith('image/') ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/purchase-requests/${requestId}/checklist/${preview.id}`} alt={preview.fileName} />
           ) : (

@@ -73,6 +73,7 @@ export async function createPurchaseRequest(
   const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
     actor,
     method: parsed.method.kind,
+    contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
     items: parsed.items,
     submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
     allowExistingAttachments: false,
@@ -131,6 +132,7 @@ export async function updatePurchaseRequest(
   const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
     actor,
     method: parsed.method.kind,
+    contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
     items: parsed.items,
     submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
     allowExistingAttachments: true,

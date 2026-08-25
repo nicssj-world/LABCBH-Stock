@@ -36,6 +36,15 @@ assert.ok(
   'contract upload authorization must happen before Storage writes',
 )
 assert.match(actionsSource, /\.remove\(\[path\]\)/, 'a failed RPC must clean up the newly uploaded object')
+assert.match(actionsSource, /hardDeleteContractFiles/, 'contract close must have a separate hard-delete path')
+assert.match(actionsSource, /\.list\(contractFolder/, 'contract close must include replaced or detached contract objects')
+assert.match(actionsSource, /p_file_paths:\s*paths/, 'the close RPC must audit every object selected for deletion')
+
+const lifecycleSql = readFileSync(join(process.cwd(), 'supabase', 'migrations', '20260825160000_contract_file_reuse.sql'), 'utf8')
+assert.match(lifecycleSql, /create table if not exists public\.contract_file_audit/i)
+assert.match(lifecycleSql, /create or replace function public\.finalize_contract_file_hard_delete/i)
+assert.match(lifecycleSql, /p_file_paths jsonb/i)
+assert.match(lifecycleSql, /contract_file_reference_deleted/i)
 
 const uploadRouteSource = readFileSync(
   join(process.cwd(), 'app', 'api', 'contracts', '[id]', 'file', 'route.ts'),

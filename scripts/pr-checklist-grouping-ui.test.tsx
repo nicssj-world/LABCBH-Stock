@@ -47,6 +47,8 @@ function attachment(
     deletedByName: null,
     deletionReason: null,
     objectDeletedAt: null,
+    storageBackend: 'r2',
+    sourceContractId: null,
   }
 }
 

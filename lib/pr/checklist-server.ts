@@ -66,12 +66,42 @@ function validateSubmissionShape(
 export async function verifyPurchaseRequestChecklistUploads(input: {
   actor: Actor
   method: PurchaseMethodKind
+  contractId?: number | null
   items: readonly PurchaseRequestLineInput[]
   submission: PurchaseRequestChecklistSubmission
   allowExistingAttachments: boolean
 }) {
   const submission = purchaseRequestChecklistSubmissionSchema.parse(input.submission)
   validateSubmissionShape(input.method, input.items, submission)
+
+  const contractFileReferences = submission.attachments.filter(
+    (attachment): attachment is Extract<(typeof submission.attachments)[number], { contractFile: true }> =>
+      'contractFile' in attachment,
+  )
+  if (contractFileReferences.length > 0) {
+    if (
+      input.method !== 'contract' ||
+      contractFileReferences.length !== 1 ||
+      contractFileReferences[0]?.kind !== 'contract_page' ||
+      contractFileReferences[0]?.slot !== 1 ||
+      !input.contractId
+    ) {
+      throw new Error('ไฟล์หน้าสัญญาที่ใช้ร่วมกันไม่ตรงกับสัญญาที่เลือก')
+    }
+    const contractResult = await supabaseAdmin
+      .from('contracts')
+      .select('file_url, status, is_archived')
+      .eq('id', input.contractId)
+      .maybeSingle()
+    if (contractResult.error) throw new Error(`ตรวจสอบไฟล์หน้าสัญญาไม่สำเร็จ: ${contractResult.error.message}`)
+    if (
+      !contractResult.data?.file_url ||
+      contractResult.data.status !== 'active' ||
+      contractResult.data.is_archived
+    ) {
+      throw new Error('สัญญานี้ยังไม่มีไฟล์สัญญาเต็มที่พร้อมใช้งาน')
+    }
+  }
 
   if (!input.allowExistingAttachments && submission.attachments.some((attachment) => 'attachmentId' in attachment)) {
     throw new Error('ใบ PR ใหม่ต้องอัปโหลดเอกสารทุกฉบับผ่านรอบการส่งปัจจุบัน')
