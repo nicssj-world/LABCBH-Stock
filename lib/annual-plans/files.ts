@@ -17,7 +17,9 @@ function safeSegment(value: string) {
     .split(/[\\/]/)
     .pop()
     ?.replace(/\.\./g, '-')
-    .replace(/[^a-zA-Z0-9ก-๙._-]+/g, '-')
+    // Supabase Storage keys follow the ASCII-safe AWS object-key subset.
+    // Keep the original display name in the database, not in the object key.
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'document'
 }
 

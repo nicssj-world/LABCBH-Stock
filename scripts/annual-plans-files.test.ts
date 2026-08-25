@@ -20,6 +20,7 @@ const path = annualPlanFilePath({
 })
 assert.match(path, /^annual-plans\/2570\/procurement\/plan-123-/)
 assert.ok(!path.includes('..'))
+assert.doesNotMatch(path, /[^\x00-\x7F]/, 'Storage keys must remain ASCII-safe even when the display filename is Thai')
 assert.equal(isAnnualPlanFilePathAllowed(path), true)
 assert.equal(isAnnualPlanFilePathAllowed('annual-plans/2570/procurement/../other.pdf'), false)
 assert.equal(isAnnualPlanFilePathAllowed('annual-plans/2570/hiring/plan.pdf'), true)
