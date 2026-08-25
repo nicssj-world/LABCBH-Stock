@@ -1,11 +1,43 @@
 'use client'
 
 import { useId, useRef, useState } from 'react'
-import { uploadAnnualPlan } from '@/lib/annual-plans/actions'
 import { validateAnnualPlanFile } from '@/lib/annual-plans/files'
 import { annualPlanTypeLabel, fiscalYearLabel } from '@/lib/annual-plans/presenter'
 import type { AnnualPlanRecord } from '@/lib/annual-plans/types'
 import type { AnnualPlanType } from '@/lib/annual-plans/schema'
+
+interface AnnualPlanUploadResponse {
+  planId?: unknown
+  error?: unknown
+}
+
+async function uploadAnnualPlanFile(formData: FormData) {
+  const response = await fetch('/api/annual-plans/upload', {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+  })
+
+  const contentType = response.headers.get('content-type') ?? ''
+  let payload: AnnualPlanUploadResponse | null = null
+  if (contentType.includes('application/json')) {
+    try {
+      payload = await response.json() as AnnualPlanUploadResponse
+    } catch {
+      payload = null
+    }
+  }
+
+  if (!response.ok) {
+    const message = typeof payload?.error === 'string'
+      ? payload.error
+      : `อัปโหลดแผนประจำปีไม่สำเร็จ (HTTP ${response.status})`
+    throw new Error(message)
+  }
+  if (typeof payload?.planId !== 'string') {
+    throw new Error('เซิร์ฟเวอร์ไม่ส่งผลการอัปโหลดแผนประจำปีกลับมา')
+  }
+}
 
 export interface AnnualPlanUploadDropzoneProps {
   fiscalYear: number
@@ -44,7 +76,7 @@ export function AnnualPlanUploadDropzone({
       formData.set('file', file)
       formData.set('fiscalYear', String(fiscalYear))
       formData.set('planType', planType)
-      await uploadAnnualPlan(formData)
+      await uploadAnnualPlanFile(formData)
       setStatus('อัปโหลดสำเร็จ กำลังโหลดข้อมูลล่าสุด')
       onUploaded()
     } catch (caught) {
