@@ -144,7 +144,7 @@ export function AutoFilterBench({ fields, ariaLabel, className = '', showClear =
           ล้างตัวกรอง
         </button>
       )}
-      <p className="filter-bench__status" aria-live="polite">{isPending ? 'กำลังกรองรายการ…' : 'ตัวกรองอัปเดตอัตโนมัติ'}</p>
+      {isPending && <p className="filter-bench__status" aria-live="polite">กำลังกรองรายการ…</p>}
     </form>
   )
 }

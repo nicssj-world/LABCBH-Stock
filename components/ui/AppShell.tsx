@@ -93,20 +93,20 @@ export interface AppShellProps {
 
 export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFICATION_SNAPSHOT }: AppShellProps) {
   const pathname = usePathname()
+  const isServiceProcurementActive = pathname === '/service-procurement' || pathname.startsWith('/service-procurement/')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [serviceProcurementOpen, setServiceProcurementOpen] = useState(isServiceProcurementActive)
   const [dark, setDark] = useState(false)
   const [notificationState, setNotificationState] = useState(notificationSnapshot)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
   const canManageMemberships = actor.appRoles.includes('admin') || actor.appRoles.includes('stock_officer')
   const visibleNavigation = [...navigation, ...(canManageMemberships ? stockOfficerNavigation.items : [])]
-  const isServiceProcurementActive = pathname === '/service-procurement' || pathname.startsWith('/service-procurement/')
   const currentItem = serviceProcurementNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     ?? visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
 
-  const renderNavigationItem = (item: NavigationItem, options: { nested?: boolean; parent?: boolean } = {}) => {
+  const renderNavigationItem = (item: NavigationItem, options: { nested?: boolean } = {}) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-    const isCurrent = isActive && !options.parent
     const count = item.href === '/purchase-requests'
       ? notificationState.pendingPurchaseRequests
       : item.href === '/requisitions'
@@ -118,9 +118,8 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
       <Link
         key={item.href}
         href={item.href}
-        className={`bench-nav__link${options.nested ? ' bench-nav__link--nested' : ''}${options.parent && isActive ? ' bench-nav__link--parent-active' : ''}`}
-        aria-current={isCurrent ? 'page' : undefined}
-        data-nav-parent-active={options.parent && isActive ? 'true' : undefined}
+        className={`bench-nav__link${options.nested ? ' bench-nav__link--nested' : ''}`}
+        aria-current={isActive ? 'page' : undefined}
         aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
         title={collapsed ? item.label : undefined}
         onClick={() => setMobileOpen(false)}
@@ -141,6 +140,11 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
   useEffect(() => {
     startTransition(() => setNotificationState(notificationSnapshot))
   }, [notificationSnapshot])
+
+  useEffect(() => {
+    if (!isServiceProcurementActive) return
+    startTransition(() => setServiceProcurementOpen(true))
+  }, [isServiceProcurementActive])
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -181,6 +185,15 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
     localStorage.setItem('labcbh-theme', nextDark ? 'dark' : 'light')
   }
 
+  function toggleServiceProcurement() {
+    if (collapsed) {
+      setCollapsed(false)
+      setServiceProcurementOpen(true)
+      return
+    }
+    setServiceProcurementOpen((open) => !open)
+  }
+
   return (
     <RouteProgress>
       <div className="app-shell">
@@ -210,14 +223,32 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
           </div>
           <p className="bench-nav__section">งานคลังและสัญญา</p>
           <nav className="bench-nav">
-            {navigation.map((item) => renderNavigationItem(item, { parent: item.href === '/service-procurement' }))}
+            {navigation.filter((item) => item.href !== '/service-procurement').map((item) => renderNavigationItem(item))}
           </nav>
-          <div className={`bench-nav__group bench-nav__group--service${isServiceProcurementActive ? ' is-active' : ''}`}>
-            <div className="bench-nav__group-heading">
-              <p className="bench-nav__group-label">โมดูลย่อยงานจ้าง</p>
-              <span className="bench-nav__group-count" aria-hidden="true">2</span>
-            </div>
-            <nav id="service-procurement-subnav" className="bench-nav bench-nav--nested" aria-label="โมดูลย่อยงานจ้าง">
+          <div className={`bench-nav__group bench-nav__group--service${serviceProcurementOpen ? ' is-open' : ''}${isServiceProcurementActive ? ' is-active' : ''}`}>
+            <button
+              className="bench-nav__accordion-trigger"
+              type="button"
+              aria-expanded={!collapsed && serviceProcurementOpen}
+              aria-controls="service-procurement-subnav"
+              aria-label={collapsed ? 'ขยายเมนูงานจ้าง' : undefined}
+              title={collapsed ? 'งานจ้าง' : undefined}
+              onClick={toggleServiceProcurement}
+            >
+              <span className="bench-nav__icon" data-nav-tone="teal">
+                <BenchIcon name="service" />
+              </span>
+              <span className="bench-nav__label">งานจ้าง</span>
+              <svg className="bench-nav__accordion-chevron" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m7 5 5 5-5 5" />
+              </svg>
+            </button>
+            <nav
+              id="service-procurement-subnav"
+              className="bench-nav bench-nav--nested"
+              aria-label="เมนูย่อยงานจ้าง"
+              hidden={collapsed || !serviceProcurementOpen}
+            >
               {serviceProcurementNavigation.map((item) => renderNavigationItem(item, { nested: true }))}
             </nav>
           </div>

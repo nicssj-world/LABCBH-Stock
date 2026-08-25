@@ -146,12 +146,13 @@ function mapRequest(row: z.infer<typeof requestRowSchema>, support: Awaited<Retu
   }
 }
 
-export interface ServiceRequestFilters { fiscalYear?: number; status?: string; search?: string; planId?: string }
+export interface ServiceRequestFilters { fiscalYear?: number; department?: string; status?: string; search?: string; planId?: string }
 
 export async function listServicePurchaseRequests(filters: ServiceRequestFilters = {}): Promise<ServicePurchaseRequestRecord[]> {
   const supabase = await createClient()
   let query = supabase.from('service_purchase_requests').select('*').order('requested_date', { ascending: false }).order('created_at', { ascending: false })
   if (filters.fiscalYear) query = query.eq('fiscal_year', filters.fiscalYear)
+  if (filters.department) query = query.eq('department', filters.department)
   if (filters.status && ['pending', 'confirmed', 'closed', 'cancelled'].includes(filters.status)) query = query.eq('status', filters.status)
   if (filters.planId) query = query.eq('plan_id', filters.planId)
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
