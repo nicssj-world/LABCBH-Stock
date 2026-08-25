@@ -17,7 +17,7 @@ import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
 import { EMPTY_NOTIFICATION_SNAPSHOT, type NotificationSnapshot } from '@/lib/notifications/types'
 
-type BenchIconName = 'overview' | 'contract' | 'outlab' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
+type BenchIconName = 'overview' | 'contract' | 'outlab' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual'
 type NavTone = 'blue' | 'violet' | 'teal' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
 const PORTAL_DASHBOARD_URL = 'https://lab-management-cbh.vercel.app/staff/dashboard'
 
@@ -30,6 +30,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'overview', tone: 'blue' },
+  { href: '/annual-plans', label: 'แผนประจำปี', icon: 'annual', tone: 'green' },
   { href: '/contracts', label: 'สัญญา', icon: 'contract', tone: 'violet' },
   { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr', tone: 'cyan' },
   { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },
@@ -38,11 +39,12 @@ const navigation: NavigationItem[] = [
   { href: '/out-lab', label: 'Out Lab', icon: 'outlab', tone: 'teal' },
 ]
 
-// The route itself remains the final authorization boundary. Showing this
-// entry only to admins avoids navigation that immediately redirects other users.
-const adminNavigation: NavigationItem[] = [
+const stockOfficerNavigation = {
+  label: 'เจ้าหน้าที่คลัง',
+  items: [
   { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings', tone: 'slate' },
-]
+  ] satisfies NavigationItem[],
+}
 
 function BenchIcon({ name }: { name: BenchIconName }) {
   const paths: Record<BenchIconName, ReactNode> = {
@@ -54,6 +56,7 @@ function BenchIcon({ name }: { name: BenchIconName }) {
     issue: <><path d="M4 5h16v14H4V5Z" /><path d="M12 15V9m-3 3 3-3 3 3" /></>,
     inventory: <><path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z" /><path d="M12 11v10" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></>,
+    annual: <><path d="M5 5h14v16H5V5Z" /><path d="M8 3v4M16 3v4M5 10h14M8 14h2M14 14h2M8 17h2M14 17h2" /></>,
   }
 
   return (
@@ -90,8 +93,40 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
   const [dark, setDark] = useState(false)
   const [notificationState, setNotificationState] = useState(notificationSnapshot)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
-  const visibleNavigation = [...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])]
+  const canManageMemberships = actor.appRoles.includes('admin') || actor.appRoles.includes('stock_officer')
+  const visibleNavigation = [...navigation, ...(canManageMemberships ? stockOfficerNavigation.items : [])]
   const currentItem = visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+
+  const renderNavigationItem = (item: NavigationItem) => {
+    const count = item.href === '/purchase-requests'
+      ? notificationState.pendingPurchaseRequests
+      : item.href === '/requisitions'
+        ? notificationState.waitingRequisitions
+        : 0
+    const countLabel = count > 0 ? ` มี ${count} รายการรอดำเนินการ` : ''
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className="bench-nav__link"
+        aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
+        aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
+        title={collapsed ? item.label : undefined}
+        onClick={() => setMobileOpen(false)}
+      >
+        <span className="bench-nav__icon" data-nav-tone={item.tone}>
+          <BenchIcon name={item.icon} />
+        </span>
+        <span className="bench-nav__label">{item.label}</span>
+        {count > 0 && (
+          <span className="bench-nav__count" aria-label={countLabel.trim()}>
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
+      </Link>
+    )
+  }
 
   useEffect(() => {
     startTransition(() => setNotificationState(notificationSnapshot))
@@ -165,39 +200,16 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
           </div>
           <p className="bench-nav__section">งานคลังและสัญญา</p>
           <nav className="bench-nav">
-            {visibleNavigation.map((item) => (
-              (() => {
-                const count = item.href === '/purchase-requests'
-                  ? notificationState.pendingPurchaseRequests
-                  : item.href === '/requisitions'
-                    ? notificationState.waitingRequisitions
-                    : 0
-                const countLabel = count > 0 ? ` มี ${count} รายการรอดำเนินการ` : ''
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="bench-nav__link"
-                    aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
-                    aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
-                    title={collapsed ? item.label : undefined}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <span className="bench-nav__icon" data-nav-tone={item.tone}>
-                      <BenchIcon name={item.icon} />
-                    </span>
-                    <span className="bench-nav__label">{item.label}</span>
-                    {count > 0 && (
-                      <span className="bench-nav__count" aria-label={countLabel.trim()}>
-                        {count > 99 ? '99+' : count}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })()
-            ))}
+            {navigation.map(renderNavigationItem)}
           </nav>
+          {canManageMemberships && (
+            <div className="bench-nav__group">
+              <p className="bench-nav__group-label">{stockOfficerNavigation.label}</p>
+              <nav className="bench-nav bench-nav--nested" aria-label={stockOfficerNavigation.label}>
+                {stockOfficerNavigation.items.map(renderNavigationItem)}
+              </nav>
+            </div>
+          )}
           <div className="bench-rail__footer">
             <span className="bench-rail__signal" aria-hidden="true" />
             <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังพัสดุและสัญญา · LAB-CBH</small></span>

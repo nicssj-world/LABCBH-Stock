@@ -283,6 +283,7 @@ textarea {
 
   .bench-rail.is-collapsed .bench-brand__copy,
   .bench-rail.is-collapsed .bench-nav__section,
+  .bench-rail.is-collapsed .bench-nav__group-label,
   .bench-rail.is-collapsed .bench-nav__label,
   .bench-rail.is-collapsed .bench-rail__footer-copy {
     display: none;
@@ -374,6 +375,24 @@ textarea {
   display: grid;
   gap: 3px;
 }
+
+.bench-nav__group {
+  display: grid;
+  gap: 3px;
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--lab-border);
+}
+
+.bench-nav__group-label {
+  margin: 0 8px 4px;
+  color: var(--lab-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.bench-nav--nested .bench-nav__link { padding-left: 15px; }
 
 .bench-nav__link {
   display: flex;
