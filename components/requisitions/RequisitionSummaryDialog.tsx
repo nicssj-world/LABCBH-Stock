@@ -95,7 +95,7 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 <div className="list-summary-dialog__fact--wide">
                   <dt>จ่ายของเมื่อ</dt>
                   <dd className="identifier">
-                    {formatThaiDateTime(requisition.fulfilledAt)} · {requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'}
+                    {formatThaiDateTime(requisition.fulfilledAt)} · {requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'}
                   </dd>
                 </div>
               )}

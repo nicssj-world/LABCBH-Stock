@@ -116,7 +116,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
             <dt>การจ่ายของ</dt>
             <dd>
               {requisition.status === 'fulfilled'
-                ? `${formatThaiDateTime(requisition.fulfilledAt)} · ${requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'}`
+                ? `${formatThaiDateTime(requisition.fulfilledAt)} · ${requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'}`
                 : 'ยังไม่จ่าย'}
             </dd>
           </div>
@@ -203,7 +203,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
       {requisition.status === 'fulfilled' && (
         <p className="inline-alert" role="status">
           จ่ายของเมื่อ {formatThaiDateTime(requisition.fulfilledAt ?? null)} โดย{' '}
-          {requisition.fulfilledByName ?? 'เจ้าหน้าที่คลัง'} · บัญชีเคลื่อนไหวบันทึกแล้วและแก้ย้อนหลังไม่ได้
+          {requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'} · บัญชีเคลื่อนไหวบันทึกแล้วและแก้ย้อนหลังไม่ได้
         </p>
       )}
 

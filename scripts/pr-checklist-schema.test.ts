@@ -14,6 +14,10 @@ const rosterGuard = readFileSync(
   join(migrationsDir, '20260824123000_purchase_request_contract_roster_guard.sql'),
   'utf8',
 )
+const overlapRuleMigration = readFileSync(
+  join(migrationsDir, '20260825130000_purchase_request_committee_overlap_rule.sql'),
+  'utf8',
+)
 
 for (const table of [
   'purchase_request_upload_tickets',
@@ -46,8 +50,12 @@ assert.match(sql, /checklist_policy_version integer/, 'new PRs must carry a poli
 assert.match(sql, /position_title/, 'committee confirmation must validate personnel positions')
 assert.match(sql, /50_000|50000/, 'quotation threshold must be enforced in SQL')
 assert.match(sql, /100_000|100000/, 'committee threshold must be enforced in SQL')
+assert.match(sql, /other\.committee_kind = 'result'/, 'only result and inspection committees must be disjoint')
+assert.doesNotMatch(sql, /other\.committee_kind in \('specification', 'result'\)/, 'specification and inspection committees may overlap')
 assert.match(sql, /upload ticket expired/i, 'expired upload tickets must be rejected')
 assert.match(sql, /contract committee roster is incomplete/i, 'contract PRs must fail closed without a roster')
+assert.match(overlapRuleMigration, /apply_purchase_request_checklist/, 'existing checklist RPCs need the overlap-rule repair')
+assert.match(overlapRuleMigration, /result committee cannot overlap inspection committee/, 'the overlap repair must preserve the result/inspection prohibition')
 assert.doesNotMatch(sql, /delete\s+from\s+public\.contract_usage/i, 'the migration must never mutate contract_usage')
 assert.match(rosterGuard, /expected_result_count/, 'contract roster must match its contract type')
 assert.match(rosterGuard, /profile\.status <> 'active'/, 'contract roster inheritance must reject inactive personnel')

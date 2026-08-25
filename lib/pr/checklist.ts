@@ -202,15 +202,9 @@ export function validateCommitteeAssignments(
     errors.push('พบชุดกรรมการที่ไม่ตรงกับวิธีจัดซื้อ')
   }
 
-  const specification = new Set(
-    assignments.filter((row) => row.kind === 'specification').map((row) => row.profileId),
-  )
   const result = new Set(assignments.filter((row) => row.kind === 'result').map((row) => row.profileId))
   const inspection = assignments.filter((row) => row.kind === 'inspection')
 
-  if (inspection.some((row) => specification.has(row.profileId))) {
-    errors.push('คณะกรรมการกำหนดคุณลักษณะเฉพาะต้องไม่ซ้ำกับคณะกรรมการตรวจรับ')
-  }
   if (inspection.some((row) => result.has(row.profileId))) {
     errors.push('คณะกรรมการพิจารณาผลต้องไม่ซ้ำกับคณะกรรมการตรวจรับ')
   }

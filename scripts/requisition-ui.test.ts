@@ -119,6 +119,8 @@ const queries = read('lib/requisitions/queries.ts')
 assert.match(queries, /department\?: string/, 'requisition queries accept a department filter')
 assert.match(queries, /filters\.department/, 'requisition queries apply the department filter')
 assert.match(queries, /inventory_item_requisition_availability/, 'requisition catalog reads reservation-aware availability')
+assert.match(queries, /fulfilled_by_name/, 'requisition reads use the fulfiller name snapshot')
+assert.doesNotMatch(queries, /fulfiller:profiles!requisitions_fulfilled_by_fkey/, 'fulfiller names must not depend on profiles RLS')
 
 // The detail page shows current on-hand stock per line, so the officer can
 // judge fulfillment without switching to the inventory catalog.
@@ -129,6 +131,11 @@ assert.match(detailPage, /รายการที่ต้องหยิบ|�
 assert.doesNotMatch(detailPage, /totalRequested|รวมที่ขอ/, 'the detail header must not show a mixed-unit sum')
 
 assert.doesNotMatch(listPage, /รวมที่ขอ/, 'the requisition register must not show a mixed-unit sum')
+
+const summaryDialogSource = read('components/requisitions/RequisitionSummaryDialog.tsx')
+const detailFulfillerDisplay = "requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'"
+assert.match(summaryDialogSource, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+assert.match(detailPage, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 
 const inventoryQueries = read('lib/inventory/queries.ts')
 assert.match(inventoryQueries, /export async function listOnHand/)

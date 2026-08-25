@@ -146,20 +146,35 @@ function countAttachments(
     { kind: 'specification' as const, seat: 1, profileId: 'a' },
     { kind: 'specification' as const, seat: 2, profileId: 'b' },
     { kind: 'specification' as const, seat: 3, profileId: 'c' },
-    { kind: 'result' as const, seat: 1, profileId: 'a' },
-    { kind: 'result' as const, seat: 2, profileId: 'd' },
-    { kind: 'result' as const, seat: 3, profileId: 'e' },
+    { kind: 'result' as const, seat: 1, profileId: 'd' },
+    { kind: 'result' as const, seat: 2, profileId: 'e' },
+    { kind: 'result' as const, seat: 3, profileId: 'i' },
     { kind: 'inspection' as const, seat: 1, profileId: 'f' },
     { kind: 'inspection' as const, seat: 2, profileId: 'g' },
     { kind: 'inspection' as const, seat: 3, profileId: 'h' },
   ]
   assert.deepEqual(validateCommitteeAssignments(policy, assignments), [])
+
+  const specificationResultOverlap = assignments.map((assignment) =>
+    assignment.kind === 'result' && assignment.seat === 1
+      ? { ...assignment, profileId: 'a' }
+      : assignment,
+  )
+  assert.deepEqual(validateCommitteeAssignments(policy, specificationResultOverlap), [])
+
+  const specificationInspectionOverlap = assignments.map((assignment) =>
+    assignment.kind === 'inspection' && assignment.seat === 1
+      ? { ...assignment, profileId: 'a' }
+      : assignment,
+  )
+  assert.deepEqual(validateCommitteeAssignments(policy, specificationInspectionOverlap), [])
+
   assert.match(
-    validateCommitteeAssignments(policy, [
-      ...assignments.slice(0, 6),
-      { kind: 'inspection', seat: 1, profileId: 'a' },
-      ...assignments.slice(7),
-    ])[0] ?? '',
+    validateCommitteeAssignments(policy, specificationInspectionOverlap.map((assignment) =>
+      assignment.kind === 'result' && assignment.seat === 1
+        ? { ...assignment, profileId: 'a' }
+        : assignment,
+    ))[0] ?? '',
     /ตรวจรับ/,
   )
 }

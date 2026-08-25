@@ -53,8 +53,8 @@ export function ContractCommitteeRoster({
     const ids = new Set<string>()
     for (const assignment of assignments) {
       if (assignment.kind === kind && assignment.seat !== seat) ids.add(assignment.profileId)
-      if (kind === 'inspection' && ['specification', 'result'].includes(assignment.kind)) ids.add(assignment.profileId)
-      if (['specification', 'result'].includes(kind) && assignment.kind === 'inspection') ids.add(assignment.profileId)
+      if (kind === 'inspection' && assignment.kind === 'result') ids.add(assignment.profileId)
+      if (kind === 'result' && assignment.kind === 'inspection') ids.add(assignment.profileId)
     }
     return ids
   }

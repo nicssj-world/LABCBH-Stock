@@ -515,11 +515,11 @@ begin
       join public.purchase_request_committees other
         on other.purchase_request_id = inspection.purchase_request_id
        and other.profile_id = inspection.profile_id
-       and other.committee_kind in ('specification', 'result')
+       and other.committee_kind = 'result'
       where inspection.purchase_request_id = p_pr_id
         and inspection.committee_kind = 'inspection'
     ) then
-      raise exception using errcode = '23514', message = 'inspection committee cannot overlap specification or result committees';
+      raise exception using errcode = '23514', message = 'result committee cannot overlap inspection committee';
     end if;
   end if;
 
@@ -746,10 +746,10 @@ begin
     join public.contract_committees other
       on other.contract_id = inspection.contract_id
      and other.profile_id = inspection.profile_id
-     and other.committee_kind in ('specification', 'result')
+     and other.committee_kind = 'result'
     where inspection.contract_id = p_contract_id and inspection.committee_kind = 'inspection'
   ) then
-    raise exception using errcode = '23514', message = 'inspection committee cannot overlap specification or result committees';
+    raise exception using errcode = '23514', message = 'result committee cannot overlap inspection committee';
   end if;
 
   insert into public.purchase_request_checklist_events (contract_id, event_type, detail, actor_id)
