@@ -4768,3 +4768,160 @@ body {
     padding-block: 16px;
   }
 }
+
+/* Annual plans: dense document workspace with two stable slots per fiscal
+   year. The resting surfaces stay flat; the only lifted surface is the
+   existing preview dialog. */
+.annual-plan-groups {
+  display: grid;
+  gap: 24px;
+}
+
+.annual-plan-retention-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  color: var(--lab-muted);
+  background: var(--lab-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-primary) 24%, var(--lab-border));
+  border-radius: var(--radius-panel);
+  font-size: 12px;
+}
+
+.annual-plan-retention-note p { margin: 0; }
+.annual-plan-retention-note strong { color: var(--lab-ink); }
+.annual-plan-retention-note__icon { display: grid; flex: 0 0 auto; place-items: center; color: var(--lab-primary); }
+
+.annual-plan-group { overflow: hidden; }
+.annual-plan-group__header { align-items: center; }
+.annual-plan-group__header h2 { margin-top: 4px; }
+
+.annual-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.annual-plan-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: 12px;
+}
+
+.annual-plan-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.annual-plan-card__marker {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--lab-primary);
+  background: var(--lab-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-primary) 25%, var(--lab-border));
+  border-radius: 10px;
+}
+
+.annual-plan-card__header h3 { margin: 3px 0 0; font-size: 16px; }
+.annual-plan-card__document { display: grid; gap: 12px; min-width: 0; }
+.annual-plan-card__file { display: grid; gap: 3px; min-width: 0; }
+.annual-plan-card__file strong { overflow-wrap: anywhere; color: var(--lab-ink); font-size: 13px; line-height: 1.45; }
+.annual-plan-card__file small { color: var(--lab-muted); font-size: 11px; line-height: 1.5; }
+.annual-plan-card__empty { min-height: 48px; margin: 0; color: var(--lab-muted); font-size: 12px; }
+
+.annual-plan-card__view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  width: 100%;
+}
+
+.annual-plan-dropzone { display: grid; gap: 6px; min-width: 0; }
+.annual-plan-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
+
+.annual-plan-dropzone__surface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 96px;
+  padding: 14px;
+  color: var(--lab-ink);
+  background: var(--lab-surface-muted);
+  border: 1.5px dashed var(--lab-border-strong);
+  border-radius: var(--radius-control);
+  text-align: center;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out, border-color var(--motion-fast) ease-out;
+}
+
+.annual-plan-dropzone__surface:hover,
+.annual-plan-dropzone__surface[data-dragging="true"] {
+  color: var(--lab-primary-strong);
+  background: var(--lab-primary-soft);
+  border-color: var(--lab-primary);
+}
+
+.annual-plan-dropzone__surface:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--lab-focus) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.annual-plan-dropzone__surface[aria-busy="true"] { cursor: progress; opacity: .72; }
+.annual-plan-dropzone__icon { display: grid; flex: 0 0 auto; place-items: center; color: var(--lab-primary); }
+.annual-plan-dropzone__copy { display: grid; justify-items: center; gap: 2px; font-size: 11px; }
+.annual-plan-dropzone__copy strong { font-size: 12px; }
+.annual-plan-dropzone__copy > span:not(.annual-plan-dropzone__button) { color: var(--lab-muted); }
+.annual-plan-dropzone__button { display: inline-flex; align-items: center; min-height: 32px; margin-top: 2px; padding: 5px 10px; color: var(--lab-primary-strong); background: var(--lab-surface); border: 1px solid color-mix(in srgb, var(--lab-primary) 32%, var(--lab-border)); border-radius: 7px; font-weight: 700; }
+.annual-plan-dropzone__hint,
+.annual-plan-dropzone__status,
+.annual-plan-dropzone__error { margin: 0; font-size: 10px; line-height: 1.45; }
+.annual-plan-dropzone__hint { color: var(--lab-muted); }
+.annual-plan-dropzone__status { color: var(--lab-green); }
+.annual-plan-dropzone__error { color: var(--lab-red); font-weight: 700; }
+
+.annual-plan-preview-dialog { width: min(1100px, calc(100vw - 32px)); }
+.annual-plan-preview-dialog__body { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 10px; max-height: calc(min(90dvh, 920px) - 92px); padding: 12px 16px 16px; overflow: auto; }
+.annual-plan-preview-dialog__toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.annual-plan-preview-dialog__toolbar .lab-link-button { min-height: 40px; }
+.annual-plan-preview-dialog iframe { height: min(70dvh, 700px); min-height: 420px; border: 1px solid var(--lab-border); }
+.annual-plan-preview-dialog__status,
+.annual-plan-preview-dialog__error,
+.annual-plan-preview-dialog__fallback { margin: 0; font-size: 12px; }
+.annual-plan-preview-dialog__status { color: var(--lab-muted); }
+.annual-plan-preview-dialog__error { color: var(--lab-red); font-weight: 700; }
+.annual-plan-preview-dialog__fallback { color: var(--lab-muted); }
+.annual-plan-preview-dialog__fallback a { color: var(--lab-primary); font-weight: 700; }
+
+@media (max-width: 800px) {
+  .annual-plan-grid { grid-template-columns: 1fr; padding: 16px; }
+  .annual-plan-preview-dialog__body { max-height: calc(100dvh - 108px); }
+  .annual-plan-preview-dialog iframe { height: calc(100dvh - 250px); min-height: 280px; }
+}
+
+@media (max-width: 540px) {
+  .annual-plan-retention-note { padding: 12px 14px; }
+  .annual-plan-group__header { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .annual-plan-group__header > p { text-align: left; }
+  .annual-plan-grid { padding: 12px; }
+  .annual-plan-card { padding: 14px; }
+  .annual-plan-preview-dialog__toolbar { display: grid; grid-template-columns: 1fr; }
+  .annual-plan-preview-dialog__toolbar .lab-link-button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .annual-plan-dropzone__surface { transition: none; }
+}
