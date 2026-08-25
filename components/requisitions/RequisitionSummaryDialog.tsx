@@ -82,12 +82,12 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 </dd>
               </div>
               <div className="list-summary-dialog__fact--wide">
-                <dt>การกันยอด</dt>
+                <dt>สถานะยอดคลัง</dt>
                 <dd>
                   {requisition.status === 'waiting'
-                    ? 'กันยอดแล้ว รอเจ้าหน้าที่คลังจ่าย'
+                    ? 'สำรองยอดแล้ว รอจ่าย'
                     : requisition.status === 'fulfilled'
-                      ? 'ใช้ยอดกันแล้ว'
+                      ? 'ตัดยอดคลังแล้ว'
                       : 'คืนยอดแล้ว'}
                 </dd>
               </div>

@@ -63,9 +63,9 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
       ? 'รายการที่ต้องหยิบ'
       : 'รายการในใบเบิก'
   const reservationLabel = requisition.status === 'waiting'
-    ? 'กันยอดแล้ว'
+    ? 'สำรองยอดแล้ว รอจ่าย'
     : requisition.status === 'fulfilled'
-      ? 'ใช้ยอดกันแล้ว'
+      ? 'ตัดยอดคลังแล้ว'
       : 'คืนยอดแล้ว'
 
   return (
@@ -111,7 +111,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
         <dl className="contract-facts contract-facts--split-with-value" aria-label="ข้อมูลสรุปใบเบิก">
           <div><dt>ผู้ขอเบิก</dt><dd>{requisition.requesterName}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{requisition.department}</dd></div>
-          <div><dt>การกันยอด</dt><dd>{reservationLabel}</dd></div>
+          <div><dt>สถานะยอดคลัง</dt><dd>{reservationLabel}</dd></div>
           <div>
             <dt>การจ่ายของ</dt>
             <dd>
