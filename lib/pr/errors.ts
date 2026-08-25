@@ -25,8 +25,8 @@ const PURCHASE_REQUEST_ERROR_COPY: Record<string, string> = {
     'เลข PO นี้ถูกปลดไปแล้ว',
   'cannot release a purchase order number after a PO file was attached':
     'ไม่สามารถปลดเลข PO ได้ เนื่องจากมีการแนบเอกสาร PO แล้ว',
-  'cannot release a purchase order number after a goods receipt was created':
-    'ไม่สามารถปลดเลข PO ได้ เนื่องจากมีการสร้างใบรับเข้าแล้ว',
+  'cannot release a purchase order number while a goods receipt is active':
+    'ไม่สามารถปลดเลข PO ได้ เนื่องจากมีใบรับเข้าที่ยังมีผลอยู่ กรุณาตรวจสอบหรือยกเลิกใบรับเข้าก่อน',
   'cannot release a purchase order number after a LINE notification was attempted':
     'ไม่สามารถปลดเลข PO ได้ เนื่องจากมีประวัติส่งแจ้งเตือน LINE แล้ว',
 }

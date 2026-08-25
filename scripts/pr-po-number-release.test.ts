@@ -11,6 +11,12 @@ const migrationName = readdirSync(migrationsDir).find((file) =>
 assert.ok(migrationName, 'the PO-number release migration must exist')
 const migration = read(join(migrationsDir, migrationName!))
 
+const repairMigrationName = readdirSync(migrationsDir).find((file) =>
+  file.endsWith('_purchase_request_po_number_release_cancelled_receipts.sql'),
+)
+assert.ok(repairMigrationName, 'the cancelled-receipt PO release repair migration must exist')
+const repairMigration = read(join(migrationsDir, repairMigrationName!))
+
 assert.match(migration, /add column if not exists po_number_released_by/i)
 assert.match(migration, /add column if not exists po_number_released_at/i)
 assert.match(migration, /add column if not exists po_number_release_reason/i)
@@ -34,9 +40,22 @@ assert.match(releaseFunction!, /po_number_release_reason/i)
 assert.match(migration, /revoke execute on function public\.release_purchase_order_number/i)
 assert.match(migration, /grant execute on function public\.release_purchase_order_number[\s\S]*?to service_role/i)
 
+const repairedReleaseFunction = repairMigration.match(
+  /create or replace function public\.release_purchase_order_number[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(repairedReleaseFunction, 'the cancelled-receipt repair must replace the release RPC')
+assert.match(repairedReleaseFunction!, /receipt\.status\s*<>\s*'cancelled'/i)
+assert.match(repairedReleaseFunction!, /goods receipt is active/i)
+assert.match(repairMigration, /revoke execute on function public\.release_purchase_order_number/i)
+assert.match(repairMigration, /grant execute on function public\.release_purchase_order_number[\s\S]*?to service_role/i)
+
 const actions = read('lib/pr/actions.ts')
 assert.match(actions, /releasePurchaseOrderNumber/)
 assert.match(actions, /supabaseAdmin\.rpc\('release_purchase_order_number'/)
+
+const errors = read('lib/pr/errors.ts')
+assert.match(errors, /cannot release a purchase order number while a goods receipt is active/i)
+assert.match(errors, /ใบรับเข้าที่ยังมีผลอยู่/)
 
 const types = read('lib/pr/types.ts')
 for (const field of ['poNumberReleasedBy', 'poNumberReleasedByName', 'poNumberReleasedAt', 'poNumberReleaseReason']) {
