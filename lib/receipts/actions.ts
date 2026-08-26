@@ -62,17 +62,26 @@ export async function postGoodsReceipt(receiptId: string) {
   })
 
   const posted = unwrapMutation('บันทึกรับเข้าคลัง', result)
-  try {
-    await Promise.all([
-      cleanupPoFileAfterPostedReceipt(parsedId, actor.id),
-      cleanupPurchaseRequestChecklistAfterPostedReceipt(parsedId, actor.id),
-    ])
-  } catch (error) {
-    // The receipt and stock transition are already committed by the RPC. Do
-    // not pretend that it rolled back; surface a retryable cleanup warning.
-    revalidateReceipt(parsedId)
-    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-    throw new Error(`บันทึกรับเข้าคลังสำเร็จ แต่การล้างไฟล์หลังรับเข้าไม่สำเร็จ: ${message}`)
+  // The receipt and stock transition are already committed by the RPC. File
+  // cleanup is best effort because its retry jobs can finish independently.
+  const cleanupResults = await Promise.allSettled([
+    cleanupPoFileAfterPostedReceipt(parsedId, actor.id),
+    cleanupPurchaseRequestChecklistAfterPostedReceipt(parsedId, actor.id),
+  ])
+  const cleanupFailures: string[] = []
+  for (const cleanupResult of cleanupResults) {
+    if (cleanupResult.status !== 'rejected') continue
+    cleanupFailures.push(
+      cleanupResult.reason instanceof Error
+        ? cleanupResult.reason.message
+        : String(cleanupResult.reason),
+    )
+  }
+  if (cleanupFailures.length > 0) {
+    console.error(`บันทึกรับเข้าคลังสำเร็จ แต่การล้างไฟล์หลังรับเข้าไม่สำเร็จ: ${cleanupFailures.join(' · ')}`, {
+      receiptId: parsedId,
+      actorId: actor.id,
+    })
   }
   revalidateReceipt(parsedId)
   return posted
