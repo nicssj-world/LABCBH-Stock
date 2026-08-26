@@ -133,6 +133,27 @@ export function budgetSnapshot({ total, entries }: BudgetSnapshotInput): BudgetS
   }
 }
 
+/**
+ * Converts a supply contract's remaining value into the value already used
+ * according to its allocation ledger. The result is rounded to satang so the
+ * displayed actual-use amount matches the contract balance figures.
+ */
+export function contractActualUsedValue(
+  total: number | null,
+  remaining: number | null,
+): number | null {
+  if (
+    total === null ||
+    remaining === null ||
+    !Number.isFinite(total) ||
+    !Number.isFinite(remaining)
+  ) {
+    return null
+  }
+
+  return satang(Math.max(total - remaining, 0)) / 100
+}
+
 export interface ContractSpendingRateSnapshot {
   durationYears: ContractDurationYears | null
   durationMonths: number | null
@@ -141,15 +162,20 @@ export interface ContractSpendingRateSnapshot {
 }
 
 /**
- * Calculates the planned spending pace from a contract ceiling and its term.
- * The returned annual figure is the contract-value average per calendar year;
- * for a one-year contract it intentionally equals the full contract value.
+ * Calculates the average spending pace from the cumulative actual value used
+ * and the contract term. A zero actual-use value is valid and is displayed as
+ * zero; null means the source value is unavailable.
  */
 export function contractSpendingRates(
-  total: number | null,
+  actualUsed: number | null,
   durationYears: ContractDurationYears | null,
 ): ContractSpendingRateSnapshot {
-  if (total === null || total <= 0 || durationYears === null) {
+  if (
+    actualUsed === null ||
+    !Number.isFinite(actualUsed) ||
+    actualUsed < 0 ||
+    durationYears === null
+  ) {
     return {
       durationYears,
       durationMonths: durationYears === null ? null : durationYears * 12,
@@ -162,8 +188,8 @@ export function contractSpendingRates(
   return {
     durationYears,
     durationMonths,
-    monthly: satang(total / durationMonths) / 100,
-    annual: satang(total / durationYears) / 100,
+    monthly: satang(actualUsed / durationMonths) / 100,
+    annual: satang(actualUsed / durationYears) / 100,
   }
 }
 

@@ -20,9 +20,9 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { contractMode } from '@/lib/contracts/budget'
+import { contractActualUsedValue, contractMode } from '@/lib/contracts/budget'
 import { canRecordContractExpense } from '@/lib/contracts/authorization'
-import { fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
+import { fetchContractBudget, fetchResponsibleCandidates } from '@/lib/contracts/budget-queries'
 import { presentContract } from '@/lib/contracts/presenter'
 import { getContract, listContractOpeningBalanceHistory } from '@/lib/contracts/queries'
 import { listInventoryCatalog } from '@/lib/inventory/queries'
@@ -91,10 +91,17 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         error: null as string | null,
       })
 
+  // The spending-rate summary is based on the same actual-use ledger rendered
+  // by the budget panel. Fetch it here once so the summary and detail panel
+  // cannot disagree or issue duplicate reads.
+  const contractBudgetPromise = mode === 'budget'
+    ? fetchContractBudget(contract.id, contract.total)
+    : Promise.resolve(null)
+
   // What each of these reads needs — the contract's mode and stage — is known
   // by now, so they overlap on the wire instead of queueing. A started supply
   // contract used to pay for all four one after another.
-  const [responsibleCandidates, purchaseHistory, openingBalanceResult, editCatalog, committeeRoster, committeeCandidates] =
+  const [responsibleCandidates, purchaseHistory, openingBalanceResult, editCatalog, committeeRoster, committeeCandidates, contractBudget] =
     await Promise.all([
       mode === 'budget' && responsibleCandidatesSettled
         ? responsibleCandidatesSettled.then((settled) =>
@@ -113,6 +120,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
       canEdit && mode !== 'budget' ? listInventoryCatalog() : [],
       getContractCommitteeRoster(contract.id),
       canManageCommitteeRoster ? listContractCommitteeCandidates() : [],
+      contractBudgetPromise,
     ])
   const openingBalanceHistory = openingBalanceResult.history
   const openingBalanceHistoryError = openingBalanceResult.error
@@ -126,6 +134,9 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
   const remainingTotal = mode === 'supply'
     ? contract.items.reduce((sum, item) => sum + item.remainingValue, 0)
     : null
+  const actualUsed = mode === 'budget'
+    ? contractBudget?.snapshot.used ?? null
+    : contractActualUsedValue(total, remainingTotal)
   const stageHistory = (
     <section className="bench-panel contract-history" aria-labelledby="stage-history-title">
       <div className="bench-panel__header">
@@ -226,7 +237,11 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
         </dl>
       </header>
 
-      <ContractSpendingRates total={total} durationYears={contract.contractDurationYears} />
+      <ContractSpendingRates
+        actualUsed={actualUsed}
+        durationYears={contract.contractDurationYears}
+        actualUsageLabel={mode === 'budget' ? 'ค่าใช้จ่ายจริงที่บันทึกในสัญญา' : 'มูลค่ารายการที่ใช้/จัดสรรแล้ว'}
+      />
 
       <div className={hasNextAction ? 'contract-detail-grid' : 'contract-detail-grid contract-detail-grid--single'}>
         {isContractStarted ? (
@@ -257,6 +272,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
 
       {mode === 'budget' ? (
         <BudgetPanel
+          budget={contractBudget!}
           contractId={contract.id}
           contractNumber={contract.contractNumber}
           displayName={contract.resolvedDisplayName}

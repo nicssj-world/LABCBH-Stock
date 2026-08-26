@@ -4,9 +4,10 @@ import { ExpenseForm } from '@/components/contracts/ExpenseForm'
 import { ExpenseHistory } from '@/components/contracts/ExpenseHistory'
 import { ExpenseMonthlyChart } from '@/components/contracts/ExpenseMonthlyChart'
 import { expenseMonthlySeries, isLowBudget } from '@/lib/contracts/budget'
-import { fetchContractBudget } from '@/lib/contracts/budget-queries'
+import type { ContractBudget } from '@/lib/contracts/budget-queries'
 
 interface BudgetPanelProps {
+  budget: ContractBudget
   contractId: number
   contractNumber: string | null
   displayName: string | null
@@ -23,6 +24,7 @@ interface BudgetPanelProps {
  * contract value, with no line items. Rendered only for that contract type.
  */
 export async function BudgetPanel({
+  budget,
   contractId,
   contractNumber,
   displayName,
@@ -33,7 +35,7 @@ export async function BudgetPanel({
   canRecord,
   canEdit,
 }: BudgetPanelProps) {
-  const { entries, snapshot } = await fetchContractBudget(contractId, total)
+  const { entries, snapshot } = budget
   const lowBudget = isLowBudget(total, snapshot.used)
   const monthlySeries = expenseMonthlySeries(startDate, endDate, entries)
 

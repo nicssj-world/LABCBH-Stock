@@ -20,7 +20,8 @@ interface SupplyBalance {
 async function main() {
   const budget = await import('../lib/contracts/budget') as unknown as {
     contractSupplyBalance?: (items: SupplyItemInput[]) => SupplyBalance
-    contractSpendingRates?: (total: number | null, durationYears: 1 | 3 | null) => {
+    contractActualUsedValue?: (total: number | null, remaining: number | null) => number | null
+    contractSpendingRates?: (actualUsed: number | null, durationYears: 1 | 3 | null) => {
       durationYears: 1 | 3 | null
       durationMonths: number | null
       monthly: number | null
@@ -71,18 +72,26 @@ async function main() {
   }, 'openingUsedQuantity must isolate only the opening_balance rows while allocatedQuantity keeps the ledger total')
 
   assert.equal(typeof budget.contractSpendingRates, 'function', 'contract spending pace must be available to the detail page')
-  assert.deepEqual(budget.contractSpendingRates!(1_200_000, 1), {
+  assert.equal(budget.contractActualUsedValue!(4255, 1066.75), 3188.25, 'supply actual use must be derived from total less remaining value')
+  assert.equal(budget.contractActualUsedValue!(null, 1066.75), null, 'an unknown contract value must not become an actual-use zero')
+  assert.deepEqual(budget.contractSpendingRates!(300_000, 1), {
     durationYears: 1,
     durationMonths: 12,
-    monthly: 100_000,
-    annual: 1_200_000,
-  }, 'a one-year contract should show its full value as the annual average')
-  assert.deepEqual(budget.contractSpendingRates!(1_200_000, 3), {
+    monthly: 25_000,
+    annual: 300_000,
+  }, 'a one-year contract should divide actual use by 12 months and one year')
+  assert.deepEqual(budget.contractSpendingRates!(300_000, 3), {
     durationYears: 3,
     durationMonths: 36,
-    monthly: 33_333.33,
-    annual: 400_000,
-  }, 'a three-year contract should spread its value across 36 months and three years')
+    monthly: 8_333.33,
+    annual: 100_000,
+  }, 'a three-year contract should divide actual use by 36 months and three years')
+  assert.deepEqual(budget.contractSpendingRates!(0, 1), {
+    durationYears: 1,
+    durationMonths: 12,
+    monthly: 0,
+    annual: 0,
+  }, 'a contract with no recorded use yet should show zero, not an unavailable rate')
   assert.deepEqual(budget.contractSpendingRates!(1_200_000, null), {
     durationYears: null,
     durationMonths: null,
