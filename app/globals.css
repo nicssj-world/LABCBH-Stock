@@ -3993,6 +3993,10 @@ input[type="number"] {
 .pr-print-reference dt { font-weight: 700; }
 .pr-print-reference dd { margin: 0; overflow-wrap: anywhere; }
 
+.pr-print-reference--annual-plan dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pr-print-reference--annual-plan dt { flex-shrink: 0; white-space: nowrap; }
+.pr-print-reference--annual-plan dd { min-width: 0; white-space: nowrap; }
+
 .pr-print-table-wrap { overflow: visible; }
 .pr-print-table { width: 100%; min-width: 0; table-layout: fixed; font-size: 10px; }
 .pr-print-table th,
@@ -4012,6 +4016,12 @@ input[type="number"] {
 .pr-print-table__item small { margin-top: 2px; color: #444444; font-size: 8px; line-height: 1.3; }
 .pr-print-table .numeric-cell { font-size: 10px; white-space: normal; }
 .pr-print-table__empty { padding: 14px !important; text-align: center !important; }
+
+@media (max-width: 540px) {
+  .pr-print-reference--annual-plan dl { grid-template-columns: 1fr; }
+  .pr-print-reference--annual-plan dt,
+  .pr-print-reference--annual-plan dd { white-space: normal; }
+}
 
 .pr-print-summary {
   display: flex;

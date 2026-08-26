@@ -142,7 +142,10 @@ export function PurchaseRequestPrint({ request }: { request: PurchaseRequestReco
         </div>
       </dl>
 
-      <section className="pr-print-reference" aria-labelledby="pr-print-reference-title">
+      <section
+        className={`pr-print-reference${request.purchaseMethod === 'annual_plan' ? ' pr-print-reference--annual-plan' : ''}`}
+        aria-labelledby="pr-print-reference-title"
+      >
         <div className="pr-print-reference__heading">
           <h2 id="pr-print-reference-title">รายละเอียดการจัดซื้อ</h2>
           <span>ข้อมูลอ้างอิงของใบ PR</span>

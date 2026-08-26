@@ -30,6 +30,7 @@ assert.match(
   /case 'annual_plan':[\s\S]*add\('ลำดับในแผนจัดซื้อ'[\s\S]*facts\.push\(methodFact\)/,
   'annual-plan purpose and plan sequence stay in the first reference row',
 )
+assert.match(printComponent, /pr-print-reference--annual-plan/, 'annual-plan reference layout gets a dedicated compact grid')
 
 // Line-level values needed for an auditable request-to-order handoff.
 assert.match(printComponent, /รหัสพัสดุ \(LS\)/)
@@ -53,6 +54,10 @@ const printCss = read('app/globals.css')
 assert.match(printCss, /@page\s*\{[^}]*size:\s*A4/i)
 assert.match(printCss, /@media print/i)
 assert.match(printCss, /\.pr-print-reference/)
+assert.match(printCss, /\.pr-print-reference--annual-plan dl\s*\{[^}]*grid-template-columns:\s*repeat\(2/i)
+assert.match(printCss, /\.pr-print-reference--annual-plan dt\s*\{[^}]*white-space:\s*nowrap/i)
+assert.match(printCss, /\.pr-print-reference--annual-plan dd\s*\{[^}]*white-space:\s*nowrap/i)
+assert.match(printCss, /@media \(max-width: 540px\)[\s\S]*\.pr-print-reference--annual-plan dl\s*\{[^}]*grid-template-columns:\s*1fr/i)
 assert.match(printCss, /\.pr-print-table\s*\{[^}]*table-layout:\s*fixed/i)
 assert.match(printCss, /\.pr-print-table-wrap\s*\{[^}]*overflow:\s*visible/i)
 assert.doesNotMatch(printCss, /\.pr-print-table-wrap\s*\{[^}]*overflow-x:\s*auto/i)
