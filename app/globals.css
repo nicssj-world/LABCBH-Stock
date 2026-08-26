@@ -5758,3 +5758,42 @@ body {
   .stock-adjustment-dialog__load-error .lab-button { width: 100%; }
   .executive-strip--even-6 { grid-template-columns: 1fr; }
 }
+
+/* Keep stock-adjustment actions in a dedicated, always-visible dialog footer. */
+.stock-adjustment-dialog {
+  display: flex;
+  flex-direction: column;
+}
+.stock-adjustment-dialog__form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.stock-adjustment-dialog__body {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+.stock-adjustment-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 24px max(18px, env(safe-area-inset-bottom));
+  background: var(--lab-surface);
+  border-top: 1px solid var(--lab-border);
+}
+.stock-adjustment-dialog__actions .lab-button { min-width: 150px; }
+
+@media (max-width: 540px) {
+  .stock-adjustment-dialog__body { padding: 18px; }
+  .stock-adjustment-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 18px max(18px, env(safe-area-inset-bottom));
+  }
+  .stock-adjustment-dialog__actions .lab-button { width: 100%; min-width: 0; }
+}

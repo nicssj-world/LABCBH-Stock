@@ -47,6 +47,7 @@ function StockCheckButton({ item, isChecked, onChecked }: StockCheckButtonProps)
         variant="secondary"
         type="button"
         aria-pressed={isChecked}
+        aria-busy={isPending}
         aria-label={isChecked ? `บันทึกการตรวจนับซ้ำ ${item.name}` : `บันทึกว่าตรวจนับแล้ว ${item.name}`}
         onClick={handleCheck}
         disabled={isPending}

@@ -463,6 +463,7 @@ export async function listInventoryExportItems(
     name: row.name,
     baseUnit: row.base_unit,
     responsibleDepartment: row.responsible_department,
+    note: row.note,
     onHand: onHandByItem.get(row.id) ?? 0,
     lots: rankLotsForFifo(
       lotsByItem.get(row.id) ?? [],

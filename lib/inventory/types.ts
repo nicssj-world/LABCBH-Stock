@@ -142,6 +142,7 @@ export interface InventoryExportItemRecord {
   name: string
   baseUnit: string
   responsibleDepartment: string | null
+  note: string | null
   onHand: number
   lots: InventoryExportLotRecord[]
 }

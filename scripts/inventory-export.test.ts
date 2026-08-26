@@ -19,6 +19,7 @@ const items = [
     name: 'น้ำยาทดสอบหลายล็อต',
     baseUnit: 'ขวด',
     responsibleDepartment: 'งานเคมีคลินิก',
+    note: 'เก็บในตู้เย็น',
     onHand: 8,
     lots: [
       { id: 'lot-1', lotNumber: 'A-001', expiryDate: '2027-01-01', balance: 5, isActive: true },
@@ -31,6 +32,7 @@ const items = [
     name: 'น้ำยาล็อตเดียว',
     baseUnit: 'กล่อง',
     responsibleDepartment: null,
+    note: null,
     onHand: 0,
     lots: [{ id: 'lot-3', lotNumber: 'B-001', expiryDate: null, balance: 0, isActive: true }],
   },
@@ -48,6 +50,8 @@ assert.equal(model.rows[0].lotCount, 2)
 assert.equal(model.rows[1].name, 'Lot A-001')
 assert.equal(model.rows[1].expiryDate, '2027-01-01')
 assert.equal(model.rows[1].balance, 5)
+assert.equal(model.rows[0].note, 'เก็บในตู้เย็น')
+assert.equal(model.rows[1].note, null, 'lot detail rows do not repeat the item note')
 assert.equal(model.rows[3].expiryDate, null, 'a zero-balance single lot stays summarized on the item row')
 
 async function runPdfAssertions() {
@@ -92,6 +96,11 @@ async function runPdfAssertions() {
   assert.match(route, /inventoryExportFiltersSchema/)
   assert.match(route, /generateInventoryPdf/)
   assert.match(route, /Content-Disposition.*attachment/)
+
+  const exportSource = read('lib/inventory/export.ts')
+  assert.doesNotMatch(exportSource, /key: 'department'/, 'the PDF table must not repeat the department column')
+  assert.match(exportSource, /key: 'balance'[\s\S]*key: 'note'/, 'the note column must follow remaining balance')
+  assert.match(exportSource, /case 'note'/, 'the PDF rows must render item notes')
 
   console.log('inventory export: ok')
 }

@@ -248,49 +248,6 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
         </section>
       )}
 
-      {annualPlanReference && (
-        <section className="bench-panel annual-plan-reference-detail" aria-labelledby="pr-annual-plan-reference-title">
-          <div className="bench-panel__header">
-            <div>
-              <p className="section-kicker">LOCKED PLAN REFERENCE</p>
-              <h2 id="pr-annual-plan-reference-title">รายการอ้างอิง{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</h2>
-            </div>
-          </div>
-          <dl className="contract-facts annual-plan-reference-detail__facts">
-            <div><dt>ประเภทแผน</dt><dd>{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</dd></div>
-            <div><dt>ปีงบประมาณแผน</dt><dd>{annualPlanReference.planFiscalYear}</dd></div>
-          </dl>
-          {annualPlanReference.planType === 'hiring' ? (
-            <ul className="annual-plan-reference-detail__lines">
-              <li>
-                <strong>ชื่อสัญญา: {annualPlanReference.contract?.contractName ?? 'ไม่ระบุ'}</strong>
-                <span>
-                  {annualPlanReference.contract
-                    ? `แผนลำดับ ${annualPlanReference.contract.planSequence} · หน้า ${annualPlanReference.contract.pageNumber}`
-                    : 'ไม่พบ reference ชื่อสัญญา'}
-                </span>
-              </li>
-            </ul>
-          ) : (
-            <ul className="annual-plan-reference-detail__lines">
-              {request.items.map((item) => {
-                const line = annualPlanReference.lines.find((candidate) => candidate.purchaseRequestItemId === item.id)
-                return (
-                  <li key={item.id}>
-                    <strong>{item.lineNumber}. {item.name}</strong>
-                    <span>
-                      {line
-                        ? `แผนลำดับ ${line.planSequence} · หน้า ${line.pageNumber}`
-                        : 'ไม่พบ reference รายบรรทัด'}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
-      )}
-
       <section className="bench-panel" aria-labelledby="pr-detail-lines-title">
         <div className="bench-panel__header">
           <div>
@@ -345,6 +302,49 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           </table>
         </StickyScroll>
       </section>
+
+      {annualPlanReference && (
+        <section className="bench-panel annual-plan-reference-detail" aria-labelledby="pr-annual-plan-reference-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">LOCKED PLAN REFERENCE</p>
+              <h2 id="pr-annual-plan-reference-title">รายการอ้างอิง{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</h2>
+            </div>
+          </div>
+          <dl className="contract-facts annual-plan-reference-detail__facts">
+            <div><dt>ประเภทแผน</dt><dd>{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</dd></div>
+            <div><dt>ปีงบประมาณแผน</dt><dd>{annualPlanReference.planFiscalYear}</dd></div>
+          </dl>
+          {annualPlanReference.planType === 'hiring' ? (
+            <ul className="annual-plan-reference-detail__lines">
+              <li>
+                <strong>ชื่อสัญญา: {annualPlanReference.contract?.contractName ?? 'ไม่ระบุ'}</strong>
+                <span>
+                  {annualPlanReference.contract
+                    ? `แผนลำดับ ${annualPlanReference.contract.planSequence} · หน้า ${annualPlanReference.contract.pageNumber}`
+                    : 'ไม่พบ reference ชื่อสัญญา'}
+                </span>
+              </li>
+            </ul>
+          ) : (
+            <ul className="annual-plan-reference-detail__lines">
+              {request.items.map((item) => {
+                const line = annualPlanReference.lines.find((candidate) => candidate.purchaseRequestItemId === item.id)
+                return (
+                  <li key={item.id}>
+                    <strong>{item.lineNumber}. {item.name}</strong>
+                    <span>
+                      {line
+                        ? `แผนลำดับ ${line.planSequence} · หน้า ${line.pageNumber}`
+                        : 'ไม่พบ reference รายบรรทัด'}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       <section className="bench-panel" aria-labelledby="pr-receipt-history-title">
         <div className="bench-panel__header">

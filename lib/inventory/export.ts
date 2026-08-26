@@ -23,7 +23,7 @@ const NAVY = rgb(0.08, 0.18, 0.29)
 const LOT_BACKGROUND = rgb(0.95, 0.97, 0.98)
 const EMPTY_BACKGROUND = rgb(0.98, 0.98, 0.98)
 
-type InventoryPdfCell = 'sequence' | 'code' | 'name' | 'department' | 'expiry' | 'unit' | 'balance'
+type InventoryPdfCell = 'sequence' | 'code' | 'name' | 'expiry' | 'unit' | 'balance' | 'note'
 type TextAlign = 'left' | 'center' | 'right'
 
 interface InventoryPdfColumn {
@@ -37,10 +37,10 @@ const COLUMNS: readonly InventoryPdfColumn[] = [
   { key: 'sequence', header: 'ลำดับ', width: 38, align: 'center' },
   { key: 'code', header: 'รหัสพัสดุ', width: 78, align: 'left' },
   { key: 'name', header: 'รายการน้ำยา / Lot', width: 250, align: 'left' },
-  { key: 'department', header: 'หน่วยงาน', width: 142, align: 'left' },
   { key: 'expiry', header: 'วันหมดอายุ', width: 86, align: 'center' },
   { key: 'unit', header: 'หน่วยนับ', width: 62, align: 'center' },
-  { key: 'balance', header: 'คงเหลือ', width: TABLE_WIDTH - 38 - 78 - 250 - 142 - 86 - 62, align: 'right' },
+  { key: 'balance', header: 'คงเหลือ', width: TABLE_WIDTH - 38 - 78 - 250 - 86 - 62 - 142, align: 'right' },
+  { key: 'note', header: 'หมายเหตุ', width: 142, align: 'left' },
 ]
 
 export interface InventoryPdfInput {
@@ -55,10 +55,10 @@ export interface InventoryPdfRow {
   sequence: number | null
   lsCode: string
   name: string
-  responsibleDepartment: string | null
   baseUnit: string
   expiryDate: string | null
   balance: number
+  note: string | null
   lotCount?: number
   isActive?: boolean
 }
@@ -93,12 +93,12 @@ export function buildInventoryPdfModel(input: InventoryPdfInput): InventoryPdfMo
       sequence: index + 1,
       lsCode: item.lsCode,
       name: item.name,
-      responsibleDepartment: item.responsibleDepartment,
       baseUnit: item.baseUnit,
       // A single lot can be summarized in the item row. Multi-lot items get
       // one explicit child row per lot immediately after the item row.
       expiryDate: lotCount === 1 ? item.lots[0].expiryDate : null,
       balance: item.onHand,
+      note: item.note,
       lotCount,
     })
 
@@ -109,10 +109,10 @@ export function buildInventoryPdfModel(input: InventoryPdfInput): InventoryPdfMo
           sequence: null,
           lsCode: '',
           name: `Lot ${lot.lotNumber}${lot.isActive ? '' : ' (ปิดใช้งาน)'}`,
-          responsibleDepartment: null,
           baseUnit: '',
           expiryDate: lot.expiryDate,
           balance: lot.balance,
+          note: null,
           isActive: lot.isActive,
         })
       })
@@ -212,8 +212,6 @@ function rowCellText(row: InventoryPdfRow, key: InventoryPdfCell): string {
       return row.kind === 'item' ? row.lsCode : ''
     case 'name':
       return row.kind === 'lot' ? `  ${row.name}` : row.name
-    case 'department':
-      return row.kind === 'item' ? (row.responsibleDepartment ?? 'ไม่ระบุ') : ''
     case 'expiry':
       if (row.kind === 'item' && (row.lotCount ?? 0) > 1) return 'ดูด้านล่าง'
       return row.expiryDate ? formatThaiDate(row.expiryDate) : '—'
@@ -221,6 +219,8 @@ function rowCellText(row: InventoryPdfRow, key: InventoryPdfCell): string {
       return row.kind === 'item' ? row.baseUnit : ''
     case 'balance':
       return formatQuantity(row.balance)
+    case 'note':
+      return row.kind === 'item' ? (row.note ?? '—') : ''
   }
 }
 
