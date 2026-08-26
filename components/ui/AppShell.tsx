@@ -17,7 +17,7 @@ import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
 import { EMPTY_NOTIFICATION_SNAPSHOT, type NotificationSnapshot } from '@/lib/notifications/types'
 
-type BenchIconName = 'overview' | 'contract' | 'outlab' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings'
+type BenchIconName = 'overview' | 'contract' | 'service' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual'
 type NavTone = 'blue' | 'violet' | 'teal' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
 const PORTAL_DASHBOARD_URL = 'https://lab-management-cbh.vercel.app/staff/dashboard'
 
@@ -30,30 +30,38 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'overview', tone: 'blue' },
+  { href: '/annual-plans', label: 'แผนประจำปี', icon: 'annual', tone: 'green' },
   { href: '/contracts', label: 'สัญญา', icon: 'contract', tone: 'violet' },
   { href: '/purchase-requests', label: 'ใบ PR', icon: 'pr', tone: 'cyan' },
   { href: '/receipts', label: 'รับเข้า', icon: 'receipt', tone: 'amber' },
   { href: '/requisitions', label: 'เบิกจ่าย', icon: 'issue', tone: 'rose' },
   { href: '/inventory', label: 'คงคลัง', icon: 'inventory', tone: 'green' },
-  { href: '/out-lab', label: 'Out Lab', icon: 'outlab', tone: 'teal' },
+  { href: '/service-procurement', label: 'งานจ้าง', icon: 'service', tone: 'teal' },
 ]
 
-// The route itself remains the final authorization boundary. Showing this
-// entry only to admins avoids navigation that immediately redirects other users.
-const adminNavigation: NavigationItem[] = [
-  { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings', tone: 'slate' },
+const serviceProcurementNavigation: NavigationItem[] = [
+  { href: '/service-procurement/plans', label: 'แผนงานจ้าง', icon: 'annual', tone: 'teal' },
+  { href: '/service-procurement/purchase-requests', label: 'ใบ PR (งานจ้าง)', icon: 'pr', tone: 'cyan' },
 ]
+
+const stockOfficerNavigation = {
+  label: 'เจ้าหน้าที่คลัง',
+  items: [
+  { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings', tone: 'slate' },
+  ] satisfies NavigationItem[],
+}
 
 function BenchIcon({ name }: { name: BenchIconName }) {
   const paths: Record<BenchIconName, ReactNode> = {
     overview: <><path d="M4 13h6V4H4v9Z" /><path d="M14 20h6V11h-6v9Z" /><path d="M4 20h6v-3H4v3Z" /><path d="M14 7h6V4h-6v3Z" /></>,
     contract: <><path d="M6 3h9l3 3v15H6V3Z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></>,
-    outlab: <><path d="M9 3h5M10 3v10.5a3 3 0 1 0 4 0V3" /><path d="M10 9h4" /><path d="M17 4h4v4" /><path d="M21 4l-4.5 4.5" /></>,
+    service: <><path d="M9 3h5M10 3v10.5a3 3 0 1 0 4 0V3" /><path d="M10 9h4" /><path d="M17 4h4v4" /><path d="M21 4l-4.5 4.5" /></>,
     pr: <><path d="M5 4h14v16H5V4Z" /><path d="M8 8h8M8 12h5M8 16h3" /></>,
     receipt: <><path d="M4 7h16v13H4V7Z" /><path d="M7 3h10v4H7V3Z" /><path d="M12 10v6m-3-3 3 3 3-3" /></>,
     issue: <><path d="M4 5h16v14H4V5Z" /><path d="M12 15V9m-3 3 3-3 3 3" /></>,
     inventory: <><path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z" /><path d="M12 11v10" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></>,
+    annual: <><path d="M5 5h14v16H5V5Z" /><path d="M8 3v4M16 3v4M5 10h14M8 14h2M14 14h2M8 17h2M14 17h2" /></>,
   }
 
   return (
@@ -85,17 +93,61 @@ export interface AppShellProps {
 
 export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFICATION_SNAPSHOT }: AppShellProps) {
   const pathname = usePathname()
+  const isServiceProcurementActive = pathname === '/service-procurement' || pathname.startsWith('/service-procurement/')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [serviceProcurementOpen, setServiceProcurementOpen] = useState(isServiceProcurementActive)
   const [dark, setDark] = useState(false)
   const [notificationState, setNotificationState] = useState(notificationSnapshot)
   const actorLabel = actor.name ?? (actor.ephisId ? `E-Phis ${actor.ephisId}` : 'ผู้ใช้งาน')
-  const visibleNavigation = [...navigation, ...(actor.appRoles.includes('admin') ? adminNavigation : [])]
-  const currentItem = visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+  const canManageMemberships = actor.appRoles.includes('admin') || actor.appRoles.includes('stock_officer')
+  const visibleNavigation = [...navigation, ...(canManageMemberships ? stockOfficerNavigation.items : [])]
+  const serviceProcurementCount = notificationState.pendingServicePurchaseRequests
+  const currentItem = serviceProcurementNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    ?? visibleNavigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+
+  const renderNavigationItem = (item: NavigationItem, options: { nested?: boolean } = {}) => {
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+    const count = item.href === '/purchase-requests'
+      ? notificationState.pendingPurchaseRequests
+      : item.href === '/service-procurement/purchase-requests'
+        ? notificationState.pendingServicePurchaseRequests
+      : item.href === '/requisitions'
+        ? notificationState.waitingRequisitions
+        : 0
+    const countLabel = count > 0 ? ` มี ${count} รายการรอดำเนินการ` : ''
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`bench-nav__link${options.nested ? ' bench-nav__link--nested' : ''}`}
+        aria-current={isActive ? 'page' : undefined}
+        aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
+        title={collapsed ? item.label : undefined}
+        onClick={() => setMobileOpen(false)}
+      >
+        <span className="bench-nav__icon" data-nav-tone={item.tone}>
+          <BenchIcon name={item.icon} />
+        </span>
+        <span className="bench-nav__label">{item.label}</span>
+        {count > 0 && (
+          <span className="bench-nav__count" aria-label={countLabel.trim()}>
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
+      </Link>
+    )
+  }
 
   useEffect(() => {
     startTransition(() => setNotificationState(notificationSnapshot))
   }, [notificationSnapshot])
+
+  useEffect(() => {
+    if (!isServiceProcurementActive) return
+    startTransition(() => setServiceProcurementOpen(true))
+  }, [isServiceProcurementActive])
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -136,6 +188,15 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
     localStorage.setItem('labcbh-theme', nextDark ? 'dark' : 'light')
   }
 
+  function toggleServiceProcurement() {
+    if (collapsed) {
+      setCollapsed(false)
+      setServiceProcurementOpen(true)
+      return
+    }
+    setServiceProcurementOpen((open) => !open)
+  }
+
   return (
     <RouteProgress>
       <div className="app-shell">
@@ -165,39 +226,48 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
           </div>
           <p className="bench-nav__section">งานคลังและสัญญา</p>
           <nav className="bench-nav">
-            {visibleNavigation.map((item) => (
-              (() => {
-                const count = item.href === '/purchase-requests'
-                  ? notificationState.pendingPurchaseRequests
-                  : item.href === '/requisitions'
-                    ? notificationState.waitingRequisitions
-                    : 0
-                const countLabel = count > 0 ? ` มี ${count} รายการรอดำเนินการ` : ''
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="bench-nav__link"
-                    aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
-                    aria-label={collapsed ? `${item.label}${countLabel}` : undefined}
-                    title={collapsed ? item.label : undefined}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <span className="bench-nav__icon" data-nav-tone={item.tone}>
-                      <BenchIcon name={item.icon} />
-                    </span>
-                    <span className="bench-nav__label">{item.label}</span>
-                    {count > 0 && (
-                      <span className="bench-nav__count" aria-label={countLabel.trim()}>
-                        {count > 99 ? '99+' : count}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })()
-            ))}
+            {navigation.filter((item) => item.href !== '/service-procurement').map((item) => renderNavigationItem(item))}
           </nav>
+          <div className={`bench-nav__group bench-nav__group--service${serviceProcurementOpen ? ' is-open' : ''}${isServiceProcurementActive ? ' is-active' : ''}`}>
+            <button
+              className="bench-nav__accordion-trigger"
+              type="button"
+              aria-expanded={!collapsed && serviceProcurementOpen}
+              aria-controls="service-procurement-subnav"
+              aria-label={collapsed ? 'ขยายเมนูงานจ้าง' : undefined}
+              title={collapsed ? 'งานจ้าง' : undefined}
+              onClick={toggleServiceProcurement}
+            >
+              <span className="bench-nav__icon" data-nav-tone="teal">
+                <BenchIcon name="service" />
+              </span>
+              <span className="bench-nav__label">งานจ้าง</span>
+              {(!serviceProcurementOpen || collapsed) && serviceProcurementCount > 0 && (
+                <span className="bench-nav__count bench-nav__accordion-count" aria-label={`มี ${serviceProcurementCount} รายการรอดำเนินการ`}>
+                  {serviceProcurementCount > 99 ? '99+' : serviceProcurementCount}
+                </span>
+              )}
+              <svg className="bench-nav__accordion-chevron" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m7 5 5 5-5 5" />
+              </svg>
+            </button>
+            <nav
+              id="service-procurement-subnav"
+              className="bench-nav bench-nav--nested"
+              aria-label="เมนูย่อยงานจ้าง"
+              hidden={collapsed || !serviceProcurementOpen}
+            >
+              {serviceProcurementNavigation.map((item) => renderNavigationItem(item, { nested: true }))}
+            </nav>
+          </div>
+          {canManageMemberships && (
+            <div className="bench-nav__group">
+              <p className="bench-nav__group-label">{stockOfficerNavigation.label}</p>
+              <nav className="bench-nav bench-nav--nested" aria-label={stockOfficerNavigation.label}>
+                {stockOfficerNavigation.items.map((item) => renderNavigationItem(item, { nested: true }))}
+              </nav>
+            </div>
+          )}
           <div className="bench-rail__footer">
             <span className="bench-rail__signal" aria-hidden="true" />
             <span className="bench-rail__footer-copy"><strong>ระบบพร้อมใช้งาน</strong><small>คลังพัสดุและสัญญา · LAB-CBH</small></span>

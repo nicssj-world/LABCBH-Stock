@@ -3,6 +3,7 @@ import { InventoryItemActiveControl } from '@/components/inventory/InventoryItem
 import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import {
   STOCK_LEVEL_LABELS,
   STOCK_LEVEL_TONES,
@@ -26,7 +27,7 @@ export function InventoryTable({
 
   return (
     <>
-      <div className="inventory-table--desktop">
+      <StickyScroll className="inventory-table--desktop" ariaLabel="ตารางน้ำยาในคลัง เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
         <table className="data-table">
           <thead>
             <tr>
@@ -82,7 +83,7 @@ export function InventoryTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </StickyScroll>
 
       <ul className="inventory-task-cards" aria-label="รายการน้ำยาในคลัง">
         {items.map((item) => (

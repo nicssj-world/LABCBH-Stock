@@ -13,6 +13,7 @@ const migrationName = readdirSync(migrationsDir)
 
 assert.ok(migrationName, 'storage cleanup migration must exist')
 const migration = read(join('supabase', 'migrations', migrationName))
+const annualMigration = read('supabase/migrations/20260825182000_annual_plan_cleanup_retry.sql')
 
 assert.match(migration, /create table public\.storage_cleanup_jobs/i)
 assert.match(migration, /storage_backend text/i)
@@ -51,6 +52,10 @@ assert.match(route, /DeleteObjectCommand/)
 assert.match(route, /complete_storage_cleanup_job/)
 assert.match(route, /cleanupPurchaseRequestChecklistObjects/)
 assert.match(route, /cleanupTerminalPurchaseRequestPoFile/)
+assert.match(route, /cleanupExpiredAnnualPlans/)
+assert.match(route, /retryAnnualPlanHardDelete/)
+assert.match(annualMigration, /annual_plan_retention_retry/i)
+assert.match(annualMigration, /lab-stock-annual-plans/i)
 
 const vercelConfig = read('vercel.ts')
 assert.match(vercelConfig, /crons\s*:/)
@@ -59,7 +64,6 @@ assert.match(vercelConfig, /\/api\/internal\/storage-cleanup/)
 for (const source of [
   read('lib/pr/po-file-actions.ts'),
   read('lib/contracts/file-actions.ts'),
-  read('lib/out-lab/file-actions.ts'),
 ]) {
   assert.match(source, /enqueueStorageCleanupJob/, 'storage rollback failures must enter the cleanup queue')
 }

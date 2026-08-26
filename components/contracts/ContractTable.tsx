@@ -4,6 +4,7 @@ import { ContractSummaryDialog } from '@/components/contracts/ContractSummaryDia
 import { StageProgress } from '@/components/contracts/StageProgress'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import type { PresentedContract } from '@/lib/contracts/presenter'
 
 function tone(contract: PresentedContract) {
@@ -19,7 +20,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
 
   return (
     <>
-      <div className="contract-table--desktop">
+      <StickyScroll className="contract-table--desktop" ariaLabel="ตารางสัญญา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
         <table className="data-table contract-register-table">
           <colgroup>
             <col className="contract-register-table__number" />
@@ -77,7 +78,7 @@ export function ContractTable({ contracts }: { contracts: PresentedContract[] })
             ))}
           </tbody>
         </table>
-      </div>
+      </StickyScroll>
 
       <ul className="contract-task-cards" aria-label="รายการสัญญา">
         {contracts.map((contract) => (

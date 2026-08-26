@@ -120,7 +120,7 @@ export function ReceiptLinesEditor({
 
                 <div className="receipt-line__fields">
                   <label className="field-row">
-                    LOT (เลขที่ล็อต)
+                    <span>LOT (เลขที่ล็อต) <span className="field-required" aria-hidden="true">*</span></span>
                     <input
                       type="text"
                       required
@@ -137,7 +137,7 @@ export function ReceiptLinesEditor({
                     />
                   </label>
                   <label className="field-row">
-                    จำนวน ({line.unit})
+                    <span>จำนวน ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
                     <input
                       type="number"
                       min="0.001"

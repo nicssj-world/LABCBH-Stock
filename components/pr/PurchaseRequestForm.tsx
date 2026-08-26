@@ -11,6 +11,7 @@ import {
   type ContractOption,
 } from '@/components/pr/PurchaseMethodFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -558,7 +559,7 @@ export function PurchaseRequestForm({
         </div>
         <div className="form-grid">
           <label className="field-row">
-            หน่วยงานผู้ขอ
+            <span>หน่วยงานผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
             <select required value={department} onChange={(event) => changeDepartment(event.target.value)}>
               {departments.map((department) => (
                 <option value={department} key={department}>{department}</option>
@@ -566,11 +567,11 @@ export function PurchaseRequestForm({
             </select>
           </label>
           <label className="field-row">
-            ชื่อผู้ขอ
+            <span>ชื่อผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
             <input type="text" required readOnly value={headName} title="ชื่อผู้สร้างใบขอซื้อ แก้ไขไม่ได้" />
           </label>
           <label className="field-row">
-            วันที่ขอซื้อ
+            <span>วันที่ขอซื้อ <span className="field-required" aria-hidden="true">*</span></span>
             <ThaiDateInput required value={requestedDate} onChange={setRequestedDate} />
           </label>
           <label className="field-row">
@@ -645,17 +646,18 @@ export function PurchaseRequestForm({
               : 'ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน'}
           </p>
         ) : (
-          <div className="detail-items-table">
+          <>
+            <StickyScroll className="detail-items-table pr-form-lines-table--desktop" ariaLabel="รายการในใบขอซื้อ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>รหัสน้ำยา (LS)</th>
-                  <th>ชื่อน้ำยา</th>
+                  <th><span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th><span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span></th>
                   <th className="pr-line-cell--center">คงเหลือในสัญญา</th>
                   <th className="pr-line-cell--center">อัตราใช้/เดือน</th>
-                  <th className="pr-line-cell--center">จำนวนที่ขอ</th>
-                  <th className="pr-line-cell--center">หน่วย</th>
-                  <th className="pr-line-cell--center">ราคาต่อหน่วย</th>
+                  <th className="pr-line-cell--center"><span>จำนวนที่ขอ <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th className="pr-line-cell--center"><span>หน่วย <span className="field-required" aria-hidden="true">*</span></span></th>
+                  <th className="pr-line-cell--center"><span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span></th>
                   <th className="pr-line-cell--center">รวม</th>
                   <th><span className="visually-hidden">นำออก</span></th>
                 </tr>
@@ -714,6 +716,7 @@ export function PurchaseRequestForm({
                         type="number"
                         min="0"
                         step="1"
+                        required
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
@@ -767,7 +770,128 @@ export function PurchaseRequestForm({
                 })}
               </tbody>
             </table>
-          </div>
+            </StickyScroll>
+
+            <ul className="pr-form-line-cards" aria-label="รายการในใบ PR">
+            {lines.map((line) => {
+              const overLimit = isOverContractLimit(line)
+              const lineTotal = formatBaht(calculateLineTotal(draftNumberValue(line.requestedQuantity), draftNumberValue(line.unitPrice)))
+              return (
+                <li key={line.key} className="pr-form-line-card">
+                  <div className="pr-form-line-card__heading">
+                    <div className="pr-form-line-card__identity">
+                      {line.inventoryItemId === null ? (
+                        <label className="field-row">
+                          <span>รหัสน้ำยา (LS) <span className="field-required" aria-hidden="true">*</span></span>
+                          <input
+                            type="text"
+                            required
+                            aria-label={`รหัสน้ำยา (LS) ของรายการที่ ${line.key}`}
+                            value={line.lsCode}
+                            onChange={(event) => updateLine(line.key, { lsCode: event.target.value })}
+                          />
+                        </label>
+                      ) : (
+                        <span className="identifier">{line.lsCode}</span>
+                      )}
+                      {line.inventoryItemId === null ? (
+                        <label className="field-row">
+                          <span>ชื่อน้ำยา <span className="field-required" aria-hidden="true">*</span></span>
+                          <input
+                            type="text"
+                            required
+                            aria-label={`ชื่อน้ำยาของรายการที่ ${line.key}`}
+                            value={line.name}
+                            onChange={(event) => updateLine(line.key, { name: event.target.value })}
+                          />
+                        </label>
+                      ) : (
+                        <strong>{line.name}</strong>
+                      )}
+                    </div>
+                    <Button variant="ghost" onClick={() => removeLine(line.key)}>นำออก</Button>
+                  </div>
+
+                  <dl className="pr-form-line-card__facts">
+                    <div>
+                      <dt>คงเหลือในสัญญา</dt>
+                      <dd>
+                        {line.contractRemaining === null ? 'ไม่ตัดยอดสัญญา' : formatQuantity(line.contractRemaining, line.unit)}
+                        {line.contractRemaining !== null && isLowContractBalance(line) && (
+                          <small className="item-picker__warning">{LOW_CONTRACT_BALANCE_WARNING}</small>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>อัตราใช้/เดือน</dt>
+                      <dd className="identifier">{formatQuantity(line.averageMonthlyUsage, line.unit)}</dd>
+                    </div>
+                    <div>
+                      <dt>รวม</dt>
+                      <dd className="identifier">{lineTotal}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="pr-form-line-card__fields">
+                    <label className="field-row">
+                      <span>จำนวนที่ขอ ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        required
+                        aria-invalid={overLimit}
+                        aria-label={`จำนวนที่ขอของ ${line.name}`}
+                        value={line.requestedQuantity}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
+                        }}
+                      />
+                      {overLimit && (
+                        <small className="field-error">
+                          เกินยอดคงเหลือในสัญญา ({formatQuantity(line.contractRemaining!, line.unit)})
+                        </small>
+                      )}
+                    </label>
+                    <div className="field-row">
+                      <span>หน่วย <span className="field-required" aria-hidden="true">*</span></span>
+                      {line.inventoryItemId === null ? (
+                        <input
+                          type="text"
+                          required
+                          aria-label={`หน่วยนับของรายการที่ ${line.key}`}
+                          value={line.unit}
+                          onChange={(event) => updateLine(line.key, { unit: event.target.value })}
+                        />
+                      ) : (
+                        <strong className="pr-form-line-card__readonly-value">{line.unit}</strong>
+                      )}
+                    </div>
+                    <label className="field-row">
+                      <span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span>
+                      <input
+                        type="number"
+                        min={method?.kind === 'specific_contract' || method?.kind === 'e_bidding' ? '0.01' : '0'}
+                        step="0.01"
+                        required
+                        readOnly={line.contractItemId !== null}
+                        tabIndex={line.contractItemId !== null ? -1 : undefined}
+                        aria-label={`ราคาต่อหน่วยของ ${line.name}`}
+                        title={line.contractItemId !== null ? 'ราคากำหนดตามสัญญา แก้ไขไม่ได้' : undefined}
+                        value={line.unitPrice}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })
+                        }}
+                      />
+                    </label>
+                  </div>
+                </li>
+              )
+            })}
+            </ul>
+          </>
         )}
 
         <p className="items-editor__grand-total">

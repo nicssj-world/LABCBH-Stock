@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -185,7 +186,7 @@ export function ReceiptForm({
         </div>
         <div className="form-grid">
           <label className="field-row">
-            หน่วยงานที่รับของ
+            <span>หน่วยงานที่รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <select required value={department} onChange={(event) => changeDepartment(event.target.value)} disabled={isPending}>
               <option value="" disabled>เลือกหน่วยงานที่รับของก่อน</option>
               {departments.map((department) => <option value={department} key={department}>{department}</option>)}
@@ -225,11 +226,11 @@ export function ReceiptForm({
             )}
           </div>
           <label className="field-row">
-            วันที่รับของ
+            <span>วันที่รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <ThaiDateInput required value={receivedDate} onChange={setReceivedDate} />
           </label>
           <label className="field-row">
-            ผู้รับของ
+            <span>ผู้รับของ <span className="field-required" aria-hidden="true">*</span></span>
             <input type="text" required value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
           </label>
           <label className="field-row form-grid__wide">
@@ -255,7 +256,7 @@ export function ReceiptForm({
                 <p>ยอดส่วนนี้ยังไม่ใช่รายการรับเข้า จึงยังไม่ต้องระบุ LOT หรือวันหมดอายุ</p>
               </div>
             </div>
-            <div className="detail-items-table">
+            <StickyScroll className="detail-items-table receipt-balance-table--desktop" ariaLabel="รายการรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -296,8 +297,48 @@ export function ReceiptForm({
                     )
                   })}
                 </tbody>
-              </table>
-            </div>
+            </table>
+            </StickyScroll>
+
+            <ul className="receipt-balance-cards" aria-label="ยอดคงเหลือรายการในใบ PR">
+              {selectedRequest.items.map((item) => {
+                const stagedQuantity = stagedByItem[item.inventoryItemId] ?? 0
+                const availableQuantity = roundQuantity(item.remainingQuantity - stagedQuantity)
+                return (
+                  <li key={item.inventoryItemId}>
+                    <div className="receipt-balance-card__identity">
+                      <strong>{item.name}</strong>
+                      <small>{item.lsCode} · {item.unit}</small>
+                    </div>
+                    <dl className="receipt-balance-card__facts">
+                      <div>
+                        <dt>ขอซื้อ</dt>
+                        <dd className="identifier">{formatQuantity(item.requestedQuantity, item.unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>รับสะสม</dt>
+                        <dd className="identifier">{formatQuantity(item.receivedQuantity, item.unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>คงเหลือ</dt>
+                        <dd className="identifier">
+                          <strong>{formatQuantity(item.remainingQuantity, item.unit)}</strong>
+                          {stagedQuantity > 0 && <small>เลือกรอบนี้ {formatQuantity(stagedQuantity, item.unit)}</small>}
+                        </dd>
+                      </div>
+                    </dl>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isPending || availableQuantity <= 0}
+                      onClick={() => addPurchaseRequestLine(item)}
+                    >
+                      {availableQuantity > 0 ? 'เพิ่มเข้ารับ' : 'เลือกครบแล้ว'}
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         )}
         <ReceiptLinesEditor

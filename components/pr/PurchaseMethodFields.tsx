@@ -137,9 +137,9 @@ export function PurchaseMethodFields({
   return (
     <div className="method-stack">
       <fieldset className="purpose-fieldset">
-        <legend>จุดประสงค์</legend>
+        <legend>จุดประสงค์ <span className="field-required" aria-hidden="true">*</span></legend>
 
-        <div className="purpose-options" role="radiogroup" aria-label="จุดประสงค์">
+        <div className="purpose-options" role="radiogroup" aria-label="จุดประสงค์" aria-required="true">
           {PURCHASE_PURPOSES.map((purposeOption) => (
             <label key={purposeOption} className="purpose-option">
               <span className="purpose-option__title">
@@ -161,13 +161,13 @@ export function PurchaseMethodFields({
       </fieldset>
 
       <fieldset className="method-fieldset">
-        <legend>วิธีจัดซื้อ</legend>
+        <legend>วิธีจัดซื้อ <span className="field-required" aria-hidden="true">*</span></legend>
 
         {purpose === null && (
           <p className="empty-state">เลือกจุดประสงค์ด้านบนก่อน แล้ววิธีจัดซื้อที่เลือกได้จะแสดงขึ้นมา</p>
         )}
 
-        <div className="method-options" role="radiogroup" aria-label="วิธีจัดซื้อ">
+        <div className="method-options" role="radiogroup" aria-label="วิธีจัดซื้อ" aria-required="true">
           {methodKinds.map((kind) => (
             <label key={kind} className="method-option">
               <input
@@ -187,7 +187,7 @@ export function PurchaseMethodFields({
             {method.kind === 'annual_plan' && (
               <div className="method-detail-grid">
                 <label className="field-row">
-                  ปีงบประมาณของแผน
+                  <span>ปีงบประมาณของแผน <span className="field-required" aria-hidden="true">*</span></span>
                   <input
                     type="number"
                     min="2500"
@@ -202,7 +202,7 @@ export function PurchaseMethodFields({
                   />
                 </label>
                 <label className="field-row">
-                  ลำดับในแผนจัดซื้อ
+                  <span>ลำดับในแผนจัดซื้อ <span className="field-required" aria-hidden="true">*</span></span>
                   <input
                     type="text"
                     required
@@ -221,7 +221,7 @@ export function PurchaseMethodFields({
               ) : (
                 <div className="method-detail-grid">
                   <label className="field-row">
-                    สัญญา
+                    <span>สัญญา <span className="field-required" aria-hidden="true">*</span></span>
                     <select
                       required
                       value={method.contractId}
@@ -238,7 +238,7 @@ export function PurchaseMethodFields({
                     </select>
                   </label>
                   <label className="field-row">
-                    ครั้งที่ซื้อ
+                    <span>ครั้งที่ซื้อ <span className="field-required" aria-hidden="true">*</span></span>
                     <input type="text" inputMode="numeric" required readOnly value={method.purchaseSequence} />
                     <small>กำหนดอัตโนมัติจากสัญญาที่เลือก</small>
                   </label>
@@ -253,7 +253,7 @@ export function PurchaseMethodFields({
                 </p>
               ) : (
                 <label className="field-row">
-                  สัญญาที่รอดำเนินการ
+                  <span>สัญญาที่รอดำเนินการ <span className="field-required" aria-hidden="true">*</span></span>
                   <select
                     required
                     value={method.contractId}
@@ -270,7 +270,7 @@ export function PurchaseMethodFields({
             {(method.kind === 'specific_contract' || method.kind === 'e_bidding' || method.kind === 'equipment_lease') && (
               <>
                 <label className="field-row">
-                  ชื่อสัญญา
+                  <span>ชื่อสัญญา <span className="field-required" aria-hidden="true">*</span></span>
                   <input
                     type="text"
                     required
@@ -281,7 +281,7 @@ export function PurchaseMethodFields({
 
                 <div className="method-detail-grid">
                   <label className="field-row">
-                    ปีงบประมาณ
+                    <span>ปีงบประมาณ <span className="field-required" aria-hidden="true">*</span></span>
                     <input
                       type="number"
                       min="2500"
@@ -301,7 +301,7 @@ export function PurchaseMethodFields({
                     <small>กำหนดจากวิธีจัดซื้อที่เลือกไว้</small>
                   </label>
                   <label className="field-row">
-                    คู่สัญญา
+                    <span>คู่สัญญา{method.kind === 'specific_contract' && <> <span className="field-required" aria-hidden="true">*</span></>}</span>
                     <input
                       type="text"
                       required={method.kind === 'specific_contract'}
@@ -311,7 +311,7 @@ export function PurchaseMethodFields({
                     {method.kind !== 'specific_contract' && <small>ยังไม่ทราบได้ เว้นว่างไว้ก่อนได้</small>}
                   </label>
                   <label className="field-row">
-                    วันที่ส่งเจ้าหน้าที่คลัง
+                    <span>วันที่ส่งเจ้าหน้าที่คลัง <span className="field-required" aria-hidden="true">*</span></span>
                     <ThaiDateInput
                       required
                       value={method.contractDraft.sentToStockOfficerDate}

@@ -4,6 +4,7 @@ import { FulfillmentPanel } from '@/components/requisitions/FulfillmentPanel'
 import { RequisitionLifecycleControls } from '@/components/requisitions/RequisitionLifecycleControls'
 import { RequisitionSignaturePanel } from '@/components/requisitions/RequisitionSignaturePanel'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { bangkokToday, listOnHand } from '@/lib/inventory/queries'
@@ -131,7 +132,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
           </div>
           <p>{requisition.items.length} รายการ</p>
         </div>
-        <div className="detail-items-table">
+        <StickyScroll className="detail-items-table" ariaLabel="รายการใบเบิก เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
           <table className="data-table">
             <thead>
               <tr>
@@ -190,7 +191,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
               ))}
             </tbody>
           </table>
-        </div>
+        </StickyScroll>
       </section>
 
       {canFulfil && (

@@ -1,6 +1,7 @@
 import { PurchaseRequestSummaryDialog } from '@/components/pr/PurchaseRequestSummaryDialog'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import type { Actor } from '@/lib/auth/actor'
 import { formatThaiDate } from '@/lib/inventory/presenter'
 import {
@@ -41,7 +42,7 @@ export function PurchaseRequestTable({
 
   return (
     <>
-      <div className="pr-table--desktop">
+      <StickyScroll className="pr-table--desktop" ariaLabel="ตารางใบขอซื้อ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
         <table className="data-table pr-register-table">
           <colgroup>
             <col className="pr-register-table__document" />
@@ -132,7 +133,7 @@ export function PurchaseRequestTable({
             })}
           </tbody>
         </table>
-      </div>
+      </StickyScroll>
 
       <ul className="pr-task-cards" aria-label="รายการใบ PR">
         {requests.map((request) => {

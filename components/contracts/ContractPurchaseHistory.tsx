@@ -4,6 +4,7 @@ import { useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import {
   PURCHASE_REQUEST_STATUS_LABELS,
@@ -40,7 +41,7 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
   const closeSummary = () => dialogRef.current?.close()
 
   return (
-    <div className="detail-items-table">
+    <StickyScroll className="detail-items-table" ariaLabel="ประวัติใบขอซื้อของสัญญา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
       <table className="data-table">
         <thead>
           <tr>
@@ -126,7 +127,7 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
               {selected.items.length === 0 ? (
                 <p className="empty-state">ใบ PR นี้ไม่มีรายการ</p>
               ) : (
-                <div className="detail-items-table">
+                <StickyScroll className="detail-items-table" ariaLabel="รายการในใบขอซื้อ เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -149,7 +150,7 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </StickyScroll>
               )}
               <p className="items-editor__grand-total">
                 <span>{selected.items.length} รายการ · ยอดรวม</span>
@@ -169,6 +170,6 @@ export function ContractPurchaseHistory({ entries }: { entries: PurchaseRequestR
           </>
         )}
       </dialog>
-    </div>
+    </StickyScroll>
   )
 }

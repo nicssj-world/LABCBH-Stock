@@ -10,10 +10,9 @@ const thaiDate = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
 })
 
 /**
- * Structural rather than tied to ContractRecord: the Out Lab register keeps its
- * own tables and its own uuid ids, but walks the identical six stages. Widening
- * the prop was cheaper and safer than a second copy of the timeline that would
- * drift the first time a stage label changed.
+ * Structural rather than tied to ContractRecord: independent workflow modules
+ * can keep their own tables and uuid ids while reusing the same six-stage
+ * visual timeline. Widening the prop avoids copies that drift over time.
  *
  * `canManageStageHistory` stays contract-only — StageHistoryEntryEditor writes
  * through the contract stage-correction RPCs, which do not know this register.

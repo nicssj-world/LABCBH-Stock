@@ -16,6 +16,7 @@ import { StageAdvanceControl } from '@/components/contracts/StageAdvanceControl'
 import { StageHistoryDisclosure } from '@/components/contracts/StageHistoryDisclosure'
 import { StageTimeline } from '@/components/contracts/StageTimeline'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { contractMode } from '@/lib/contracts/budget'
@@ -276,7 +277,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           )}
         </div>
         {contract.items.length === 0 ? <p className="empty-state">ยังไม่มีรายการน้ำยา</p> : (
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="รายการน้ำยาในสัญญา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead><tr><th>รหัสพัสดุ</th><th>ชื่อน้ำยา</th><th className="numeric-cell">จำนวน</th><th className="numeric-cell">คงเหลือ</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย</th><th className="numeric-cell">รวม</th></tr></thead>
               <tbody>
@@ -311,7 +312,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyScroll>
         )}
       </section>
 

@@ -49,7 +49,7 @@ assert.match(
   /StageTimeline contract=\{contract\} canManageStageHistory=\{canManageStageHistory\}/,
   'the history timeline receives the restricted edit capability',
 )
-// StageTimeline is shared with the Out Lab register, which has uuid ids and no
+// StageTimeline is shared with independent workflows that have uuid ids and no
 // correction workflow, so the contract id the stage-history editor writes
 // through is passed explicitly rather than read off the record.
 assert.match(

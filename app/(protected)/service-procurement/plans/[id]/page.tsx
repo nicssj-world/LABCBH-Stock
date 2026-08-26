@@ -1,0 +1,20 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { requireActor } from '@/lib/auth/actor'
+import { canManageServicePlans, canRecordServicePlanExpense } from '@/lib/service-procurement/authorization'
+import { getServicePlan, listServiceCommitteeCandidates } from '@/lib/service-procurement/queries'
+import { servicePlanTypeLabel } from '@/lib/service-procurement/presenter'
+import { formatBaht } from '@/lib/pr/presenter'
+import { ServicePlanExpenseControls } from '@/components/service-procurement/ServicePlanExpenseControls'
+import { ServicePlanResponsibleDialog } from '@/components/service-procurement/ServicePlanResponsibleDialog'
+
+export default async function ServicePlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const actor = await requireActor()
+  const { id } = await params
+  const result = await getServicePlan(id)
+  if (!result) notFound()
+  const { plan, ledger } = result
+  const canManage = canManageServicePlans(actor)
+  const candidates = canManage ? await listServiceCommitteeCandidates() : []
+  return <div className="route-stack"><header className="page-heading page-heading--actions"><div><Link className="back-link" href="/service-procurement/plans">← แผนงานจ้าง</Link><p className="section-kicker">SERVICE PLAN · FY {plan.fiscalYear}</p><h1>{plan.name}</h1><p>{plan.department} · {servicePlanTypeLabel(plan.type)}</p></div><div className="page-heading__actions"><a className="lab-link-button lab-link-button--secondary" href={`/api/service-procurement/plans/${plan.id}/export`}>Export Excel</a>{canManage && <ServicePlanResponsibleDialog planId={plan.id} candidates={candidates} selected={plan.responsibles.map((person) => person.profileId)} />}{canManage && <Link className="lab-link-button lab-link-button--secondary" href={`/service-procurement/plans/${plan.id}/edit`}>แก้ไขข้อมูล</Link>}</div></header><section className="service-balance-grid"><article className="bench-panel"><small>วงเงิน</small><strong>{formatBaht(plan.balance.budget)}</strong></article><article className="bench-panel"><small>ใช้จริง</small><strong>{formatBaht(plan.balance.spent)}</strong></article><article className="bench-panel"><small>สำรองจาก PR</small><strong>{formatBaht(plan.balance.reserved)}</strong></article><article className="bench-panel"><small>คงเหลือ</small><strong>{formatBaht(plan.balance.available)}</strong></article></section><section className="bench-panel"><div className="bench-panel__header"><div><p className="section-kicker">RESPONSIBLE USERS</p><h2>ผู้รับผิดชอบ</h2></div><p>{plan.responsibles.length} คน</p></div>{plan.responsibles.length ? <ul className="service-responsible-list">{plan.responsibles.map((person) => <li key={person.profileId}><strong>{person.name}</strong><span>{person.department ?? 'ไม่ระบุหน่วยงาน'}</span></li>)}</ul> : <p className="empty-state">ยังไม่ได้กำหนดผู้รับผิดชอบ</p>}</section><section className="bench-panel"><div className="bench-panel__header"><div><p className="section-kicker">FINANCIAL LEDGER</p><h2>ประวัติการใช้จ่าย</h2></div><p>{ledger.length} รายการ</p></div>{ledger.length === 0 ? <p className="empty-state">ยังไม่มีรายการค่าใช้จ่ายหรือยอดสำรอง</p> : <div className="service-ledger-table-wrap"><table className="data-table"><thead><tr><th>วันที่</th><th>ประเภท</th><th>จำนวนเงิน</th><th>อ้างอิง</th><th>เหตุผล</th><th>ผู้บันทึก</th></tr></thead><tbody>{ledger.map((entry) => <tr key={entry.id}><td>{entry.eventDate}</td><td>{entry.entryKind}</td><td className="identifier">{formatBaht(entry.amount)}</td><td>{entry.sourceReference ?? entry.purchaseRequestId ?? '—'}</td><td>{entry.reason}</td><td>{entry.actorName ?? '—'}</td></tr>)}</tbody></table></div>}</section>{canRecordServicePlanExpense(actor, plan.responsibles.map((person) => person.profileId)) && <ServicePlanExpenseControls plan={plan} canManage={canManage} />}</div>
+}

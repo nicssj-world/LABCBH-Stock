@@ -2,7 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { deriveAppRoles } from '../lib/auth/access'
-import { assertMembershipAdministrator, canAdministerMemberships } from '../lib/access/authorization'
+import {
+  assertMembershipAdministrator,
+  assertMembershipManager,
+  canAdministerMemberships,
+  canChangeMembershipRole,
+  canManageMemberships,
+} from '../lib/access/authorization'
 import { membershipInputSchema } from '../lib/access/schema'
 import type { Actor } from '../lib/auth/actor'
 
@@ -21,8 +27,16 @@ assert.equal(canAdministerMemberships(actor({ appRoles: ['admin'] })), true)
 assert.equal(canAdministerMemberships(actor({ appRoles: ['head'] })), false)
 assert.equal(canAdministerMemberships(actor({ appRoles: ['stock_officer'] })), false)
 assert.equal(canAdministerMemberships(actor({ appRoles: [] })), false)
+assert.equal(canManageMemberships(actor({ appRoles: ['admin'] })), true)
+assert.equal(canManageMemberships(actor({ appRoles: ['stock_officer'] })), true)
+assert.equal(canManageMemberships(actor({ appRoles: ['head'] })), false)
+assert.equal(canChangeMembershipRole(actor({ appRoles: ['stock_officer'] }), 'head'), true)
+assert.equal(canChangeMembershipRole(actor({ appRoles: ['stock_officer'] }), 'admin'), false)
+assert.equal(canChangeMembershipRole(actor({ appRoles: ['admin'] }), 'admin'), true)
 assert.throws(() => assertMembershipAdministrator(actor({ appRoles: ['head'] })), /ไม่มีสิทธิ์/)
 assert.doesNotThrow(() => assertMembershipAdministrator(actor({ appRoles: ['admin'] })))
+assert.throws(() => assertMembershipManager(actor({ appRoles: ['head'] })), /ไม่มีสิทธิ์/)
+assert.doesNotThrow(() => assertMembershipManager(actor({ appRoles: ['stock_officer'] })))
 
 assert.equal(
   membershipInputSchema.safeParse({
@@ -131,6 +145,24 @@ assert.ok(adminAssert, 'assert_lab_stock_admin_actor must exist')
 assert.match(adminAssert, /ephis_id = '9495'/)
 assert.match(adminAssert, /membership\.role = 'admin'/i)
 assert.doesNotMatch(adminAssert, /'head'|'stock_officer'/i, 'only admins pass this gate')
+
+const managerName = readdirSync(migrationsDir).find((file) =>
+  file.endsWith('_lab_stock_membership_manager.sql'),
+)
+assert.ok(managerName, 'the membership manager migration must exist')
+const managerSql = readFileSync(join(migrationsDir, managerName), 'utf8')
+const managerAssert = managerSql.match(
+  /create or replace function public\.assert_lab_stock_membership_manager[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(managerAssert, 'assert_lab_stock_membership_manager must exist')
+assert.match(managerAssert, /membership\.role in \('admin',\s*'stock_officer'\)/i)
+const managerSetFunction = managerSql.match(
+  /create or replace function public\.set_lab_stock_membership[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(managerSetFunction, 'the forward migration must replace set_lab_stock_membership')
+assert.match(managerSetFunction, /assert_lab_stock_membership_manager/i)
+assert.match(managerSetFunction, /p_role\s*=\s*'admin'/i)
+assert.match(managerSetFunction, /assert_lab_stock_admin_actor/i)
 
 const recursionFixName = readdirSync(migrationsDir).find((file) =>
   file.endsWith('_lab_stock_membership_rls_recursion.sql'),

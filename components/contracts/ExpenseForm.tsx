@@ -112,7 +112,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
       <form id={formId} className="expense-form" onSubmit={submit}>
       <div className="expense-form__primary">
         <label>
-          เดือนที่ใช้จ่าย
+          <span>เดือนที่ใช้จ่าย <span className="field-required" aria-hidden="true">*</span></span>
           <select value={usageMonth} onChange={(event) => setUsageMonth(event.target.value)} required>
             {months.map((month) => (
               <option key={month} value={month}>
@@ -122,7 +122,7 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
           </select>
         </label>
         <label>
-          จำนวนเงิน (บาท)
+          <span>จำนวนเงิน (บาท) <span className="field-required" aria-hidden="true">*</span></span>
           <input
             type="number"
             inputMode="decimal"

@@ -212,7 +212,7 @@ export function RequisitionForm({
         </div>
         <div className="form-grid">
           <label className="field-row">
-            หน่วยงานผู้ขอเบิก
+            <span>หน่วยงานผู้ขอเบิก <span className="field-required" aria-hidden="true">*</span></span>
             <select
               required
               value={department}
@@ -224,11 +224,11 @@ export function RequisitionForm({
             </select>
           </label>
           <label className="field-row">
-            ชื่อผู้ขอเบิก
+            <span>ชื่อผู้ขอเบิก <span className="field-required" aria-hidden="true">*</span></span>
             <input type="text" required value={requesterName} onChange={(event) => setRequesterName(event.target.value)} />
           </label>
           <label className="field-row">
-            วันที่ขอเบิก
+            <span>วันที่ขอเบิก <span className="field-required" aria-hidden="true">*</span></span>
             <ThaiDateInput required value={desiredDate} onChange={setDesiredDate} />
           </label>
           <label className="field-row form-grid__wide">
@@ -322,7 +322,7 @@ export function RequisitionForm({
 
                     <div className="requisition-line__fields">
                       <label className="field-row">
-                        จำนวนที่ขอ ({line.unit})
+                        <span>จำนวนที่ขอ ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
                         <input
                           type="number"
                           min="0.001"

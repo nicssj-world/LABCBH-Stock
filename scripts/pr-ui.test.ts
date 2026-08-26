@@ -299,7 +299,7 @@ assert.match(
 )
 assert.match(
   review,
-  /\{canEditPoNumber && \([\s\S]*?เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
+  /canEditPoNumber\s*\?\s*\([\s\S]*?เลขที่ใบสั่งซื้อ \(PO\)\s*<input/,
   'a contract-originating PR opens a contract directly and never becomes a purchase order, so it must not show a PO number field',
 )
 assert.match(review, /formatThaiDateTime/, 'audit lines must show a full date and time, not just a date')
@@ -378,6 +378,11 @@ assert.match(table, /<PurchaseRequestSummaryDialog\s+request=\{request\}[\s\S]{0
 assert.match(table, /<PurchaseRequestSummaryDialog\s+request=\{request\}[\s\S]{0,250}?variant="card"[\s\S]{0,500}?\/>/, 'the mobile card must open the same popup')
 assert.match(table, /DetailIconLink/, 'the trailing detail action must use the shared icon link')
 assert.doesNotMatch(table, /<Link[^>]*>\s*ดูรายละเอียด/, 'the trailing detail action must not render a visible text label')
+
+const formLayout = read('components/pr/PurchaseRequestForm.tsx')
+assert.match(formLayout, /pr-form-lines-table--desktop/, 'the wide PR line table must have an explicit desktop-only presentation')
+assert.match(formLayout, /className="pr-form-line-cards"/, 'the PR form must provide phone-friendly line cards')
+assert.match(formLayout, /pr-form-line-card__fields/, 'phone PR cards must keep editable line fields')
 
 const summaryDialog = read('components/pr/PurchaseRequestSummaryDialog.tsx')
 assert.match(summaryDialog, /^['"]use client['"]/m)

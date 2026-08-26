@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { StickyScroll } from '@/components/ui/StickyScroll'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { setContractOpeningBalances } from '@/lib/contracts/actions'
 import type { ContractItemRecord } from '@/lib/contracts/types'
@@ -86,7 +87,7 @@ export function OpeningBalanceDialog({ contractId, items }: { contractId: number
           </button>
         </header>
         <form className="app-dialog__body opening-balance-dialog__body" onSubmit={submit}>
-          <div className="detail-items-table">
+          <StickyScroll className="detail-items-table" ariaLabel="รายการน้ำยาสำหรับบันทึกยอดยกมา เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
             <table className="data-table">
               <thead>
                 <tr>
@@ -123,7 +124,7 @@ export function OpeningBalanceDialog({ contractId, items }: { contractId: number
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyScroll>
           <label>
             วันที่มีผล
             <ThaiDateInput value={effectiveDate} onChange={setEffectiveDate} />
