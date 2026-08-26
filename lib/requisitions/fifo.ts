@@ -5,6 +5,8 @@ export interface FifoLot {
   receivedAt: string
   expiryDate: string | null
   balance: number
+  /** Inactive lots remain historical records but can never be issued. */
+  isActive?: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function rankLotsForFifo<T extends FifoLot>(lots: T[]): T[] {
 
 /** Expired or empty lots are never issuable. */
 export function isLotSelectable(lot: FifoLot, today: string): boolean {
+  if (lot.isActive === false) return false
   if (lot.balance <= 0) return false
   return classifyLotExpiry(lot.expiryDate, today) !== 'expired'
 }

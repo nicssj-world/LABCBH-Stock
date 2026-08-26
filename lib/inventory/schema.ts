@@ -47,6 +47,12 @@ export const setInventoryItemActiveInputSchema = z
   })
   .strict()
 
+export const setInventoryLotActiveInputSchema = z
+  .object({
+    isActive: z.boolean(),
+  })
+  .strict()
+
 export const minimumStockInputSchema = z
   .object({
     // Null clears the override and hands the item back to the suggested value.
@@ -105,5 +111,12 @@ export const inventoryFiltersSchema = z
     search: z.string().trim().max(200).optional(),
     department: z.string().trim().max(200).optional(),
     includeInactive: z.boolean().optional(),
+  })
+  .strict()
+
+export const inventoryExportFiltersSchema = z
+  .object({
+    department: z.string().trim().max(200).optional(),
+    onlyInStock: z.boolean().default(false),
   })
   .strict()

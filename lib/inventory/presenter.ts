@@ -12,6 +12,9 @@ export const STOCK_LEVEL_TONES: Record<StockLevel, 'danger' | 'attention' | 'suc
   healthy: 'success',
 }
 
+/** Inactive is distinct from stock level so it does not look like an empty item or lot. */
+export const INACTIVE_STATUS_TONE = 'neutral' as const
+
 export const LOT_EXPIRY_LABELS: Record<LotExpiryStatus, string> = {
   expired: 'หมดอายุแล้ว',
   near_expiry: 'ใกล้หมดอายุ',

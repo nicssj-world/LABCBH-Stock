@@ -18,6 +18,8 @@ import {
 } from './balance'
 import type {
   InventoryCatalogEntry,
+  InventoryExportFilters,
+  InventoryExportItemRecord,
   InventoryFilters,
   InventoryItemDetail,
   InventoryItemRecord,
@@ -65,6 +67,11 @@ const lotRowSchema = z.object({
   received_date: z.string(),
   original_quantity: numericSchema,
   storage_location: z.string().nullable(),
+  is_active: z.boolean(),
+})
+
+const exportLotRowSchema = lotRowSchema.extend({
+  inventory_item_id: z.string().uuid(),
 })
 
 const lotBalanceRowSchema = z.object({
@@ -93,6 +100,9 @@ const ITEM_SELECT = `
   is_active,
   note
 `
+
+export const INVENTORY_MOVEMENT_PREVIEW_SIZE = 5
+export const INVENTORY_MOVEMENT_PAGE_SIZE = 20
 
 /** Hospital operations run on Bangkok dates, not the server's locale. */
 export function bangkokToday(): string {
@@ -349,6 +359,82 @@ export async function listInventoryItems(
   )
 }
 
+/**
+ * Reads the complete, current catalogue shape needed by the stock report in
+ * three batch queries. The report deliberately keeps the item total and every
+ * lot balance together so a multi-lot item can be rendered as child rows
+ * without making one round trip per item.
+ */
+export async function listInventoryExportItems(
+  filters: InventoryExportFilters = { onlyInStock: false },
+): Promise<InventoryExportItemRecord[]> {
+  const supabase = await createClient()
+  let itemQuery = supabase.from('inventory_items').select(ITEM_SELECT).eq('is_active', true).order('ls_code')
+
+  if (filters.department) itemQuery = itemQuery.eq('responsible_department', filters.department)
+
+  const { data, error } = await itemQuery
+  if (error) throw new Error(`อ่านรายการคลังสำหรับรายงานไม่สำเร็จ: ${error.message}`)
+
+  const itemRows = itemRowSchema.array().parse(data ?? [])
+  if (itemRows.length === 0) return []
+
+  const itemIds = itemRows.map((row) => row.id)
+  const [balanceResult, lotResult, lotBalanceResult] = await Promise.all([
+    supabase
+      .from('inventory_item_balances')
+      .select('inventory_item_id, on_hand')
+      .in('inventory_item_id', itemIds),
+    supabase
+      .from('inventory_lots')
+      .select('inventory_item_id, id, lot_number, expiry_date, received_date, original_quantity, storage_location, is_active')
+      .in('inventory_item_id', itemIds),
+    supabase
+      .from('inventory_lot_balances')
+      .select('inventory_lot_id, balance')
+      .in('inventory_item_id', itemIds),
+  ])
+
+  if (balanceResult.error) throw new Error(`อ่านยอดคงเหลือสำหรับรายงานไม่สำเร็จ: ${balanceResult.error.message}`)
+  if (lotResult.error) throw new Error(`อ่านข้อมูลล็อตสำหรับรายงานไม่สำเร็จ: ${lotResult.error.message}`)
+  if (lotBalanceResult.error) throw new Error(`อ่านยอดคงเหลือรายล็อตสำหรับรายงานไม่สำเร็จ: ${lotBalanceResult.error.message}`)
+
+  const onHandByItem = new Map(
+    balanceRowSchema.array().parse(balanceResult.data ?? []).map((row) => [row.inventory_item_id, roundQuantity(row.on_hand)]),
+  )
+  const balanceByLot = new Map(
+    lotBalanceRowSchema.array().parse(lotBalanceResult.data ?? []).map((row) => [row.inventory_lot_id, roundQuantity(row.balance)]),
+  )
+  const lotsByItem = new Map<string, Array<InventoryExportItemRecord['lots'][number] & { receivedAt: string }>>()
+
+  for (const lot of exportLotRowSchema.array().parse(lotResult.data ?? [])) {
+    const itemLots = lotsByItem.get(lot.inventory_item_id) ?? []
+    itemLots.push({
+      id: lot.id,
+      lotNumber: lot.lot_number,
+      expiryDate: lot.expiry_date,
+      balance: balanceByLot.get(lot.id) ?? 0,
+      isActive: lot.is_active,
+      receivedAt: lot.received_date,
+    })
+    lotsByItem.set(lot.inventory_item_id, itemLots)
+  }
+
+  const items = itemRows.map((row) => ({
+    id: row.id,
+    lsCode: row.ls_code,
+    name: row.name,
+    baseUnit: row.base_unit,
+    responsibleDepartment: row.responsible_department,
+    onHand: onHandByItem.get(row.id) ?? 0,
+    lots: rankLotsForFifo(
+      lotsByItem.get(row.id) ?? [],
+    ).map(({ id, lotNumber, expiryDate, balance, isActive }) => ({ id, lotNumber, expiryDate, balance, isActive })),
+  }))
+
+  return filters.onlyInStock ? items.filter((item) => item.onHand > 0) : items
+}
+
 export async function listInventoryDepartments(): Promise<string[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -368,8 +454,18 @@ export async function listInventoryDepartments(): Promise<string[]> {
   return [...departments].sort((left, right) => left.localeCompare(right, 'th'))
 }
 
-export async function getInventoryItem(itemId: string): Promise<InventoryItemDetail | null> {
+export async function getInventoryItem(
+  itemId: string,
+  options: { movementPage?: number; movementPageSize?: number } = {},
+): Promise<InventoryItemDetail | null> {
   const supabase = await createClient()
+  const movementPageSize = options.movementPageSize === INVENTORY_MOVEMENT_PAGE_SIZE
+    ? INVENTORY_MOVEMENT_PAGE_SIZE
+    : INVENTORY_MOVEMENT_PREVIEW_SIZE
+  const requestedMovementPage = Number.isInteger(options.movementPage) && (options.movementPage ?? 0) > 0
+    ? options.movementPage!
+    : 1
+  const movementFrom = (requestedMovementPage - 1) * movementPageSize
   const { data, error } = await supabase
     .from('inventory_items')
     .select(ITEM_SELECT)
@@ -386,7 +482,7 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
     readBalancesAndIssues(supabase, [row.id]),
     supabase
       .from('inventory_lots')
-      .select('id, lot_number, expiry_date, received_date, original_quantity, storage_location')
+      .select('id, lot_number, expiry_date, received_date, original_quantity, storage_location, is_active')
       .eq('inventory_item_id', row.id),
     // Reads by item rather than by the lot ids the query above returns, which
     // is what lets it run here instead of waiting a further round trip for
@@ -395,11 +491,11 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
     readLotBalances(supabase, row.id),
     supabase
       .from('stock_movements')
-      .select('id, movement_type, quantity, occurred_on, note, created_at, inventory_lots (lot_number)')
+      .select('id, movement_type, quantity, occurred_on, note, created_at, inventory_lots (lot_number)', { count: 'exact' })
       .eq('inventory_item_id', row.id)
       .order('occurred_on', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(50),
+      .range(movementFrom, movementFrom + movementPageSize - 1),
     getInventoryMinimumStockMonths(),
   ])
 
@@ -422,11 +518,15 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
       originalQuantity: lot.original_quantity,
       storageLocation: lot.storage_location,
       balance: lotBalances.get(lot.id) ?? 0,
+      isActive: lot.is_active,
       expiryStatus: classifyLotExpiry(lot.expiry_date, today),
     })),
   )
 
   const { monthKeys, onHandByItem, issuesByItem } = balancesAndIssues
+  const movementTotalCount = movementResult.count ?? movementResult.data?.length ?? 0
+  const movementPageCount = Math.max(1, Math.ceil(movementTotalCount / movementPageSize))
+  const movementCurrentPage = Math.min(requestedMovementPage, movementPageCount)
 
   return {
     ...toItemRecord(
@@ -449,6 +549,13 @@ export async function getInventoryItem(itemId: string): Promise<InventoryItemDet
         note: movement.note,
         createdAt: movement.created_at,
       })),
+    movementPagination: {
+      currentPage: movementCurrentPage,
+      pageCount: movementPageCount,
+      totalCount: movementTotalCount,
+      pageSize: movementPageSize,
+      startIndex: (movementCurrentPage - 1) * movementPageSize,
+    },
   }
 }
 

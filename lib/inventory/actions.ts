@@ -5,11 +5,13 @@ import { z } from 'zod'
 import { hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { assertStockOperator } from '@/lib/inventory/authorization'
+import { getInventoryItem } from '@/lib/inventory/queries'
 import {
   createInventoryItemInputSchema,
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   setInventoryItemActiveInputSchema,
+  setInventoryLotActiveInputSchema,
   stockBalanceInputSchema,
   stockAdjustmentInputSchema,
   updateInventoryItemInputSchema,
@@ -18,10 +20,12 @@ import type {
   CreateInventoryItemInput,
   InventoryMinimumStockSettingsInput,
   MinimumStockInput,
+  SetInventoryLotActiveInput,
   SetInventoryItemActiveInput,
   StockBalanceInput,
   StockAdjustmentInput,
   UpdateInventoryItemInput,
+  InventoryItemSummary,
 } from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -112,6 +116,34 @@ export async function setInventoryItemActive(itemId: string, input: SetInventory
   return updated
 }
 
+export async function setInventoryLotActive(
+  lotId: string,
+  inventoryItemId: string,
+  input: SetInventoryLotActiveInput,
+) {
+  const actor = await requireStockOperator()
+  const parsedLotId = inventoryItemIdSchema.parse(lotId)
+  const parsedItemId = inventoryItemIdSchema.parse(inventoryItemId)
+  const parsed = setInventoryLotActiveInputSchema.parse(input)
+
+  const result = await supabaseAdmin.rpc('set_inventory_lot_active', {
+    p_inventory_lot_id: parsedLotId,
+    p_actor_id: actor.id,
+    p_is_active: parsed.isActive,
+  })
+
+  const updated = unwrapMutation(
+    parsed.isActive ? 'เปิดใช้งาน Lot' : 'ปิดใช้งาน Lot',
+    result,
+  )
+  revalidatePath('/inventory')
+  revalidatePath(`/inventory/${parsedItemId}`)
+  revalidatePath('/requisitions')
+  revalidatePath('/requisitions/[id]', 'page')
+  revalidatePath('/dashboard')
+  return updated
+}
+
 export async function setMinimumStock(itemId: string, input: MinimumStockInput) {
   const actor = await requireStockOperator()
   const parsedItemId = inventoryItemIdSchema.parse(itemId)
@@ -176,6 +208,29 @@ export async function recordStockAdjustment(itemId: string, input: StockAdjustme
   revalidatePath(`/inventory/${parsedItemId}`)
   revalidatePath('/dashboard')
   return movement
+}
+
+/** Read the compact catalogue summary on demand, without loading every lot into the list page. */
+export async function getInventoryItemSummary(itemId: string): Promise<InventoryItemSummary | null> {
+  await requireActor()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+  const item = await getInventoryItem(parsedItemId)
+  if (!item) return null
+
+  return {
+    id: item.id,
+    lsCode: item.lsCode,
+    name: item.name,
+    baseUnit: item.baseUnit,
+    responsibleDepartment: item.responsibleDepartment,
+    note: item.note,
+    defaultUnitPrice: item.defaultUnitPrice,
+    isActive: item.isActive,
+    onHand: item.onHand,
+    minimumStock: item.minimumStock,
+    stockLevel: item.stockLevel,
+    lots: item.lots,
+  }
 }
 
 /** Set a counted balance; the RPC derives the signed adjustment under lock. */

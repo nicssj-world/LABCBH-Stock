@@ -2,10 +2,12 @@ import type { z } from 'zod'
 import type { LotExpiryStatus, MovementType, StockLevel } from './balance'
 import type {
   createInventoryItemInputSchema,
+  inventoryExportFiltersSchema,
   inventoryFiltersSchema,
   inventoryMinimumStockSettingsInputSchema,
   minimumStockInputSchema,
   setInventoryItemActiveInputSchema,
+  setInventoryLotActiveInputSchema,
   stockBalanceInputSchema,
   stockAdjustmentInputSchema,
   updateInventoryItemInputSchema,
@@ -14,11 +16,13 @@ import type {
 export type CreateInventoryItemInput = z.infer<typeof createInventoryItemInputSchema>
 export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemInputSchema>
 export type SetInventoryItemActiveInput = z.infer<typeof setInventoryItemActiveInputSchema>
+export type SetInventoryLotActiveInput = z.infer<typeof setInventoryLotActiveInputSchema>
 export type MinimumStockInput = z.infer<typeof minimumStockInputSchema>
 export type InventoryMinimumStockSettingsInput = z.infer<typeof inventoryMinimumStockSettingsInputSchema>
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>
 export type StockBalanceInput = z.infer<typeof stockBalanceInputSchema>
 export type InventoryFilters = z.infer<typeof inventoryFiltersSchema>
+export type InventoryExportFilters = z.infer<typeof inventoryExportFiltersSchema>
 
 export interface InventoryLotRecord {
   id: string
@@ -30,6 +34,7 @@ export interface InventoryLotRecord {
   originalQuantity: number
   storageLocation: string | null
   balance: number
+  isActive: boolean
   expiryStatus: LotExpiryStatus
 }
 
@@ -41,6 +46,14 @@ export interface StockMovementRecord {
   lotNumber: string | null
   note: string | null
   createdAt: string
+}
+
+export interface InventoryMovementPagination {
+  currentPage: number
+  pageCount: number
+  totalCount: number
+  pageSize: number
+  startIndex: number
 }
 
 /**
@@ -84,4 +97,39 @@ export interface InventoryItemRecord {
 export interface InventoryItemDetail extends InventoryItemRecord {
   lots: InventoryLotRecord[]
   recentMovements: StockMovementRecord[]
+  movementPagination: InventoryMovementPagination
+}
+
+export type InventoryItemSummary = Pick<
+  InventoryItemDetail,
+  | 'id'
+  | 'lsCode'
+  | 'name'
+  | 'baseUnit'
+  | 'responsibleDepartment'
+  | 'note'
+  | 'defaultUnitPrice'
+  | 'isActive'
+  | 'onHand'
+  | 'minimumStock'
+  | 'stockLevel'
+  | 'lots'
+>
+
+export interface InventoryExportLotRecord {
+  id: string
+  lotNumber: string
+  expiryDate: string | null
+  balance: number
+  isActive: boolean
+}
+
+export interface InventoryExportItemRecord {
+  id: string
+  lsCode: string
+  name: string
+  baseUnit: string
+  responsibleDepartment: string | null
+  onHand: number
+  lots: InventoryExportLotRecord[]
 }

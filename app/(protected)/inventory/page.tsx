@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { InventoryExportDialog } from '@/components/inventory/InventoryExportDialog'
 import { InventoryMinimumStockSettings } from '@/components/inventory/InventoryMinimumStockSettings'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
@@ -117,14 +118,17 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           <Link className="lab-link-button lab-link-button--secondary" href={inactiveHref}>
             {includeInactive ? 'ซ่อนรายการที่ปิดใช้งาน' : 'แสดงรายการที่ปิดใช้งาน'}
           </Link>
-          {hasAppRole(actor, 'admin') && (
-            <InventoryMinimumStockSettings minimumStockMonths={minimumStockMonths} />
-          )}
-          {canOperateStock(actor) && (
-            <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
-              เพิ่มรายการน้ำยา
-            </Link>
-          )}
+          <div className="page-heading__actions inventory-heading__actions">
+            <InventoryExportDialog departments={departmentOptions} />
+            {hasAppRole(actor, 'admin') && (
+              <InventoryMinimumStockSettings minimumStockMonths={minimumStockMonths} />
+            )}
+            {canOperateStock(actor) && (
+              <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
+                เพิ่มรายการน้ำยา
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

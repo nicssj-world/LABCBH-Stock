@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
+import { InventoryItemSummaryDialog } from '@/components/inventory/InventoryItemSummaryDialog'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import {
+  INACTIVE_STATUS_TONE,
   STOCK_LEVEL_LABELS,
   STOCK_LEVEL_TONES,
   formatBaht,
@@ -45,7 +47,7 @@ export function InventoryTable({
             {items.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <strong>{item.name}</strong>
+                  <InventoryItemSummaryDialog item={item} />
                   <small className="identifier">{item.lsCode}</small>
                 </td>
                 <td>{item.responsibleDepartment ?? 'ไม่ระบุ'}</td>
@@ -55,10 +57,13 @@ export function InventoryTable({
                 </td>
                 <td className="numeric-cell identifier">{formatBaht(item.defaultUnitPrice)}</td>
                 <td>
-                  <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
-                    {STOCK_LEVEL_LABELS[item.stockLevel]}
-                  </StatusChip>
-                  {!item.isActive && <StatusChip tone="danger">ปิดใช้งาน</StatusChip>}
+                  {!item.isActive ? (
+                    <StatusChip tone={INACTIVE_STATUS_TONE}>ปิดใช้งาน</StatusChip>
+                  ) : (
+                    <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
+                      {STOCK_LEVEL_LABELS[item.stockLevel]}
+                    </StatusChip>
+                  )}
                 </td>
                 <td className="inventory-note-cell">{item.note ?? '—'}</td>
                 <td>
@@ -66,8 +71,8 @@ export function InventoryTable({
                     <Link
                       className="inventory-action-icon"
                       href={`/inventory/${item.id}`}
-                      aria-label={`ดูรายละเอียด ${item.name}`}
-                      title="ดูรายละเอียดน้ำยา"
+                      aria-label={`เปิดรายละเอียดเต็ม ${item.name}`}
+                      title="เปิดรายละเอียดน้ำยาเต็ม"
                     >
                       <DocumentOpenIcon />
                     </Link>
@@ -89,24 +94,27 @@ export function InventoryTable({
         {items.map((item) => (
           <li key={item.id}>
             <div className="task-card__topline">
-              <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
-                {STOCK_LEVEL_LABELS[item.stockLevel]}
-              </StatusChip>
+              {!item.isActive ? (
+                <StatusChip tone={INACTIVE_STATUS_TONE}>ปิดใช้งาน</StatusChip>
+              ) : (
+                <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
+                  {STOCK_LEVEL_LABELS[item.stockLevel]}
+                </StatusChip>
+              )}
               <span className="identifier">{item.lsCode}</span>
             </div>
-            <h3>{item.name}</h3>
+            <h3><InventoryItemSummaryDialog item={item} variant="card" /></h3>
             <p>
               คงเหลือ {formatQuantity(item.onHand, item.baseUnit)} · ขั้นต่ำ{' '}
               {formatQuantity(item.minimumStock, item.baseUnit)} · ราคาต่อหน่วย {formatBaht(item.defaultUnitPrice)}
             </p>
             <p className="inventory-note-cell"><strong>หมายเหตุ:</strong> {item.note ?? '—'}</p>
-            {!item.isActive && <p className="task-card__callout">ปิดใช้งาน</p>}
             <div className="inventory-actions task-card__action">
               <Link
                 className="inventory-action-icon"
                 href={`/inventory/${item.id}`}
-                aria-label={`ดูรายละเอียด ${item.name}`}
-                title="ดูรายละเอียดน้ำยา"
+                aria-label={`เปิดรายละเอียดเต็ม ${item.name}`}
+                title="เปิดรายละเอียดน้ำยาเต็ม"
               >
                 <DocumentOpenIcon />
               </Link>

@@ -1,14 +1,16 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
 import { LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
 import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
+import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import {
+  INACTIVE_STATUS_TONE,
   MOVEMENT_TYPE_LABELS,
   STOCK_LEVEL_LABELS,
   STOCK_LEVEL_TONES,
@@ -16,10 +18,18 @@ import {
   formatQuantity,
   formatThaiDate,
 } from '@/lib/inventory/presenter'
-import { completedMonthKeys, bangkokToday, getInventoryItem } from '@/lib/inventory/queries'
+import {
+  INVENTORY_MOVEMENT_PAGE_SIZE,
+  INVENTORY_MOVEMENT_PREVIEW_SIZE,
+  bangkokToday,
+  completedMonthKeys,
+  getInventoryItem,
+} from '@/lib/inventory/queries'
+import { parsePage } from '@/lib/pagination'
 
 interface InventoryDetailPageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -31,18 +41,30 @@ const monthLabel = (isoMonth: string) => {
   )
 }
 
-export default async function InventoryDetailPage({ params }: InventoryDetailPageProps) {
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+
+export default async function InventoryDetailPage({ params, searchParams }: InventoryDetailPageProps) {
   const { id } = await params
   if (!UUID_PATTERN.test(id)) notFound()
+
+  const query = await searchParams
+  const expandedLedger = first(query.ledger) === 'expanded'
+  const requestedLedgerPage = parsePage(first(query.ledgerPage))
 
   const actor = await requireActor()
   const canEdit = canOperateStock(actor)
 
-  const item = await getInventoryItem(id)
+  const item = await getInventoryItem(id, {
+    movementPage: expandedLedger ? requestedLedgerPage : 1,
+    movementPageSize: expandedLedger ? INVENTORY_MOVEMENT_PAGE_SIZE : INVENTORY_MOVEMENT_PREVIEW_SIZE,
+  })
   if (!item) notFound()
+  if (expandedLedger && item.movementPagination.currentPage !== requestedLedgerPage) {
+    redirect(`/inventory/${id}?ledger=expanded&ledgerPage=${item.movementPagination.currentPage}`)
+  }
 
   const monthKeys = completedMonthKeys(bangkokToday())
-  const usableLots = item.lots.filter((lot) => lot.expiryStatus !== 'expired' && lot.balance > 0)
+  const usableLots = item.lots.filter((lot) => lot.isActive && lot.expiryStatus !== 'expired' && lot.balance > 0)
 
   return (
     <div className="route-stack">
@@ -60,10 +82,13 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
           </div>
         </div>
         <div className="page-heading__cluster">
-          <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
-            {STOCK_LEVEL_LABELS[item.stockLevel]}
-          </StatusChip>
-          {!item.isActive && <StatusChip tone="danger">ปิดใช้งานแล้ว</StatusChip>}
+          {!item.isActive ? (
+            <StatusChip tone={INACTIVE_STATUS_TONE}>ปิดใช้งานแล้ว</StatusChip>
+          ) : (
+            <StatusChip tone={STOCK_LEVEL_TONES[item.stockLevel]}>
+              {STOCK_LEVEL_LABELS[item.stockLevel]}
+            </StatusChip>
+          )}
           {canEdit && (
             <>
               <StockAdjustmentDialog
@@ -142,9 +167,9 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             <p className="section-kicker">LOTS · FIFO ORDER</p>
             <h2 id="lot-title">ล็อตคงเหลือ</h2>
           </div>
-          <p>เรียงตามลำดับที่ควรเบิกก่อน</p>
+          <p>เรียงตามลำดับที่ควรเบิกก่อน · Lot ปิดใช้งานจะไม่ถูกนำไปเลือกจ่าย</p>
         </div>
-        <LotTable lots={item.lots} unit={item.baseUnit} />
+        <LotTable lots={item.lots} unit={item.baseUnit} inventoryItemId={item.id} canEdit={canEdit} />
       </section>
 
       <section className="bench-panel" aria-labelledby="issue-history-title">
@@ -171,7 +196,14 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
             <p className="section-kicker">LEDGER</p>
             <h2 id="movement-title">ความเคลื่อนไหวล่าสุด</h2>
           </div>
-          <p>บัญชีนี้แก้ไขย้อนหลังไม่ได้ ต้องบันทึกรายการกลับรายการแทน</p>
+          <div className="inventory-ledger__header-meta">
+            <p className="inventory-ledger__summary">
+              {expandedLedger
+                ? `แสดงครั้งละ ${item.movementPagination.pageSize} รายการ · ทั้งหมด ${item.movementPagination.totalCount} รายการ`
+                : `แสดง ${item.recentMovements.length} รายการล่าสุดจากทั้งหมด ${item.movementPagination.totalCount} รายการ`}
+            </p>
+            <small>บัญชีนี้แก้ไขย้อนหลังไม่ได้ ต้องบันทึกรายการกลับรายการแทน</small>
+          </div>
         </div>
         {item.recentMovements.length === 0 ? (
           <p className="empty-state">ยังไม่มีความเคลื่อนไหวของน้ำยารายการนี้</p>
@@ -202,6 +234,25 @@ export default async function InventoryDetailPage({ params }: InventoryDetailPag
               </tbody>
             </table>
           </StickyScroll>
+        )}
+        {!expandedLedger && item.movementPagination.totalCount > INVENTORY_MOVEMENT_PREVIEW_SIZE && (
+          <div className="inventory-ledger__load-more">
+            <p>มีความเคลื่อนไหวเก่ากว่านี้อีก {item.movementPagination.totalCount - item.recentMovements.length} รายการ</p>
+            <Link className="lab-link-button lab-link-button--secondary" href={`/inventory/${item.id}?ledger=expanded&ledgerPage=1`}>
+              โหลดเพิ่มเติม
+            </Link>
+          </div>
+        )}
+        {expandedLedger && (
+          <ListPagination
+            currentPage={item.movementPagination.currentPage}
+            pageCount={item.movementPagination.pageCount}
+            totalCount={item.movementPagination.totalCount}
+            startIndex={item.movementPagination.startIndex}
+            pageSize={item.movementPagination.pageSize}
+            itemLabel="รายการ"
+            buildHref={(page) => `/inventory/${item.id}?ledger=expanded&ledgerPage=${page}`}
+          />
         )}
       </section>
     </div>

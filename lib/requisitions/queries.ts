@@ -243,6 +243,7 @@ const lotRowSchema = z.object({
   expiry_date: z.string().nullable(),
   received_date: z.string(),
   storage_location: z.string().nullable(),
+  is_active: z.boolean(),
 })
 
 const lotBalanceRowSchema = z.object({
@@ -264,8 +265,9 @@ export async function listSelectableLots(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('inventory_lots')
-    .select('id, inventory_item_id, lot_number, expiry_date, received_date, storage_location')
+    .select('id, inventory_item_id, lot_number, expiry_date, received_date, storage_location, is_active')
     .in('inventory_item_id', inventoryItemIds)
+    .eq('is_active', true)
 
   if (error) throw new Error(`อ่านข้อมูลล็อตไม่สำเร็จ: ${error.message}`)
 
@@ -287,6 +289,7 @@ export async function listSelectableLots(
   for (const itemId of inventoryItemIds) {
     const itemLots = lots
       .filter((lot) => lot.inventory_item_id === itemId)
+      .filter((lot) => lot.is_active)
       .map((lot) => ({
         id: lot.id,
         lotNumber: lot.lot_number,
