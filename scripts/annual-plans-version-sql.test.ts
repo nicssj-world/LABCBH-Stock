@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 
 const sql = readFileSync('supabase/migrations/20260826110000_annual_plan_versions_and_pr_references.sql', 'utf8')
 const normalized = sql.toLowerCase()
+const referenceIdHotfixSql = readFileSync('supabase/migrations/20260826151619_fix_annual_plan_reference_id_ambiguity.sql', 'utf8')
+const normalizedReferenceIdHotfix = referenceIdHotfixSql.toLowerCase()
 
 assert.match(normalized, /create table public\.lab_stock_annual_plan_versions/)
 assert.match(normalized, /create table public\.lab_stock_annual_plan_rows/)
@@ -37,5 +39,10 @@ assert.match(normalized, /deferrable initially deferred/)
 assert.match(normalized, /enable row level security/)
 assert.match(normalized, /revoke all on table public\.lab_stock_annual_plan_versions from anon, authenticated/)
 assert.doesNotMatch(normalized, /created_at\s*>=\s*timestamptz\s*'2026-/)
+assert.match(normalizedReferenceIdHotfix, /create or replace function public\.apply_purchase_request_annual_plan_reference/)
+assert.match(normalizedReferenceIdHotfix, /v_reference_id uuid/)
+assert.match(normalizedReferenceIdHotfix, /returning id into v_reference_id/)
+assert.match(normalizedReferenceIdHotfix, /where reference_line\.reference_id = v_reference_id/)
+assert.doesNotMatch(normalizedReferenceIdHotfix, /where reference_line\.reference_id = reference_id/)
 
 console.log('annual plan version and PR-reference SQL contract: ok')
