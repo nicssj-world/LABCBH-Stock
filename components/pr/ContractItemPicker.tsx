@@ -208,9 +208,8 @@ export function ContractItemPicker({
           </p>
           <div className="item-picker__manual-fields">
             <label>
-              <span>{itemCodeLabel} <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemCodeLabel}</span>
               <input
-                required
                 value={manualItem.lsCode}
                 onChange={(event) => setManualItem((current) => ({ ...current, lsCode: event.target.value }))}
                 placeholder="เช่น LS046022"
@@ -218,9 +217,8 @@ export function ContractItemPicker({
               />
             </label>
             <label>
-              <span>{itemNameLabel} <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemNameLabel}</span>
               <input
-                required
                 value={manualItem.name}
                 onChange={(event) => setManualItem((current) => ({ ...current, name: event.target.value }))}
                 placeholder="ชื่อรายการน้ำยา"
@@ -228,9 +226,8 @@ export function ContractItemPicker({
               />
             </label>
             <label>
-              <span>{itemUnitLabel} <span className="field-required" aria-hidden="true">*</span></span>
+              <span>{itemUnitLabel}</span>
               <input
-                required
                 value={manualItem.unit}
                 onChange={(event) => setManualItem((current) => ({ ...current, unit: event.target.value }))}
                 placeholder="เช่น ขวด"

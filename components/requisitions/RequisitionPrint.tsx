@@ -94,6 +94,7 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
           // The receiving head's block already has a digital signature —
           // print what was actually captured instead of a blank line to sign.
           const isReceiverBlock = block.role === 'หัวหน้าหน่วยงานผู้รับ'
+          const isIssuerBlock = block.role === 'ผู้จ่ายของ'
           if (isReceiverBlock && requisition.signature) {
             return (
               <div key={block.role}>
@@ -102,6 +103,19 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
                 <p className="print-signature__role">({requisition.receivedByName})</p>
                 <p className="print-signature__hint">{block.hint}</p>
                 <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.signedAt?.slice(0, 10) ?? null)}</p>
+              </div>
+            )
+          }
+
+          // The stock officer is identified by the fulfilment snapshot rather
+          // than signing the printed form by hand. The same fulfilment date is
+          // also shown here so the issuer block remains self-contained.
+          if (isIssuerBlock && requisition.fulfilledByName) {
+            return (
+              <div key={block.role}>
+                <p className="print-signature__role">({requisition.fulfilledByName})</p>
+                <p className="print-signature__hint">{block.hint}</p>
+                <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.fulfilledAt?.slice(0, 10) ?? null)}</p>
               </div>
             )
           }

@@ -30,7 +30,7 @@ export function formatDocumentDate(isoDate: string | null): string {
   return toThaiPrintDate(isoDate)
 }
 
-/** A signature line the issuer and the receiving head sign by hand. */
+/** Printed identity blocks for the stock issuer and receiving head. */
 export const SIGNATURE_BLOCKS = [
   { role: 'ผู้จ่ายของ', hint: 'เจ้าหน้าที่คลัง' },
   { role: 'หัวหน้าหน่วยงานผู้รับ', hint: 'ผู้รับของ' },

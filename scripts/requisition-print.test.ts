@@ -30,6 +30,11 @@ assert.match(printComponent, /วันที่จ่าย/)
 assert.match(printComponent, /SIGNATURE_BLOCKS/)
 assert.match(printComponent, /ลงชื่อ/)
 
+// The issuer is identified from the fulfilment audit snapshot, not asked to
+// sign the printed form by hand. The fulfilment date is repeated in that block.
+assert.match(printComponent, /requisition\.fulfilledByName/)
+assert.match(printComponent, /requisition\.fulfilledAt\?\.slice\(0, 10\)/)
+
 // The receiver's block prints the digitally captured signature once it
 // exists, instead of a blank line the recipient has already signed on-screen.
 assert.match(printComponent, /requisition\.signature/, 'the print view must check for a captured digital signature')

@@ -66,6 +66,10 @@ assert.match(picker, /รหัสน้ำยา \(LS\)/)
 assert.match(picker, /ชื่อน้ำยา/)
 assert.match(picker, /ระบบจะสร้างรายการน้ำยาในคงคลังให้อัตโนมัติ/)
 
+const manualPicker = picker.match(/<fieldset className="item-picker__manual">[\s\S]*?<\/fieldset>/)?.[0]
+assert.ok(manualPicker, 'the manual catalogue section must remain present')
+assert.doesNotMatch(manualPicker, /field-required|\brequired\b/, 'the optional manual catalogue section must not block PR submission')
+
 // A follow-up migration closed three gaps left by the one above — see its own
 // header comment for the full reasoning. Asserted separately, by its own
 // distinct suffix, so it stays covered even though it doesn't share the

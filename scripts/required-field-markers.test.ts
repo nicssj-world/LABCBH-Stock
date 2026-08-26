@@ -9,7 +9,6 @@ const expectations: Array<{ path: string; minimumMarkers: number }> = [
   { path: 'components/service-procurement/ServicePlanForm.tsx', minimumMarkers: 5 },
   { path: 'components/pr/PurchaseRequestForm.tsx', minimumMarkers: 5 },
   { path: 'components/pr/PurchaseMethodFields.tsx', minimumMarkers: 11 },
-  { path: 'components/pr/ContractItemPicker.tsx', minimumMarkers: 3 },
   { path: 'components/receipts/ReceiptForm.tsx', minimumMarkers: 3 },
   { path: 'components/receipts/ReceiptLinesEditor.tsx', minimumMarkers: 2 },
   { path: 'components/requisitions/RequisitionForm.tsx', minimumMarkers: 4 },
