@@ -10,6 +10,7 @@ import {
   formatBaht,
   formatQuantity,
   formatThaiDate,
+  formatThaiDateTime,
 } from '@/lib/inventory/presenter'
 import type { InventoryItemRecord, InventoryItemSummary } from '@/lib/inventory/types'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
@@ -134,6 +135,15 @@ export function InventoryItemSummaryDialog({ item, variant = 'table' }: Inventor
                   <div className="list-summary-dialog__fact--wide inventory-summary-dialog__fact--balance">
                     <dt>คงเหลือรวม</dt>
                     <dd className="identifier">{formatQuantity(summary.onHand, summary.baseUnit)}</dd>
+                  </div>
+                  <div className="list-summary-dialog__fact--wide inventory-summary-dialog__fact--check">
+                    <dt>ตรวจนับสต๊อกล่าสุด</dt>
+                    <dd className="identifier">
+                      {summary.lastStockCheckedAt ? formatThaiDateTime(summary.lastStockCheckedAt) : 'ยังไม่เคยตรวจ'}
+                    </dd>
+                    <small>
+                      {summary.isStockCheckedThisWeek ? 'ตรวจแล้วในสัปดาห์นี้' : 'ยังไม่ได้ตรวจสัปดาห์นี้'}
+                    </small>
                   </div>
                   <div>
                     <dt>ขั้นต่ำ</dt>

@@ -1,12 +1,12 @@
 'use client'
 
-import { useRef, useState, useTransition, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
-import { setStockBalance } from '@/lib/inventory/actions'
+import { getInventoryItemSummary, setStockBalance } from '@/lib/inventory/actions'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import type { InventoryLotRecord } from '@/lib/inventory/types'
 
@@ -15,6 +15,11 @@ interface StockAdjustmentDialogProps {
   itemName: string
   unit: string
   lots: InventoryLotRecord[]
+  defaultReason?: string
+  loadLotsOnOpen?: boolean
+  autoOpen?: boolean
+  showTrigger?: boolean
+  onClosed?: () => void
 }
 
 const NEW_LOT = '__new_lot__' as const
@@ -26,9 +31,20 @@ function signedQuantity(value: number, unit: string) {
 }
 
 /** Set the physical count for one lot while keeping the ledger append-only. */
-export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdjustmentDialogProps) {
+export function StockAdjustmentDialog({
+  itemId,
+  itemName,
+  unit,
+  lots,
+  defaultReason,
+  loadLotsOnOpen = false,
+  autoOpen = false,
+  showTrigger = true,
+  onClosed,
+}: StockAdjustmentDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const router = useRouter()
+  const [availableLots, setAvailableLots] = useState<InventoryLotRecord[]>(lots)
   const [selectedLot, setSelectedLot] = useState<LotSelection>(lots[0]?.id ?? NEW_LOT)
   const [lotNumber, setLotNumber] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
@@ -36,12 +52,14 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
   const [occurredOn, setOccurredOn] = useState(bangkokIsoDate())
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isLoadingLots, setIsLoadingLots] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const isNewLot = selectedLot === NEW_LOT
-  const selectedLotRecord = isNewLot ? undefined : lots.find((lot) => lot.id === selectedLot)
+  const selectedLotRecord = isNewLot ? undefined : availableLots.find((lot) => lot.id === selectedLot)
   const matchingLotRecord = isNewLot
-    ? lots.find((lot) => lot.lotNumber.trim().toLocaleUpperCase() === lotNumber.trim().toLocaleUpperCase())
+    ? availableLots.find((lot) => lot.lotNumber.trim().toLocaleUpperCase() === lotNumber.trim().toLocaleUpperCase())
     : selectedLotRecord
   const currentBalance = matchingLotRecord?.balance ?? 0
   const parsedTarget = Number(targetQuantity)
@@ -57,19 +75,53 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
     (!isNewLot || Boolean(matchingLotRecord) || parsedTarget > 0) &&
     delta !== 0 &&
     Boolean(reason.trim()) &&
-    Boolean(occurredOn)
+    Boolean(occurredOn) &&
+    !isLoadingLots &&
+    !loadError
 
-  const openDialog = () => {
-    const firstLot = lots[0]
+  const loadLots = useCallback(async () => {
+    setIsLoadingLots(true)
+    setLoadError(null)
+
+    try {
+      const summary = await getInventoryItemSummary(itemId)
+      if (!summary) throw new Error('ไม่พบรายการน้ำยานี้ในคลัง')
+
+      const nextLots = summary.lots
+      const firstLot = nextLots[0]
+      setAvailableLots(nextLots)
+      setSelectedLot(firstLot?.id ?? NEW_LOT)
+      setLotNumber(firstLot?.lotNumber ?? '')
+      setExpiryDate(firstLot?.expiryDate ?? '')
+      setTargetQuantity(firstLot ? String(roundQuantity(firstLot.balance)) : '')
+      setReason(defaultReason ?? '')
+    } catch (caught) {
+      setLoadError(caught instanceof Error ? caught.message : 'โหลดข้อมูลล็อตไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setIsLoadingLots(false)
+    }
+  }, [defaultReason, itemId])
+
+  const openDialog = useCallback(() => {
+    const initialLots = loadLotsOnOpen ? [] : lots
+    const firstLot = initialLots[0]
+    setAvailableLots(initialLots)
     setSelectedLot(firstLot?.id ?? NEW_LOT)
     setLotNumber(firstLot?.lotNumber ?? '')
     setExpiryDate(firstLot?.expiryDate ?? '')
     setTargetQuantity(firstLot ? String(roundQuantity(firstLot.balance)) : '')
     setOccurredOn(bangkokIsoDate())
-    setReason('')
+    setReason(defaultReason ?? '')
     setError(null)
+    setLoadError(null)
+    setIsLoadingLots(loadLotsOnOpen)
     dialogRef.current?.showModal()
-  }
+    if (loadLotsOnOpen) void loadLots()
+  }, [defaultReason, loadLots, loadLotsOnOpen, lots])
+
+  useEffect(() => {
+    if (autoOpen && !dialogRef.current?.open) openDialog()
+  }, [autoOpen, openDialog])
 
   const closeDialog = () => {
     if (!isPending) dialogRef.current?.close()
@@ -85,7 +137,7 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
       return
     }
 
-    const nextLot = lots.find((lot) => lot.id === selection)
+    const nextLot = availableLots.find((lot) => lot.id === selection)
     setSelectedLot(selection)
     setLotNumber(nextLot?.lotNumber ?? '')
     setExpiryDate(nextLot?.expiryDate ?? '')
@@ -122,9 +174,11 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
 
   return (
     <>
-      <Button variant="secondary" onClick={openDialog} aria-haspopup="dialog">
-        ปรับยอดคงคลัง
-      </Button>
+      {showTrigger && (
+        <Button variant="secondary" onClick={openDialog} aria-haspopup="dialog">
+          ปรับยอดคงคลัง
+        </Button>
+      )}
 
       <dialog
         ref={dialogRef}
@@ -133,6 +187,7 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
         aria-describedby="stock-adjustment-dialog-description"
         onCancel={(event) => { event.preventDefault(); closeDialog() }}
         onClick={(event) => { if (event.target === event.currentTarget) closeDialog() }}
+        onClose={() => onClosed?.()}
       >
         <header className="app-dialog__header">
           <div>
@@ -150,113 +205,137 @@ export function StockAdjustmentDialog({ itemId, itemName, unit, lots }: StockAdj
         </header>
 
         <form className="app-dialog__body stock-adjustment-dialog__body" onSubmit={submit}>
-          {lots.length > 0 && (
-            <label className="field-row">
-              เลือกล็อตที่ต้องการปรับ
-              <select value={selectedLot} onChange={(event) => changeLot(event.target.value)} disabled={isPending}>
-                {lots.map((lot) => (
-                  <option key={lot.id} value={lot.id}>
-                    ล็อต {lot.lotNumber} · หมดอายุ {formatThaiDate(lot.expiryDate)}
-                  </option>
-                ))}
-                <option value={NEW_LOT}>＋ เพิ่มล็อตใหม่</option>
-              </select>
-              <small>หากเป็นล็อตเดิมให้เลือกจากรายการ หากยังไม่มีล็อตให้เพิ่มล็อตใหม่</small>
-            </label>
+          {isLoadingLots && (
+            <div className="stock-adjustment-dialog__loading" role="status" aria-live="polite">
+              <span className="inventory-summary-dialog__loading-line inventory-summary-dialog__loading-line--wide" aria-hidden="true" />
+              <p>กำลังโหลดข้อมูลล็อตและยอดคงเหลือ…</p>
+            </div>
           )}
 
-          {isNewLot && (
-            <p className="inline-alert inline-alert--info">
-              ล็อตนี้ยังไม่มีในระบบ ระบบจะสร้างล็อตพร้อมยอดตั้งต้นจากยอดที่ตรวจนับใน transaction เดียวกัน
-            </p>
+          {!isLoadingLots && loadError && (
+            <div className="stock-adjustment-dialog__load-error" role="alert">
+              <p>{loadError}</p>
+              <Button variant="secondary" onClick={() => void loadLots()}>ลองใหม่</Button>
+            </div>
           )}
 
-          <div className="stock-adjustment-dialog__facts" aria-live="polite">
-            <div>
-              <span>ล็อตที่ปรับ</span>
-              <strong>{(matchingLotRecord?.lotNumber ?? lotNumber) || 'รอระบุเลขล็อต'}</strong>
+          {!isLoadingLots && !loadError && (
+            <>
+              {availableLots.length > 0 && (
+                <label className="field-row">
+                  เลือกล็อตที่ต้องการปรับ
+                  <select value={selectedLot} onChange={(event) => changeLot(event.target.value)} disabled={isPending}>
+                    {availableLots.map((lot) => (
+                      <option key={lot.id} value={lot.id}>
+                        ล็อต {lot.lotNumber} · หมดอายุ {formatThaiDate(lot.expiryDate)}
+                      </option>
+                    ))}
+                    <option value={NEW_LOT}>＋ เพิ่มล็อตใหม่</option>
+                  </select>
+                  <small>หากเป็นล็อตเดิมให้เลือกจากรายการ หากยังไม่มีล็อตให้เพิ่มล็อตใหม่</small>
+                </label>
+              )}
+
+              {isNewLot && (
+                <p className="inline-alert inline-alert--info">
+                  ล็อตนี้ยังไม่มีในระบบ ระบบจะสร้างล็อตพร้อมยอดตั้งต้นจากยอดที่ตรวจนับใน transaction เดียวกัน
+                </p>
+              )}
+
+              <div className="stock-adjustment-dialog__facts" aria-live="polite">
+                <div>
+                  <span>ล็อตที่ปรับ</span>
+                  <strong>{(matchingLotRecord?.lotNumber ?? lotNumber) || 'รอระบุเลขล็อต'}</strong>
+                </div>
+                <div>
+                  <span>ยอดตามบัญชีของล็อต</span>
+                  <strong>{formatQuantity(currentBalance, unit)}</strong>
+                </div>
+                <div>
+                  <span>ส่วนต่างที่จะบันทึก</span>
+                  <strong className={delta < 0 ? 'stock-adjustment-dialog__delta--decrease' : 'stock-adjustment-dialog__delta--increase'}>
+                    {signedQuantity(delta, unit)}
+                  </strong>
+                </div>
+              </div>
+
+              <label className="field-row">
+                เลขล็อต
+                <input
+                  type="text"
+                  required
+                  maxLength={200}
+                  value={lotNumber}
+                  onChange={(event) => setLotNumber(event.target.value)}
+                  readOnly={!isNewLot}
+                  disabled={isPending}
+                />
+              </label>
+
+              <label className="field-row">
+                วันหมดอายุ (Expired)
+                <ThaiDateInput
+                  value={expiryDate}
+                  onChange={setExpiryDate}
+                  required
+                  disabled={isPending || (!isNewLot && Boolean(selectedLotRecord?.expiryDate))}
+                />
+                {!isNewLot && !selectedLotRecord?.expiryDate && (
+                  <small>ล็อตนี้ยังไม่มีวันหมดอายุ กรุณาระบุให้ครบก่อนบันทึก</small>
+                )}
+              </label>
+
+              <label className="field-row">
+                ยอดที่ตรวจนับได้จริง ({unit})
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.001"
+                  required
+                  value={targetQuantity}
+                  onChange={(event) => setTargetQuantity(event.target.value)}
+                  disabled={isPending}
+                  autoFocus
+                />
+                <small>{isNewLot ? 'ล็อตใหม่ต้องมียอดมากกว่า 0' : 'ใส่ 0 ได้ หากตรวจนับแล้วไม่เหลือในล็อตนี้'}</small>
+              </label>
+
+              <label className="field-row">
+                วันที่ตรวจนับ/มีผล
+                <ThaiDateInput value={occurredOn} onChange={setOccurredOn} required disabled={isPending} />
+              </label>
+
+              <label className="field-row">
+                เหตุผลในการปรับยอด
+                <textarea
+                  required
+                  minLength={1}
+                  maxLength={1000}
+                  rows={3}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  disabled={isPending}
+                  placeholder="เช่น ตรวจนับประจำเดือน พบยอดไม่ตรงกับบัญชี"
+                />
+              </label>
+
+              {error && <p className="form-error" role="alert">{error}</p>}
+
+              <div className="dialog-actions">
+                <Button variant="secondary" onClick={closeDialog} disabled={isPending}>ยกเลิก</Button>
+                <Button type="submit" disabled={isPending || !canSubmit}>
+                  {isPending ? 'กำลังบันทึก…' : 'ยืนยันการปรับยอด'}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {!isLoadingLots && loadError && (
+            <div className="dialog-actions">
+              <Button variant="secondary" onClick={closeDialog}>ยกเลิก</Button>
             </div>
-            <div>
-              <span>ยอดตามบัญชีของล็อต</span>
-              <strong>{formatQuantity(currentBalance, unit)}</strong>
-            </div>
-            <div>
-              <span>ส่วนต่างที่จะบันทึก</span>
-              <strong className={delta < 0 ? 'stock-adjustment-dialog__delta--decrease' : 'stock-adjustment-dialog__delta--increase'}>
-                {signedQuantity(delta, unit)}
-              </strong>
-            </div>
-          </div>
-
-          <label className="field-row">
-            เลขล็อต
-            <input
-              type="text"
-              required
-              maxLength={200}
-              value={lotNumber}
-              onChange={(event) => setLotNumber(event.target.value)}
-              readOnly={!isNewLot}
-              disabled={isPending}
-            />
-          </label>
-
-          <label className="field-row">
-            วันหมดอายุ (Expired)
-            <ThaiDateInput
-              value={expiryDate}
-              onChange={setExpiryDate}
-              required
-              disabled={isPending || (!isNewLot && Boolean(selectedLotRecord?.expiryDate))}
-            />
-            {!isNewLot && !selectedLotRecord?.expiryDate && (
-              <small>ล็อตนี้ยังไม่มีวันหมดอายุ กรุณาระบุให้ครบก่อนบันทึก</small>
-            )}
-          </label>
-
-          <label className="field-row">
-            ยอดที่ตรวจนับได้จริง ({unit})
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.001"
-              required
-              value={targetQuantity}
-              onChange={(event) => setTargetQuantity(event.target.value)}
-              disabled={isPending}
-              autoFocus
-            />
-            <small>{isNewLot ? 'ล็อตใหม่ต้องมียอดมากกว่า 0' : 'ใส่ 0 ได้ หากตรวจนับแล้วไม่เหลือในล็อตนี้'}</small>
-          </label>
-
-          <label className="field-row">
-            วันที่ตรวจนับ/มีผล
-            <ThaiDateInput value={occurredOn} onChange={setOccurredOn} required disabled={isPending} />
-          </label>
-
-          <label className="field-row">
-            เหตุผลในการปรับยอด
-            <textarea
-              required
-              minLength={1}
-              maxLength={1000}
-              rows={3}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              disabled={isPending}
-              placeholder="เช่น ตรวจนับประจำเดือน พบยอดไม่ตรงกับบัญชี"
-            />
-          </label>
-
-          {error && <p className="form-error" role="alert">{error}</p>}
-
-          <div className="dialog-actions">
-            <Button variant="secondary" onClick={closeDialog} disabled={isPending}>ยกเลิก</Button>
-            <Button type="submit" disabled={isPending || !canSubmit}>
-              {isPending ? 'กำลังบันทึก…' : 'ยืนยันการปรับยอด'}
-            </Button>
-          </div>
+          )}
         </form>
       </dialog>
     </>

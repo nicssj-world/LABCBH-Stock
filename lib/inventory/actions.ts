@@ -26,6 +26,7 @@ import type {
   StockAdjustmentInput,
   UpdateInventoryItemInput,
   InventoryItemSummary,
+  InventoryStockCheckResult,
 } from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -210,6 +211,36 @@ export async function recordStockAdjustment(itemId: string, input: StockAdjustme
   return movement
 }
 
+export async function recordInventoryStockCheck(itemId: string): Promise<InventoryStockCheckResult> {
+  const actor = await requireStockOperator()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+
+  const result = await supabaseAdmin.rpc('record_inventory_stock_check', {
+    p_inventory_item_id: parsedItemId,
+    p_actor_id: actor.id,
+  })
+
+  if (result.error) throw new Error(`บันทึกการตรวจนับไม่สำเร็จ: ${result.error.message}`)
+
+  const check = z
+    .object({
+      id: z.string().uuid(),
+      checked_at: z.string(),
+      week_start: z.string(),
+    })
+    .parse(result.data)
+
+  revalidatePath('/inventory')
+  revalidatePath('/inventory/checklist')
+  revalidatePath(`/inventory/${parsedItemId}`)
+
+  return {
+    id: check.id,
+    checkedAt: check.checked_at,
+    weekStart: check.week_start,
+  }
+}
+
 /** Read the compact catalogue summary on demand, without loading every lot into the list page. */
 export async function getInventoryItemSummary(itemId: string): Promise<InventoryItemSummary | null> {
   await requireActor()
@@ -229,6 +260,8 @@ export async function getInventoryItemSummary(itemId: string): Promise<Inventory
     onHand: item.onHand,
     minimumStock: item.minimumStock,
     stockLevel: item.stockLevel,
+    lastStockCheckedAt: item.lastStockCheckedAt,
+    isStockCheckedThisWeek: item.isStockCheckedThisWeek,
     lots: item.lots,
   }
 }

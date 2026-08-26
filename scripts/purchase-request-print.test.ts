@@ -54,6 +54,21 @@ const printCss = read('app/globals.css')
 assert.match(printCss, /@page\s*\{[^}]*size:\s*A4/i)
 assert.match(printCss, /@media print/i)
 assert.match(printCss, /\.pr-print-reference/)
+assert.match(
+  printCss,
+  /\.pr-print-reference dl\s*\{[^}]*grid-template-columns:\s*repeat\(2/i,
+  'all PR reference facts need enough width for their Thai labels',
+)
+assert.match(
+  printCss,
+  /\.pr-print-reference dt\s*\{[^}]*white-space:\s*nowrap/i,
+  'every PR reference label must stay on one line',
+)
+assert.match(
+  printCss,
+  /\.pr-print-reference dl > div\s*\{[^}]*grid-template-columns:\s*max-content\s+minmax\(0,\s*1fr\)/i,
+  'reference facts must reserve label width and let values flex',
+)
 assert.match(printCss, /\.pr-print-reference--annual-plan dl\s*\{[^}]*grid-template-columns:\s*repeat\(2/i)
 assert.match(printCss, /\.pr-print-reference--annual-plan dt\s*\{[^}]*white-space:\s*nowrap/i)
 assert.match(printCss, /\.pr-print-reference--annual-plan dd\s*\{[^}]*white-space:\s*nowrap/i)

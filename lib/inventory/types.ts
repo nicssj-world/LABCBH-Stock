@@ -92,6 +92,10 @@ export interface InventoryItemRecord {
   /** True while a draft or pending purchase request already covers this item. */
   hasOpenRequest: boolean
   monthlyIssues: number[]
+  /** The latest physical stock-check stamp, retained across weekly resets. */
+  lastStockCheckedAt: string | null
+  /** Whether the latest stamp belongs to the current Bangkok business week. */
+  isStockCheckedThisWeek: boolean
 }
 
 export interface InventoryItemDetail extends InventoryItemRecord {
@@ -113,8 +117,16 @@ export type InventoryItemSummary = Pick<
   | 'onHand'
   | 'minimumStock'
   | 'stockLevel'
+  | 'lastStockCheckedAt'
+  | 'isStockCheckedThisWeek'
   | 'lots'
 >
+
+export interface InventoryStockCheckResult {
+  id: string
+  checkedAt: string
+  weekStart: string
+}
 
 export interface InventoryExportLotRecord {
   id: string

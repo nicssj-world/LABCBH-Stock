@@ -4075,14 +4075,21 @@ input[type="number"] {
 
 .pr-print-reference dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px 18px;
   margin: 0;
 }
 
-.pr-print-reference dl > div { display: flex; gap: 6px; min-width: 0; }
-.pr-print-reference dt { font-weight: 700; }
-.pr-print-reference dd { margin: 0; overflow-wrap: anywhere; }
+/* Keep every label intact; the value is the flexible part of the fact pair. */
+.pr-print-reference dl > div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.pr-print-reference dt { font-weight: 700; white-space: nowrap; }
+.pr-print-reference dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 
 .pr-print-reference--annual-plan dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .pr-print-reference--annual-plan dt { flex-shrink: 0; white-space: nowrap; }
@@ -4109,8 +4116,9 @@ input[type="number"] {
 .pr-print-table__empty { padding: 14px !important; text-align: center !important; }
 
 @media (max-width: 540px) {
+  .pr-print-reference dl { grid-template-columns: 1fr; }
   .pr-print-reference--annual-plan dl { grid-template-columns: 1fr; }
-  .pr-print-reference--annual-plan dt,
+  .pr-print-reference--annual-plan dt { white-space: nowrap; }
   .pr-print-reference--annual-plan dd { white-space: normal; }
 }
 
@@ -4571,7 +4579,7 @@ body {
 .annual-plan-reference-detail__header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .annual-plan-reference-detail__header h2 { margin: 4px 0 0; color: var(--lab-navy-strong); font-size: 18px; }
 .annual-plan-reference-detail__header p:not(.section-kicker) { margin: 6px 0 0; color: var(--lab-muted); font-size: 13px; line-height: 1.45; }
-.annual-plan-reference-detail__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.annual-plan-reference-detail__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
 .annual-plan-reference-detail__facts > div { min-width: 0; padding: 12px 14px; background: var(--lab-surface-muted); border-radius: 9px; }
 .annual-plan-reference-detail__facts dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
 .annual-plan-reference-detail__facts dd { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--lab-ink); font-size: 13px; line-height: 1.45; }
@@ -5576,4 +5584,177 @@ body {
   .service-pr-form__body { padding-inline: 16px; }
   .service-lines { padding-inline: 16px; }
   .item-picker-search--service .item-picker__manual-fields { grid-template-columns: 1fr; }
+}
+
+/* Weekly stock checklist: compact on the bench, touch-safe on small screens. */
+.inventory-checklist-heading .back-link { display: inline-flex; margin-bottom: 8px; }
+.inventory-checklist-trigger { gap: 8px; }
+.inventory-checklist-trigger__count {
+  display: inline-grid;
+  min-width: 24px;
+  min-height: 22px;
+  place-items: center;
+  padding-inline: 5px;
+  color: var(--lab-primary);
+  background: var(--lab-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-primary) 22%, var(--lab-border));
+  border-radius: 999px;
+  font: 600 11px/1 var(--font-mono);
+}
+.inventory-checklist-panel { overflow: hidden; }
+.inventory-checklist__progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  margin: 0 22px 12px;
+  padding: 11px 13px;
+  color: var(--lab-muted);
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+}
+.inventory-checklist__progress strong {
+  color: var(--lab-navy-strong);
+  font: 700 15px/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.inventory-checklist-table--desktop {
+  margin: 0 22px 20px;
+  overflow-x: auto;
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+.inventory-checklist-table--desktop .data-table { min-width: 820px; }
+.inventory-checklist-table--desktop .data-table th,
+.inventory-checklist-table--desktop .data-table td { padding-block: 12px; }
+.inventory-checklist__identity { display: grid; gap: 3px; min-width: 180px; }
+.inventory-checklist__name {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 7px 0;
+  overflow-wrap: anywhere;
+  color: var(--lab-primary);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.inventory-checklist__name:hover { color: var(--lab-primary-strong); text-decoration: underline; text-underline-offset: 3px; }
+.inventory-checklist__name:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: 2px; }
+.inventory-checklist__code { color: var(--lab-teal); font-size: 11px; }
+.inventory-checklist__department { color: var(--lab-muted); font-size: 10px; line-height: 1.35; }
+.inventory-checklist__balance { color: var(--lab-navy-strong); font-weight: 600; white-space: nowrap; }
+.inventory-checklist__latest {
+  display: block;
+  min-width: 155px;
+  color: var(--lab-ink);
+  font: 500 12px/1.45 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+}
+.inventory-checklist__latest--empty { color: var(--lab-muted); font-family: var(--font-sans); font-size: 11px; }
+.inventory-checklist__status { display: grid; gap: 5px; min-width: 178px; }
+.inventory-checklist__status-copy { color: var(--lab-amber); font-size: 11px; font-weight: 700; line-height: 1.35; }
+.inventory-checklist__status-copy.is-complete { color: var(--lab-green); }
+.inventory-checklist__check-control { display: grid; justify-items: start; gap: 4px; min-width: 178px; }
+.inventory-checklist__check-button {
+  gap: 7px;
+  width: fit-content;
+  min-width: 138px;
+  padding-inline: 12px;
+  color: var(--lab-primary);
+  background: var(--lab-primary-soft);
+  border-color: color-mix(in srgb, var(--lab-primary) 28%, var(--lab-border));
+}
+.inventory-checklist__check-button:hover:not(:disabled) {
+  color: var(--lab-primary-strong);
+  background: color-mix(in srgb, var(--lab-primary-soft) 78%, var(--lab-surface));
+  border-color: var(--lab-primary);
+}
+.inventory-checklist__check-button:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: 2px; }
+.inventory-checklist__check-button.is-checked {
+  color: var(--lab-green);
+  background: var(--lab-green-soft);
+  border-color: color-mix(in srgb, var(--lab-green) 32%, var(--lab-border));
+}
+.inventory-checklist__check-button.is-checked:hover:not(:disabled) {
+  color: var(--lab-green);
+  background: color-mix(in srgb, var(--lab-green-soft) 78%, var(--lab-surface));
+  border-color: var(--lab-green);
+}
+.inventory-checklist__check-button:disabled { cursor: wait; }
+.inventory-checklist__check-button svg { width: 18px; height: 18px; flex: none; }
+.inventory-checklist__check-control > small { color: var(--lab-muted); font-size: 10px; line-height: 1.4; }
+.inventory-checklist__error { color: var(--lab-red); font-size: 11px; line-height: 1.4; }
+.inventory-checklist-cards { display: none; margin: 0 16px 20px; padding: 0; list-style: none; }
+.inventory-checklist__card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--lab-shadow-panel);
+}
+.inventory-checklist__card-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.inventory-checklist__card-topline .inventory-checklist__identity { min-width: 0; }
+.inventory-checklist__card-topline .inventory-checklist__status-copy { flex: none; padding-top: 7px; text-align: right; }
+.inventory-checklist__card-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--lab-border); border-bottom: 1px solid var(--lab-border); }
+.inventory-checklist__card-facts > div { min-width: 0; padding: 11px 12px; }
+.inventory-checklist__card-facts > div + div { border-left: 1px solid var(--lab-border); }
+.inventory-checklist__card-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
+.inventory-checklist__card-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 700; }
+.inventory-checklist__card .inventory-checklist__check-control { width: 100%; }
+.inventory-checklist__card .inventory-checklist__check-button { width: 100%; }
+.inventory-checklist__empty { display: grid; gap: 6px; margin: 0 22px 20px; color: var(--lab-muted); }
+.inventory-checklist__empty strong { color: var(--lab-ink); }
+.inventory-summary-dialog__fact--check { background: var(--lab-primary-soft); }
+.inventory-summary-dialog__fact--check dd { color: var(--lab-navy-strong); font: 500 14px/1.45 var(--font-mono); }
+.inventory-summary-dialog__fact--check small { display: block; margin-top: 5px; color: var(--lab-muted); font-size: 11px; line-height: 1.4; }
+.executive-strip--even-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.executive-strip__date-value { overflow-wrap: anywhere; font-size: 16px !important; line-height: 1.35 !important; letter-spacing: 0 !important; }
+.executive-strip__card.executive-strip__cell--attention { border-color: color-mix(in srgb, var(--lab-amber) 34%, var(--lab-border)); }
+.executive-strip__cell--attention .executive-strip__date-value { color: var(--lab-amber); }
+.stock-adjustment-dialog__loading,
+.stock-adjustment-dialog__load-error {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+.stock-adjustment-dialog__loading { background: var(--lab-surface-muted); }
+.stock-adjustment-dialog__loading p,
+.stock-adjustment-dialog__load-error p { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.5; }
+.stock-adjustment-dialog__load-error { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 24%, var(--lab-border)); }
+.stock-adjustment-dialog__load-error p { color: var(--lab-red); font-weight: 600; }
+.stock-adjustment-dialog__load-error .lab-button { justify-self: start; }
+
+@media (max-width: 1180px) {
+  .executive-strip--even-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 800px) {
+  .inventory-checklist-table--desktop { display: none; }
+  .inventory-checklist-cards { display: grid; gap: 12px; }
+  .inventory-checklist__progress { margin-inline: 16px; }
+  .executive-strip--even-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 540px) {
+  .inventory-checklist__card-topline { flex-direction: column; gap: 8px; }
+  .inventory-checklist__card-topline .inventory-checklist__status-copy { padding-top: 0; text-align: left; }
+  .inventory-checklist__card-facts { grid-template-columns: 1fr; }
+  .inventory-checklist__card-facts > div + div { border-top: 1px solid var(--lab-border); border-left: 0; }
+  .inventory-checklist__empty { margin-inline: 16px; }
+  .stock-adjustment-dialog__load-error .lab-button { width: 100%; }
+  .executive-strip--even-6 { grid-template-columns: 1fr; }
 }

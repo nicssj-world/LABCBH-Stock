@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
-import { LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
+import { CheckCircleIcon, LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
 import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
 import { ListPagination } from '@/components/ui/ListPagination'
@@ -17,6 +17,7 @@ import {
   formatBaht,
   formatQuantity,
   formatThaiDate,
+  formatThaiDateTime,
 } from '@/lib/inventory/presenter'
 import {
   INVENTORY_MOVEMENT_PAGE_SIZE,
@@ -106,7 +107,7 @@ export default async function InventoryDetailPage({ params, searchParams }: Inve
         </div>
       </header>
 
-      <section className="executive-strip executive-strip--even-5" aria-label="ยอดคงเหลือ จุดสั่งซื้อ และราคาต่อหน่วย">
+      <section className="executive-strip executive-strip--even-6" aria-label="ยอดคงเหลือ จุดสั่งซื้อ ราคาต่อหน่วย และการตรวจนับล่าสุด">
         <div className={`executive-strip__card${item.stockLevel !== 'healthy' ? ' executive-strip__cell--risk' : ''}`}>
           <div className="executive-strip__head">
             <span>คงเหลือทั้งหมด</span>
@@ -152,6 +153,16 @@ export default async function InventoryDetailPage({ params, searchParams }: Inve
           </div>
           <strong>{formatBaht(item.defaultUnitPrice)}</strong>
           <small>ราคาอ้างอิงล่าสุดที่บันทึกไว้</small>
+        </div>
+        <div className={`executive-strip__card${!item.isStockCheckedThisWeek ? ' executive-strip__cell--attention' : ''}`}>
+          <div className="executive-strip__head">
+            <span>ตรวจนับล่าสุด</span>
+            <span className="executive-strip__icon" aria-hidden="true"><CheckCircleIcon /></span>
+          </div>
+          <strong className="executive-strip__date-value">
+            {item.lastStockCheckedAt ? formatThaiDateTime(item.lastStockCheckedAt) : 'ยังไม่เคยตรวจ'}
+          </strong>
+          <small>{item.isStockCheckedThisWeek ? 'ตรวจแล้วในสัปดาห์นี้' : 'ยังไม่ได้ตรวจสัปดาห์นี้'}</small>
         </div>
       </section>
 

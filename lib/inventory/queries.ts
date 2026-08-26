@@ -16,6 +16,7 @@ import {
   resolveMinimumStock,
   roundQuantity,
 } from './balance'
+import { EMPTY_STOCK_CHECK_STATUS, getStockCheckWeekStart, type StockCheckStatus } from './checklist'
 import type {
   InventoryCatalogEntry,
   InventoryExportFilters,
@@ -52,6 +53,12 @@ const movementPresenceRowSchema = z.object({
 
 const openRequestRowSchema = z.object({
   inventory_item_id: z.string().uuid(),
+})
+
+const stockCheckRowSchema = z.object({
+  inventory_item_id: z.string().uuid(),
+  checked_at: z.string(),
+  week_start: z.string(),
 })
 
 const monthlyIssueRowSchema = z.object({
@@ -189,6 +196,7 @@ function toItemRecord(
   minimumStockMonths: number,
   hasMovements = false,
   hasOpenRequest = false,
+  stockCheck: StockCheckStatus = EMPTY_STOCK_CHECK_STATUS,
 ): InventoryItemRecord {
   const suggestedMinimum = calculateSuggestedMinimum(monthlyIssues, minimumStockMonths)
   const minimumStock = resolveMinimumStock(row.minimum_stock_override, suggestedMinimum)
@@ -211,7 +219,34 @@ function toItemRecord(
     hasMovements,
     hasOpenRequest,
     monthlyIssues,
+    lastStockCheckedAt: stockCheck.lastCheckedAt,
+    isStockCheckedThisWeek: stockCheck.isCheckedThisWeek,
   }
+}
+
+async function readLatestStockChecks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itemIds?: string[],
+): Promise<Map<string, StockCheckStatus>> {
+  let query = supabase
+    .from('inventory_item_latest_stock_checks')
+    .select('inventory_item_id, checked_at, week_start')
+
+  if (itemIds) query = query.in('inventory_item_id', itemIds)
+
+  const { data, error } = await query
+  if (error) throw new Error(`อ่านประวัติการตรวจนับไม่สำเร็จ: ${error.message}`)
+
+  const currentWeekStart = getStockCheckWeekStart(bangkokToday())
+  return new Map(
+    stockCheckRowSchema.array().parse(data ?? []).map((row) => [
+      row.inventory_item_id,
+      {
+        lastCheckedAt: row.checked_at,
+        isCheckedThisWeek: row.week_start === currentWeekStart,
+      },
+    ]),
+  )
 }
 
 /**
@@ -334,12 +369,13 @@ export async function listInventoryItems(
     ? Promise.resolve({ moved: new Set<string>(), requested: new Set<string>() })
     : readAlertScope(supabase)
 
-  const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, alertScope, minimumStockMonths] =
+  const [{ data, error }, { monthKeys, onHandByItem, issuesByItem }, alertScope, minimumStockMonths, stockChecks] =
     await Promise.all([
       query,
       readBalancesAndIssues(supabase),
       alertScopePromise,
       getInventoryMinimumStockMonths(),
+      readLatestStockChecks(supabase),
     ])
 
   if (error) throw new Error(`อ่านรายการคลังไม่สำเร็จ: ${error.message}`)
@@ -355,6 +391,7 @@ export async function listInventoryItems(
       minimumStockMonths,
       alertScope.moved.has(row.id),
       alertScope.requested.has(row.id),
+      stockChecks.get(row.id),
     ),
   )
 }
@@ -478,7 +515,7 @@ export async function getInventoryItem(
   const row = itemRowSchema.parse(data)
   const today = bangkokToday()
 
-  const [balancesAndIssues, lotResult, lotBalances, movementResult, minimumStockMonths] = await Promise.all([
+  const [balancesAndIssues, lotResult, lotBalances, movementResult, minimumStockMonths, stockChecks] = await Promise.all([
     readBalancesAndIssues(supabase, [row.id]),
     supabase
       .from('inventory_lots')
@@ -497,6 +534,7 @@ export async function getInventoryItem(
       .order('created_at', { ascending: false })
       .range(movementFrom, movementFrom + movementPageSize - 1),
     getInventoryMinimumStockMonths(),
+    readLatestStockChecks(supabase, [row.id]),
   ])
 
   if (lotResult.error) throw new Error(`อ่านข้อมูลล็อตไม่สำเร็จ: ${lotResult.error.message}`)
@@ -534,6 +572,9 @@ export async function getInventoryItem(
       onHandByItem.get(row.id) ?? 0,
       buildMonthlyIssues(monthKeys, issuesByItem.get(row.id) ?? new Map()),
       minimumStockMonths,
+      false,
+      false,
+      stockChecks.get(row.id),
     ),
     note: row.note,
     lots,

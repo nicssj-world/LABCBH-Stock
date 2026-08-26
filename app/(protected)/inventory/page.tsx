@@ -62,6 +62,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const belowMinimumCount = alertItems.filter((item) => alertOf(item) === 'below_minimum').length
   const alertCount = alertItems.length
   const visibleItems = onlyAlerts ? alertItems : items
+  const stockedItemCount = items.filter((item) => item.isActive && item.onHand > 0).length
   const paginatedItems = paginate(visibleItems, page, LIST_PAGE_SIZE)
   const departmentOptions = [...new Set([...DEPARTMENTS, ...departments])].sort((left, right) => left.localeCompare(right, 'th'))
 
@@ -78,6 +79,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   if (onlyAlerts) alertsToggleParams.delete('onlyAlerts')
   else alertsToggleParams.set('onlyAlerts', '1')
   const alertsHref = toggleHref(alertsToggleParams)
+  const checklistParams = new URLSearchParams()
+  if (search) checklistParams.set('search', search)
+  if (department) checklistParams.set('department', department)
+  const checklistQuery = checklistParams.toString()
+  const checklistHref = checklistQuery ? `/inventory/checklist?${checklistQuery}` : '/inventory/checklist'
   const inactiveToggleParams = new URLSearchParams(activeParams)
   if (includeInactive) inactiveToggleParams.delete('includeInactive')
   else inactiveToggleParams.set('includeInactive', '1')
@@ -124,9 +130,19 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
               <InventoryMinimumStockSettings minimumStockMonths={minimumStockMonths} />
             )}
             {canOperateStock(actor) && (
-              <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
-                เพิ่มรายการน้ำยา
-              </Link>
+              <>
+                <Link
+                  className="lab-link-button lab-link-button--secondary inventory-checklist-trigger"
+                  href={checklistHref}
+                  aria-label={`เปิด Check list ตรวจนับ ${stockedItemCount} รายการ`}
+                >
+                  <span>Check list</span>
+                  <span className="inventory-checklist-trigger__count" aria-hidden="true">{stockedItemCount}</span>
+                </Link>
+                <Link className="lab-link-button lab-link-button--primary" href="/inventory/new">
+                  เพิ่มรายการน้ำยา
+                </Link>
+              </>
             )}
           </div>
         </div>

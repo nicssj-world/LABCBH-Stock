@@ -254,14 +254,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
             <div>
               <p className="section-kicker">LOCKED PLAN REFERENCE</p>
               <h2 id="pr-annual-plan-reference-title">รายการอ้างอิง{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</h2>
-              <p>ระบบล็อก version ของแผนที่ใช้ตอนส่ง PR แล้ว การอัปโหลดไฟล์แผนใหม่จะไม่เปลี่ยน reference ของใบนี้</p>
             </div>
           </div>
           <dl className="contract-facts annual-plan-reference-detail__facts">
             <div><dt>ประเภทแผน</dt><dd>{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</dd></div>
             <div><dt>ปีงบประมาณแผน</dt><dd>{annualPlanReference.planFiscalYear}</dd></div>
-            <div><dt>Plan version ID</dt><dd className="identifier">{annualPlanReference.planVersionId}</dd></div>
-            <div><dt>Checksum</dt><dd className="identifier">{annualPlanReference.sourceChecksum ?? 'ไม่ระบุ'}</dd></div>
           </dl>
           {annualPlanReference.planType === 'hiring' ? (
             <ul className="annual-plan-reference-detail__lines">
@@ -269,7 +266,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                 <strong>ชื่อสัญญา: {annualPlanReference.contract?.contractName ?? 'ไม่ระบุ'}</strong>
                 <span>
                   {annualPlanReference.contract
-                    ? `แผนลำดับ ${annualPlanReference.contract.planSequence} · หน้า ${annualPlanReference.contract.pageNumber} · ${annualPlanReference.contract.matchMethod}`
+                    ? `แผนลำดับ ${annualPlanReference.contract.planSequence} · หน้า ${annualPlanReference.contract.pageNumber}`
                     : 'ไม่พบ reference ชื่อสัญญา'}
                 </span>
               </li>
@@ -283,7 +280,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
                     <strong>{item.lineNumber}. {item.name}</strong>
                     <span>
                       {line
-                        ? `แผนลำดับ ${line.planSequence} · หน้า ${line.pageNumber} · ${line.matchMethod}`
+                        ? `แผนลำดับ ${line.planSequence} · หน้า ${line.pageNumber}`
                         : 'ไม่พบ reference รายบรรทัด'}
                     </span>
                   </li>
