@@ -63,6 +63,33 @@ export interface PurchaseRequestChecklistRecord {
   downloadsBlocked: boolean
 }
 
+export interface PurchaseRequestAnnualPlanReferenceRecord {
+  planType: 'procurement' | 'hiring'
+  planVersionId: string
+  planFiscalYear: number
+  sourceChecksum: string | null
+  generatedAttachmentId: string
+  lines: Array<{
+    purchaseRequestItemId: string
+    planRowId: string
+    planLineNumber: number
+    planSequence: string
+    itemName: string
+    lsCode: string | null
+    pageNumber: number
+    matchMethod: 'name_exact' | 'code_exact' | 'manual_confirmed'
+  }>
+  contract?: {
+    contractName: string
+    planRowId: string
+    planLineNumber: number
+    planSequence: string
+    itemName: string
+    pageNumber: number
+    matchMethod: 'name_exact' | 'manual_confirmed'
+  }
+}
+
 export interface PurchaseRequestPoFileRecord {
   path: string | null
   fileName: string | null
@@ -159,6 +186,8 @@ export interface PurchaseRequestRecord {
   createdContractId: number | null
   checklistPolicyVersion: number | null
   checklistCompletedAt: string | null
+  /** False for PRs created before procurement-plan line references were introduced. */
+  annualPlanReferenceRequired: boolean
   acknowledgedBy: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null

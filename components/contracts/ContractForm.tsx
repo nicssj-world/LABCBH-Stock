@@ -17,8 +17,8 @@ import { ContractItemsEditor, type ContractCatalogChoice } from '@/components/co
 import { createContract, updateContract } from '@/lib/contracts/actions'
 import { contractMode } from '@/lib/contracts/budget'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
-import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
-import type { ContractFormItemInput, ContractRecord } from '@/lib/contracts/types'
+import { CONTRACT_DEPARTMENTS, CONTRACT_DURATION_YEARS, CONTRACT_TYPES, createContractInputSchema, updateContractInputSchema } from '@/lib/contracts/schema'
+import type { ContractDurationYears, ContractFormItemInput, ContractRecord } from '@/lib/contracts/types'
 
 interface ContractFormProps {
   mode: 'create' | 'edit'
@@ -33,6 +33,7 @@ interface ContractFormProps {
 interface FormState {
   fiscalYear: number | ''
   contractType: (typeof CONTRACT_TYPES)[number]
+  contractDurationYears: ContractDurationYears | ''
   department: (typeof CONTRACT_DEPARTMENTS)[number]
   displayName: string
   vendor: string
@@ -58,6 +59,7 @@ function initialState(contract?: ContractRecord): FormState {
   return {
     fiscalYear: contract?.fiscalYear ?? currentThaiFiscalYear(),
     contractType,
+    contractDurationYears: contract?.contractDurationYears ?? '',
     department: contract?.department ?? CONTRACT_DEPARTMENTS[0],
     displayName: contract?.displayName ?? contract?.product ?? '',
     vendor: contract?.vendor ?? '',
@@ -149,6 +151,7 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
     const shared = {
       fiscalYear: state.fiscalYear,
       contractType: state.contractType,
+      contractDurationYears: state.contractDurationYears,
       department: state.department,
       displayName: state.displayName,
       vendor: state.vendor.trim() || null,
@@ -258,6 +261,31 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
             <select required value={state.contractType} onChange={(event) => patchState('contractType', event.target.value as FormState['contractType'])}>
               {CONTRACT_TYPES.map((type) => <option value={type} key={type}>{CONTRACT_TYPE_LABELS[type]}</option>)}
             </select>
+          </label>
+          <label>
+            <span>จำนวนปีที่ทำสัญญา <span className="field-required" aria-hidden="true">*</span></span>
+            <select
+              id="contract-duration-years"
+              required
+              value={state.contractDurationYears}
+              onChange={(event) => {
+                const value = event.target.value
+                patchState('contractDurationYears', value === '' ? '' : Number(value) as ContractDurationYears)
+              }}
+              aria-invalid={Boolean(errors.contractDurationYears)}
+              aria-describedby={errors.contractDurationYears ? 'contract-duration-years-hint contract-duration-years-error' : 'contract-duration-years-hint'}
+            >
+              <option value="">เลือกจำนวนปี</option>
+              {CONTRACT_DURATION_YEARS.map((years) => <option value={years} key={years}>{years} ปี</option>)}
+            </select>
+            <small id="contract-duration-years-hint" className="form-field-note">
+              ใช้คำนวณอัตราใช้จ่ายเฉลี่ยต่อเดือนและต่อปี
+            </small>
+            {errors.contractDurationYears && (
+              <small id="contract-duration-years-error" className="field-error" role="alert">
+                {errors.contractDurationYears}
+              </small>
+            )}
           </label>
           <label className="form-grid__wide">
             <span>ชื่อสัญญา <span className="field-required" aria-hidden="true">*</span></span>

@@ -152,6 +152,26 @@ assert.match(form, /const isLease = method\?\.kind === 'equipment_lease'/, 'a le
 assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
 assert.match(form, /changeDepartment/, 'changing the requesting department must re-filter its contract lists')
 assert.match(form, /changePurpose/)
+assert.match(form, /methodRequiresAnnualPlanReference/, 'every checklist method with a plan-page requirement must use the generated plan reference flow')
+assert.match(form, /generateAnnualPlanEvidence/, 'the plan-page attachment is generated from the stored plan, not uploaded again by the requester')
+assert.match(form, /hiringPlan/, 'equipment leases must receive the current hiring plan as a separate source')
+assert.match(form, /matchAnnualPlanContractName/, 'equipment leases must match their plan row from contract name only')
+
+const planReferenceFields = read('components/pr/AnnualPlanReferenceFields.tsx')
+assert.match(planReferenceFields, /PROCUREMENT PLAN MATCHING/)
+assert.match(planReferenceFields, /ไม่ต้องแนบไฟล์แผนซ้ำ/, 'the plan reference panel must explain that the requester does not re-upload the annual plan')
+
+const checklistFields = read('components/pr/PurchaseRequestChecklistFields.tsx')
+assert.match(checklistFields, /methodRequiresAnnualPlanReference/, 'the generated plan evidence must replace the plan upload dropzone')
+assert.match(checklistFields, /ไฟล์นี้สร้างและแนบเข้าใบ PR โดยระบบเมื่อกดส่ง/, 'the checklist must tell the requester when the generated plan file is attached')
+assert.match(checklistFields, /พร้อมสร้าง/, 'the generated plan card must distinguish ready-to-generate from already-uploaded files')
+assert.match(detailPage, /methodRequiresAnnualPlanReference/, 'saved references must be loaded for every plan-backed PR method')
+assert.match(editPage, /methodRequiresAnnualPlanReference/, 'editing a plan-backed PR must load its saved reference')
+assert.match(detailPage, /planType === 'hiring'/, 'saved hiring-plan references must render separately from procurement lines')
+
+const checklistQueries = read('lib/pr/checklist-queries.ts')
+assert.match(checklistQueries, /purchase_request_items/, 'saved plan references must use PR line order when reopening an edit form')
+assert.match(checklistQueries, /orderedLineRows/, 'plan references must not rely on UUID order')
 
 assert.match(
   form,
@@ -239,7 +259,8 @@ assert.match(
   'an unchosen purpose must explain itself rather than show nothing',
 )
 assert.match(methodFields, /purpose === null \? \[\] : PURCHASE_METHODS_BY_PURPOSE\[purpose\]/, 'only the current purpose\'s methods are offered')
-assert.match(methodFields, /planSequence/)
+assert.match(methodFields, /annualPlanFiscalYear/)
+assert.doesNotMatch(methodFields, /ลำดับในแผนจัดซื้อ[\s\S]*field-required/, 'annual-plan sequence must not be a requester-entered required field')
 assert.match(methodFields, /purchaseSequence/)
 assert.match(methodFields, /readOnly/)
 assert.match(methodFields, /contractId: 0,[\s\S]*?purchaseSequence: 1/, 'a contract method must start unselected — auto-picking contracts[0] would silently auto-fill the wrong contract')
@@ -328,8 +349,8 @@ assert.match(presenter, /เช่าเครื่อง/, 'a lease PR method 
 assert.match(presenter, /PURCHASE_PURPOSE_LABELS/, 'the purpose fork needs its own labels, distinct from the method labels')
 assert.match(presenter, /partially_received:\s*'รับบางส่วน'/, 'partial receiving needs a Thai PR status label')
 assert.match(presenter, /received:\s*'รับครบ'/, 'fully received needs a Thai PR status label')
-assert.match(presenter, /cancelled:\s*'ยกเลิก \(ก่อนยืนยัน\)'/, 'pre-confirmation cancellation needs a clear Thai status label')
-assert.match(presenter, /reversed:\s*'ยกเลิก \(หลังยืนยัน\)'/, 'post-confirmation cancellation needs a clear Thai status label')
+assert.match(presenter, /cancelled:\s*'ยกเลิก'/, 'pre-confirmation cancellation needs the shared Thai status label')
+assert.match(presenter, /reversed:\s*'ยกเลิก'/, 'post-confirmation cancellation needs the shared Thai status label')
 assert.match(presenter, /ทำใบ PR เพื่อสั่งซื้อ/)
 assert.match(presenter, /ทำใบ PR เพื่อเริ่มสัญญาใหม่/)
 assert.match(presenter, /ต่ำกว่าขั้นต่ำ|ควรทำ PR/, 'minimum-stock warning wording lives with the labels')

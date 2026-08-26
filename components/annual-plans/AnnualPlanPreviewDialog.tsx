@@ -1,41 +1,48 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { annualPlanFileUrl } from '@/lib/annual-plans/actions'
+import { annualPlanFileUrl, annualPlanVersionFileUrl } from '@/lib/annual-plans/actions'
 
 export interface AnnualPlanPreviewDialogProps {
   planId: string | null
+  planVersionId?: string | null
   fileName: string | null
   open: boolean
   onCancel: () => void
 }
 
-export function AnnualPlanPreviewDialog({ planId, fileName, open, onCancel }: AnnualPlanPreviewDialogProps) {
+export function AnnualPlanPreviewDialog({ planId, planVersionId = null, fileName, open, onCancel }: AnnualPlanPreviewDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const [resolved, setResolved] = useState<{ planId: string; url: string } | null>(null)
-  const [loadError, setLoadError] = useState<{ planId: string; message: string } | null>(null)
+  const [resolved, setResolved] = useState<{ key: string; url: string } | null>(null)
+  const [loadError, setLoadError] = useState<{ key: string; message: string } | null>(null)
 
-  const url = open && planId && resolved?.planId === planId ? resolved.url : null
-  const error = open && planId && loadError?.planId === planId ? loadError.message : null
-  const loading = Boolean(open && planId && !url && !error)
+  const sourceKey = planVersionId ? `version:${planVersionId}` : planId ? `plan:${planId}` : null
+  const url = open && sourceKey && resolved?.key === sourceKey ? resolved.url : null
+  const error = open && sourceKey && loadError?.key === sourceKey ? loadError.message : null
+  const loading = Boolean(open && sourceKey && !url && !error)
 
   useEffect(() => {
     const dialog = dialogRef.current
-    if (!open || !planId) {
+    if (!open || !sourceKey) {
       if (dialog?.open) dialog.close()
       return
     }
 
     if (dialog && !dialog.open) dialog.showModal()
     let cancelled = false
-    void annualPlanFileUrl(planId, 'inline')
+    const request = planVersionId
+      ? annualPlanVersionFileUrl(planVersionId, 'inline')
+      : planId
+        ? annualPlanFileUrl(planId, 'inline')
+        : Promise.reject(new Error('Annual plan file was not found'))
+    void request
       .then((signedUrl) => {
-        if (!cancelled) setResolved({ planId, url: signedUrl })
+        if (!cancelled) setResolved({ key: sourceKey, url: signedUrl })
       })
       .catch((caught) => {
         if (!cancelled) {
           setLoadError({
-            planId,
+            key: sourceKey,
             message: caught instanceof Error ? caught.message : 'เปิดดูแผนประจำปีไม่สำเร็จ',
           })
         }
@@ -44,7 +51,7 @@ export function AnnualPlanPreviewDialog({ planId, fileName, open, onCancel }: An
     return () => {
       cancelled = true
     }
-  }, [open, planId])
+  }, [open, planId, planVersionId, sourceKey])
 
   const close = () => {
     dialogRef.current?.close()

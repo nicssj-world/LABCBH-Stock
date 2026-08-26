@@ -107,6 +107,10 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
                 <dd className="identifier contract-number-token">{contract.contractNumberLabel}</dd>
               </div>
               <div>
+                <dt>จำนวนปีที่ทำสัญญา</dt>
+                <dd>{contract.contractDurationYears ? `${contract.contractDurationYears} ปี` : 'ไม่ระบุ'}</dd>
+              </div>
+              <div>
                 <dt>คู่สัญญา</dt>
                 <dd>{contract.vendor || 'ไม่ระบุคู่สัญญา'}</dd>
               </div>
@@ -126,7 +130,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
                 <dt>ช่วงสัญญา</dt>
                 <dd>{formatThaiDate(contract.startDate)} – {formatThaiDate(contract.endDate)}</dd>
               </div>
-              <div className="contract-summary-dialog__fact--wide">
+              <div>
                 <dt>หน่วยงาน</dt>
                 <dd>{contract.department || 'ไม่ระบุหน่วยงาน'}</dd>
               </div>

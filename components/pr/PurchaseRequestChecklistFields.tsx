@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { formatProfileName } from '@/lib/profiles/name'
 import {
   derivePurchaseRequestChecklist,
+  methodRequiresAnnualPlanReference,
   PR_MAX_ATTACHMENT_SIZE_BYTES,
   purchaseRequestAttachmentSlotKey,
   validateCommitteeAssignments,
@@ -247,6 +248,8 @@ export interface PurchaseRequestChecklistFieldsProps {
   assignments: CommitteeAssignmentInput[]
   contractRosterReady: boolean
   checklistComplete: boolean
+  annualPlanReferenceReady?: boolean
+  annualPlanFileName?: string
   overallProgress: number | null
   disabled?: boolean
   showCommitteeValidationErrors?: boolean
@@ -264,6 +267,8 @@ export function PurchaseRequestChecklistFields({
   assignments,
   contractRosterReady,
   checklistComplete,
+  annualPlanReferenceReady = false,
+  annualPlanFileName,
   overallProgress,
   disabled = false,
   showCommitteeValidationErrors = true,
@@ -298,11 +303,13 @@ export function PurchaseRequestChecklistFields({
       file,
       existing,
       errors,
-      complete: errors.length === 0 && Boolean(
-        file ||
-        existing ||
-        (requirement.kind === 'contract_page' && contractFileAvailable),
-      ),
+      complete: requirement.kind === 'plan_page' && methodRequiresAnnualPlanReference(method)
+        ? annualPlanReferenceReady
+        : errors.length === 0 && Boolean(
+            file ||
+            existing ||
+            (requirement.kind === 'contract_page' && contractFileAvailable),
+          ),
       isDragging: draggingSlotKey === key,
       dropzoneHintId: `pr-checklist-${requirement.kind}-${requirement.slot}-hint`,
       dropzoneErrorId: `pr-checklist-${requirement.kind}-${requirement.slot}-error`,
@@ -346,9 +353,17 @@ export function PurchaseRequestChecklistFields({
 
   const renderAttachmentCard = (item: (typeof attachmentItems)[number]) => {
     const { requirement, key, file, existing, errors, complete, isDragging, dropzoneHintId, dropzoneErrorId } = item
+    const isGeneratedPlan = requirement.kind === 'plan_page' && methodRequiresAnnualPlanReference(method)
     const visibleLabel = requirement.kind === 'quotation'
       ? `บริษัทที่ ${item.requirement.slot}`
-      : requirement.label
+      : isGeneratedPlan && method === 'equipment_lease'
+        ? 'แผนจัดจ้างที่มีลำดับสัญญา'
+        : requirement.label
+    const statusLabel = isGeneratedPlan
+      ? existing
+        ? 'แนบแล้ว'
+        : complete ? 'พร้อมสร้าง' : 'รอจับคู่'
+      : complete ? 'แนบแล้ว' : 'รอแนบ'
 
     return (
       <article className={`pr-checklist__file${complete ? ' is-complete' : ''}`} key={key}>
@@ -363,10 +378,16 @@ export function PurchaseRequestChecklistFields({
                 <path d="m2.25 6.25 2.2 2.2 5.3-5.3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
               </svg>
             )}
-            {complete ? 'แนบแล้ว' : 'รอแนบ'}
+            {statusLabel}
           </span>
         </div>
-        {(file || existing) && (
+        {requirement.kind === 'plan_page' && methodRequiresAnnualPlanReference(method) ? (
+          <p className="pr-checklist__file-name">
+            {annualPlanReferenceReady
+              ? `ระบบจะสร้าง ${annualPlanFileName ?? 'ไฟล์แผนที่ไฮไลท์รายการ'} จากแผนปัจจุบันให้อัตโนมัติ ไม่ต้องแนบไฟล์ใหม่`
+              : `ต้องจับคู่${method === 'equipment_lease' ? 'ชื่อสัญญา' : 'รายการ'}กับแผน${method === 'equipment_lease' ? 'จัดจ้าง' : 'จัดซื้อ'}ให้ครบก่อน ระบบจึงจะสร้างไฟล์ไฮไลท์ได้`}
+          </p>
+        ) : (file || existing) && (
           <p className="pr-checklist__file-name">
             {file?.name ?? existing?.fileName} · {formatFileSize(file?.size ?? existing?.sizeBytes ?? 0)}
             {file && existing && <small>จะแทนที่ไฟล์เดิมเมื่อบันทึก</small>}
@@ -381,7 +402,9 @@ export function PurchaseRequestChecklistFields({
           </div>
         )}
         <div className="pr-checklist__file-actions">
-          {requirement.kind === 'contract_page' && contractFileAvailable && !file && !existing ? (
+          {requirement.kind === 'plan_page' && methodRequiresAnnualPlanReference(method) ? (
+            <p className="pr-checklist__file-name">ไฟล์นี้สร้างและแนบเข้าใบ PR โดยระบบเมื่อกดส่ง</p>
+          ) : requirement.kind === 'contract_page' && contractFileAvailable && !file && !existing ? (
             <p className="pr-checklist__file-name">ไฟล์สัญญาเต็มจะถูกอ้างอิงโดยอัตโนมัติ</p>
           ) : (
           <label

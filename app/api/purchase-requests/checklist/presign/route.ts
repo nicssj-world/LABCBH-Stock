@@ -5,6 +5,7 @@ import { ZodError } from 'zod'
 import { getActor } from '@/lib/auth/actor'
 import {
   derivePurchaseRequestChecklist,
+  methodRequiresAnnualPlanReference,
   purchaseRequestAttachmentSlotKey,
   validatePurchaseRequestAttachment,
 } from '@/lib/pr/checklist'
@@ -30,6 +31,9 @@ export async function POST(request: Request) {
     const slotKey = purchaseRequestAttachmentSlotKey(input.kind, input.slot)
     if (!policy.attachments.some((requirement) => purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot) === slotKey)) {
       return NextResponse.json({ error: 'ช่องเอกสารนี้ไม่ตรงกับวิธีจัดซื้อและยอดรวมปัจจุบัน' }, { status: 422 })
+    }
+    if (input.kind === 'plan_page' && methodRequiresAnnualPlanReference(input.method)) {
+      return NextResponse.json({ error: 'ช่องแผนนี้สร้างจากแผนประจำปีโดยระบบ ไม่ต้องแนบไฟล์ใหม่' }, { status: 422 })
     }
 
     const validationErrors = validatePurchaseRequestAttachment({

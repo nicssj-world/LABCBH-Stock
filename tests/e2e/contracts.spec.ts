@@ -11,6 +11,7 @@ test.describe('manager contract workflow', () => {
     await loginAs(page, 'manager')
     const activeBefore = Number((await page.locator('.executive-strip__card').filter({ hasText: 'สัญญาใช้งานอยู่' }).locator('strong').textContent())?.replace(/\D/g, '') ?? 0)
     await page.goto('/contracts/new')
+    await page.locator('#contract-duration-years').selectOption('1')
 
     const token = Date.now().toString()
     // The form defaults to equipment_lease, which is billed monthly in baht and

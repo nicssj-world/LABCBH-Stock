@@ -3,8 +3,12 @@ import 'server-only'
 import { z } from 'zod'
 import { canOperateStock } from '@/lib/auth/access'
 import type { Actor } from '@/lib/auth/actor'
+import { methodRequiresAnnualPlanReference } from '@/lib/pr/checklist'
 import { purchaseMethodPurpose } from '@/lib/pr/schema'
-import type { PurchaseRequestChecklistRecord } from '@/lib/pr/types'
+import type {
+  PurchaseRequestAnnualPlanReferenceRecord,
+  PurchaseRequestChecklistRecord,
+} from '@/lib/pr/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const purchaseRequestIdSchema = z.string().uuid()
@@ -149,6 +153,112 @@ export async function getPurchaseRequestChecklist(
       !attachment.sourceContractId && !attachment.objectDeletedAt && (downloadsBlocked || Boolean(attachment.deletedAt)),
     ).length,
     downloadsBlocked,
+  }
+}
+
+/** Reads the immutable plan version and the row chosen for every PR line. */
+export async function getPurchaseRequestAnnualPlanReference(
+  purchaseRequestId: string,
+  actor: Actor,
+): Promise<PurchaseRequestAnnualPlanReferenceRecord | null> {
+  const access = await getPurchaseRequestChecklistAccess(purchaseRequestId, actor)
+  if (!methodRequiresAnnualPlanReference(access.request.purchase_method)) return null
+
+  const referenceResult = await supabaseAdmin
+    .from('purchase_request_annual_plan_references')
+    .select('id, plan_type, plan_version_id, plan_fiscal_year, source_checksum, generated_attachment_id, contract_name_snapshot, contract_plan_row_id, contract_plan_line_number, contract_match_method, contract_plan_row:lab_stock_annual_plan_rows(plan_sequence, item_name, page_number)')
+    .eq('purchase_request_id', access.request.id)
+    .maybeSingle()
+  if (referenceResult.error) throw new Error(`อ่าน reference แผนจัดซื้อไม่สำเร็จ: ${referenceResult.error.message}`)
+  if (!referenceResult.data) return null
+
+  const planType = String(referenceResult.data.plan_type) as PurchaseRequestAnnualPlanReferenceRecord['planType']
+  if (planType !== 'procurement' && planType !== 'hiring') {
+    throw new Error('ประเภทแผนใน reference ไม่ถูกต้อง')
+  }
+  if (planType === 'hiring') {
+    const contractPlanRow = Array.isArray(referenceResult.data.contract_plan_row)
+      ? referenceResult.data.contract_plan_row[0]
+      : referenceResult.data.contract_plan_row
+    if (
+      !referenceResult.data.contract_name_snapshot
+      || !referenceResult.data.contract_plan_row_id
+      || !referenceResult.data.contract_plan_line_number
+      || !referenceResult.data.contract_match_method
+      || !contractPlanRow
+    ) {
+      throw new Error('ไม่พบข้อมูลอ้างอิงชื่อสัญญาในแผนจัดจ้าง')
+    }
+    return {
+      planType: 'hiring',
+      planVersionId: String(referenceResult.data.plan_version_id),
+      planFiscalYear: Number(referenceResult.data.plan_fiscal_year),
+      sourceChecksum: referenceResult.data.source_checksum
+        ? String(referenceResult.data.source_checksum)
+        : null,
+      generatedAttachmentId: String(referenceResult.data.generated_attachment_id),
+      lines: [],
+      contract: {
+        contractName: String(referenceResult.data.contract_name_snapshot),
+        planRowId: String(referenceResult.data.contract_plan_row_id),
+        planLineNumber: Number(referenceResult.data.contract_plan_line_number),
+        planSequence: String(contractPlanRow.plan_sequence),
+        itemName: String(contractPlanRow.item_name),
+        pageNumber: Number(contractPlanRow.page_number),
+        matchMethod: referenceResult.data.contract_match_method as 'name_exact' | 'manual_confirmed',
+      },
+    }
+  }
+
+  const [lineResult, itemOrderResult] = await Promise.all([
+    supabaseAdmin
+      .from('purchase_request_annual_plan_line_references')
+      .select('purchase_request_item_id, plan_row_id, plan_line_number, match_method, plan_row:lab_stock_annual_plan_rows(plan_sequence, item_name, ls_code, page_number)')
+      .eq('reference_id', referenceResult.data.id),
+    supabaseAdmin
+      .from('purchase_request_items')
+      .select('id, line_number')
+      .eq('purchase_request_id', access.request.id)
+      .order('line_number'),
+  ])
+  if (lineResult.error) throw new Error(`อ่านรายการอ้างอิงแผนจัดซื้อไม่สำเร็จ: ${lineResult.error.message}`)
+  if (itemOrderResult.error) throw new Error(`อ่านลำดับรายการ PR ไม่สำเร็จ: ${itemOrderResult.error.message}`)
+
+  // Reference rows have no meaningful insertion order. Rebuild the PR order
+  // explicitly so editing a saved PR never shows one item's plan row on a
+  // different item after Postgres returns UUID-sorted rows.
+  const itemOrder = new Map(
+    (itemOrderResult.data ?? []).map((row) => [String(row.id), Number(row.line_number)]),
+  )
+  const orderedLineRows = [...(lineResult.data ?? [])].sort((left, right) =>
+    (itemOrder.get(String(left.purchase_request_item_id)) ?? Number.MAX_SAFE_INTEGER)
+    - (itemOrder.get(String(right.purchase_request_item_id)) ?? Number.MAX_SAFE_INTEGER),
+  )
+
+  const lines = orderedLineRows.map((row) => {
+    const planRow = Array.isArray(row.plan_row) ? row.plan_row[0] : row.plan_row
+    if (!planRow) throw new Error('ไม่พบแถวใน version ของแผนจัดซื้อ')
+    return {
+      purchaseRequestItemId: String(row.purchase_request_item_id),
+      planRowId: String(row.plan_row_id),
+      planLineNumber: Number(row.plan_line_number),
+      planSequence: String(planRow.plan_sequence),
+      itemName: String(planRow.item_name),
+      lsCode: planRow.ls_code === null ? null : String(planRow.ls_code),
+      pageNumber: Number(planRow.page_number),
+      matchMethod: row.match_method as PurchaseRequestAnnualPlanReferenceRecord['lines'][number]['matchMethod'],
+    }
+  })
+
+  return {
+    planType: 'procurement',
+    planVersionId: String(referenceResult.data.plan_version_id),
+    planFiscalYear: Number(referenceResult.data.plan_fiscal_year),
+    sourceChecksum: referenceResult.data.source_checksum
+      ? String(referenceResult.data.source_checksum)
+      : null,
+    generatedAttachmentId: String(referenceResult.data.generated_attachment_id),
+    lines,
   }
 }
 

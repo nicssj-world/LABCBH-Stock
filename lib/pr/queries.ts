@@ -69,6 +69,9 @@ const requestRowSchema = z.object({
   created_contract_id: z.number().int().nullable(),
   checklist_policy_version: z.number().int().nullable(),
   checklist_completed_at: z.string().nullable(),
+  // Old staging/production snapshots may predate the annual-plan reference
+  // flag. The read path falls back to the legacy projection in that case.
+  annual_plan_reference_required: z.boolean().default(false),
   note: z.string().nullable(),
   acknowledged_by: z.string().uuid().nullable(),
   acknowledged_at: z.string().nullable(),
@@ -148,6 +151,7 @@ const REQUEST_SELECT = `
   created_contract_id,
   checklist_policy_version,
   checklist_completed_at,
+  annual_plan_reference_required,
   note,
   acknowledged_by,
   acknowledged_at,
@@ -193,6 +197,37 @@ const REQUEST_SELECT = `
     )
   )
 `
+
+const REQUEST_SELECT_LEGACY = REQUEST_SELECT.replace(
+  /\s*annual_plan_reference_required,\s*/,
+  '\n',
+)
+
+type RequestReadResult = {
+  data: unknown
+  error: { code?: string | null; message: string } | null
+}
+
+function isMissingAnnualPlanReferenceColumn(error: RequestReadResult['error']): boolean {
+  const message = error?.message.toLowerCase() ?? ''
+  return (
+    message.includes('annual_plan_reference_required') &&
+    (error?.code === 'PGRST204' || message.includes('does not exist') || message.includes('schema cache'))
+  )
+}
+
+/**
+ * Keep read-only screens usable while an older environment catches up with
+ * the reviewed annual-plan migration. Writes still require the real column
+ * and database boundary, so this never hides a write-time schema failure.
+ */
+async function readRequestQuery(
+  build: (select: string) => PromiseLike<RequestReadResult>,
+): Promise<RequestReadResult> {
+  const result = await build(REQUEST_SELECT)
+  if (!isMissingAnnualPlanReferenceColumn(result.error)) return result
+  return build(REQUEST_SELECT_LEGACY)
+}
 
 export interface PurchaseRequestFilters {
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number]
@@ -272,6 +307,7 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     createdContractId: row.created_contract_id,
     checklistPolicyVersion: row.checklist_policy_version,
     checklistCompletedAt: row.checklist_completed_at,
+    annualPlanReferenceRequired: row.annual_plan_reference_required,
     acknowledgedBy: row.acknowledged_by,
     acknowledgedByName: row.acknowledger?.name ?? null,
     acknowledgedAt: row.acknowledged_at,
@@ -317,25 +353,28 @@ export async function listPurchaseRequests(
   filters: PurchaseRequestFilters = {},
 ): Promise<PurchaseRequestRecord[]> {
   const supabase = await createClient()
-  let query = supabase
-    .from('purchase_requests')
-    .select(REQUEST_SELECT)
-    .order('requested_date', { ascending: false })
-    .order('sequence_number', { ascending: false })
-
-  if (filters.status) query = query.eq('status', filters.status)
-  if (filters.department) query = query.eq('department', filters.department)
-
   const search = filters.search?.trim().replace(/[,%()]/g, ' ')
-  if (search) {
-    // Officers search by PO, PR, LS code, or reagent name. The first two live on
-    // the header; the last two are resolved separately and merged below.
-    query = query.or(
-      `document_number.ilike.%${search}%,po_number.ilike.%${search}%,ephis_pr_number.ilike.%${search}%`,
-    )
-  }
 
-  const { data, error } = await query
+  const { data, error } = await readRequestQuery((select) => {
+    let query = supabase
+      .from('purchase_requests')
+      .select(select)
+      .order('requested_date', { ascending: false })
+      .order('sequence_number', { ascending: false })
+
+    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.department) query = query.eq('department', filters.department)
+
+    if (search) {
+      // Officers search by PO, PR, LS code, or reagent name. The first two live on
+      // the header; the last two are resolved separately and merged below.
+      query = query.or(
+        `document_number.ilike.%${search}%,po_number.ilike.%${search}%,ephis_pr_number.ilike.%${search}%`,
+      )
+    }
+
+    return query
+  })
   if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
 
   const headerMatches = requestRowSchema.array().parse(data ?? []).map(mapRequest)
@@ -387,11 +426,12 @@ async function findRequestsByLine(
   ]
   if (requestIds.length === 0) return []
 
-  let query = supabase.from('purchase_requests').select(REQUEST_SELECT).in('id', requestIds)
-  if (status) query = query.eq('status', status)
-  if (department) query = query.eq('department', department)
-
-  const { data, error } = await query
+  const { data, error } = await readRequestQuery((select) => {
+    let query = supabase.from('purchase_requests').select(select).in('id', requestIds)
+    if (status) query = query.eq('status', status)
+    if (department) query = query.eq('department', department)
+    return query
+  })
   if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
 
   return requestRowSchema.array().parse(data ?? []).map(mapRequest)
@@ -400,11 +440,13 @@ async function findRequestsByLine(
 export async function getPurchaseRequest(id: string): Promise<PurchaseRequestRecord | null> {
   const supabase = await createClient()
   const [requestResult, receiptsResult] = await Promise.all([
-    supabase
-      .from('purchase_requests')
-      .select(REQUEST_SELECT)
-      .eq('id', id)
-      .maybeSingle(),
+    readRequestQuery((select) =>
+      supabase
+        .from('purchase_requests')
+        .select(select)
+        .eq('id', id)
+        .maybeSingle(),
+    ),
     supabase
       .from('goods_receipts')
       .select(`
@@ -493,10 +535,12 @@ export async function listNextContractPurchaseSequences(contractIds: readonly nu
 /** Every "ซื้อในสัญญา" PR against one contract, newest purchase first. */
 export async function listContractPurchaseHistory(contractId: number): Promise<PurchaseRequestRecord[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('purchase_requests')
-    .select(REQUEST_SELECT)
-    .eq('purchase_method', 'contract')
+  const { data, error } = await readRequestQuery((select) =>
+    supabase
+      .from('purchase_requests')
+      .select(select)
+      .eq('purchase_method', 'contract'),
+  )
 
   if (error) throw new Error(`อ่านประวัติการซื้อไม่สำเร็จ: ${error.message}`)
 

@@ -15,6 +15,13 @@ export const CONTRACT_TYPES = [
   'thai_red_cross',
 ] as const
 
+/** Supported contract terms for purchase requests that open a new contract. */
+export const CONTRACT_DURATION_YEARS = [1, 3] as const
+export const contractDurationYearsSchema = z.union([
+  z.literal(CONTRACT_DURATION_YEARS[0]),
+  z.literal(CONTRACT_DURATION_YEARS[1]),
+], { errorMap: () => ({ message: 'กรุณาระบุจำนวนปีที่ทำสัญญา (1 หรือ 3 ปี)' }) })
+
 // The lab section that owns a contract. Carried over verbatim from the
 // legacy portal's own department list so a contract migrated from there
 // keeps matching against the same set of names.
@@ -176,6 +183,7 @@ export const createContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
     contractType: z.enum(CONTRACT_TYPES),
+    contractDurationYears: contractDurationYearsSchema,
     department: z.enum(CONTRACT_DEPARTMENTS, { errorMap: () => ({ message: 'กรุณาเลือกหน่วยงาน' }) }),
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),
@@ -196,6 +204,7 @@ export const updateContractInputSchema = z
   .object({
     fiscalYear: z.number().int().min(2500).max(3000),
     contractType: z.enum(CONTRACT_TYPES),
+    contractDurationYears: contractDurationYearsSchema,
     department: z.enum(CONTRACT_DEPARTMENTS, { errorMap: () => ({ message: 'กรุณาเลือกหน่วยงาน' }) }),
     displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
     vendor: z.string().trim().min(1, 'กรุณาระบุคู่สัญญา').nullable(),

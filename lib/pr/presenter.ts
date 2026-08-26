@@ -23,18 +23,20 @@ export const PURCHASE_REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, strin
   partially_received: 'รับบางส่วน',
   received: 'รับครบ',
   closed_short: 'ปิดยอดไม่ครบ',
-  cancelled: 'ยกเลิก (ก่อนยืนยัน)',
-  reversed: 'ยกเลิก (หลังยืนยัน)',
+  // Keep cancelled/reversed as separate internal lifecycle states for audit
+  // and stock-allocation rules, while presenting one user-facing status.
+  cancelled: 'ยกเลิก',
+  reversed: 'ยกเลิก',
 }
 
 export const PURCHASE_REQUEST_STATUS_TONES: Record<
   PurchaseRequestStatus,
-  'neutral' | 'info' | 'attention' | 'success' | 'danger'
+  'neutral' | 'info' | 'progress' | 'attention' | 'success' | 'danger'
 > = {
   draft: 'neutral',
   pending: 'attention',
   completed: 'info',
-  partially_received: 'attention',
+  partially_received: 'progress',
   received: 'success',
   closed_short: 'attention',
   cancelled: 'danger',

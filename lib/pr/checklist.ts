@@ -1,5 +1,7 @@
 import type { PurchaseMethodKind } from './schema'
 
+export type PurchaseRequestPlanType = 'procurement' | 'hiring'
+
 export const PR_CHECKLIST_POLICY_VERSION = 1
 export const PR_MAX_ATTACHMENT_SIZE_BYTES = 20 * 1024 * 1024
 
@@ -34,6 +36,27 @@ export interface CommitteeAssignmentInput {
   kind: PurchaseRequestCommitteeKind
   seat: number
   profileId: string
+}
+
+/**
+ * Returns the annual-plan source used by each PR method that carries a
+ * plan_page checklist requirement. Equipment leases use the hiring plan and
+ * are matched by contract name; the other methods use the procurement plan
+ * and match each PR line.
+ */
+export function annualPlanTypeForPurchaseMethod(method: PurchaseMethodKind): PurchaseRequestPlanType | null {
+  if (method === 'equipment_lease') return 'hiring'
+  if (method === 'annual_plan' || method === 'specific_contract' || method === 'e_bidding') return 'procurement'
+  return null
+}
+
+export function methodRequiresAnnualPlanReference(method: PurchaseMethodKind): boolean {
+  return annualPlanTypeForPurchaseMethod(method) !== null
+}
+
+/** Kept as a precise alias for callers that only handle procurement plans. */
+export function methodRequiresProcurementPlanReference(method: PurchaseMethodKind): boolean {
+  return annualPlanTypeForPurchaseMethod(method) === 'procurement'
 }
 
 const PDF_TYPES = ['application/pdf'] as const
@@ -107,7 +130,21 @@ export function derivePurchaseRequestChecklist(
     }
   }
 
-  if (method === 'e_bidding' || method === 'equipment_lease') {
+  if (method === 'e_bidding') {
+    return {
+      version: PR_CHECKLIST_POLICY_VERSION,
+      method,
+      attachments: [
+        ...attachments('tor', 1, PDF_TYPES),
+        ...attachments('quotation', 3, PDF_OR_IMAGE_TYPES),
+        ...attachments('plan_page', 1, PDF_OR_IMAGE_TYPES),
+      ],
+      committees: committees([['specification', 3], ['result', 3], ['inspection', 3]]),
+      committeeSource: 'request',
+    }
+  }
+
+  if (method === 'equipment_lease') {
     return {
       version: PR_CHECKLIST_POLICY_VERSION,
       method,

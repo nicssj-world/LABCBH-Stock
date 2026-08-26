@@ -7,6 +7,7 @@ interface ContractFiltersProps {
   search: string
   fiscalYear: string
   contractType: string
+  contractDurationYears: string
   department: string
   procurementStage: string
   showEnded: boolean
@@ -22,6 +23,7 @@ export function ContractFilters({
   search: initialSearch,
   fiscalYear,
   contractType,
+  contractDurationYears,
   department,
   procurementStage,
   showEnded,
@@ -98,6 +100,14 @@ export function ContractFilters({
         <select name="contractType" value={contractType} onChange={handleSelectChange}>
           <option value="">ทุกประเภท</option>
           {contractTypes.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}
+        </select>
+      </label>
+      <label>
+        จำนวนปีที่ทำสัญญา
+        <select name="contractDurationYears" value={contractDurationYears} onChange={handleSelectChange}>
+          <option value="">ทุกระยะเวลา</option>
+          <option value="1">1 ปี</option>
+          <option value="3">3 ปี</option>
         </select>
       </label>
       <label>

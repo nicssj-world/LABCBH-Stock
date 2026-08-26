@@ -4,6 +4,7 @@ import { HeadObjectCommand } from '@aws-sdk/client-s3'
 import type { Actor } from '@/lib/auth/actor'
 import {
   derivePurchaseRequestChecklist,
+  methodRequiresAnnualPlanReference,
   purchaseRequestAttachmentSlotKey,
   validateCommitteeAssignments,
   validatePurchaseRequestAttachment,
@@ -31,6 +32,8 @@ interface UploadTicketRow {
   expires_at: string
   claimed_at: string | null
   cancelled_at: string | null
+  generated_by_system: boolean
+  annual_plan_version_id: string | null
 }
 
 function checklistTotal(method: PurchaseMethodKind, items: readonly PurchaseRequestLineInput[]) {
@@ -74,6 +77,13 @@ export async function verifyPurchaseRequestChecklistUploads(input: {
   const submission = purchaseRequestChecklistSubmissionSchema.parse(input.submission)
   validateSubmissionShape(input.method, input.items, submission)
 
+  if (methodRequiresAnnualPlanReference(input.method)) {
+    const planReference = submission.attachments.find((attachment) => attachment.kind === 'plan_page' && attachment.slot === 1)
+    if (!planReference || !('uploadId' in planReference)) {
+      throw new Error('เอกสารแผนประจำปีของ PR ต้องสร้างโดยระบบ ไม่ต้องแนบไฟล์เอง')
+    }
+  }
+
   const contractFileReferences = submission.attachments.filter(
     (attachment): attachment is Extract<(typeof submission.attachments)[number], { contractFile: true }> =>
       'contractFile' in attachment,
@@ -116,7 +126,7 @@ export async function verifyPurchaseRequestChecklistUploads(input: {
   const uploadIds = uploadReferences.map((attachment) => attachment.uploadId)
   const ticketResult = await supabaseAdmin
     .from('purchase_request_upload_tickets')
-    .select('id, actor_id, upload_session_id, attachment_kind, slot, storage_key, file_name, mime_type, size_bytes, expires_at, claimed_at, cancelled_at')
+    .select('id, actor_id, upload_session_id, attachment_kind, slot, storage_key, file_name, mime_type, size_bytes, expires_at, claimed_at, cancelled_at, generated_by_system, annual_plan_version_id')
     .in('id', uploadIds)
   if (ticketResult.error) throw new Error(`ตรวจรายการอัปโหลดไม่สำเร็จ: ${ticketResult.error.message}`)
 
@@ -132,6 +142,13 @@ export async function verifyPurchaseRequestChecklistUploads(input: {
       ticket.cancelled_at
     ) {
       throw new Error('รายการอัปโหลดไม่ตรงกับผู้ใช้หรือช่องเอกสาร')
+    }
+    if (
+      methodRequiresAnnualPlanReference(input.method) &&
+      ticket.attachment_kind === 'plan_page' &&
+      (!ticket.generated_by_system || !ticket.annual_plan_version_id)
+    ) {
+      throw new Error('เอกสารแผนประจำปีต้องสร้างจากแผนปัจจุบันโดยระบบเท่านั้น')
     }
     if (!ticket.claimed_at && Date.parse(ticket.expires_at) <= Date.now()) {
       throw new Error('รายการอัปโหลดหมดอายุ กรุณาอัปโหลดไฟล์นี้ใหม่')

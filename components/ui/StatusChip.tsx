@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-type StatusTone = 'neutral' | 'info' | 'attention' | 'success' | 'danger'
+type StatusTone = 'neutral' | 'info' | 'progress' | 'attention' | 'success' | 'danger'
 
 export interface StatusChipProps {
   children: ReactNode

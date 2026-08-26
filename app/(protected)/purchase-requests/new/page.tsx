@@ -18,7 +18,7 @@ export default async function NewPurchaseRequestPage() {
     ? [requesterDepartment, ...DEPARTMENTS]
     : DEPARTMENTS
 
-  const { contracts, awaitingContracts, contractLines, catalog, committeeCandidates } = await loadPurchaseRequestFormOptions()
+  const { annualPlan, hiringPlan, contracts, awaitingContracts, contractLines, catalog, committeeCandidates } = await loadPurchaseRequestFormOptions()
 
   return (
     <div className="route-stack">
@@ -40,6 +40,8 @@ export default async function NewPurchaseRequestPage() {
         contractLines={contractLines}
         catalog={catalog}
         committeeCandidates={committeeCandidates}
+        annualPlan={annualPlan}
+        hiringPlan={hiringPlan}
       />
     </div>
   )

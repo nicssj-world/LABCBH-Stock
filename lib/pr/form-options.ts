@@ -4,6 +4,11 @@ import { listInventoryItems } from '@/lib/inventory/queries'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { listContractItemOptions, listNextContractPurchaseSequences } from '@/lib/pr/queries'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import {
+  getCurrentHiringPlanForPurchaseRequest,
+  getCurrentProcurementPlanForPurchaseRequest,
+} from '@/lib/annual-plans/pr'
+import type { AnnualPlanForPurchaseRequest } from '@/lib/annual-plans/pr-reference'
 
 export interface PurchaseRequestCommitteeCandidate {
   id: string
@@ -14,6 +19,8 @@ export interface PurchaseRequestCommitteeCandidate {
 }
 
 export interface PurchaseRequestFormOptions {
+  annualPlan: AnnualPlanForPurchaseRequest
+  hiringPlan: AnnualPlanForPurchaseRequest
   contracts: Array<{
     id: number
     department: string
@@ -60,7 +67,7 @@ export interface PurchaseRequestFormOptions {
  * away from the safeguards on the new-PR screen.
  */
 export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: string): Promise<PurchaseRequestFormOptions> {
-  const [inventoryItems, allContracts, profileResult] = await Promise.all([
+  const [inventoryItems, allContracts, profileResult, annualPlan, hiringPlan] = await Promise.all([
     listInventoryItems({}, { includeAlertScope: false }),
     listContractFormOptions(),
     supabaseAdmin
@@ -70,6 +77,8 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
       .is('deleted_at', null)
       .not('name', 'is', null)
       .order('name'),
+    getCurrentProcurementPlanForPurchaseRequest(),
+    getCurrentHiringPlanForPurchaseRequest(),
   ])
   if (profileResult.error) throw new Error(`อ่านรายชื่อบุคลากรไม่สำเร็จ: ${profileResult.error.message}`)
 
@@ -150,6 +159,8 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
   })
 
   return {
+    annualPlan,
+    hiringPlan,
     contracts: contracts.map((contract) => ({
       id: contract.id,
       department: contract.department,

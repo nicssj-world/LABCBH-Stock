@@ -34,7 +34,11 @@ import { getPurchaseRequest } from '@/lib/pr/queries'
 import { getLatestPurchaseRequestLineNotification } from '@/lib/pr/line-notification-queries'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { isPurchaseRequestOutsideStockEligible, purchaseMethodPurpose } from '@/lib/pr/schema'
-import { getPurchaseRequestChecklist } from '@/lib/pr/checklist-queries'
+import { methodRequiresAnnualPlanReference } from '@/lib/pr/checklist'
+import {
+  getPurchaseRequestAnnualPlanReference,
+  getPurchaseRequestChecklist,
+} from '@/lib/pr/checklist-queries'
 
 interface PurchaseRequestDetailPageProps {
   params: Promise<{ id: string }>
@@ -55,6 +59,7 @@ const METHOD_DETAIL_LABELS: Record<string, string> = {
 const CONTRACT_DRAFT_LABELS: Record<string, string> = {
   fiscalYear: 'ปีงบประมาณ',
   displayName: 'ชื่อสัญญา',
+  contractDurationYears: 'จำนวนปีที่ทำสัญญา',
   vendor: 'คู่สัญญา',
   sentToStockOfficerDate: 'วันที่ส่งเจ้าหน้าที่คลัง',
 }
@@ -69,9 +74,12 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
 
   const canReview = canOperateStock(actor)
   const canAccessChecklist = request.checklistPolicyVersion !== null && (canReview || request.requesterId === actor.id)
-  const [lineNotification, checklist] = await Promise.all([
+  const [lineNotification, checklist, annualPlanReference] = await Promise.all([
     canReview ? getLatestPurchaseRequestLineNotification(id, actor) : Promise.resolve(null),
     canAccessChecklist ? getPurchaseRequestChecklist(id, actor) : Promise.resolve(null),
+    canAccessChecklist && methodRequiresAnnualPlanReference(request.purchaseMethod)
+      ? getPurchaseRequestAnnualPlanReference(id, actor)
+      : Promise.resolve(null),
   ])
   const lineNotificationConfigured = canReview && Boolean(getLineNotificationConfig())
   const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
@@ -214,7 +222,11 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               <div key={key}>
                 <dt>{CONTRACT_DRAFT_LABELS[key] ?? key}</dt>
                 <dd className="identifier">
-                  {key === 'sentToStockOfficerDate' ? formatThaiDate(String(value)) : String(value)}
+                  {key === 'sentToStockOfficerDate'
+                    ? formatThaiDate(String(value))
+                    : key === 'contractDurationYears'
+                      ? `${String(value)} ปี`
+                      : String(value)}
                 </dd>
               </div>
             ))}
@@ -233,6 +245,52 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               </div>
             )}
           </dl>
+        </section>
+      )}
+
+      {annualPlanReference && (
+        <section className="bench-panel annual-plan-reference-detail" aria-labelledby="pr-annual-plan-reference-title">
+          <div className="bench-panel__header">
+            <div>
+              <p className="section-kicker">LOCKED PLAN REFERENCE</p>
+              <h2 id="pr-annual-plan-reference-title">รายการอ้างอิง{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</h2>
+              <p>ระบบล็อก version ของแผนที่ใช้ตอนส่ง PR แล้ว การอัปโหลดไฟล์แผนใหม่จะไม่เปลี่ยน reference ของใบนี้</p>
+            </div>
+          </div>
+          <dl className="contract-facts annual-plan-reference-detail__facts">
+            <div><dt>ประเภทแผน</dt><dd>{annualPlanReference.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}</dd></div>
+            <div><dt>ปีงบประมาณแผน</dt><dd>{annualPlanReference.planFiscalYear}</dd></div>
+            <div><dt>Plan version ID</dt><dd className="identifier">{annualPlanReference.planVersionId}</dd></div>
+            <div><dt>Checksum</dt><dd className="identifier">{annualPlanReference.sourceChecksum ?? 'ไม่ระบุ'}</dd></div>
+          </dl>
+          {annualPlanReference.planType === 'hiring' ? (
+            <ul className="annual-plan-reference-detail__lines">
+              <li>
+                <strong>ชื่อสัญญา: {annualPlanReference.contract?.contractName ?? 'ไม่ระบุ'}</strong>
+                <span>
+                  {annualPlanReference.contract
+                    ? `แผนลำดับ ${annualPlanReference.contract.planSequence} · หน้า ${annualPlanReference.contract.pageNumber} · ${annualPlanReference.contract.matchMethod}`
+                    : 'ไม่พบ reference ชื่อสัญญา'}
+                </span>
+              </li>
+            </ul>
+          ) : (
+            <ul className="annual-plan-reference-detail__lines">
+              {request.items.map((item) => {
+                const line = annualPlanReference.lines.find((candidate) => candidate.purchaseRequestItemId === item.id)
+                return (
+                  <li key={item.id}>
+                    <strong>{item.lineNumber}. {item.name}</strong>
+                    <span>
+                      {line
+                        ? `แผนลำดับ ${line.planSequence} · หน้า ${line.pageNumber} · ${line.matchMethod}`
+                        : 'ไม่พบ reference รายบรรทัด'}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </section>
       )}
 

@@ -94,6 +94,7 @@ assert.match(detailPage, /contract-detail-heading__top/, 'contract identity must
 assert.match(detailPage, /contract-detail-heading__value/, 'contract value must be the primary summary metric')
 assert.match(detailPage, /<dl className="contract-facts/, 'supporting facts must stay grouped inside the contract overview')
 assert.match(detailPage, /contract-facts--vendor-split-with-value/, 'the last fact column must align under the contract value panel above it, not just sit near it')
+assert.match(detailPage, /contract-facts--overview/, 'contract facts must use the compact five-column overview layout on wide screens')
 assert.match(detailPage, /contract-facts__period[\s\S]*contract\.expiryNotice[\s\S]*contract-expiry-chip/, 'an imminent contract expiry must sit with the contract period instead of becoming a detached banner')
 assert.doesNotMatch(detailPage, /contract-expiry-notice/, 'the expiry state must not consume a full-width alert row beneath the summary facts')
 assert.match(detailPage, /<StatusChip tone="neutral">\{contract\.contractTypeLabel\}<\/StatusChip>/, 'contract type must be a neutral category badge, distinct from workflow status')

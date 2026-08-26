@@ -3,7 +3,19 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
+import { currentFiscalYear, fiscalYearOfIsoDate } from '@/lib/annual-plans/fiscal'
+import {
+  getCurrentAnnualPlanForPurchaseRequest,
+  readCurrentPlanVersionPdf,
+  validateAnnualPlanReferenceForContract,
+  validateAnnualPlanReferenceForLines,
+} from '@/lib/annual-plans/pr'
+import type { AnnualPlanReference } from '@/lib/annual-plans/pr-reference'
 import { assertStockOperator } from '@/lib/inventory/authorization'
+import {
+  annualPlanTypeForPurchaseMethod,
+  methodRequiresAnnualPlanReference,
+} from '@/lib/pr/checklist'
 import {
   assertPurchaseRequestOutsideStockReceiver,
   assertPurchaseRequestManager,
@@ -61,17 +73,51 @@ function revalidatePurchaseRequest(id?: string) {
 
 /** The Thai fiscal year rolls on 1 October. */
 function thaiFiscalYear(isoDate: string): number {
-  const [year, month] = isoDate.split('-').map(Number)
-  return year + 543 + (month >= 10 ? 1 : 0)
+  return fiscalYearOfIsoDate(isoDate)
+}
+
+async function validateCurrentAnnualPlanSubmission(
+  parsed: PurchaseRequestInput,
+  referenceInput: unknown,
+) {
+  const planType = annualPlanTypeForPurchaseMethod(parsed.method.kind)
+  if (!planType) {
+    return { method: parsed.method, reference: null }
+  }
+
+  const fiscalYear = currentFiscalYear()
+  if (fiscalYearOfIsoDate(parsed.requestedDate) !== fiscalYear) {
+    throw new Error(`วันที่ขอซื้อของ PR ที่อ้างอิงแผน${planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ต้องอยู่ในปีงบประมาณปัจจุบัน (${fiscalYear})`)
+  }
+  const plan = await getCurrentAnnualPlanForPurchaseRequest(planType)
+  const validated = planType === 'hiring' && parsed.method.kind === 'equipment_lease'
+    ? validateAnnualPlanReferenceForContract(referenceInput, parsed.method.contractDraft.displayName, plan)
+    : validateAnnualPlanReferenceForLines(referenceInput, parsed.items, plan)
+  // The source PDF is immutable evidence, not only a row index. Recheck its
+  // size/checksum immediately before the PR transaction so a storage object
+  // changed in place cannot make a cached highlight look current.
+  await readCurrentPlanVersionPdf(validated.reference.planVersionId, planType)
+  return {
+    method: parsed.method.kind === 'annual_plan'
+      ? {
+          ...parsed.method,
+          fiscalYear,
+          planSequence: validated.selectedRows.map((row) => row.planSequence).join(', '),
+        }
+      : parsed.method,
+    reference: validated.reference as AnnualPlanReference,
+  }
 }
 
 export async function createPurchaseRequest(
   input: PurchaseRequestInput,
   checklist: PurchaseRequestChecklistSubmission,
+  annualPlanReferenceInput?: unknown,
 ) {
   const actor = await requireActor()
   assertPurchaseRequester(actor)
   const parsed = purchaseRequestInputSchema.parse(input)
+  const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
   const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
     actor,
     method: parsed.method.kind,
@@ -81,19 +127,24 @@ export async function createPurchaseRequest(
     allowExistingAttachments: false,
   })
   const { items, ...request } = parsed
+  const requestMethod = annualPlanSubmission.method
 
-  const result = await supabaseAdmin.rpc('create_purchase_request_with_checklist', {
+  // The legacy create_purchase_request_with_checklist RPC remains available
+  // (supabaseAdmin.rpc('create_purchase_request_with_checklist', ...))
+  // for old integrations; new submissions use the reference-aware wrapper.
+  const result = await supabaseAdmin.rpc('create_purchase_request_with_annual_plan_checklist', {
     p_actor_id: actor.id,
     // headName always names the actor creating the PR — never trust a
     // client-supplied value, which a direct call to this action could set
     // to anyone's name.
-    p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+    p_request: { ...request, method: requestMethod, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
     // Usage and on-hand snapshots are taken inside the transaction, not here,
     // so a stale browser value can never be recorded as fact.
     p_items: items.map(omitNullishProperties),
     p_upload_session_id: parsedChecklist.uploadSessionId,
     p_attachments: parsedChecklist.attachments,
     p_committees: parsedChecklist.committees,
+    p_annual_plan_reference: annualPlanSubmission.reference,
   })
 
   const created = unwrapMutation('สร้างใบ PR', result)
@@ -110,6 +161,7 @@ export async function updatePurchaseRequest(
   purchaseRequestId: string,
   input: PurchaseRequestInput,
   checklist?: PurchaseRequestChecklistSubmission,
+  annualPlanReferenceInput?: unknown,
 ) {
   const actor = await requireActor()
   const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
@@ -119,7 +171,11 @@ export async function updatePurchaseRequest(
   assertPurchaseRequestManager(actor, existing.requesterId)
   const { items, ...request } = parsed
 
-  if (existing.checklistPolicyVersion === null) {
+  const legacyAnnualPlan = methodRequiresAnnualPlanReference(existing.purchaseMethod)
+    && methodRequiresAnnualPlanReference(parsed.method.kind)
+    && existing.purchaseMethod === parsed.method.kind
+    && !existing.annualPlanReferenceRequired
+  if (existing.checklistPolicyVersion === null || legacyAnnualPlan) {
     const legacyResult = await supabaseAdmin.rpc('update_purchase_request', {
       p_pr_id: parsedId,
       p_actor_id: actor.id,
@@ -131,6 +187,7 @@ export async function updatePurchaseRequest(
     return legacyUpdated
   }
 
+  const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
   const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
     actor,
     method: parsed.method.kind,
@@ -140,14 +197,18 @@ export async function updatePurchaseRequest(
     allowExistingAttachments: true,
   })
 
-  const result = await supabaseAdmin.rpc('update_purchase_request_with_checklist', {
+  // The legacy update_purchase_request_with_checklist RPC remains available
+  // (supabaseAdmin.rpc('update_purchase_request_with_checklist', ...))
+  // for old integrations; new submissions use the reference-aware wrapper.
+  const result = await supabaseAdmin.rpc('update_purchase_request_with_annual_plan_checklist', {
     p_pr_id: parsedId,
     p_actor_id: actor.id,
-    p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+    p_request: { ...request, method: annualPlanSubmission.method, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
     p_items: items.map(omitNullishProperties),
     p_upload_session_id: parsedChecklist.uploadSessionId,
     p_attachments: parsedChecklist.attachments,
     p_committees: parsedChecklist.committees,
+    p_annual_plan_reference: annualPlanSubmission.reference,
   })
 
   const updated = unwrapMutation('แก้ไขใบ PR', result)

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { contractDurationYearsSchema } from '@/lib/contracts/schema'
 import type { ContractType } from '@/lib/contracts/types'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { isoDateSchema } from '@/lib/validation/date'
@@ -71,6 +72,9 @@ export type PurchaseRequestStatus = (typeof PURCHASE_REQUEST_STATUSES)[number]
 const contractDraftBaseSchema = z.object({
   fiscalYear: z.number().int().min(2500).max(3000),
   displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),
+  // Optional only for reading/editing PRs created before this field existed.
+  // New submissions are required to provide one in purchaseRequestInputSchema.
+  contractDurationYears: contractDurationYearsSchema.optional(),
   sentToStockOfficerDate: isoDateSchema,
 })
 
@@ -106,7 +110,11 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('annual_plan'),
     fiscalYear: z.number().int().min(2500).max(3000),
-    planSequence: z.string().trim().min(1, 'กรุณาระบุลำดับในแผนจัดซื้อ'),
+    // The sequence is derived from the current annual-plan rows matched to
+    // the PR items. It is retained as optional method metadata for legacy
+    // callers and for displaying the server-confirmed result, but it is not
+    // something the requester has to enter.
+    planSequence: z.string().trim().max(240).optional(),
   }),
   z.object({
     kind: z.literal('contract'),
@@ -248,6 +256,18 @@ export const purchaseRequestInputSchema = z
     // create_contract's own check) means the officer never hits an opaque
     // database error on a PR that isn't theirs to fix.
     const createsContract = methodCreatesContract(value.method)
+
+    if (
+      createsContract &&
+      'contractDraft' in value.method &&
+      value.method.contractDraft.contractDurationYears == null
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['method', 'contractDraft', 'contractDurationYears'],
+        message: 'กรุณาเลือกจำนวนปีที่ทำสัญญา',
+      })
+    }
 
     value.items.forEach((item, index) => {
       if (requiresContractItems && !item.contractItemId) {

@@ -811,6 +811,7 @@ textarea {
 
 .status-chip--neutral { color: var(--lab-muted); background: var(--lab-surface-muted); }
 .status-chip--info { color: var(--lab-primary); background: var(--lab-primary-soft); border-color: color-mix(in srgb, var(--lab-primary) 30%, var(--lab-border)); font-family: var(--font-mono); letter-spacing: .04em; }
+.status-chip--progress { color: var(--lab-teal); background: color-mix(in srgb, var(--lab-teal) 10%, var(--lab-surface)); border-color: color-mix(in srgb, var(--lab-teal) 30%, var(--lab-border)); }
 .status-chip--attention { color: var(--lab-amber); background: var(--lab-amber-soft); border-color: color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border)); }
 .status-chip--success { color: var(--lab-green); background: var(--lab-green-soft); border-color: color-mix(in srgb, var(--lab-green) 30%, var(--lab-border)); }
 .status-chip--danger { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 30%, var(--lab-border)); }
@@ -1443,6 +1444,10 @@ textarea {
   width: 100%;
 }
 
+.page-heading--stack .inventory-heading__actions {
+  margin-left: auto;
+}
+
 .page-heading--stack h1 {
   max-width: none;
 }
@@ -1524,7 +1529,7 @@ textarea {
   border-radius: var(--radius-panel);
   box-shadow: var(--lab-shadow-panel);
 }
-.contract-filters { grid-template-columns: minmax(220px, 1.3fr) repeat(4, minmax(130px, 1fr)) auto; gap: 14px; padding: 18px; }
+.contract-filters { grid-template-columns: minmax(220px, 1.3fr) repeat(5, minmax(130px, 1fr)) auto; gap: 14px; padding: 18px; }
 .contract-filters label { color: var(--lab-navy-strong); }
 .contract-filters input,
 .contract-filters select { min-height: 48px; background: var(--lab-surface-muted); }
@@ -2059,6 +2064,32 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .pr-outside-stock-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pr-outside-stock-control .form-error { flex: 1 0 100%; margin: 0; }
 .list-summary-dialog__footer > .pr-outside-stock-control { margin-right: auto; }
+.inventory-summary-dialog { width: min(720px, calc(100vw - 32px)); }
+.inventory-summary-dialog__body { max-height: calc(min(84dvh, 760px) - 92px); }
+.inventory-summary-dialog__fact--balance { background: var(--lab-primary-soft); }
+.inventory-summary-dialog__fact--balance dd { color: var(--lab-navy-strong); font: 500 16px/1.35 var(--font-mono); }
+.inventory-summary-dialog__fact--note dd { font-weight: 500; line-height: 1.5; }
+.inventory-summary-dialog__status { display: flex; flex-wrap: wrap; gap: 6px; }
+.inventory-summary-dialog__lot-value { display: grid; justify-items: end; gap: 4px; white-space: normal; }
+.inventory-summary-dialog__lot-value .status-chip { margin-top: 1px; }
+.lot-table__statuses { display: flex; flex-wrap: wrap; gap: 6px; }
+.lot-table__action { min-width: 44px; }
+.inventory-summary-dialog__loading,
+.inventory-summary-dialog__error { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--lab-border); border-radius: 12px; }
+.inventory-summary-dialog__loading { background: var(--lab-surface-muted); }
+.inventory-summary-dialog__loading p,
+.inventory-summary-dialog__error p { margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.5; }
+.inventory-summary-dialog__loading-line { display: block; width: 68%; height: 12px; background: var(--lab-border); border-radius: 4px; }
+.inventory-summary-dialog__loading-line--wide { width: 100%; height: 18px; }
+.inventory-summary-dialog__error { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 24%, var(--lab-border)); }
+.inventory-summary-dialog__error p { color: var(--lab-red); font-weight: 600; }
+.inventory-summary-dialog__error .lab-button { justify-self: start; }
+.inventory-export-dialog { width: min(560px, calc(100vw - 32px)); }
+.inventory-export-dialog__body { display: grid; gap: 16px; max-height: calc(min(84dvh, 760px) - 92px); }
+.inventory-export-dialog__hint { margin: -4px 0 0; color: var(--lab-muted); font-size: 12px; line-height: 1.55; }
+.inventory-export-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; border-top: 1px solid var(--lab-border); }
+.inventory-export-dialog__actions .lab-button,
+.inventory-export-dialog__actions .lab-link-button { min-width: 132px; }
 .contract-edit-dialog__body { max-height: calc(min(92dvh, 900px) - 92px); background: var(--lab-canvas); }
 .contract-edit-dialog__body .contract-form { gap: 16px; }
 .contract-edit-dialog__body .form-action-bar { bottom: 0; margin: 0; }
@@ -2085,6 +2116,11 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 /* Same alignment fix as above, but keeps this page's own vendor/period bias
    (1.1 : .55 : .95 scaled down) instead of flattening every column to equal width. */
 .contract-facts--vendor-split-with-value { grid-template-columns: minmax(0, .66fr) minmax(0, .33fr) minmax(0, .56fr) minmax(300px, .65fr); }
+/* The contract overview keeps the first four facts aligned to the identity
+   panel above and the period aligned to its value panel. This keeps the whole
+   summary on one scan line at desktop width; the 1180px rule below reflows it
+   when the values need room. */
+.contract-facts--overview { grid-template-columns: minmax(0, .5fr) minmax(96px, .25fr) minmax(108px, .3fr) minmax(0, .5fr) minmax(300px, .65fr); }
 .contract-facts > div { min-width: 0; padding: 16px 24px 18px; border-right: 1px solid var(--lab-border); }
 .contract-facts > div:last-child { border-right: 0; }
 .contract-facts dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
@@ -2103,6 +2139,22 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .contract-renewal-hint--attention { color: var(--lab-amber); }
 .contract-renewal-hint--danger { color: var(--lab-red); }
 .contract-task-cards .contract-renewal-hint { display: flex; margin-top: 8px; }
+.contract-spending-rates { overflow: hidden; }
+.contract-spending-rates__header { align-items: flex-start; padding: 20px 24px 16px; }
+.contract-spending-rates__header > div { min-width: 0; }
+.contract-spending-rates__header > div > p { max-width: 65ch; }
+.contract-spending-rates__term { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 32px; padding: 6px 10px; color: var(--lab-primary-strong); background: var(--lab-primary-soft); border: 1px solid color-mix(in srgb, var(--lab-primary) 22%, var(--lab-border)); border-radius: var(--radius-control); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.contract-spending-rates__term--missing { color: var(--lab-amber); background: var(--lab-amber-soft); border-color: color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border)); }
+.contract-spending-rates__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--lab-border); }
+.contract-spending-rates__grid > div { min-width: 0; padding: 18px 24px 16px; border-right: 1px solid var(--lab-border); }
+.contract-spending-rates__grid > div:last-child { border-right: 0; }
+.contract-spending-rates__grid dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.contract-spending-rates__grid dd { margin: 7px 0 0; overflow-wrap: anywhere; color: var(--lab-navy-strong); font: 500 clamp(20px, 2.2vw, 28px)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+.contract-spending-rates__grid small { display: block; margin-top: 8px; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }
+.contract-spending-rates__note { margin: 0; padding: 0 24px 18px; color: var(--lab-muted); font-size: 11px; line-height: 1.5; }
+.contract-spending-rates__missing { display: grid; gap: 5px; margin: 0; padding: 16px 24px 18px; background: color-mix(in srgb, var(--lab-amber-soft) 66%, var(--lab-surface)); border-top: 1px solid color-mix(in srgb, var(--lab-amber) 20%, var(--lab-border)); }
+.contract-spending-rates__missing strong { color: var(--lab-amber); font-size: 13px; }
+.contract-spending-rates__missing p { max-width: 65ch; margin: 0; color: var(--lab-ink); font-size: 12px; line-height: 1.5; }
 .contract-detail-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, .75fr); gap: 20px; align-items: start; }
 .contract-detail-grid--single { grid-template-columns: minmax(0, 1fr); }
 .next-action { position: sticky; top: 20px; }
@@ -2520,6 +2572,26 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 
 .inventory-detail__note span {
   overflow-wrap: anywhere;
+}
+
+.inventory-ledger__header-meta { display: grid; gap: 4px; max-width: 50ch; text-align: right; }
+.inventory-ledger__summary,
+.inventory-ledger__header-meta small { margin: 0; overflow-wrap: anywhere; color: var(--lab-muted); font-size: 12px; line-height: 1.45; }
+.inventory-ledger__header-meta small { font-size: 11px; }
+
+.inventory-ledger__load-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--lab-border);
+}
+
+.inventory-ledger__load-more p {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 12px;
 }
 
 .inventory-detail-grid {
@@ -3646,6 +3718,8 @@ input[type="number"] {
   .dashboard-operations .pipeline-panel { grid-column: 1; grid-row: auto; }
   .pipeline-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
   .next-action { position: static; }
+  .contract-facts--overview { grid-template-columns: minmax(0, .9fr) minmax(104px, .55fr) minmax(112px, .65fr) minmax(0, 1.05fr); }
+  .contract-facts--overview > .contract-facts__period { grid-column: 1 / -1; border-top: 1px solid var(--lab-border); border-right: 0; }
 }
 
 @media (max-width: 800px) {
@@ -3662,6 +3736,11 @@ input[type="number"] {
   .contract-task-cards .remaining-gauge { min-width: 150px; }
   .inventory-table--desktop { display: none; }
   .inventory-task-cards { display: block; }
+  .inventory-ledger__header-meta { width: 100%; max-width: none; text-align: left; }
+  .inventory-ledger__summary,
+  .inventory-ledger__header-meta small { text-align: left; }
+  .inventory-ledger__load-more { align-items: stretch; flex-direction: column; padding-inline: 16px; }
+  .inventory-ledger__load-more .lab-link-button { width: 100%; }
   .pr-table--desktop { display: none; }
   .pr-task-cards { display: block; }
   .receipt-table--desktop { display: none; }
@@ -3683,6 +3762,8 @@ input[type="number"] {
   .item-edit-row__name { grid-column: span 2; }
   .contract-detail-heading__body { grid-template-columns: 1fr; }
   .contract-detail-heading__value { min-height: 120px; border-top: 1px solid var(--lab-border); border-left: 0; }
+  .contract-spending-rates__header { flex-direction: column; }
+  .contract-spending-rates__term { align-self: flex-start; }
   .contract-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .contract-facts > .contract-facts__vendor { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--lab-border); }
   .contract-facts > div:nth-child(2) { border-right: 1px solid var(--lab-border); }
@@ -3773,6 +3854,7 @@ input[type="number"] {
   .contract-items-disclosure__list li { grid-template-columns: minmax(0, 1fr) minmax(104px, 42%); gap: 9px; }
   .page-heading__actions { display: grid; grid-template-columns: 1fr; width: 100%; }
   .page-heading__actions .lab-link-button { width: 100%; }
+  .inventory-heading__actions .lab-button { width: 100%; }
   .dashboard-quick-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
   .dashboard-quick-actions .lab-link-button { width: 100%; }
   .budget-gauge__progress-meta { align-items: flex-start; flex-direction: column; gap: 6px; }
@@ -3807,6 +3889,9 @@ input[type="number"] {
   .list-summary-dialog__footer > .pr-outside-stock-control,
   .contract-detail-heading__status > .pr-outside-stock-control { width: 100%; margin: 4px 0 0; }
   .pr-outside-stock-control > .lab-button { width: 100%; }
+  .inventory-export-dialog__actions { display: grid; grid-template-columns: 1fr; }
+  .inventory-export-dialog__actions .lab-button,
+  .inventory-export-dialog__actions .lab-link-button { width: 100%; }
   .app-dialog__header { padding: 16px 12px 14px 18px; }
   .app-dialog__body,
   .responsible-dialog__body,
@@ -3822,6 +3907,12 @@ input[type="number"] {
   .contract-detail-heading__identity,
   .contract-detail-heading__value { padding: 24px 20px; }
   .contract-detail-heading h1 { font-size: clamp(26px, 9vw, 34px); }
+  .contract-spending-rates__header { padding: 18px 18px 14px; }
+  .contract-spending-rates__grid { grid-template-columns: 1fr; }
+  .contract-spending-rates__grid > div { padding: 16px 18px; border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .contract-spending-rates__grid > div:last-child { border-bottom: 0; }
+  .contract-spending-rates__note,
+  .contract-spending-rates__missing { padding-right: 18px; padding-left: 18px; }
   .contract-facts { grid-template-columns: 1fr; }
   .contract-facts > div,
   .contract-facts > div:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--lab-border); }
@@ -4453,6 +4544,43 @@ body {
 .pr-checklist__progress progress { width: 100%; height: 9px; accent-color: var(--lab-primary); }
 .pr-checklist--legacy { color: var(--lab-muted); border-style: dashed; }
 
+/* Current annual-plan matching ----------------------------------------- */
+.annual-plan-reference { display: grid; gap: 20px; overflow: hidden; }
+.annual-plan-reference__header { align-items: flex-start; }
+.annual-plan-reference__header h2 { margin-top: 4px; }
+.annual-plan-reference__header p:not(.section-kicker) { margin: 6px 0 0; color: var(--lab-muted); }
+.annual-plan-reference__helper { display: block; margin-top: 8px; color: var(--lab-primary); line-height: 1.45; }
+.annual-plan-reference__header-actions { display: grid; justify-items: end; gap: 8px; width: min(42%, 360px); min-width: 0; max-width: 100%; }
+.annual-plan-reference__status { display: flex; width: 100%; min-width: 0; min-height: 32px; gap: 8px; align-items: center; padding: 5px 10px; overflow: hidden; color: var(--lab-danger); background: color-mix(in srgb, var(--lab-danger) 8%, var(--lab-surface)); border: 1px solid color-mix(in srgb, var(--lab-danger) 24%, var(--lab-border)); border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.35; text-align: left; white-space: nowrap; }
+.annual-plan-reference__status.is-ready { color: var(--lab-success); background: color-mix(in srgb, var(--lab-success) 8%, var(--lab-surface)); border-color: color-mix(in srgb, var(--lab-success) 26%, var(--lab-border)); }
+.annual-plan-reference__status-label { flex: 0 0 auto; white-space: nowrap; }
+.annual-plan-reference__filename { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annual-plan-reference__view { min-height: 44px; padding-block: 8px; font-size: 12px; white-space: nowrap; }
+.annual-plan-reference__notice { margin: 0 24px 24px; padding: 14px 16px; color: var(--lab-red); background: color-mix(in srgb, var(--lab-red) 7%, var(--lab-surface)); border: 1px solid color-mix(in srgb, var(--lab-red) 22%, var(--lab-border)); border-radius: 10px; line-height: 1.5; }
+.annual-plan-reference__lines { display: grid; gap: 14px; padding: 0 24px 24px; }
+.annual-plan-reference__line { display: grid; gap: 12px; min-width: 0; padding: 16px; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 12px; }
+.annual-plan-reference__line.is-matched { border-color: color-mix(in srgb, var(--lab-success) 35%, var(--lab-border)); }
+.annual-plan-reference__line-copy { display: grid; min-width: 0; gap: 4px; }
+.annual-plan-reference__line-copy strong, .annual-plan-reference__line-copy small { overflow-wrap: anywhere; }
+.annual-plan-reference__line-copy small { color: var(--lab-muted); line-height: 1.45; }
+.annual-plan-reference__selected { margin: 0; padding: 10px 12px; overflow-wrap: anywhere; color: var(--lab-success); background: color-mix(in srgb, var(--lab-success) 7%, var(--lab-surface)); border-radius: 8px; font-size: 13px; line-height: 1.45; }
+.annual-plan-reference__controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); gap: 14px; align-items: end; }
+.annual-plan-reference__hint { color: var(--lab-attention); line-height: 1.45; }
+
+.annual-plan-reference-detail { display: grid; gap: 16px; margin-bottom: 20px; padding: 20px 22px; border: 1px solid color-mix(in srgb, var(--lab-primary) 18%, var(--lab-border-strong)); border-radius: 12px; }
+.annual-plan-reference-detail__header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.annual-plan-reference-detail__header h2 { margin: 4px 0 0; color: var(--lab-navy-strong); font-size: 18px; }
+.annual-plan-reference-detail__header p:not(.section-kicker) { margin: 6px 0 0; color: var(--lab-muted); font-size: 13px; line-height: 1.45; }
+.annual-plan-reference-detail__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.annual-plan-reference-detail__facts > div { min-width: 0; padding: 12px 14px; background: var(--lab-surface-muted); border-radius: 9px; }
+.annual-plan-reference-detail__facts dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.annual-plan-reference-detail__facts dd { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--lab-ink); font-size: 13px; line-height: 1.45; }
+.annual-plan-reference-detail__lines { display: grid; gap: 8px; margin: 0; padding-left: 22px; }
+.annual-plan-reference-detail__lines li { padding-left: 4px; line-height: 1.5; }
+.annual-plan-reference-detail__lines span { display: block; color: var(--lab-muted); font-size: 13px; }
+
+.readonly-field-note { margin: -2px 2px 0; color: var(--lab-muted); font-size: 12px; line-height: 1.45; }
+
 .pr-checklist-detail { display: grid; gap: 18px; margin-bottom: 20px; padding: 0 22px 20px; border-bottom: 2px solid color-mix(in srgb, var(--lab-primary) 18%, var(--lab-border-strong)); }
 .pr-checklist-detail__toolbar { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .pr-checklist-detail__toolbar > div:first-child { display: grid; gap: 3px; }
@@ -4536,6 +4664,10 @@ body {
 @media (max-width: 800px) {
   .pr-stock-officer__actions { justify-content: stretch; }
   .pr-stock-officer__actions > * { flex: 1 1 auto; justify-content: center; }
+  .annual-plan-reference__header-actions { width: 100%; max-width: none; justify-items: stretch; }
+  .annual-plan-reference__status { max-width: 100%; }
+  .annual-plan-reference__controls, .annual-plan-reference-detail__facts { grid-template-columns: 1fr; }
+  .annual-plan-reference-detail__header { display: grid; }
 }
 
 /* Keep the browser's native dialog:not([open]) { display: none } contract.

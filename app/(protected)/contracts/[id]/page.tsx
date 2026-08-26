@@ -8,6 +8,7 @@ import { ContractFileCard } from '@/components/contracts/ContractFileCard'
 import { ContractOpeningBalanceHistory } from '@/components/contracts/ContractOpeningBalanceHistory'
 import { ContractPurchaseHistory } from '@/components/contracts/ContractPurchaseHistory'
 import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
+import { ContractSpendingRates } from '@/components/contracts/ContractSpendingRates'
 import { ExpireContractDialog } from '@/components/contracts/ExpireContractDialog'
 import { OpeningBalanceDialog } from '@/components/contracts/OpeningBalanceDialog'
 import { ResponsibleUserDialog } from '@/components/contracts/ResponsibleUserDialog'
@@ -203,9 +204,10 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </dl>
         </div>
 
-        <dl className="contract-facts contract-facts--vendor-split-with-value" aria-label="ข้อมูลสรุปสัญญา">
+        <dl className="contract-facts contract-facts--vendor-split-with-value contract-facts--overview" aria-label="ข้อมูลสรุปสัญญา">
           <div className="contract-facts__vendor"><dt>คู่สัญญา</dt><dd>{contract.vendor || 'ไม่ระบุ'}</dd></div>
           <div><dt>ปีงบประมาณ</dt><dd className="identifier">{contract.fiscalYear ?? 'ไม่ระบุ'}</dd></div>
+          <div><dt>จำนวนปีที่ทำสัญญา</dt><dd>{contract.contractDurationYears ? `${contract.contractDurationYears} ปี` : 'ไม่ระบุ'}</dd></div>
           <div><dt>หน่วยงาน</dt><dd>{contract.department || 'ไม่ระบุ'}</dd></div>
           <div className="contract-facts__period">
             <dt>ระยะเวลาสัญญา</dt>
@@ -223,6 +225,8 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
           </div>
         </dl>
       </header>
+
+      <ContractSpendingRates total={total} durationYears={contract.contractDurationYears} />
 
       <div className={hasNextAction ? 'contract-detail-grid' : 'contract-detail-grid contract-detail-grid--single'}>
         {isContractStarted ? (

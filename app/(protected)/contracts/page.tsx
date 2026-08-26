@@ -5,7 +5,7 @@ import { ListPagination } from '@/components/ui/ListPagination'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS, contractNeedsWatch, presentContract } from '@/lib/contracts/presenter'
-import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
+import { CONTRACT_DEPARTMENTS, CONTRACT_DURATION_YEARS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { listContracts } from '@/lib/contracts/queries'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import { bangkokIsoDate } from '@/lib/date/thai'
@@ -24,6 +24,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const params = await searchParams
   const fiscalYearValue = first(params.fiscalYear)
   const contractTypeValue = first(params.contractType)
+  const contractDurationYearsValue = first(params.contractDurationYears)
   const departmentValue = first(params.department)
   const stageValue = first(params.stage)
   const search = first(params.search)?.trim() ?? ''
@@ -37,6 +38,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const showArchived = isAdmin && first(params.showArchived) === '1'
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const contractType = CONTRACT_TYPES.find((type) => type === contractTypeValue)
+  const contractDurationYears = CONTRACT_DURATION_YEARS.find((years) => String(years) === contractDurationYearsValue)
   const department = CONTRACT_DEPARTMENTS.find((dept) => dept === departmentValue)
   const procurementStage = PROCUREMENT_STAGES.find((stage) => stage === stageValue)
 
@@ -108,7 +110,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   let contracts: Awaited<ReturnType<typeof listContracts>> = []
   let error: string | null = null
   try {
-    contracts = await listContracts({ fiscalYear, contractType, department, procurementStage, search })
+    contracts = await listContracts({ fiscalYear, contractType, contractDurationYears, department, procurementStage, search })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการสัญญาไม่สำเร็จ'
   }
@@ -144,6 +146,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   const activeParams = new URLSearchParams()
   if (fiscalYear) activeParams.set('fiscalYear', String(fiscalYear))
   if (contractType) activeParams.set('contractType', contractType)
+  if (contractDurationYears) activeParams.set('contractDurationYears', String(contractDurationYears))
   if (department) activeParams.set('department', department)
   if (procurementStage) activeParams.set('stage', procurementStage)
   if (search) activeParams.set('search', search)
@@ -218,6 +221,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
         search={search}
         fiscalYear={fiscalYear ? String(fiscalYear) : ''}
         contractType={contractType ?? ''}
+        contractDurationYears={contractDurationYears ? String(contractDurationYears) : ''}
         department={department ?? ''}
         procurementStage={procurementStage ?? ''}
         showEnded={showEnded}

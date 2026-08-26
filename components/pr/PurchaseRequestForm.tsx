@@ -13,6 +13,16 @@ import {
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
+import { fiscalYearOfIsoDate } from '@/lib/annual-plans/fiscal'
+import { generateAnnualPlanEvidence } from '@/lib/annual-plans/actions'
+import {
+  annualPlanReferenceFingerprint,
+  matchAnnualPlanContractName,
+  matchAnnualPlanLine,
+  type AnnualPlanForPurchaseRequest,
+  type AnnualPlanReference,
+  type AnnualPlanReferenceLine,
+} from '@/lib/annual-plans/pr-reference'
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest, updatePurchaseRequest } from '@/lib/pr/actions'
@@ -29,6 +39,8 @@ import {
 } from '@/components/pr/PurchaseRequestChecklistFields'
 import {
   derivePurchaseRequestChecklist,
+  annualPlanTypeForPurchaseMethod,
+  methodRequiresAnnualPlanReference,
   purchaseRequestAttachmentSlotKey,
   validateCommitteeAssignments,
   validatePurchaseRequestAttachment,
@@ -36,6 +48,7 @@ import {
 } from '@/lib/pr/checklist'
 import type { PurchaseRequestCommitteeCandidate } from '@/lib/pr/form-options'
 import type { PurchaseRequestChecklistRecord } from '@/lib/pr/types'
+import { AnnualPlanReferenceFields } from '@/components/pr/AnnualPlanReferenceFields'
 
 export interface CatalogOption {
   inventoryItemId: string
@@ -76,6 +89,8 @@ export interface PurchaseRequestFormInitialValues {
   items: PurchaseRequestFormInitialItem[]
   checklistPolicyVersion: number | null
   checklist: PurchaseRequestChecklistRecord | null
+  annualPlanReferenceRequired: boolean
+  annualPlanReference?: AnnualPlanReference
 }
 
 export interface PurchaseRequestFormProps {
@@ -87,6 +102,8 @@ export interface PurchaseRequestFormProps {
   contractLines: ContractLineOption[]
   catalog: CatalogOption[]
   committeeCandidates: PurchaseRequestCommitteeCandidate[]
+  annualPlan: AnnualPlanForPurchaseRequest
+  hiringPlan: AnnualPlanForPurchaseRequest
   mode?: 'create' | 'edit'
   initialValues?: PurchaseRequestFormInitialValues
 }
@@ -136,6 +153,14 @@ function isLowContractBalance(line: DraftLine): boolean {
   )
 }
 
+function safeFiscalYearOfIsoDate(value: string) {
+  try {
+    return fiscalYearOfIsoDate(value)
+  } catch {
+    return null
+  }
+}
+
 /** Whether switching to `next` invalidates lines already picked under `current`. */
 function invalidatesLines(current: PurchaseMethod | null, next: PurchaseMethod): boolean {
   // Nothing was chosen yet, so there is nothing selected under the old method
@@ -147,6 +172,9 @@ function invalidatesLines(current: PurchaseMethod | null, next: PurchaseMethod):
   // …) never change what's pickable, so they must not silently wipe lines.
   if (current.kind === 'contract' && next.kind === 'contract') {
     return current.contractId !== next.contractId
+  }
+  if (current.kind === 'equipment_lease' && next.kind === 'equipment_lease') {
+    return current.contractDraft.displayName !== next.contractDraft.displayName
   }
   return false
 }
@@ -160,6 +188,8 @@ export function PurchaseRequestForm({
   contractLines,
   catalog,
   committeeCandidates,
+  annualPlan,
+  hiringPlan,
   mode = 'create',
   initialValues,
 }: PurchaseRequestFormProps) {
@@ -174,6 +204,11 @@ export function PurchaseRequestForm({
   // Editing an existing request restores what it already says.
   const [purpose, setPurpose] = useState<PurchasePurpose | null>(initialValues?.purpose ?? null)
   const [method, setMethod] = useState<PurchaseMethod | null>(() => initialValues?.method ?? null)
+  const isContractOriginationMethod = method !== null && (
+    method.kind === 'specific_contract' ||
+    method.kind === 'e_bidding' ||
+    method.kind === 'equipment_lease'
+  )
   const [lines, setLines] = useState<DraftLine[]>(() =>
     initialValues?.items.map((item) => {
       const contractLine = item.contractItemId
@@ -198,6 +233,24 @@ export function PurchaseRequestForm({
   const [uploadSessionId, setUploadSessionId] = useState(() => crypto.randomUUID())
   const [checklistFiles, setChecklistFiles] = useState<ChecklistFileSelections>({})
   const [uploadedChecklistFiles, setUploadedChecklistFiles] = useState<UploadedChecklistFiles>({})
+  const [annualPlanSelections, setAnnualPlanSelections] = useState<Record<string, AnnualPlanReferenceLine | undefined>>(() =>
+    Object.fromEntries(
+      (initialValues?.annualPlanReference?.lines ?? []).flatMap((reference, index) => {
+        const item = initialValues?.items[index]
+        const key = item?.contractItemId ?? item?.inventoryItemId
+        return key ? [[key, reference] as const] : []
+      }),
+    ),
+  )
+  const [annualPlanContractSelection, setAnnualPlanContractSelection] = useState<AnnualPlanReferenceLine | undefined>(
+    initialValues?.annualPlanReference?.contract?.line,
+  )
+  const [annualPlanEvidence, setAnnualPlanEvidence] = useState<{
+    uploadId: string
+    fileName: string
+    fingerprint: string
+    planVersionId: string
+  } | null>(null)
   const [committeeAssignments, setCommitteeAssignments] = useState<CommitteeAssignmentInput[]>(() =>
     initialValues?.checklist?.committees.map((member) => ({
       kind: member.kind,
@@ -263,6 +316,88 @@ export function PurchaseRequestForm({
 
   const options: PickerOption[] = optionsFor(method)
 
+  const annualPlanType = method ? annualPlanTypeForPurchaseMethod(method.kind) : null
+  const activeAnnualPlan = annualPlanType === 'hiring' ? hiringPlan : annualPlan
+  const annualPlanReadyForMatching = Boolean(method && methodRequiresAnnualPlanReference(method.kind))
+    && activeAnnualPlan.status === 'ready'
+    && Boolean(activeAnnualPlan.planVersionId)
+    && activeAnnualPlan.rows.length > 0
+
+  const resolvedAnnualPlanContractSelection = useMemo<AnnualPlanReferenceLine | undefined>(() => {
+    if (!annualPlanReadyForMatching || activeAnnualPlan.planType !== 'hiring' || method?.kind !== 'equipment_lease') {
+      return undefined
+    }
+    const retained = annualPlanContractSelection
+    if (retained && activeAnnualPlan.rows.some((row) => row.id === retained.planRowId)) return retained
+    const automatic = matchAnnualPlanContractName(method.contractDraft.displayName, activeAnnualPlan.rows)
+    return automatic.selected && automatic.matchMethod
+      ? {
+          lineNumber: automatic.selected.lineNumber,
+          planRowId: automatic.selected.id,
+          matchMethod: automatic.matchMethod,
+        }
+      : undefined
+  }, [activeAnnualPlan.planType, activeAnnualPlan.rows, annualPlanContractSelection, annualPlanReadyForMatching, method])
+
+  // A unique exact match is selected for the requester automatically. Keep
+  // only manual choices in state; deriving automatic matches avoids a render
+  // cycle and means an edited name/code immediately gets re-matched.
+  const resolvedAnnualPlanSelections = useMemo(() => {
+    if (!annualPlanReadyForMatching || activeAnnualPlan.planType !== 'procurement') return {}
+
+    const next: Record<string, AnnualPlanReferenceLine | undefined> = {}
+    for (const line of lines) {
+      const retained = annualPlanSelections[line.key]
+      if (retained && activeAnnualPlan.rows.some((row) => row.id === retained.planRowId)) {
+        next[line.key] = retained
+        continue
+      }
+      const automatic = matchAnnualPlanLine(line.name, line.lsCode, activeAnnualPlan.rows)
+      if (automatic.selected && automatic.matchMethod) {
+        next[line.key] = {
+          lineNumber: automatic.selected.lineNumber,
+          planRowId: automatic.selected.id,
+          matchMethod: automatic.matchMethod,
+        }
+      }
+    }
+    return next
+  }, [activeAnnualPlan.planType, activeAnnualPlan.rows, annualPlanReadyForMatching, annualPlanSelections, lines])
+
+  const annualPlanReference = useMemo<AnnualPlanReference | null>(() => {
+    if (!annualPlanReadyForMatching || !activeAnnualPlan.planVersionId) return null
+    if (activeAnnualPlan.planType === 'hiring') {
+      if (method?.kind !== 'equipment_lease' || !resolvedAnnualPlanContractSelection) return null
+      return {
+        planVersionId: activeAnnualPlan.planVersionId,
+        planFiscalYear: activeAnnualPlan.currentFiscalYear,
+        planType: 'hiring',
+        lines: [],
+        contract: {
+          contractName: method.contractDraft.displayName,
+          line: resolvedAnnualPlanContractSelection,
+        },
+      }
+    }
+    if (lines.length === 0) return null
+    const references = lines.map((line) => resolvedAnnualPlanSelections[line.key])
+    if (references.some((reference): reference is undefined => !reference)) return null
+    return {
+      planVersionId: activeAnnualPlan.planVersionId,
+      planFiscalYear: activeAnnualPlan.currentFiscalYear,
+      planType: 'procurement',
+      lines: references as AnnualPlanReferenceLine[],
+    }
+  }, [activeAnnualPlan.currentFiscalYear, activeAnnualPlan.planType, activeAnnualPlan.planVersionId, annualPlanReadyForMatching, lines, method, resolvedAnnualPlanContractSelection, resolvedAnnualPlanSelections])
+
+  const annualPlanEvidenceFingerprint = annualPlanReferenceFingerprint(
+    annualPlanReference?.planVersionId ?? null,
+    lines.map((line) => ({ name: line.name, lsCode: line.lsCode, reference: resolvedAnnualPlanSelections[line.key] })),
+    method?.kind === 'equipment_lease'
+      ? { name: method.contractDraft.displayName, reference: resolvedAnnualPlanContractSelection }
+      : undefined,
+  )
+
   const draftLineFor = (option: PickerOption): DraftLine => ({
     key: option.contractItemId ?? option.inventoryItemId,
     inventoryItemId: option.inventoryItemId,
@@ -279,6 +414,7 @@ export function PurchaseRequestForm({
 
   const addLine = (option: PickerOption) => {
     setLines((current) => [...current, draftLineFor(option)])
+    setAnnualPlanEvidence(null)
   }
 
   const addManualLine = (item: ManualItemInput): string | null => {
@@ -303,16 +439,31 @@ export function PurchaseRequestForm({
         averageMonthlyUsage: 0,
       },
     ])
+    setAnnualPlanEvidence(null)
     setError(null)
     return null
   }
 
   const updateLine = (key: string, patch: Partial<DraftLine>) => {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)))
+    setAnnualPlanSelections((current) => {
+      if (!(key in current)) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+    setAnnualPlanEvidence(null)
   }
 
   const removeLine = (key: string) => {
     setLines((current) => current.filter((line) => line.key !== key))
+    setAnnualPlanSelections((current) => {
+      if (!(key in current)) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+    setAnnualPlanEvidence(null)
   }
 
   const changeMethod = (next: PurchaseMethod, reason = 'เปลี่ยนวิธีจัดซื้อ') => {
@@ -322,6 +473,9 @@ export function PurchaseRequestForm({
 
     setChecklistFiles({})
     setUploadedChecklistFiles({})
+    setAnnualPlanSelections({})
+    setAnnualPlanContractSelection(undefined)
+    setAnnualPlanEvidence(null)
     setCommitteeAssignments([])
     setUploadSessionId(crypto.randomUUID())
     setOverallProgress(null)
@@ -351,6 +505,9 @@ export function PurchaseRequestForm({
     setLines([])
     setChecklistFiles({})
     setUploadedChecklistFiles({})
+    setAnnualPlanSelections({})
+    setAnnualPlanContractSelection(undefined)
+    setAnnualPlanEvidence(null)
     setCommitteeAssignments([])
     setUploadSessionId(crypto.randomUUID())
     setOverallProgress(null)
@@ -382,7 +539,8 @@ export function PurchaseRequestForm({
   const methodSelectionMissing =
     method === null ||
     (method.kind === 'contract' && (departmentContracts.length === 0 || method.contractId === 0)) ||
-    (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0)
+    (method.kind === 'awaiting_contract' && departmentAwaitingContracts.length === 0) ||
+    (isContractOriginationMethod && method.contractDraft.contractDurationYears == null)
 
   const hasOverLimitLine = lines.some(isOverContractLimit)
   const hasInvalidLine = lines.some(
@@ -398,7 +556,21 @@ export function PurchaseRequestForm({
     0,
   )
 
-  const legacyChecklistExempt = Boolean(isEditMode && initialValues?.checklistPolicyVersion === null)
+  // PRs created before annual-plan references were introduced may have a
+  // checklist but no saved plan reference. Keep their original edit lifecycle;
+  // only newly created plan-backed PRs are required to rematch against the
+  // current plan version.
+  const legacyAnnualPlan = Boolean(
+    isEditMode &&
+    method &&
+    methodRequiresAnnualPlanReference(method.kind) &&
+    initialValues?.method.kind === method.kind &&
+    initialValues.annualPlanReferenceRequired === false,
+  )
+  const legacyChecklistExempt = Boolean(
+    isEditMode &&
+    (initialValues?.checklistPolicyVersion === null || legacyAnnualPlan),
+  )
   const checklistTotal = method?.kind === 'equipment_lease' ? null : total
   const checklistPolicy = method ? derivePurchaseRequestChecklist(method.kind, checklistTotal) : null
   const existingChecklistAttachments = initialValues?.checklist?.attachments ?? []
@@ -421,12 +593,25 @@ export function PurchaseRequestForm({
   const selectedContractRosterReady = method?.kind !== 'contract'
     ? true
     : contracts.find((contract) => contract.id === method.contractId)?.committeeRosterReady === true
+  const requestedFiscalYear = safeFiscalYearOfIsoDate(requestedDate)
+  const annualPlanDateValid = !method || !methodRequiresAnnualPlanReference(method.kind)
+    || requestedFiscalYear === activeAnnualPlan.currentFiscalYear
+  const annualPlanDateError = method && methodRequiresAnnualPlanReference(method.kind) && !annualPlanDateValid
+    ? `วันที่ขอซื้อของ PR ที่อ้างอิงแผน${activeAnnualPlan.planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ต้องอยู่ในปีงบประมาณปัจจุบัน (${activeAnnualPlan.currentFiscalYear}) ระบบจะไม่เปลี่ยนไปใช้แผนย้อนหลัง`
+    : null
+  const annualPlanReferenceReady = !method || !methodRequiresAnnualPlanReference(method.kind)
+    || Boolean(annualPlanReference)
   const checklistComplete = legacyChecklistExempt || Boolean(
     checklistPolicy &&
+    annualPlanDateValid &&
+    annualPlanReferenceReady &&
     selectedContractRosterReady &&
     checklistPolicy.attachments.every((requirement) => {
       const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
       const file = checklistFiles[key]
+      if (requirement.kind === 'plan_page' && method && methodRequiresAnnualPlanReference(method.kind)) {
+        return Boolean(annualPlanReference)
+      }
       if (requirement.kind === 'contract_page' && method?.kind === 'contract' && !file) {
         return selectedContractFileAvailable || existingChecklistBySlot.has(key)
       }
@@ -447,6 +632,7 @@ export function PurchaseRequestForm({
       delete next[slotKey]
       return next
     })
+    if (slotKey === purchaseRequestAttachmentSlotKey('plan_page', 1)) setAnnualPlanEvidence(null)
     setOverallProgress(null)
   }
 
@@ -459,6 +645,24 @@ export function PurchaseRequestForm({
       return
     }
 
+    if (isContractOriginationMethod && method.contractDraft.contractDurationYears == null) {
+      setError('กรุณาเลือกจำนวนปีที่ทำสัญญาก่อนส่งใบ PR')
+      document.querySelector<HTMLSelectElement>('[name="contractDurationYears"]')?.focus()
+      return
+    }
+
+    if (!legacyChecklistExempt && methodRequiresAnnualPlanReference(method.kind)) {
+      if (!annualPlanDateValid) {
+        setError(annualPlanDateError ?? 'วันที่ขอซื้อไม่อยู่ในปีงบประมาณปัจจุบัน')
+        return
+      }
+      if (!annualPlanReference) {
+        setError(`กรุณาจับคู่${activeAnnualPlan.planType === 'hiring' ? 'ชื่อสัญญา' : 'รายการทั้งหมด'}กับแผน${activeAnnualPlan.planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ปีงบประมาณ ${activeAnnualPlan.currentFiscalYear} ก่อนส่งใบ PR`)
+        document.getElementById('annual-plan-reference-title')?.focus()
+        return
+      }
+    }
+
     if (!checklistComplete) {
       setError('กรุณาแนบเอกสารและเลือกรายชื่อกรรมการใน checklist ให้ครบก่อนส่งใบ PR')
       document.getElementById('pr-checklist-title')?.focus()
@@ -467,12 +671,22 @@ export function PurchaseRequestForm({
 
     startTransition(async () => {
       try {
+        const selectedPlanRows = annualPlanReference?.lines
+          .map((reference) => activeAnnualPlan.rows.find((row) => row.id === reference.planRowId))
+          .filter((row): row is NonNullable<typeof row> => Boolean(row)) ?? []
+        const submittedMethod: PurchaseMethod = method.kind === 'annual_plan' && !legacyChecklistExempt
+          ? {
+              ...method,
+              fiscalYear: activeAnnualPlan.currentFiscalYear,
+              planSequence: selectedPlanRows.map((row) => row.planSequence).join(', '),
+            }
+          : method
         const input = {
           department,
           headName,
           requestedDate,
           note: note.trim() || null,
-          method,
+          method: submittedMethod,
           items: lines
             .filter((line) => isFiniteDraftNumber(line.requestedQuantity) && line.requestedQuantity > 0)
             .map((line) => ({
@@ -494,6 +708,43 @@ export function PurchaseRequestForm({
 
         if (!checklistPolicy) throw new Error('ไม่พบกฎ checklist ของวิธีจัดซื้อ')
         setOverallProgress(0)
+        let uploadsForSubmit = uploadedChecklistFiles
+        if (!legacyChecklistExempt && methodRequiresAnnualPlanReference(method.kind)) {
+          if (!annualPlanReference || !activeAnnualPlan.planVersionId) {
+            throw new Error(`ไม่มีแผน${activeAnnualPlan.planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ปีงบประมาณ ${activeAnnualPlan.currentFiscalYear} ที่พร้อมใช้งาน`)
+          }
+          const cachedEvidence = annualPlanEvidence?.fingerprint === annualPlanEvidenceFingerprint
+            && annualPlanEvidence.planVersionId === activeAnnualPlan.planVersionId
+          if (!cachedEvidence) {
+            const generated = await generateAnnualPlanEvidence({
+              uploadSessionId,
+              requestedDate,
+              method: method.kind,
+              contractName: method.kind === 'equipment_lease' ? method.contractDraft.displayName : undefined,
+              reference: annualPlanReference,
+              items: input.items.map((item) => ({ name: item.name, lsCode: item.lsCode })),
+            })
+            const generatedUpload: UploadedChecklistFile = {
+              source: 'r2',
+              uploadId: generated.uploadId,
+              fingerprint: annualPlanEvidenceFingerprint,
+            }
+            setAnnualPlanEvidence({
+              uploadId: generated.uploadId,
+              fileName: generated.fileName,
+              fingerprint: annualPlanEvidenceFingerprint,
+              planVersionId: generated.planVersionId,
+            })
+            setUploadedChecklistFiles((current) => ({
+              ...current,
+              [purchaseRequestAttachmentSlotKey('plan_page', 1)]: generatedUpload,
+            }))
+            uploadsForSubmit = {
+              ...uploadsForSubmit,
+              [purchaseRequestAttachmentSlotKey('plan_page', 1)]: generatedUpload,
+            }
+          }
+        }
         const uploaded = await uploadChecklistFiles({
           uploadSessionId,
           method: method.kind,
@@ -501,7 +752,7 @@ export function PurchaseRequestForm({
           total: checklistTotal,
           policy: checklistPolicy,
           files: checklistFiles,
-          uploaded: uploadedChecklistFiles,
+          uploaded: uploadsForSubmit,
           onUploaded: (slotKey: string, uploadedFile: UploadedChecklistFile) => {
             setUploadedChecklistFiles((current) => ({ ...current, [slotKey]: uploadedFile }))
           },
@@ -511,6 +762,13 @@ export function PurchaseRequestForm({
           const key = purchaseRequestAttachmentSlotKey(requirement.kind, requirement.slot)
           const file = checklistFiles[key]
           const existing = existingChecklistBySlot.get(key)
+          if (requirement.kind === 'plan_page' && methodRequiresAnnualPlanReference(method.kind)) {
+            const generated = uploaded[key]
+            if (!generated || generated.source !== 'r2' || !generated.uploadId) {
+              throw new Error('ยังสร้างไฟล์แผนที่ไฮไลท์รายการไม่สำเร็จ กรุณาลองใหม่')
+            }
+            return { kind: requirement.kind, slot: requirement.slot, uploadId: generated.uploadId }
+          }
           if (requirement.kind === 'contract_page' && method.kind === 'contract') {
             if (selectedContractFileAvailable) {
               return { kind: requirement.kind, slot: requirement.slot, contractFile: true as const }
@@ -537,8 +795,8 @@ export function PurchaseRequestForm({
           committees: checklistPolicy.committeeSource === 'contract' ? [] : applicableAssignments,
         }
         const saved = isEditMode && initialValues
-          ? await updatePurchaseRequest(initialValues.requestId, input, checklist)
-          : await createPurchaseRequest(input, checklist)
+          ? await updatePurchaseRequest(initialValues.requestId, input, checklist, annualPlanReference)
+          : await createPurchaseRequest(input, checklist, annualPlanReference)
         router.push(`/purchase-requests/${saved.id}`)
         router.refresh()
       } catch (caught) {
@@ -572,7 +830,15 @@ export function PurchaseRequestForm({
           </label>
           <label className="field-row">
             <span>วันที่ขอซื้อ <span className="field-required" aria-hidden="true">*</span></span>
-            <ThaiDateInput required value={requestedDate} onChange={setRequestedDate} />
+            <ThaiDateInput
+              required
+              value={requestedDate}
+              onChange={(value) => {
+                setRequestedDate(value)
+                setAnnualPlanEvidence(null)
+              }}
+            />
+            {annualPlanDateError && <small className="field-error">{annualPlanDateError}</small>}
           </label>
           <label className="field-row">
             หมายเหตุ
@@ -594,6 +860,7 @@ export function PurchaseRequestForm({
           method={method}
           contracts={departmentContracts}
           awaitingContracts={departmentAwaitingContracts}
+          annualPlanFiscalYear={activeAnnualPlan.currentFiscalYear}
           onPurposeChange={changePurpose}
           onChange={changeMethod}
         />
@@ -901,6 +1168,25 @@ export function PurchaseRequestForm({
       </section>
       )}
 
+      {method && methodRequiresAnnualPlanReference(method.kind) && !legacyChecklistExempt && (
+        <AnnualPlanReferenceFields
+          plan={activeAnnualPlan}
+          lines={lines.map((line) => ({ key: line.key, name: line.name, lsCode: line.lsCode }))}
+          selections={resolvedAnnualPlanSelections}
+          contractName={method.kind === 'equipment_lease' ? method.contractDraft.displayName : undefined}
+          contractSelection={resolvedAnnualPlanContractSelection}
+          disabled={isPending}
+          onSelect={(lineKey, reference) => {
+            setAnnualPlanSelections((current) => ({ ...current, [lineKey]: reference }))
+            setAnnualPlanEvidence(null)
+          }}
+          onContractSelect={(reference) => {
+            setAnnualPlanContractSelection(reference)
+            setAnnualPlanEvidence(null)
+          }}
+        />
+      )}
+
       {method !== null && !legacyChecklistExempt && (
         <PurchaseRequestChecklistFields
           method={method.kind}
@@ -912,6 +1198,8 @@ export function PurchaseRequestForm({
           assignments={applicableAssignments}
           contractRosterReady={selectedContractRosterReady}
           checklistComplete={checklistComplete}
+          annualPlanReferenceReady={!methodRequiresAnnualPlanReference(method.kind) || Boolean(annualPlanReference)}
+          annualPlanFileName={annualPlanEvidence?.fileName ?? `${activeAnnualPlan.planType === 'hiring' ? 'แผนจัดจ้าง' : 'แผนจัดซื้อ'}-ไฮไลท์-${activeAnnualPlan.currentFiscalYear}.pdf`}
           overallProgress={overallProgress}
           disabled={isPending}
           showCommitteeValidationErrors={isEditMode}

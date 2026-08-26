@@ -62,6 +62,9 @@ function methodReferenceFacts(request: PurchaseRequestRecord): PrintFact[] {
       if (!draft) break
       add('ชื่อสัญญา', draft.displayName)
       add('ปีงบประมาณ', draft.fiscalYear)
+      if (draft.contractDurationYears === 1 || draft.contractDurationYears === 3) {
+        add('จำนวนปีที่ทำสัญญา', `${draft.contractDurationYears} ปี`)
+      }
       add('คู่สัญญา', draft.vendor)
       add('วันที่ส่งเจ้าหน้าที่คลัง', draft.sentToStockOfficerDate, true)
       break

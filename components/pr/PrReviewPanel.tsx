@@ -30,6 +30,7 @@ import type { PurchaseRequestLineNotificationSummary, PurchaseRequestRecord } fr
 interface ContractDraftDetails {
   fiscalYear: number
   displayName: string
+  contractDurationYears: 1 | 3 | null
   vendor: string | null
   /** Only present for an equipment-lease draft — the ceiling budget.ts calls "ไม่ระบุ" when null. */
   total: number | null
@@ -40,11 +41,12 @@ interface ContractDraftDetails {
 function readContractDraft(methodDetails: Record<string, unknown>): ContractDraftDetails | null {
   const draft = methodDetails.contractDraft
   if (!draft || typeof draft !== 'object') return null
-  const { fiscalYear, displayName, vendor, total } = draft as Record<string, unknown>
+  const { fiscalYear, displayName, contractDurationYears, vendor, total } = draft as Record<string, unknown>
   if (typeof fiscalYear !== 'number' || typeof displayName !== 'string') return null
   return {
     fiscalYear,
     displayName,
+    contractDurationYears: contractDurationYears === 1 || contractDurationYears === 3 ? contractDurationYears : null,
     vendor: typeof vendor === 'string' ? vendor : null,
     total: typeof total === 'number' ? total : null,
   }
@@ -405,6 +407,10 @@ export function PrReviewPanel({
             <div>
               <dt>ปีงบประมาณ</dt>
               <dd>{contractDraft.fiscalYear}</dd>
+            </div>
+            <div>
+              <dt>จำนวนปีที่ทำสัญญา</dt>
+              <dd>{contractDraft.contractDurationYears ? `${contractDraft.contractDurationYears} ปี` : 'ไม่ระบุ'}</dd>
             </div>
             {contractType === 'equipment_lease' ? (
               <div>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
+import { CONTRACT_DURATION_YEARS } from '@/lib/contracts/schema'
 import { CONTRACT_TYPE_LABELS } from '@/lib/contracts/presenter'
 import { PURCHASE_METHOD_LABELS, PURCHASE_PURPOSE_LABELS } from '@/lib/pr/presenter'
 import {
@@ -40,6 +41,8 @@ export interface PurchaseMethodFieldsProps {
   contracts: ContractOption[]
   /** Contracts still working through the procurement stages. */
   awaitingContracts: AwaitingContractOption[]
+  /** Supplied by the server from the current Bangkok fiscal year. */
+  annualPlanFiscalYear: number
   onPurposeChange: (purpose: PurchasePurpose) => void
   onChange: (method: PurchaseMethod) => void
 }
@@ -66,7 +69,7 @@ export function emptyMethod(
 ): PurchaseMethod {
   switch (kind) {
     case 'annual_plan':
-      return { kind, fiscalYear: currentThaiFiscalYear(), planSequence: '' }
+      return { kind, fiscalYear: currentThaiFiscalYear() }
     case 'contract':
       // contractId 0 is the unselected placeholder — the requester must pick
       // a contract deliberately, since picking one now auto-fills every line
@@ -85,6 +88,7 @@ export function emptyMethod(
         contractDraft: {
           fiscalYear: currentThaiFiscalYear(),
           displayName: '',
+          contractDurationYears: 1,
           vendor: null,
           sentToStockOfficerDate: todayIso(),
         },
@@ -98,7 +102,7 @@ type ContractOriginationMethod = Extract<
 >
 
 /**
- * Patches the shared contractDraft fields (name/fiscal year/vendor/date).
+ * Patches the shared contractDraft fields (name/fiscal year/term/vendor/date).
  * A plain `{ ...method, contractDraft: { ...method.contractDraft, ... } }`
  * doesn't type-check here: with `method` narrowed to a 3-member union, TS
  * can't re-correlate which contractDraft shape goes with which `kind` after
@@ -107,7 +111,7 @@ type ContractOriginationMethod = Extract<
  */
 function patchContractDraft(
   method: ContractOriginationMethod,
-  patch: Partial<Pick<ContractOriginationMethod['contractDraft'], 'fiscalYear' | 'displayName' | 'vendor' | 'sentToStockOfficerDate'>>,
+  patch: Partial<Pick<ContractOriginationMethod['contractDraft'], 'fiscalYear' | 'displayName' | 'contractDurationYears' | 'vendor' | 'sentToStockOfficerDate'>>,
 ): ContractOriginationMethod {
   switch (method.kind) {
     case 'specific_contract':
@@ -123,6 +127,7 @@ export function PurchaseMethodFields({
   method,
   contracts,
   awaitingContracts,
+  annualPlanFiscalYear,
   onPurposeChange,
   onChange,
 }: PurchaseMethodFieldsProps) {
@@ -187,28 +192,9 @@ export function PurchaseMethodFields({
             {method.kind === 'annual_plan' && (
               <div className="method-detail-grid">
                 <label className="field-row">
-                  <span>ปีงบประมาณของแผน <span className="field-required" aria-hidden="true">*</span></span>
-                  <input
-                    type="number"
-                    min="2500"
-                    max="3000"
-                    required
-                    value={fiscalYearDrafts[method.kind] ?? method.fiscalYear}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      setFiscalYearDrafts((current) => ({ ...current, [method.kind]: value }))
-                      if (value !== '') onChange({ ...method, fiscalYear: Number(value) })
-                    }}
-                  />
-                </label>
-                <label className="field-row">
-                  <span>ลำดับในแผนจัดซื้อ <span className="field-required" aria-hidden="true">*</span></span>
-                  <input
-                    type="text"
-                    required
-                    value={method.planSequence}
-                    onChange={(event) => onChange({ ...method, planSequence: event.target.value })}
-                  />
+                  <span>ปีงบประมาณของแผน</span>
+                  <input type="number" readOnly value={annualPlanFiscalYear} aria-describedby="annual-plan-fiscal-year-note" />
+                  <small id="annual-plan-fiscal-year-note">ระบบเลือกจากวันที่ปัจจุบันในเขตเวลา Bangkok และใช้เฉพาะแผนจัดซื้อของปีนี้</small>
                 </label>
               </div>
             )}
@@ -299,6 +285,25 @@ export function PurchaseMethodFields({
                     ประเภทสัญญา
                     <input type="text" readOnly value={CONTRACT_TYPE_LABELS[contractTypeForMethod(method.kind)!]} />
                     <small>กำหนดจากวิธีจัดซื้อที่เลือกไว้</small>
+                  </label>
+                  <label className="field-row">
+                    <span>จำนวนปีที่ทำสัญญา <span className="field-required" aria-hidden="true">*</span></span>
+                    <select
+                      name="contractDurationYears"
+                      required
+                      value={method.contractDraft.contractDurationYears ?? ''}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        onChange(patchContractDraft(method, {
+                          contractDurationYears: value === '' ? undefined : Number(value) as typeof CONTRACT_DURATION_YEARS[number],
+                        }))
+                      }}
+                    >
+                      <option value="" disabled>เลือกจำนวนปี</option>
+                      {CONTRACT_DURATION_YEARS.map((years) => (
+                        <option value={years} key={years}>{years} ปี</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="field-row">
                     <span>คู่สัญญา{method.kind === 'specific_contract' && <> <span className="field-required" aria-hidden="true">*</span></>}</span>

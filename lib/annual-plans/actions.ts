@@ -1,8 +1,15 @@
 'use server'
 
+import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireActor } from '@/lib/auth/actor'
+import { fiscalYearOfIsoDate } from './fiscal'
+import { canUploadPurchaseRequestChecklist } from '@/lib/pr/authorization'
+import { annualPlanTypeForPurchaseMethod, PR_MAX_ATTACHMENT_SIZE_BYTES } from '@/lib/pr/checklist'
+import { buildPurchaseRequestChecklistUploadKey } from '@/lib/pr/checklist-storage'
+import { getR2BucketName, getR2Client } from '@/lib/r2/client'
+import { isoDateSchema } from '@/lib/validation/date'
 import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { assertAnnualPlanUploader } from './authorization'
@@ -15,6 +22,18 @@ import {
   validateAnnualPlanFile,
 } from './files'
 import { ANNUAL_PLAN_TYPES, annualPlanInputSchema, type AnnualPlanType } from './schema'
+import { annualPlanReferenceSchema } from './pr-reference'
+import { createHighlightedAnnualPlanPdf } from './pdf-index'
+import {
+  getCurrentAnnualPlanForPurchaseRequest,
+  persistIndexedAnnualPlanVersion,
+  readAndIndexAnnualPlanFile,
+  readCurrentPlanVersionPdf,
+  validateAnnualPlanReferenceForContract,
+  validateAnnualPlanReferenceForLines,
+} from './pr'
+
+import { PURCHASE_METHODS } from '@/lib/pr/schema'
 
 const annualPlanRpcResultSchema = z.object({
   id: z.string().uuid(),
@@ -24,6 +43,8 @@ const annualPlanRpcResultSchema = z.object({
   file_name: z.string().min(1),
   file_mime_type: z.literal(ANNUAL_PLAN_MIME_TYPE),
   file_size_bytes: z.number().int().positive(),
+  version_id: z.string().uuid().optional(),
+  source_checksum: z.string().nullable().optional(),
   previous_file_path: z.string().nullable(),
 })
 
@@ -37,6 +58,20 @@ const annualPlanFinalizeInputSchema = annualPlanInputSchema.extend({
   fileName: z.string().trim().min(1).max(255),
   fileSizeBytes: z.number().int().positive().max(MAX_ANNUAL_PLAN_FILE_SIZE_BYTES),
 })
+
+const annualPlanEvidenceInputSchema = z
+  .object({
+    uploadSessionId: z.string().uuid(),
+    requestedDate: isoDateSchema,
+    method: z.enum(PURCHASE_METHODS),
+    contractName: z.string().trim().min(1).max(240).optional(),
+    reference: annualPlanReferenceSchema,
+    items: z.array(z.object({
+      name: z.string().trim().min(1).max(240),
+      lsCode: z.string().trim().min(1).max(100),
+    }).strict()),
+  })
+  .strict()
 
 async function removeOrQueue(path: string) {
   const removed = await supabaseAdmin.storage.from(ANNUAL_PLAN_BUCKET).remove([path])
@@ -114,6 +149,49 @@ async function assertUploadedAnnualPlanObject(filePath: string, fileSizeBytes: n
   }
 }
 
+async function readUploadedAnnualPlanIndex(
+  filePath: string,
+  fileSizeBytes: number,
+  requireRows: boolean,
+) {
+  const downloaded = await supabaseAdmin.storage.from(ANNUAL_PLAN_BUCKET).download(filePath)
+  if (downloaded.error || !downloaded.data) {
+    throw new Error(`ไม่สามารถอ่านไฟล์แผนจัดซื้อเพื่อสร้างดัชนีได้: ${downloaded.error?.message ?? 'ไม่พบไฟล์'}`)
+  }
+  if (Number(downloaded.data.size) !== fileSizeBytes) {
+    throw new Error('ขนาดไฟล์แผนจัดซื้อเปลี่ยนไประหว่างตรวจสอบ กรุณาอัปโหลดใหม่')
+  }
+  return readAndIndexAnnualPlanFile(downloaded.data, { requireRows })
+}
+
+async function persistUploadedAnnualPlan(input: {
+  fiscalYear: number
+  planType: AnnualPlanType
+  actorId: string
+  filePath: string
+  fileName: string
+  fileSizeBytes: number
+}) {
+  // The version-aware RPC supersedes upsert_lab_stock_annual_plan while the
+  // original RPC remains available for already deployed integrations.
+  const indexed = await readUploadedAnnualPlanIndex(
+    input.filePath,
+    input.fileSizeBytes,
+    true,
+  )
+  const rawRecord = await persistIndexedAnnualPlanVersion({
+    fiscalYear: input.fiscalYear,
+    planType: input.planType,
+    actorId: input.actorId,
+    filePath: input.filePath,
+    fileName: input.fileName,
+    fileSizeBytes: input.fileSizeBytes,
+    sourceChecksum: indexed.sourceChecksum,
+    rows: indexed.rows,
+  })
+  return annualPlanRpcResultSchema.parse(rawRecord)
+}
+
 /**
  * Records metadata after the browser has completed the direct Storage upload.
  * The request body contains no file bytes and remains small.
@@ -133,17 +211,14 @@ export async function finalizeAnnualPlanUpload(input: unknown) {
 
   let record: z.infer<typeof annualPlanRpcResultSchema>
   try {
-    const result = await supabaseAdmin.rpc('upsert_lab_stock_annual_plan', {
-      p_fiscal_year: parsed.fiscalYear,
-      p_plan_type: parsed.planType,
-      p_actor_id: actor.id,
-      p_file_path: parsed.filePath,
-      p_file_name: parsed.fileName,
-      p_file_mime_type: ANNUAL_PLAN_MIME_TYPE,
-      p_file_size_bytes: parsed.fileSizeBytes,
+    record = await persistUploadedAnnualPlan({
+      fiscalYear: parsed.fiscalYear,
+      planType: parsed.planType,
+      actorId: actor.id,
+      filePath: parsed.filePath,
+      fileName: parsed.fileName,
+      fileSizeBytes: parsed.fileSizeBytes,
     })
-    if (result.error) throw new Error(result.error.message)
-    record = annualPlanRpcResultSchema.parse(result.data)
     if (
       record.fiscal_year !== parsed.fiscalYear
       || record.plan_type !== parsed.planType
@@ -155,14 +230,6 @@ export async function finalizeAnnualPlanUpload(input: unknown) {
   } catch (error) {
     await removeOrQueue(parsed.filePath)
     throw new Error(`บันทึกแผนประจำปีไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`)
-  }
-
-  if (record.previous_file_path) {
-    if (!isAnnualPlanFilePathAllowed(record.previous_file_path)) {
-      await removeOrQueue(parsed.filePath)
-      throw new Error('เส้นทางไฟล์แผนประจำปีเดิมไม่ถูกต้อง')
-    }
-    await removeOrQueue(record.previous_file_path)
   }
 
   revalidatePath('/annual-plans')
@@ -194,17 +261,14 @@ export async function storeAnnualPlan(
 
   let record: z.infer<typeof annualPlanRpcResultSchema>
   try {
-    const result = await supabaseAdmin.rpc('upsert_lab_stock_annual_plan', {
-      p_fiscal_year: parsedInput.fiscalYear,
-      p_plan_type: parsedInput.planType,
-      p_actor_id: actor.id,
-      p_file_path: path,
-      p_file_name: file.name,
-      p_file_mime_type: ANNUAL_PLAN_MIME_TYPE,
-      p_file_size_bytes: file.size,
+    record = await persistUploadedAnnualPlan({
+      fiscalYear: parsedInput.fiscalYear,
+      planType: parsedInput.planType,
+      actorId: actor.id,
+      filePath: path,
+      fileName: file.name,
+      fileSizeBytes: file.size,
     })
-    if (result.error) throw new Error(result.error.message)
-    record = annualPlanRpcResultSchema.parse(result.data)
     if (
       record.fiscal_year !== parsedInput.fiscalYear
       || record.plan_type !== parsedInput.planType
@@ -216,14 +280,6 @@ export async function storeAnnualPlan(
   } catch (error) {
     await removeOrQueue(path)
     throw new Error(`บันทึกแผนประจำปีไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`)
-  }
-
-  if (record.previous_file_path) {
-    if (!isAnnualPlanFilePathAllowed(record.previous_file_path)) {
-      await removeOrQueue(path)
-      throw new Error('เส้นทางไฟล์แผนประจำปีเดิมไม่ถูกต้อง')
-    }
-    await removeOrQueue(record.previous_file_path)
   }
 
   return { planId: record.id, previousFilePath: record.previous_file_path }
@@ -261,4 +317,124 @@ export async function annualPlanFileUrl(planId: string, mode: 'inline' | 'downlo
     })
   if (signed.error) throw new Error(`สร้างลิงก์แผนประจำปีไม่สำเร็จ: ${signed.error.message}`)
   return signed.data.signedUrl
+}
+
+export async function annualPlanVersionFileUrl(versionId: string, mode: 'inline' | 'download'): Promise<string> {
+  await requireActor()
+  const parsedId = z.string().uuid().parse(versionId)
+  const versionResult = await supabaseAdmin
+    .from('lab_stock_annual_plan_versions')
+    .select('annual_plan_id, file_path, file_name')
+    .eq('id', parsedId)
+    .maybeSingle()
+  if (versionResult.error) throw new Error(`Unable to read annual plan version: ${versionResult.error.message}`)
+  if (!versionResult.data) throw new Error('Annual plan version was not found')
+
+  const currentResult = await supabaseAdmin
+    .from('lab_stock_annual_plans')
+    .select('current_version_id')
+    .eq('id', versionResult.data.annual_plan_id)
+    .maybeSingle()
+  if (currentResult.error) throw new Error(`Unable to read current annual plan: ${currentResult.error.message}`)
+  if (!currentResult.data || currentResult.data.current_version_id !== parsedId) {
+    throw new Error('The requested annual plan is no longer the current version')
+  }
+  if (!isAnnualPlanFilePathAllowed(versionResult.data.file_path)) throw new Error('Annual plan file path is invalid')
+
+  const signed = await supabaseAdmin.storage
+    .from(ANNUAL_PLAN_BUCKET)
+    .createSignedUrl(versionResult.data.file_path, 300, {
+      download: mode === 'download' ? versionResult.data.file_name : false,
+    })
+  if (signed.error) throw new Error(`Unable to create annual plan version link: ${signed.error.message}`)
+  return signed.data.signedUrl
+}
+
+async function removeGeneratedEvidenceOrQueue(storageKey: string) {
+  try {
+    await getR2Client().send(new DeleteObjectCommand({
+      Bucket: getR2BucketName(),
+      Key: storageKey,
+    }))
+  } catch (error) {
+    console.error('ลบไฟล์แผนไฮไลท์ที่สร้างค้างไม่สำเร็จ', {
+      storageKey,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    await enqueueStorageCleanupJobBestEffort({
+      storageBackend: 'r2',
+      bucketName: '__r2__',
+      storageKey,
+      jobKind: 'storage_upload_rollback',
+    })
+  }
+}
+
+/**
+ * Builds the plan_page checklist artifact on the server. The browser submits
+ * only the selected row ids; it never uploads a second copy of the annual
+ * plan or controls which fiscal-year source is opened.
+ */
+export async function generateAnnualPlanEvidence(input: unknown) {
+  const actor = await requireActor()
+  if (!canUploadPurchaseRequestChecklist(actor)) {
+    throw new Error('ไม่มีสิทธิ์สร้างเอกสารแผนประกอบใบ PR')
+  }
+  const parsed = annualPlanEvidenceInputSchema.parse(input)
+  const planType = annualPlanTypeForPurchaseMethod(parsed.method)
+  if (!planType) throw new Error('วิธีจัดซื้อของ PR ไม่รองรับการสร้างไฟล์แผนจากระบบ')
+  const currentPlan = await getCurrentAnnualPlanForPurchaseRequest(planType)
+  const currentFiscalYear = currentPlan.currentFiscalYear
+  if (fiscalYearOfIsoDate(parsed.requestedDate) !== currentFiscalYear) {
+    throw new Error(`วันที่ขอซื้อของ PR ที่อ้างอิงแผน${planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ต้องอยู่ในปีงบประมาณ ${currentFiscalYear}`)
+  }
+
+  const source = await readCurrentPlanVersionPdf(parsed.reference.planVersionId, planType)
+  const validated = planType === 'hiring'
+    ? validateAnnualPlanReferenceForContract(parsed.reference, parsed.contractName ?? '', source.plan)
+    : validateAnnualPlanReferenceForLines(parsed.reference, parsed.items, source.plan)
+  const highlighted = await createHighlightedAnnualPlanPdf(source.bytes, validated.selectedRows)
+  if (highlighted.byteLength > PR_MAX_ATTACHMENT_SIZE_BYTES) {
+    throw new Error(`ไฟล์แผน${planType === 'hiring' ? 'จัดจ้าง' : 'จัดซื้อ'}ที่ไฮไลท์มีขนาดเกิน 20 MB กรุณาให้ผู้ดูแลตรวจสอบไฟล์แผน`)
+  }
+
+  const fileName = `annual-plan-highlight-${parsed.reference.planFiscalYear}-${parsed.uploadSessionId}.pdf`
+  const storageKey = buildPurchaseRequestChecklistUploadKey({
+    actorId: actor.id,
+    sessionId: parsed.uploadSessionId,
+    fileName,
+  })
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+
+  try {
+    await getR2Client().send(new PutObjectCommand({
+      Bucket: getR2BucketName(),
+      Key: storageKey,
+      Body: highlighted,
+      ContentType: 'application/pdf',
+      IfNoneMatch: '*',
+    }))
+    const ticketResult = await supabaseAdmin.rpc('register_purchase_request_annual_plan_upload', {
+      p_actor_id: actor.id,
+      p_upload_session_id: parsed.uploadSessionId,
+      p_storage_key: storageKey,
+      p_file_name: fileName,
+      p_size_bytes: highlighted.byteLength,
+      p_expires_at: expiresAt,
+      p_plan_version_id: parsed.reference.planVersionId,
+    })
+    if (ticketResult.error) throw new Error(ticketResult.error.message)
+    const ticket = z.object({ id: z.string().uuid() }).parse(
+      Array.isArray(ticketResult.data) ? ticketResult.data[0] : ticketResult.data,
+    )
+    return {
+      uploadId: ticket.id,
+      fileName,
+      planVersionId: parsed.reference.planVersionId,
+      planFiscalYear: parsed.reference.planFiscalYear,
+    }
+  } catch (error) {
+    await removeGeneratedEvidenceOrQueue(storageKey)
+    throw new Error(`สร้างไฟล์แผนที่ไฮไลท์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }

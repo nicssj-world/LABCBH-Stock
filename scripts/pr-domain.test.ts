@@ -18,7 +18,9 @@ import {
   purchaseMethodSchema,
   purchaseRequestInputSchema,
 } from '../lib/pr/schema'
+import { PURCHASE_REQUEST_STATUS_LABELS } from '../lib/pr/presenter'
 import { PURCHASE_REQUEST_STATUS_TONES } from '../lib/pr/presenter'
+import { methodRequiresProcurementPlanReference } from '../lib/pr/checklist'
 
 const actor = (id: string, appRoles: LabStockRole[]): Actor => ({
   id,
@@ -114,6 +116,7 @@ for (const status of ['pending', 'partially_received', 'received', 'closed_short
 const contractDraft = {
   fiscalYear: 2569,
   displayName: 'สัญญาซื้อน้ำยา A',
+  contractDurationYears: 1 as const,
   vendor: 'บริษัท เอ จำกัด',
   sentToStockOfficerDate: '2026-07-30',
 }
@@ -147,9 +150,15 @@ assert.equal(contractTypeForMethod('specific_contract'), 'specific')
 assert.equal(contractTypeForMethod('e_bidding'), 'e_bidding')
 assert.equal(contractTypeForMethod('equipment_lease'), 'equipment_lease')
 assert.equal(contractTypeForMethod('annual_plan'), null)
+assert.equal(PURCHASE_REQUEST_STATUS_LABELS.cancelled, 'ยกเลิก')
+assert.equal(PURCHASE_REQUEST_STATUS_LABELS.reversed, 'ยกเลิก')
 assert.equal(contractTypeForMethod('contract'), null)
 assert.equal(contractTypeForMethod('awaiting_contract'), null)
 assert.equal(contractTypeForMethod('off_plan'), null)
+assert.equal(methodRequiresProcurementPlanReference('annual_plan'), true)
+assert.equal(methodRequiresProcurementPlanReference('specific_contract'), true)
+assert.equal(methodRequiresProcurementPlanReference('e_bidding'), true)
+assert.equal(methodRequiresProcurementPlanReference('equipment_lease'), false)
 
 assert.equal(
   purchaseMethodSchema.safeParse({ kind: 'annual_plan', fiscalYear: 2569, planSequence: '12' }).success,
@@ -157,8 +166,8 @@ assert.equal(
 )
 assert.equal(
   purchaseMethodSchema.safeParse({ kind: 'annual_plan', fiscalYear: 2569 }).success,
-  false,
-  'the annual plan needs its plan sequence',
+  true,
+  'the annual plan sequence is derived from its matched PR items and is optional',
 )
 assert.equal(
   purchaseMethodSchema.safeParse({ kind: 'contract', contractId: 12, purchaseSequence: 3 }).success,
@@ -270,7 +279,7 @@ assert.deepEqual(allowedPurchaseRequestTransitions('cancelled'), [])
 assert.deepEqual(allowedPurchaseRequestTransitions('reversed'), [])
 
 assert.equal(PURCHASE_REQUEST_STATUS_TONES.completed, 'info', 'a confirmed PR uses the informational blue tone')
-assert.equal(PURCHASE_REQUEST_STATUS_TONES.partially_received, 'attention', 'a partially received PR uses the attention tone')
+assert.equal(PURCHASE_REQUEST_STATUS_TONES.partially_received, 'progress', 'a partially received PR uses the progress tone')
 assert.equal(PURCHASE_REQUEST_STATUS_TONES.received, 'success', 'a fully received PR uses the success tone')
 assert.equal(PURCHASE_REQUEST_STATUS_TONES.closed_short, 'attention', 'a short-closed PR uses the attention tone')
 

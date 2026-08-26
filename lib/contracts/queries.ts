@@ -2,7 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { contractRemainingPercent, contractSupplyBalance } from '@/lib/contracts/budget'
-import { CONTRACT_DEPARTMENTS, CONTRACT_TYPES } from '@/lib/contracts/schema'
+import { CONTRACT_DEPARTMENTS, CONTRACT_DURATION_YEARS, CONTRACT_TYPES } from '@/lib/contracts/schema'
 import { PROCUREMENT_STAGES } from '@/lib/contracts/stages'
 import type { ContractOpeningBalanceHistoryEntry, ContractRecord } from '@/lib/contracts/types'
 import { createClient } from '@/lib/supabase/server'
@@ -55,6 +55,7 @@ export const contractReadRowSchema = z.object({
   status: z.enum(['active', 'expired', 'cancelled', 'pending']).nullable(),
   display_name: z.string().nullable(),
   contract_number: z.string().nullable(),
+  contract_duration_years: z.union([z.literal(1), z.literal(3)]).nullable(),
   vendor: z.string().nullable(),
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
@@ -80,6 +81,7 @@ const CONTRACT_SCALAR_READ_SELECT = `
   status,
   display_name,
   contract_number,
+  contract_duration_years,
   vendor,
   start_date,
   end_date,
@@ -164,6 +166,7 @@ const contractFormOptionReadRowSchema = z.object({
 export interface ContractFilters {
   fiscalYear?: number
   contractType?: (typeof CONTRACT_TYPES)[number]
+  contractDurationYears?: (typeof CONTRACT_DURATION_YEARS)[number]
   department?: (typeof CONTRACT_DEPARTMENTS)[number]
   procurementStage?: (typeof PROCUREMENT_STAGES)[number]
   search?: string
@@ -208,6 +211,7 @@ function mapContractRow(
     status: row.status,
     displayName: row.display_name,
     contractNumber: row.contract_number,
+    contractDurationYears: row.contract_duration_years,
     vendor: row.vendor,
     startDate: row.start_date,
     endDate: row.end_date,
@@ -316,6 +320,7 @@ export async function listContracts(filters: ContractFilters = {}): Promise<Cont
 
   if (filters.fiscalYear) query = query.eq('fiscal_year', filters.fiscalYear)
   if (filters.contractType) query = query.eq('contract_type', filters.contractType)
+  if (filters.contractDurationYears) query = query.eq('contract_duration_years', filters.contractDurationYears)
   if (filters.department) query = query.eq('department', filters.department)
   if (filters.procurementStage) query = query.eq('procurement_stage', filters.procurementStage)
 

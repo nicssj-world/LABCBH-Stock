@@ -8,9 +8,14 @@ import { requireActor } from '@/lib/auth/actor'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canManagePurchaseRequest } from '@/lib/pr/authorization'
 import { loadPurchaseRequestFormOptions } from '@/lib/pr/form-options'
+import { methodRequiresAnnualPlanReference } from '@/lib/pr/checklist'
 import { purchaseMethodPurpose, purchaseMethodSchema } from '@/lib/pr/schema'
 import { getPurchaseRequest } from '@/lib/pr/queries'
-import { getPurchaseRequestChecklist } from '@/lib/pr/checklist-queries'
+import {
+  getPurchaseRequestAnnualPlanReference,
+  getPurchaseRequestChecklist,
+} from '@/lib/pr/checklist-queries'
+import type { AnnualPlanReference } from '@/lib/annual-plans/pr-reference'
 
 interface PurchaseRequestEditPageProps {
   params: Promise<{ id: string }>
@@ -35,10 +40,47 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
   })
   if (!parsedMethod.success) redirect(`/purchase-requests/${request.id}`)
 
-  const [options, checklist] = await Promise.all([
+  const [options, checklist, savedAnnualPlanReference] = await Promise.all([
     loadPurchaseRequestFormOptions(request.id),
     request.checklistPolicyVersion === null ? Promise.resolve(null) : getPurchaseRequestChecklist(request.id, actor),
+    request.checklistPolicyVersion !== null && methodRequiresAnnualPlanReference(request.purchaseMethod)
+      ? getPurchaseRequestAnnualPlanReference(request.id, actor)
+      : Promise.resolve(null),
   ])
+  const savedAnnualPlanLines = savedAnnualPlanReference?.planType === 'procurement'
+    ? request.items.map((item) => savedAnnualPlanReference.lines.find((line) => line.purchaseRequestItemId === item.id))
+    : []
+  const annualPlanReference: AnnualPlanReference | undefined = savedAnnualPlanReference?.planType === 'hiring'
+    ? savedAnnualPlanReference.contract
+      ? {
+          planVersionId: savedAnnualPlanReference.planVersionId,
+          planFiscalYear: savedAnnualPlanReference.planFiscalYear,
+          planType: 'hiring',
+          lines: [],
+          contract: {
+            contractName: savedAnnualPlanReference.contract.contractName,
+            line: {
+              lineNumber: savedAnnualPlanReference.contract.planLineNumber,
+              planRowId: savedAnnualPlanReference.contract.planRowId,
+              matchMethod: savedAnnualPlanReference.contract.matchMethod,
+            },
+          },
+        }
+      : undefined
+    : savedAnnualPlanReference
+      && savedAnnualPlanLines.length === request.items.length
+      && savedAnnualPlanLines.every(Boolean)
+      ? {
+          planVersionId: savedAnnualPlanReference.planVersionId,
+          planFiscalYear: savedAnnualPlanReference.planFiscalYear,
+          planType: 'procurement',
+          lines: savedAnnualPlanLines.map((line) => ({
+            lineNumber: line!.planLineNumber,
+            planRowId: line!.planRowId,
+            matchMethod: line!.matchMethod,
+          })),
+        }
+      : undefined
   const initialValues: PurchaseRequestFormInitialValues = {
     requestId: request.id,
     requestedDate: request.requestedDate,
@@ -60,6 +102,8 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
     })),
     checklistPolicyVersion: request.checklistPolicyVersion,
     checklist,
+    annualPlanReferenceRequired: request.annualPlanReferenceRequired,
+    annualPlanReference,
   }
 
   return (
@@ -82,6 +126,8 @@ export default async function PurchaseRequestEditPage({ params }: PurchaseReques
         contractLines={options.contractLines}
         catalog={options.catalog}
         committeeCandidates={options.committeeCandidates}
+        annualPlan={options.annualPlan}
+        hiringPlan={options.hiringPlan}
         mode="edit"
         initialValues={initialValues}
       />

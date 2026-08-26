@@ -61,11 +61,35 @@ const threeQuotationsWithPlan = renderChecklist({ method: 'specific_contract' })
 assert.match(threeQuotationsWithPlan, /แนบแล้ว 0\/5 ไฟล์/)
 assert.equal((threeQuotationsWithPlan.match(/>บริษัทที่ [123]</g) ?? []).length, 3)
 assert.match(threeQuotationsWithPlan, /แผนที่มีลำดับรายการที่ต้องการซื้อ/)
+assert.equal((threeQuotationsWithPlan.match(/type="file"/g) ?? []).length, 4, 'the plan-page checklist item must not render a second upload input')
+assert.match(threeQuotationsWithPlan, /ไฟล์นี้สร้างและแนบเข้าใบ PR โดยระบบเมื่อกดส่ง/)
 assert.ok(
   threeQuotationsWithPlan.indexOf('รายละเอียดคุณลักษณะเฉพาะ (TOR)')
     < threeQuotationsWithPlan.indexOf('ใบเสนอราคาจากบริษัท'),
   'primary documents must precede quotations in DOM order',
 )
+
+const leaseWithHiringPlan = renderToStaticMarkup(
+  <PurchaseRequestChecklistFields
+    method="equipment_lease"
+    total={null}
+    candidates={[]}
+    files={{}}
+    existingAttachments={[]}
+    assignments={[]}
+    contractRosterReady={false}
+    checklistComplete={false}
+    annualPlanReferenceReady={true}
+    annualPlanFileName="แผนจัดจ้าง-ไฮไลท์-2569.pdf"
+    overallProgress={null}
+    onFileChange={() => undefined}
+    onAssignmentsChange={() => undefined}
+  />,
+)
+assert.match(leaseWithHiringPlan, /แผนจัดจ้างที่มีลำดับสัญญา/)
+assert.match(leaseWithHiringPlan, /แผนจัดจ้าง-ไฮไลท์-2569\.pdf/)
+assert.equal((leaseWithHiringPlan.match(/type="file"/g) ?? []).length, 4, 'lease plan evidence must be generated, not uploaded by the requester')
+assert.doesNotMatch(leaseWithHiringPlan, /แนบไฟล์ตามเดิม/)
 assert.ok(
   threeQuotationsWithPlan.indexOf('>บริษัทที่ 1<')
     < threeQuotationsWithPlan.indexOf('>บริษัทที่ 2<')

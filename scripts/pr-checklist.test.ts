@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import {
   PR_MAX_ATTACHMENT_SIZE_BYTES,
+  annualPlanTypeForPurchaseMethod,
   committeePdfVariant,
   derivePurchaseRequestChecklist,
+  methodRequiresAnnualPlanReference,
+  methodRequiresProcurementPlanReference,
   validateCommitteeAssignments,
   validatePurchaseRequestAttachment,
 } from '../lib/pr/checklist'
@@ -105,12 +108,25 @@ function countAttachments(
   for (const method of ['e_bidding', 'equipment_lease'] as const) {
     const policy = derivePurchaseRequestChecklist(method, method === 'equipment_lease' ? null : 1_000_000)
     assert.equal(countAttachments(policy, 'quotation'), 3)
+    assert.equal(countAttachments(policy, 'plan_page'), 1)
     assert.deepEqual(
       policy.committees.map(({ kind, seats }) => [kind, seats]),
       [['specification', 3], ['result', 3], ['inspection', 3]],
     )
   }
 }
+
+for (const method of ['annual_plan', 'specific_contract', 'e_bidding'] as const) {
+  assert.equal(methodRequiresProcurementPlanReference(method), true)
+  assert.equal(methodRequiresAnnualPlanReference(method), true)
+  assert.equal(annualPlanTypeForPurchaseMethod(method), 'procurement')
+}
+assert.equal(methodRequiresProcurementPlanReference('equipment_lease'), false)
+assert.equal(methodRequiresAnnualPlanReference('equipment_lease'), true)
+assert.equal(annualPlanTypeForPurchaseMethod('equipment_lease'), 'hiring')
+assert.equal(methodRequiresProcurementPlanReference('off_plan'), false)
+assert.equal(methodRequiresAnnualPlanReference('off_plan'), false)
+assert.equal(annualPlanTypeForPurchaseMethod('off_plan'), null)
 
 {
   assert.equal(PR_MAX_ATTACHMENT_SIZE_BYTES, 20 * 1024 * 1024)

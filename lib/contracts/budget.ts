@@ -1,4 +1,4 @@
-import type { ContractType } from '@/lib/contracts/types'
+import type { ContractDurationYears, ContractType } from '@/lib/contracts/types'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { bangkokIsoDate } from '@/lib/date/thai'
 
@@ -130,6 +130,40 @@ export function budgetSnapshot({ total, entries }: BudgetSnapshotInput): BudgetS
     remaining: remainingSatang / 100,
     percentUsed: (usedSatang / totalSatang) * 100,
     exhausted: remainingSatang <= 0,
+  }
+}
+
+export interface ContractSpendingRateSnapshot {
+  durationYears: ContractDurationYears | null
+  durationMonths: number | null
+  monthly: number | null
+  annual: number | null
+}
+
+/**
+ * Calculates the planned spending pace from a contract ceiling and its term.
+ * The returned annual figure is the contract-value average per calendar year;
+ * for a one-year contract it intentionally equals the full contract value.
+ */
+export function contractSpendingRates(
+  total: number | null,
+  durationYears: ContractDurationYears | null,
+): ContractSpendingRateSnapshot {
+  if (total === null || total <= 0 || durationYears === null) {
+    return {
+      durationYears,
+      durationMonths: durationYears === null ? null : durationYears * 12,
+      monthly: null,
+      annual: null,
+    }
+  }
+
+  const durationMonths = durationYears * 12
+  return {
+    durationYears,
+    durationMonths,
+    monthly: satang(total / durationMonths) / 100,
+    annual: satang(total / durationYears) / 100,
   }
 }
 
