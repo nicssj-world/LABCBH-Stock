@@ -44,6 +44,8 @@ assert.match(printComponent, /requisition\.receivedByName/)
 assert.match(printComponent, /print-signature__image/)
 
 const printCss = read('app/globals.css')
+assert.match(printCss, /\.print-table\s*\{[\s\S]{0,140}font-size:\s*9px/, 'the print table uses a compact font size')
+assert.match(printCss, /\.print-table th,[\s\S]{0,220}white-space:\s*nowrap/, 'print table cells stay on one line')
 assert.match(printCss, /@page\s*\{[^}]*size:\s*A4/i)
 assert.match(printCss, /@page\s*\{[^}]*margin:\s*12mm/i)
 assert.match(printCss, /@media print/i)

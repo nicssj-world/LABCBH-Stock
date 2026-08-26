@@ -25,6 +25,11 @@ assert.match(printComponent, /หน่วยงานผู้ขอ/)
 assert.match(printComponent, /PURCHASE_PURPOSE_LABELS/)
 assert.match(printComponent, /PURCHASE_METHOD_LABELS/)
 assert.match(printComponent, /request\.methodDetails/)
+assert.match(
+  printComponent,
+  /case 'annual_plan':[\s\S]*add\('ลำดับในแผนจัดซื้อ'[\s\S]*facts\.push\(methodFact\)/,
+  'annual-plan purpose and plan sequence stay in the first reference row',
+)
 
 // Line-level values needed for an auditable request-to-order handoff.
 assert.match(printComponent, /รหัสพัสดุ \(LS\)/)
@@ -49,7 +54,9 @@ assert.match(printCss, /@page\s*\{[^}]*size:\s*A4/i)
 assert.match(printCss, /@media print/i)
 assert.match(printCss, /\.pr-print-reference/)
 assert.match(printCss, /\.pr-print-table\s*\{[^}]*table-layout:\s*fixed/i)
-assert.match(printCss, /\.pr-print-table-wrap\s*\{[^}]*overflow-x:\s*auto/i)
+assert.match(printCss, /\.pr-print-table-wrap\s*\{[^}]*overflow:\s*visible/i)
+assert.doesNotMatch(printCss, /\.pr-print-table-wrap\s*\{[^}]*overflow-x:\s*auto/i)
+assert.match(printCss, /\.pr-print-table__col--total\s*\{\s*width:\s*14%/i)
 assert.match(printCss, /\.pr-print-signatures\s*\{[^}]*margin-top:/i)
 
 console.log('purchase-request print: ok')

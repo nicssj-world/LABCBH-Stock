@@ -3756,7 +3756,7 @@ input[type="number"] {
   .pr-print-reference dl { grid-template-columns: 1fr; }
   .pr-print-summary { align-items: flex-start; flex-direction: column; gap: 6px; }
   .pr-print-summary > div { width: 100%; justify-content: space-between; }
-  .pr-print-table { min-width: 720px; }
+  .pr-print-table { min-width: 0; }
   .filter-bench { grid-template-columns: 1fr; }
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,
@@ -3901,14 +3901,20 @@ input[type="number"] {
 .print-meta dt { font-weight: 700; }
 .print-meta dd { margin: 0; }
 
-.print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+  line-height: 1.35;
+}
 
 .print-table th,
 .print-table td {
-  padding: 6px 8px;
+  padding: 4px 5px;
   border: 1px solid #000000;
   text-align: left;
   vertical-align: top;
+  white-space: nowrap;
 }
 
 .print-table thead { display: table-header-group; }
@@ -3987,22 +3993,24 @@ input[type="number"] {
 .pr-print-reference dt { font-weight: 700; }
 .pr-print-reference dd { margin: 0; overflow-wrap: anywhere; }
 
-.pr-print-table-wrap { overflow-x: auto; }
-.pr-print-table { table-layout: fixed; }
+.pr-print-table-wrap { overflow: visible; }
+.pr-print-table { width: 100%; min-width: 0; table-layout: fixed; font-size: 10px; }
 .pr-print-table th,
-.pr-print-table td { padding: 5px 6px; }
+.pr-print-table td { padding: 4px 4px; overflow-wrap: anywhere; }
+.pr-print-table th { padding: 4px 3px; }
 .pr-print-table__col--number { width: 6%; }
 .pr-print-table__col--code { width: 14%; }
-.pr-print-table__col--item { width: 31%; }
-.pr-print-table__col--usage { width: 11%; }
-.pr-print-table__col--quantity { width: 11%; }
-.pr-print-table__col--unit { width: 8%; }
-.pr-print-table__col--price { width: 10%; }
-.pr-print-table__col--total { width: 9%; }
+.pr-print-table__col--item { width: 27%; }
+.pr-print-table__col--usage { width: 10%; }
+.pr-print-table__col--quantity { width: 10%; }
+.pr-print-table__col--unit { width: 7%; }
+.pr-print-table__col--price { width: 12%; }
+.pr-print-table__col--total { width: 14%; }
 .pr-print-table__item { overflow-wrap: anywhere; }
 .pr-print-table__item strong,
 .pr-print-table__item small { display: block; }
-.pr-print-table__item small { margin-top: 2px; color: #444444; font-size: 9px; line-height: 1.3; }
+.pr-print-table__item small { margin-top: 2px; color: #444444; font-size: 8px; line-height: 1.3; }
+.pr-print-table .numeric-cell { font-size: 10px; white-space: normal; }
 .pr-print-table__empty { padding: 14px !important; text-align: center !important; }
 
 .pr-print-summary {

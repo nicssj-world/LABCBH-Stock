@@ -27,13 +27,14 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function methodReferenceFacts(request: PurchaseRequestRecord): PrintFact[] {
-  const facts: PrintFact[] = [
-    {
-      label: 'จุดประสงค์',
-      value: PURCHASE_PURPOSE_LABELS[purchaseMethodPurpose(request.purchaseMethod)],
-    },
-    { label: 'วิธีจัดซื้อ', value: PURCHASE_METHOD_LABELS[request.purchaseMethod] },
-  ]
+  const purposeFact: PrintFact = {
+    label: 'จุดประสงค์',
+    value: PURCHASE_PURPOSE_LABELS[purchaseMethodPurpose(request.purchaseMethod)],
+  }
+  const methodFact: PrintFact = { label: 'วิธีจัดซื้อ', value: PURCHASE_METHOD_LABELS[request.purchaseMethod] }
+  const facts: PrintFact[] = request.purchaseMethod === 'annual_plan'
+    ? [purposeFact]
+    : [purposeFact, methodFact]
   const details = request.methodDetails
   const add = (label: string, value: unknown, date = false) => {
     const parsed = asPrintValue(value)
@@ -43,8 +44,9 @@ function methodReferenceFacts(request: PurchaseRequestRecord): PrintFact[] {
 
   switch (request.purchaseMethod) {
     case 'annual_plan':
-      add('ปีงบประมาณของแผน', details.fiscalYear)
       add('ลำดับในแผนจัดซื้อ', details.planSequence)
+      facts.push(methodFact)
+      add('ปีงบประมาณของแผน', details.fiscalYear)
       break
     case 'contract':
       add('สัญญาเลขที่ระบบ', details.contractId)
