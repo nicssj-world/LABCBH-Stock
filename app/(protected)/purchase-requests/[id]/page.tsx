@@ -110,6 +110,9 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               {PURCHASE_REQUEST_STATUS_LABELS[request.status]}
             </StatusChip>
             <StatusChip tone="neutral">{PURCHASE_METHOD_LABELS[request.purchaseMethod]}</StatusChip>
+            <Link className="lab-link-button lab-link-button--secondary" href={`/purchase-requests/${request.id}/print`}>
+              พิมพ์ใบ PR
+            </Link>
             {canEdit && (
               <PurchaseRequestLifecycleControls
                 requestId={request.id}

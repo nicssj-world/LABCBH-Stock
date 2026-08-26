@@ -3751,6 +3751,12 @@ input[type="number"] {
   .lot-picker li { grid-template-columns: 1fr; }
   .print-meta { grid-template-columns: 1fr; }
   .print-signatures { grid-template-columns: 1fr; gap: 28px; }
+  .pr-print-sheet { padding: 8mm; }
+  .pr-print-reference__heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .pr-print-reference dl { grid-template-columns: 1fr; }
+  .pr-print-summary { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .pr-print-summary > div { width: 100%; justify-content: space-between; }
+  .pr-print-table { min-width: 720px; }
   .filter-bench { grid-template-columns: 1fr; }
   .filter-bench__search { grid-column: auto; }
   .filter-bench .lab-button,
@@ -3922,11 +3928,99 @@ input[type="number"] {
 }
 
 .print-signatures p { margin: 0; font-size: 11px; }
-.print-signature__line { margin-bottom: 6px !important; }
-.print-signature__image { max-height: 60px; margin: 0 auto 6px; }
+.print-signature {
+  display: grid;
+  grid-template-rows: 66px auto auto auto;
+  align-content: start;
+}
+
+.print-signature__mark {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 66px;
+}
+
+.print-signature__line { margin: 0 0 6px !important; }
+.print-signature__image { display: block; max-width: 100%; max-height: 60px; margin: 0 auto 6px; }
 .print-signature__role { font-weight: 700; }
 .print-signature__hint { color: #444444; }
 .print-signature__date { margin-top: 8px !important; }
+
+/* --- Print: A4 purchase request form ------------------------- */
+.pr-print-header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #000000;
+}
+
+.pr-print-header__subtitle { margin: 2px 0 0; font-size: 11px; }
+
+.pr-print-meta { gap: 6px 18px; margin-bottom: 12px; }
+.pr-print-meta dd { overflow-wrap: anywhere; }
+
+.pr-print-reference {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid #000000;
+}
+
+.pr-print-reference__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pr-print-reference__heading h2 { margin: 0; font-size: 12px; }
+.pr-print-reference__heading span { color: #444444; font-size: 10px; }
+
+.pr-print-reference dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px 18px;
+  margin: 0;
+}
+
+.pr-print-reference dl > div { display: flex; gap: 6px; min-width: 0; }
+.pr-print-reference dt { font-weight: 700; }
+.pr-print-reference dd { margin: 0; overflow-wrap: anywhere; }
+
+.pr-print-table-wrap { overflow-x: auto; }
+.pr-print-table { table-layout: fixed; }
+.pr-print-table th,
+.pr-print-table td { padding: 5px 6px; }
+.pr-print-table__col--number { width: 6%; }
+.pr-print-table__col--code { width: 14%; }
+.pr-print-table__col--item { width: 31%; }
+.pr-print-table__col--usage { width: 11%; }
+.pr-print-table__col--quantity { width: 11%; }
+.pr-print-table__col--unit { width: 8%; }
+.pr-print-table__col--price { width: 10%; }
+.pr-print-table__col--total { width: 9%; }
+.pr-print-table__item { overflow-wrap: anywhere; }
+.pr-print-table__item strong,
+.pr-print-table__item small { display: block; }
+.pr-print-table__item small { margin-top: 2px; color: #444444; font-size: 9px; line-height: 1.3; }
+.pr-print-table__empty { padding: 14px !important; text-align: center !important; }
+
+.pr-print-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 2px solid #000000;
+}
+
+.pr-print-summary p { margin: 0; color: #444444; font-size: 11px; }
+.pr-print-summary > div { display: flex; align-items: baseline; gap: 16px; }
+.pr-print-summary span { font-weight: 700; }
+.pr-print-summary strong { font: 700 15px/1.3 var(--font-mono); }
+.pr-print-signatures { margin-top: 32px; }
+.print-signature__name { margin: 0; font-weight: 700; }
 
 /*
 Route progress — a slim bar across the top for as long as a navigation is in
@@ -4049,6 +4143,8 @@ frozen on screen with nothing to say the click was received.
     border: 0;
   }
 
+  .pr-print-table-wrap { overflow: visible; }
+  .pr-print-table { min-width: 0; }
   .print-signatures { break-inside: avoid; }
 }
 

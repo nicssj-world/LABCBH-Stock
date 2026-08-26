@@ -97,11 +97,13 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
           const isIssuerBlock = block.role === 'ผู้จ่ายของ'
           if (isReceiverBlock && requisition.signature) {
             return (
-              <div key={block.role}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through */}
-                <img className="print-signature__image" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+              <div key={block.role} className="print-signature">
+                <div className="print-signature__mark">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through */}
+                  <img className="print-signature__image" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+                </div>
                 <p className="print-signature__role">({requisition.receivedByName})</p>
-                <p className="print-signature__hint">{block.hint}</p>
+                <p className="print-signature__hint">({block.hint})</p>
                 <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.signedAt?.slice(0, 10) ?? null)}</p>
               </div>
             )
@@ -112,19 +114,21 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
           // also shown here so the issuer block remains self-contained.
           if (isIssuerBlock && requisition.fulfilledByName) {
             return (
-              <div key={block.role}>
+              <div key={block.role} className="print-signature">
+                <div className="print-signature__mark" aria-hidden="true" />
                 <p className="print-signature__role">({requisition.fulfilledByName})</p>
-                <p className="print-signature__hint">{block.hint}</p>
+                <p className="print-signature__hint">({block.hint})</p>
                 <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.fulfilledAt?.slice(0, 10) ?? null)}</p>
               </div>
             )
           }
 
           return (
-            <div key={block.role}>
-              <p className="print-signature__line">ลงชื่อ ..................................................</p>
-              <p className="print-signature__role">({block.role})</p>
-              <p className="print-signature__hint">{block.hint}</p>
+            <div key={block.role} className="print-signature">
+              <div className="print-signature__mark">
+                <p className="print-signature__line">ลงชื่อ ..................................................</p>
+              </div>
+              <p className="print-signature__hint">({block.hint})</p>
               <p className="print-signature__date">วันที่ ......../......../..........</p>
             </div>
           )

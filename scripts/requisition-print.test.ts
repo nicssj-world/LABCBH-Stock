@@ -34,6 +34,8 @@ assert.match(printComponent, /ลงชื่อ/)
 // sign the printed form by hand. The fulfilment date is repeated in that block.
 assert.match(printComponent, /requisition\.fulfilledByName/)
 assert.match(printComponent, /requisition\.fulfilledAt\?\.slice\(0, 10\)/)
+assert.match(printComponent, /\(\{block\.hint\}\)/, 'signature roles use the requested parenthesized labels')
+assert.match(printComponent, /print-signature__mark/, 'signature content reserves a shared row for alignment')
 
 // The receiver's block prints the digitally captured signature once it
 // exists, instead of a blank line the recipient has already signed on-screen.
