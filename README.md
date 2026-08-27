@@ -125,6 +125,32 @@ npm run test:contract-budget
 variables are present; see [docs/runbooks/e2e-staging.md](docs/runbooks/e2e-staging.md)
 for how to run it for real.
 
+## Adding modules safely
+
+Use this checklist for every new module, Postgres function, migration, or
+Realtime subscription:
+
+1. Keep the database boundary authoritative. Application writes go through a
+   Postgres RPC called with `supabaseAdmin`; do not write directly to tables.
+2. In PL/pgSQL, prefix inputs with `p_` and locals with `v_` or a specific
+   suffix such as `_value`. Never name a local variable `line`, `contract_id`,
+   `product_id`, or another name that can also be a column. Qualify every
+   column in a joined query with its table alias.
+3. Add a new forward-only migration and commit it with the code. Do not edit
+   an applied migration or patch Production with untracked SQL.
+4. Run `npm run test:sql-safety` and `npm run verify`. When a migration creates
+   or replaces PL/pgSQL, also run `scripts/plpgsql-production-audit.sql` as one
+   transaction against the target database and review every reported error.
+5. Apply and verify the migration in `LABCBH Stock Staging` first. Confirm the
+   intended project ref, migration ledger, exact function definition and
+   critical user flow before applying it to Production.
+6. For Realtime, wait for an authenticated Supabase session, call
+   `supabase.realtime.setAuth(accessToken)`, and only then subscribe. Test the
+   initial unauthenticated-loading race as well as a restored session.
+7. Keep the browser error safe, but log the server-side cause with a request or
+   correlation ID. A generic Next.js Server Components error is not a root
+   cause and must not be the only diagnostic signal.
+
 ## Data safety
 
 All writes go through Postgres functions invoked with the service role, never

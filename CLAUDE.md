@@ -18,6 +18,43 @@ things that have already cost time.
   originals stay so a rollback leaves the portal working.
 - Thai user-facing copy, matching `lib/contracts/presenter.ts`.
 
+## New module, RPC, and migration safety
+
+Treat every new module as a database-and-UI change. The following rules are
+mandatory because a compile-successful build does not validate a PL/pgSQL body
+or a browser authentication race:
+
+- **Name PL/pgSQL variables defensively.** Use `p_` for parameters, `v_` for
+  locals, `row_` for records, and `payload_` for JSON values. Never use a local
+  name that is also a table column or query alias (`line`, `contract_id`,
+  `product_id`, `canonical_name`, `cas_number`, etc.). Qualify every selected,
+  filtered, joined, and inserted column with a table alias when a query has
+  more than one relation. Use explicit column lists; do not rely on `select *`
+  in an RPC that is part of a user-facing workflow.
+- **Review the complete function body.** A function can compile or be created
+  successfully and still fail on its first execution because PL/pgSQL resolves
+  a name ambiguously. Check the exact overload/signature and inspect
+  `pg_get_functiondef(...)` after applying a replacement.
+- **Make schema changes forward-only.** Add a timestamped migration, add or
+  update a static regression test, and never edit an applied migration. Do not
+  use an untracked SQL Editor hotfix as the only Production fix.
+- **Use the release order.** Run `npm run test:sql-safety`, then
+  `npm run verify`; for PL/pgSQL changes run
+  `scripts/plpgsql-production-audit.sql` as one transaction and investigate
+  every error other than the documented `_phleb` checker limitation. Apply to
+  the confirmed Staging project first, verify the migration ledger, function
+  definition, and critical user flow, then promote the same migration to
+  Production.
+- **Protect Realtime subscriptions.** Do not subscribe while the client has no
+  authenticated access token. Restore the session, call
+  `supabase.realtime.setAuth(accessToken)`, and reconnect on auth/token changes.
+  Include a regression test for the initial unauthenticated render.
+- **Make failures diagnosable.** Keep user-facing messages safe, but record the
+  underlying server/database error with a request or correlation ID. When a
+  Next.js Server Components error appears, use the server log and digest to
+  identify the failing RPC or route instead of treating the generic page as
+  the diagnosis.
+
 ## Current operating state
 
 LABCBH Stock is the live contract-management surface. The Lab Management Portal
