@@ -21,3 +21,5 @@ supabase/.temp/
 .claude/skills/
 .claude/agents/
 .claude/settings.local.json
+
+.vercel

@@ -5,6 +5,7 @@ const schema = readFileSync('supabase/migrations/20260826100000_service_procurem
 const rpc = readFileSync('supabase/migrations/20260826101000_service_procurement_rpc.sql', 'utf8')
 const cleanup = readFileSync('supabase/migrations/20260826102000_service_procurement_cleanup.sql', 'utf8')
 const expenseNote = readFileSync('supabase/migrations/20260827110000_service_plan_expense_note.sql', 'utf8')
+const productionRepair = readFileSync('supabase/migrations/20260827044504_purchase_request_service_line_ambiguity.sql', 'utf8')
 
 for (const table of [
   'service_procurement_plans',
@@ -56,6 +57,9 @@ assert.match(schema, /reference_event_id uuid references public\.service_purchas
 assert.match(schema, /reference_ledger_id uuid references public\.service_plan_ledger/i)
 assert.match(rpc, /expense_reversal[\s\S]*reference_event_id/i)
 assert.match(rpc, /expense_reversal[\s\S]*reference_ledger_id/i)
+assert.match(productionRepair, /create_service_purchase_request\(uuid, jsonb\)/i, 'Production repair targets the service PR RPC')
+assert.match(productionRepair, /line_payload/i, 'Production repair separates the PL/pgSQL line variable')
+assert.match(productionRepair, /item_payload/i, 'Production repair separates the JSON array alias')
 assert.match(rpc, /drop table if exists public\.out_lab_contracts cascade/i)
 assert.match(rpc, /drop function if exists public\.create_out_lab_contract/i)
 assert.doesNotMatch(rpc, /grant select, insert, update, delete on all tables in schema public/i)

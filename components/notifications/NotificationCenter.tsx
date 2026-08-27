@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { markAllNotificationsRead, markNotificationRead } from '@/lib/notifications/actions'
 import type { NotificationEntityType, NotificationEventType, NotificationItem, NotificationSnapshot } from '@/lib/notifications/types'
@@ -126,98 +127,142 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
     if (!snapshot.enabled) return
 
     const supabase = createClient()
-    const channel = supabase
-      .channel(`lab-stock-notifications:${actorId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'lab_stock_notifications',
-          filter: `recipient_id=eq.${actorId}`,
-        },
-        (payload) => {
-          const notification = toNotification(payload.new)
-          if (
-            !notification ||
-            notification.resolvedAt ||
-            notification.dismissedAt ||
-            knownNotificationIds.current.has(notification.id)
-          ) return
 
-          knownNotificationIds.current.add(notification.id)
-          onSnapshotChange((current) => ({
-            ...current,
-            notifications: [notification, ...current.notifications].slice(0, 12),
-            unreadCount: notification.readAt ? current.unreadCount : current.unreadCount + 1,
-             pendingPurchaseRequests:
-               notification.eventType === 'purchase_request_created'
-                 ? current.pendingPurchaseRequests + 1
-                 : current.pendingPurchaseRequests,
-            pendingServicePurchaseRequests:
-              notification.eventType === 'service_purchase_request_created'
-                ? current.pendingServicePurchaseRequests + 1
-                : current.pendingServicePurchaseRequests,
-            waitingRequisitions:
-              notification.eventType === 'requisition_created'
-                ? current.waitingRequisitions + 1
-                : current.waitingRequisitions,
-          }))
-          setToast(notification)
-          router.refresh()
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'lab_stock_notifications',
-          filter: `recipient_id=eq.${actorId}`,
-        },
-        (payload) => {
-          const notification = toNotification(payload.new)
-          if (!notification) return
+    let disposed = false
+    let connectionAttempt = 0
+    let channel: RealtimeChannel | null = null
 
-          onSnapshotChange((current) => {
-            const previous = current.notifications.find((item) => item.id === notification.id)
-            if (!previous) return current
+    async function removeCurrentChannel() {
+      const currentChannel = channel
+      channel = null
+      if (currentChannel) await supabase.removeChannel(currentChannel)
+    }
 
-            const leavesQueue = Boolean(notification.resolvedAt || notification.dismissedAt)
-            const unreadDelta = !previous.readAt && (notification.readAt || leavesQueue)
-              ? -1
-              : previous.readAt && !notification.readAt && !leavesQueue
-                ? 1
-                : 0
-            const resolvedDelta = !previous.resolvedAt && notification.resolvedAt ? -1 : 0
+    async function subscribeForSession(accessToken: string | null) {
+      const attempt = ++connectionAttempt
 
-            return {
+      // The server-rendered snapshot can be ready before the browser has
+      // restored its Supabase session. Subscribing as `anon` makes Realtime
+      // reject the recipient_id filter even though the column exists.
+      if (!accessToken) {
+        await removeCurrentChannel()
+        return
+      }
+
+      await supabase.realtime.setAuth(accessToken)
+      if (disposed || attempt !== connectionAttempt) return
+
+      await removeCurrentChannel()
+      if (disposed || attempt !== connectionAttempt) return
+
+      const nextChannel = supabase
+        .channel(`lab-stock-notifications:${actorId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'lab_stock_notifications',
+            filter: `recipient_id=eq.${actorId}`,
+          },
+          (payload) => {
+            const notification = toNotification(payload.new)
+            if (
+              !notification ||
+              notification.resolvedAt ||
+              notification.dismissedAt ||
+              knownNotificationIds.current.has(notification.id)
+            ) return
+
+            knownNotificationIds.current.add(notification.id)
+            onSnapshotChange((current) => ({
               ...current,
-              notifications: leavesQueue
-                ? current.notifications.filter((item) => item.id !== notification.id)
-                : current.notifications.map((item) => item.id === notification.id ? notification : item),
-              unreadCount: Math.max(0, current.unreadCount + unreadDelta),
-              pendingPurchaseRequests: notification.eventType === 'purchase_request_created'
-                ? Math.max(0, current.pendingPurchaseRequests + resolvedDelta)
-                : current.pendingPurchaseRequests,
-              pendingServicePurchaseRequests: notification.eventType === 'service_purchase_request_created'
-                ? Math.max(0, current.pendingServicePurchaseRequests + resolvedDelta)
-                : current.pendingServicePurchaseRequests,
-              waitingRequisitions: notification.eventType === 'requisition_created'
-                ? Math.max(0, current.waitingRequisitions + resolvedDelta)
-                : current.waitingRequisitions,
+              notifications: [notification, ...current.notifications].slice(0, 12),
+              unreadCount: notification.readAt ? current.unreadCount : current.unreadCount + 1,
+              pendingPurchaseRequests:
+                notification.eventType === 'purchase_request_created'
+                  ? current.pendingPurchaseRequests + 1
+                  : current.pendingPurchaseRequests,
+              pendingServicePurchaseRequests:
+                notification.eventType === 'service_purchase_request_created'
+                  ? current.pendingServicePurchaseRequests + 1
+                  : current.pendingServicePurchaseRequests,
+              waitingRequisitions:
+                notification.eventType === 'requisition_created'
+                  ? current.waitingRequisitions + 1
+                  : current.waitingRequisitions,
+            }))
+            setToast(notification)
+            router.refresh()
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'lab_stock_notifications',
+            filter: `recipient_id=eq.${actorId}`,
+          },
+          (payload) => {
+            const notification = toNotification(payload.new)
+            if (!notification) return
+
+            onSnapshotChange((current) => {
+              const previous = current.notifications.find((item) => item.id === notification.id)
+              if (!previous) return current
+
+              const leavesQueue = Boolean(notification.resolvedAt || notification.dismissedAt)
+              const unreadDelta = !previous.readAt && (notification.readAt || leavesQueue)
+                ? -1
+                : previous.readAt && !notification.readAt && !leavesQueue
+                  ? 1
+                  : 0
+              const resolvedDelta = !previous.resolvedAt && notification.resolvedAt ? -1 : 0
+
+              return {
+                ...current,
+                notifications: leavesQueue
+                  ? current.notifications.filter((item) => item.id !== notification.id)
+                  : current.notifications.map((item) => item.id === notification.id ? notification : item),
+                unreadCount: Math.max(0, current.unreadCount + unreadDelta),
+                pendingPurchaseRequests: notification.eventType === 'purchase_request_created'
+                  ? Math.max(0, current.pendingPurchaseRequests + resolvedDelta)
+                  : current.pendingPurchaseRequests,
+                pendingServicePurchaseRequests: notification.eventType === 'service_purchase_request_created'
+                  ? Math.max(0, current.pendingServicePurchaseRequests + resolvedDelta)
+                  : current.pendingServicePurchaseRequests,
+                waitingRequisitions: notification.eventType === 'requisition_created'
+                  ? Math.max(0, current.waitingRequisitions + resolvedDelta)
+                  : current.waitingRequisitions,
+              }
+            })
+            if (notification.resolvedAt || notification.dismissedAt) {
+              setToast((current) => current?.id === notification.id ? null : current)
             }
-          })
-          if (notification.resolvedAt || notification.dismissedAt) {
-            setToast((current) => current?.id === notification.id ? null : current)
-          }
-          router.refresh()
-        },
-      )
-      .subscribe()
+            router.refresh()
+          },
+        )
+
+      channel = nextChannel
+      nextChannel.subscribe()
+    }
+
+    const { data: authState } = supabase.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        void subscribeForSession(session?.access_token ?? null)
+      }, 0)
+    })
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      void subscribeForSession(session?.access_token ?? null)
+    })
 
     return () => {
-      void supabase.removeChannel(channel)
+      disposed = true
+      connectionAttempt += 1
+      authState.subscription.unsubscribe()
+      void removeCurrentChannel()
     }
   }, [actorId, onSnapshotChange, router, snapshot.enabled])
 

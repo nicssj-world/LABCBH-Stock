@@ -12,6 +12,8 @@
 .next
 .vercel
 node_modules
+release
+.tmp-backup-desktop-shots
 out
 playwright-report
 test-results

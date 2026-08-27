@@ -47,12 +47,14 @@ const model = buildInventoryPdfModel({
 assert.equal(model.itemCount, 2)
 assert.deepEqual(model.rows.map((row) => row.kind), ['item', 'lot', 'lot', 'item'])
 assert.equal(model.rows[0].lotCount, 2)
-assert.equal(model.rows[1].name, 'Lot A-001')
+assert.equal(model.rows[1].name, '')
+assert.equal(model.rows[1].lotNumber, 'A-001')
 assert.equal(model.rows[1].expiryDate, '2027-01-01')
 assert.equal(model.rows[1].balance, 5)
 assert.equal(model.rows[0].note, 'เก็บในตู้เย็น')
 assert.equal(model.rows[1].note, null, 'lot detail rows do not repeat the item note')
 assert.equal(model.rows[3].expiryDate, null, 'a zero-balance single lot stays summarized on the item row')
+assert.equal(model.rows[3].lotNumber, 'B-001', 'a single lot stays summarized on the item row')
 
 async function runPdfAssertions() {
   const pdf = await generateInventoryPdf({
@@ -99,6 +101,8 @@ async function runPdfAssertions() {
 
   const exportSource = read('lib/inventory/export.ts')
   assert.doesNotMatch(exportSource, /key: 'department'/, 'the PDF table must not repeat the department column')
+  assert.match(exportSource, /key: 'name'[^\n]*\n\s*\{ key: 'lot'/, 'the Lot column must follow the item name')
+  assert.match(exportSource, /case 'lot'/, 'the PDF rows must render lot numbers in the Lot column')
   assert.match(exportSource, /key: 'balance'[\s\S]*key: 'note'/, 'the note column must follow remaining balance')
   assert.match(exportSource, /case 'note'/, 'the PDF rows must render item notes')
 

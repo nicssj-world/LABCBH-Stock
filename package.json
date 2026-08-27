@@ -12,6 +12,7 @@
     "backup:desktop:build": "electron-builder --projectDir desktop --config electron-builder.yml --win",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:sql-safety": "tsx scripts/plpgsql-ambiguity-regression.test.ts",
     "test:rpc-boundaries": "tsx scripts/rpc-payload-nullability.test.ts",
     "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/design-refresh.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts",
     "test:dashboard": "tsx scripts/dashboard-watchlist.test.ts && tsx scripts/dashboard-executive.test.ts",
@@ -43,7 +44,7 @@
     "e2e:staging-seed-receipt": "node scripts/staging-seed-receipt-draft.mjs",
     "e2e:staging-seed-lease": "node scripts/staging-seed-lease-contract.mjs",
     "preflight:lots": "node scripts/lot-normalization-preflight.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:dashboard && npm run test:sticky-scroll-ui && npm run test:pdf-preview && npm run test:notifications && npm run test:contracts && npm run test:contract-budget && npm run test:service-procurement && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:required-field-markers && npm run test:pagination && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:backup && npm run test:annual-plans && npm run test:storage-cleanup && npm run test:e2e && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:sql-safety && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:dashboard && npm run test:sticky-scroll-ui && npm run test:pdf-preview && npm run test:notifications && npm run test:contracts && npm run test:contract-budget && npm run test:service-procurement && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:required-field-markers && npm run test:pagination && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:backup && npm run test:annual-plans && npm run test:storage-cleanup && npm run test:e2e && npm run build"
   },
   "engines": {
     "node": ">=22"
