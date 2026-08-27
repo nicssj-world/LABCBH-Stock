@@ -40,6 +40,8 @@ type CommandResult = { stderr: string }
 const HEARTBEAT_INTERVAL_MS = 30_000
 const WATCH_INTERVAL_MS = 15_000
 const SCHEDULE_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000
+const EXCLUDED_STAGING_PROJECT_REF = 'stogulcfwsvunydmwrex'
+const PRODUCTION_PROJECT_REF = 'fslagsuorkcckvvtrmyi'
 
 function loadRunnerEnv(): void {
   if (typeof process.loadEnvFile !== 'function') return
@@ -71,6 +73,9 @@ function createRunnerContext(): RunnerContext {
 
   if (projectRef !== expectedProjectRef) {
     throw new Error(`refusing database backup: expected project ${expectedProjectRef}, received ${projectRef}`)
+  }
+  if (projectRef === EXCLUDED_STAGING_PROJECT_REF) {
+    throw new Error(`refusing staging database backup: use Production project ${PRODUCTION_PROJECT_REF}`)
   }
 
   const parsedDatabaseUrl = new URL(databaseUrl)

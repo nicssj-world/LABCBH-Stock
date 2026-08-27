@@ -20,7 +20,7 @@ try {
   await page.waitForSelector('#setup-view:not([hidden])')
   assert.equal(await page.title(), 'LABCBH Backup')
   assert.equal(await page.locator('#dashboard-view').getAttribute('hidden'), '')
-  assert.equal(await page.locator('#setup-title').textContent(), 'เลือกโปรเจคที่จะตั้งค่า')
+  assert.equal(await page.locator('#setup-title').textContent(), 'เลือกระบบที่ต้องการตั้งค่า')
   assert.equal(await page.locator('#setup-profile-picker [data-profile-id="stock"]').count(), 1)
   assert.equal(await page.locator('#setup-profile-picker [data-profile-id="portal"]').count(), 1)
   await page.locator('#supabase-url').fill('not-a-supabase-url')
@@ -43,11 +43,11 @@ try {
   }
 
   const serviceRoleKey = 'service-role-test-secret-1234567890'
-  const databaseUrl = 'postgresql://backup-user:db-password@db.example.com:5432/postgres?sslmode=require'
+  const databaseUrl = 'postgresql://backup-user:db-password@db.fslagsuorkcckvvtrmyi.supabase.co:5432/postgres?sslmode=require'
   const saved = await page.evaluate(async ({ serviceRoleKey: key, databaseUrl: connectionString, backupRoot }) => {
     return window.backupDesktop.saveSettings({
       profileId: 'stock',
-      supabaseUrl: 'https://stogulcfwsvunydmwrex.supabase.co',
+      supabaseUrl: 'https://fslagsuorkcckvvtrmyi.supabase.co',
       serviceRoleKey: key,
       databaseUrl: connectionString,
       backupRoot,
@@ -56,29 +56,15 @@ try {
     })
   }, { serviceRoleKey, databaseUrl, backupRoot: path.join(userData, 'backups') })
   assert.equal(saved.configured, true)
-  assert.equal(saved.profiles.filter((profile) => profile.configured).length, 1)
-  const portalRoleKey = 'portal-service-role-test-secret-1234567890'
-  const portalDatabaseUrl = 'postgresql://portal-user:portal-db-password@db.fslagsuorkcckvvtrmyi.supabase.co:5432/postgres?sslmode=require'
-  const savedBoth = await page.evaluate(async ({ serviceRoleKey: key, databaseUrl: connectionString, backupRoot }) => {
-    return window.backupDesktop.saveSettings({
-      profileId: 'portal',
-      supabaseUrl: 'https://fslagsuorkcckvvtrmyi.supabase.co',
-      serviceRoleKey: key,
-      databaseUrl: connectionString,
-      backupRoot,
-      pgDumpPath: '',
-      runnerId: 'desktop-smoke',
-    })
-  }, { serviceRoleKey: portalRoleKey, databaseUrl: portalDatabaseUrl, backupRoot: path.join(userData, 'portal-backups') })
-  assert.equal(savedBoth.profiles.filter((profile) => profile.configured).length, 2)
+  assert.equal(saved.profiles.filter((profile) => profile.configured).length, 2)
+  assert.equal(saved.profiles.find((profile) => profile.id === 'stock').expectedProjectRef, 'fslagsuorkcckvvtrmyi')
+  assert.equal(saved.profiles.find((profile) => profile.id === 'portal').configurationSource, 'stock')
   const publicSettings = await page.evaluate(() => window.backupDesktop.getSettings())
   assert.equal('serviceRoleKey' in publicSettings, false)
   assert.equal('databaseUrl' in publicSettings, false)
   const storedSettings = readFileSync(path.join(userData, 'settings.json'), 'utf8')
   assert.equal(storedSettings.includes(serviceRoleKey), false)
   assert.equal(storedSettings.includes(databaseUrl), false)
-  assert.equal(storedSettings.includes(portalRoleKey), false)
-  assert.equal(storedSettings.includes(portalDatabaseUrl), false)
   assert.match(storedSettings, /dpapi:/)
   console.log('backup desktop smoke test passed')
 } finally {

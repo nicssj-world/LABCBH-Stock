@@ -154,8 +154,9 @@
   }
 
   function profileStatusLabel(profile) {
-    if (!profile?.configured) return 'ต้องตั้งค่า'
+    if (!profile?.configured) return profile?.migratedFromStaging ? 'ตั้งค่า Production' : 'ต้องตั้งค่า'
     if (!profile.pgDumpAvailable) return 'รอ pg_dump'
+    if (profile.configurationSource) return 'พร้อม · ใช้การตั้งค่าร่วม'
     if (profile.schedule?.enabled && profile.schedule?.taskInstalled) return 'พร้อม · ตั้งเวลาแล้ว'
     return 'พร้อมใช้งาน'
   }
@@ -192,7 +193,9 @@
       const label = document.createElement('strong')
       label.textContent = profile.label
       const detail = document.createElement('span')
-      detail.textContent = `${profile.expectedProjectRef} · ${profileStatusLabel(profile)}`
+      const sharedLabel = profile.sharedDatabaseKey ? 'ฐานข้อมูลร่วม' : ''
+      detail.textContent = [profile.expectedProjectRef, sharedLabel, profileStatusLabel(profile)].filter(Boolean).join(' · ')
+      if (profile.sharedDatabaseLabel) button.title = profile.sharedDatabaseLabel
       copy.append(label, detail)
 
       const arrow = document.createElement('span')
@@ -407,7 +410,8 @@
   function updateDashboardProfileCopy(profile) {
     if (!profile) return
     el.dashboardTitle.textContent = `สำรอง ${profile.label}`
-    el.dashboardSubtitle.textContent = `${profile.description} · project ${profile.expectedProjectRef}`
+    const targetLabel = profile.sharedDatabaseKey ? 'ฐานข้อมูล Production ร่วม' : `project ${profile.expectedProjectRef}`
+    el.dashboardSubtitle.textContent = `${profile.description} · ${targetLabel}`
   }
 
   function renderStatus(status) {
@@ -520,7 +524,10 @@
       } else {
         showDashboard()
         await refreshStatus(state.activeProfileId)
-        setFeedback(el.dashboardFeedback, `ตั้งค่า ${profileById(state.activeProfileId)?.label || 'โปรเจคนี้'} เรียบร้อยแล้ว`, 'success')
+        const sharedMessage = profileById(state.activeProfileId)?.sharedDatabaseKey
+          ? ' · พร้อมสำรองฐานข้อมูล Production เดียวกันทั้ง Stock และ Portal'
+          : ''
+        setFeedback(el.dashboardFeedback, `ตั้งค่า ${profileById(state.activeProfileId)?.label || 'โปรเจคนี้'} เรียบร้อยแล้ว${sharedMessage}`, 'success')
       }
     } catch (cause) {
       setFeedback(el.setupFeedback, errorMessage(cause), 'error')
@@ -554,9 +561,9 @@
       setFeedback(el.dashboardFeedback, `ยังไม่ได้ตั้งค่า ${profile?.label || 'โปรเจคนี้'} กรุณาเปิด “ตั้งค่าโปรเจค”`, 'error')
       return
     }
-    if (!window.confirm(`เริ่มสำรองฐานข้อมูล ${profile.label} ลงเครื่องนี้ตอนนี้หรือไม่?`)) return
+    if (!window.confirm(`เริ่มสำรองฐานข้อมูล Production ร่วมของ ${profile.label} ลงเครื่องนี้ตอนนี้หรือไม่?`)) return
     state.busy = true
-    setFeedback(el.dashboardFeedback, `กำลังสร้างไฟล์สำรองของ ${profile.label} อาจใช้เวลาตามขนาดฐานข้อมูลและความเร็วเครือข่าย`, 'info')
+    setFeedback(el.dashboardFeedback, `กำลังสร้างไฟล์สำรอง Production ร่วมของ ${profile.label} อาจใช้เวลาตามขนาดฐานข้อมูลและความเร็วเครือข่าย`, 'info')
     setBusy(el.backupNow, true, 'กำลังสำรองโปรเจค')
     renderStatus(state.status)
     try {

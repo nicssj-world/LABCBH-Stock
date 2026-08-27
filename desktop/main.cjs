@@ -29,6 +29,8 @@ const DEFAULT_TIME = '02:00'
 const DEFAULT_DAY = 1
 const TASK_PREFIX = 'LABCBH Database Backup'
 const LEGACY_TASK_NAME = TASK_PREFIX
+const PRODUCTION_PROJECT_REF = 'fslagsuorkcckvvtrmyi'
+const EXCLUDED_STAGING_PROJECT_REF = 'stogulcfwsvunydmwrex'
 
 let mainWindow = null
 let cachedSettings = undefined
@@ -188,6 +190,27 @@ function hydrateProfile(raw, fallback) {
   return profile
 }
 
+function isExcludedStagingProfile(profile) {
+  return profile?.expectedProjectRef === EXCLUDED_STAGING_PROJECT_REF
+    || profile?.supabaseUrl === `https://${EXCLUDED_STAGING_PROJECT_REF}.supabase.co`
+}
+
+function migrateExcludedStagingProfile(profile, fallback) {
+  if (!isExcludedStagingProfile(profile)) return profile
+  return {
+    ...profile,
+    supabaseUrl: fallback.supabaseUrl,
+    expectedProjectRef: PRODUCTION_PROJECT_REF,
+    sharedDatabaseKey: fallback.sharedDatabaseKey,
+    sharedDatabaseLabel: fallback.sharedDatabaseLabel,
+    serviceRoleKey: '',
+    databaseUrl: '',
+    encryptedServiceRoleKey: null,
+    encryptedDatabaseUrl: null,
+    migratedFromStaging: true,
+  }
+}
+
 async function readStoredSettings() {
   if (cachedSettings !== undefined) return cachedSettings
   let raw
@@ -207,11 +230,11 @@ async function readStoredSettings() {
 
   const defaults = createDefaultSettings()
   if (raw.version === LEGACY_SETTINGS_VERSION) {
-    const legacyStock = hydrateProfile({
+    const legacyStock = migrateExcludedStagingProfile(hydrateProfile({
       ...raw,
       secrets: raw.secrets,
       backupRoot: raw.backupRoot || defaults.profiles[0].backupRoot,
-    }, defaults.profiles[0])
+    }, defaults.profiles[0]), defaults.profiles[0])
     defaults.profiles[0] = legacyStock
     defaults.runnerId = validateStoredRunnerId(raw.runnerId)
     cachedSettings = defaults
@@ -222,7 +245,7 @@ async function readStoredSettings() {
   const rawProfiles = Array.isArray(raw.profiles) ? raw.profiles : []
   defaults.profiles = defaults.profiles.map((fallback) => {
     const stored = rawProfiles.find((candidate) => candidate?.id === fallback.id)
-    return hydrateProfile(stored, fallback)
+    return migrateExcludedStagingProfile(hydrateProfile(stored, fallback), fallback)
   })
   cachedSettings = defaults
   return cachedSettings
@@ -290,7 +313,33 @@ async function detectPgDumpPath(settings) {
   return null
 }
 
-function publicProfile(profile, taskInstalled = false, pgDumpAvailable = false) {
+function sameDatabaseTarget(first, second) {
+  return Boolean(first?.sharedDatabaseKey
+    && first.sharedDatabaseKey === second?.sharedDatabaseKey
+    && String(first.supabaseUrl || '').toLowerCase() === String(second?.supabaseUrl || '').toLowerCase()
+    && first.expectedProjectRef === second?.expectedProjectRef)
+}
+
+function effectiveProfile(settings, profile) {
+  if (isConfigured(profile)) return profile
+  const peer = settings?.profiles?.find((candidate) => candidate.id !== profile.id
+    && isConfigured(candidate)
+    && sameDatabaseTarget(profile, candidate))
+  if (!peer) return profile
+  return {
+    ...profile,
+    serviceRoleKey: peer.serviceRoleKey,
+    databaseUrl: peer.databaseUrl,
+    backupRoot: peer.backupRoot,
+    encryptedServiceRoleKey: peer.encryptedServiceRoleKey,
+    encryptedDatabaseUrl: peer.encryptedDatabaseUrl,
+    pgDumpPath: profile.pgDumpPath || peer.pgDumpPath,
+    configurationSource: peer.id,
+  }
+}
+
+function publicProfile(profile, settings = null, taskInstalled = false, pgDumpAvailable = false) {
+  const effective = effectiveProfile(settings, profile)
   return {
     id: profile.id,
     label: profile.label,
@@ -298,12 +347,16 @@ function publicProfile(profile, taskInstalled = false, pgDumpAvailable = false) 
     description: profile.description,
     supabaseUrl: profile.supabaseUrl,
     expectedProjectRef: profile.expectedProjectRef,
-    backupRoot: profile.backupRoot,
-    pgDumpPath: profile.pgDumpPath,
-    configured: isConfigured(profile),
-    hasServiceRoleKey: Boolean(profile.serviceRoleKey),
-    hasDatabaseUrl: Boolean(profile.databaseUrl),
+    backupRoot: effective.backupRoot,
+    pgDumpPath: effective.pgDumpPath,
+    configured: isConfigured(effective),
+    hasServiceRoleKey: Boolean(effective.serviceRoleKey),
+    hasDatabaseUrl: Boolean(effective.databaseUrl),
     pgDumpAvailable,
+    sharedDatabaseKey: profile.sharedDatabaseKey || null,
+    sharedDatabaseLabel: profile.sharedDatabaseLabel || null,
+    configurationSource: effective.configurationSource || null,
+    migratedFromStaging: profile.migratedFromStaging === true,
     schedule: publicSchedule(profile.schedule, taskInstalled),
   }
 }
@@ -332,11 +385,15 @@ async function getPublicSettings() {
     }
   }
 
-  const profiles = await Promise.all(settings.profiles.map(async (profile) => publicProfile(
-    profile,
-    await scheduledTaskExists(profile.id),
-    Boolean(await detectPgDumpPath(profile)),
-  )))
+  const profiles = await Promise.all(settings.profiles.map(async (profile) => {
+    const effective = effectiveProfile(settings, profile)
+    return publicProfile(
+      profile,
+      settings,
+      await scheduledTaskExists(profile.id),
+      Boolean(await detectPgDumpPath(effective)),
+    )
+  }))
   return {
     configured: profiles.some((profile) => profile.configured),
     runnerId: settings.runnerId,
@@ -349,10 +406,14 @@ async function saveSettings(input) {
   const existing = (await readStoredSettings()) || createDefaultSettings()
   const profileId = normalizeProfileId(input?.profileId)
   const current = profileFor(existing, profileId)
+  const effectiveCurrent = effectiveProfile(existing, current)
   const supabaseUrl = String(input?.supabaseUrl || current.supabaseUrl).trim().replace(/\/$/, '')
   const projectRef = parseProjectRefFromUrl(supabaseUrl)
-  const serviceRoleKey = String(input?.serviceRoleKey || '').trim() || current.serviceRoleKey || ''
-  const databaseUrl = String(input?.databaseUrl || '').trim() || current.databaseUrl || ''
+  if (projectRef === EXCLUDED_STAGING_PROJECT_REF) {
+    throw new Error(`ไม่รองรับการสำรอง Staging (${EXCLUDED_STAGING_PROJECT_REF}) · ให้ใช้ Production project ${PRODUCTION_PROJECT_REF}`)
+  }
+  const serviceRoleKey = String(input?.serviceRoleKey || '').trim() || current.serviceRoleKey || effectiveCurrent.serviceRoleKey || ''
+  const databaseUrl = String(input?.databaseUrl || '').trim() || current.databaseUrl || effectiveCurrent.databaseUrl || ''
   if (!serviceRoleKey) throw new Error('กรุณาระบุ service role key ของโปรเจคนี้')
   if (serviceRoleKey.length < 20) throw new Error('service role key สั้นเกินไป กรุณาตรวจสอบค่าที่คัดลอกมา')
   if (!databaseUrl) throw new Error('กรุณาระบุ PostgreSQL connection string ของโปรเจคนี้')
@@ -361,12 +422,12 @@ async function saveSettings(input) {
     ...current,
     supabaseUrl,
     expectedProjectRef: projectRef,
-    backupRoot: validateBackupRoot(input?.backupRoot || current.backupRoot),
-    pgDumpPath: validatePgDumpPath(input?.pgDumpPath),
+    backupRoot: validateBackupRoot(input?.backupRoot || current.backupRoot || effectiveCurrent.backupRoot),
+    pgDumpPath: validatePgDumpPath(input?.pgDumpPath || current.pgDumpPath || effectiveCurrent.pgDumpPath),
     serviceRoleKey,
     databaseUrl: validateProjectDatabaseUrl(databaseUrl, projectRef),
-    encryptedServiceRoleKey: String(input?.serviceRoleKey || '').trim() ? encodeSecret(serviceRoleKey) : current.encryptedServiceRoleKey,
-    encryptedDatabaseUrl: String(input?.databaseUrl || '').trim() ? encodeSecret(databaseUrl) : current.encryptedDatabaseUrl,
+    encryptedServiceRoleKey: String(input?.serviceRoleKey || '').trim() ? encodeSecret(serviceRoleKey) : current.encryptedServiceRoleKey || effectiveCurrent.encryptedServiceRoleKey,
+    encryptedDatabaseUrl: String(input?.databaseUrl || '').trim() ? encodeSecret(databaseUrl) : current.encryptedDatabaseUrl || effectiveCurrent.encryptedDatabaseUrl,
   }
   if (!nextProfile.encryptedServiceRoleKey || !nextProfile.encryptedDatabaseUrl) {
     throw new Error('ไม่พบค่าความลับที่เข้ารหัส กรุณาระบุ key และ connection string ใหม่')
@@ -447,7 +508,8 @@ async function setSchedule(input) {
   if (!settings) throw new Error('กรุณาบันทึกการตั้งค่าการเชื่อมต่อก่อน')
   const profileId = normalizeProfileId(input?.profileId)
   const profile = profileFor(settings, profileId)
-  if (!isConfigured(profile)) throw new Error('โปรดตั้งค่าการเชื่อมต่อของโปรเจคนี้ให้ครบก่อน')
+  const configuredProfile = effectiveProfile(settings, profile)
+  if (!isConfigured(configuredProfile)) throw new Error('โปรดตั้งค่าการเชื่อมต่อของ Production project ให้ครบก่อน')
   const schedule = normaliseSchedule(input)
   if (schedule.enabled) {
     if (profileId === 'stock') await removeTaskByName(LEGACY_TASK_NAME).catch(() => {})
@@ -495,7 +557,13 @@ async function getLogs(profileId) {
     const lines = value.split(/\r?\n/).filter(Boolean)
     const normalizedProfileId = profileId ? normalizeProfileId(profileId) : null
     const selected = normalizedProfileId
-      ? lines.filter((line) => line.includes(`[${normalizedProfileId}] `) || (normalizedProfileId === 'stock' && !/\[(stock|portal)\] /.test(line)))
+      ? lines.filter((line) => {
+        const taggedProfileId = /\[(stock|portal)\] /.exec(line)?.[1] || null
+        if (normalizedProfileId === 'stock' || normalizedProfileId === 'portal') {
+          return !taggedProfileId || taggedProfileId === 'stock' || taggedProfileId === 'portal'
+        }
+        return taggedProfileId === normalizedProfileId
+      })
       : lines
     return selected.slice(-80).map((line) => line.replace(/^(\S+\s+\[[A-Z]+\])\s+\[(stock|portal)\]\s+/, '$1 '))
   } catch (cause) {
@@ -508,8 +576,14 @@ async function getStatus(profileId = 'stock') {
   const settings = await readStoredSettings()
   if (!settings) return { configured: false, profileId: normalizeProfileId(profileId), logs: await getLogs(profileId) }
   const profile = profileFor(settings, profileId)
-  const profileSummary = publicProfile(profile, await scheduledTaskExists(profile.id), Boolean(await detectPgDumpPath(profile)))
-  if (!isConfigured(profile)) {
+  const configuredProfile = effectiveProfile(settings, profile)
+  const profileSummary = publicProfile(
+    profile,
+    settings,
+    await scheduledTaskExists(profile.id),
+    Boolean(await detectPgDumpPath(configuredProfile)),
+  )
+  if (!isConfigured(configuredProfile)) {
     return {
       configured: false,
       profileId: profile.id,
@@ -518,7 +592,7 @@ async function getStatus(profileId = 'stock') {
       logs: await getLogs(profile.id),
     }
   }
-  const engine = createEngine(profile)
+  const engine = createEngine(configuredProfile)
   const local = await engine.readLocalStatus()
   return {
     configured: true,
@@ -527,8 +601,8 @@ async function getStatus(profileId = 'stock') {
     latestLocal: local.latest,
     localCount: local.count,
     pgDumpAvailable: Boolean(await engine.resolvePgDumpPath()),
-    pgDumpPath: profile.pgDumpPath,
-    backupRoot: profile.backupRoot,
+    pgDumpPath: configuredProfile.pgDumpPath,
+    backupRoot: configuredProfile.backupRoot,
     runnerId: settings.runnerId,
     schedule: profileSummary.schedule,
     logs: await getLogs(profile.id),
@@ -539,8 +613,9 @@ async function testConnection(profileId = 'stock') {
   const settings = await readStoredSettings()
   if (!settings) throw new Error('กรุณาบันทึกการตั้งค่าก่อนตรวจสอบการเชื่อมต่อ')
   const profile = profileFor(settings, profileId)
-  if (!isConfigured(profile)) throw new Error('โปรดตั้งค่าการเชื่อมต่อของโปรเจคนี้ให้ครบก่อน')
-  const engine = createEngine(profile)
+  const configuredProfile = effectiveProfile(settings, profile)
+  if (!isConfigured(configuredProfile)) throw new Error('โปรดตั้งค่าการเชื่อมต่อของ Production project ให้ครบก่อน')
+  const engine = createEngine(configuredProfile)
   const result = await engine.testConnection()
   await appendLog('success', `เชื่อมต่อ Supabase สำเร็จ · project ${result.projectRef}`, new Date().toISOString(), profile.id)
   return result
@@ -553,9 +628,10 @@ async function runBackup(triggerSource = 'manual', profileId = 'stock') {
     const settings = await readStoredSettings()
     if (!settings) throw new Error('กรุณาตั้งค่าการเชื่อมต่อก่อนเริ่มสำรอง')
     const profile = profileFor(settings, normalizedProfileId)
-    if (!isConfigured(profile)) throw new Error(`ยังไม่ได้ตั้งค่า ${profile.label}`)
+    const configuredProfile = effectiveProfile(settings, profile)
+    if (!isConfigured(configuredProfile)) throw new Error(`ยังไม่ได้ตั้งค่า Production project สำหรับ ${profile.label}`)
     await appendLog('info', triggerSource === 'scheduled' ? 'เริ่มงานสำรองตามกำหนดเวลา' : 'เริ่มงานสำรองจากปุ่มผู้ใช้', new Date().toISOString(), profile.id)
-    const engine = createEngine(profile)
+    const engine = createEngine(configuredProfile)
     const result = await engine.runOnce(triggerSource)
     if (result.status === 'failed') await appendLog('error', result.error || 'การสำรองล้มเหลว', new Date().toISOString(), profile.id)
     else if (result.status === 'skipped') await appendLog('info', result.reason || 'ข้ามรอบสำรองนี้', new Date().toISOString(), profile.id)
@@ -620,8 +696,9 @@ async function openBackupFolder(profileId = 'stock') {
   const settings = await readStoredSettings()
   if (!settings) throw new Error('ยังไม่ได้ตั้งค่าการสำรอง')
   const profile = profileFor(settings, profileId)
-  await fsp.mkdir(profile.backupRoot, { recursive: true })
-  const error = await shell.openPath(profile.backupRoot)
+  const configuredProfile = effectiveProfile(settings, profile)
+  await fsp.mkdir(configuredProfile.backupRoot, { recursive: true })
+  const error = await shell.openPath(configuredProfile.backupRoot)
   if (error) throw new Error(`เปิดโฟลเดอร์ไม่สำเร็จ: ${error}`)
   return true
 }

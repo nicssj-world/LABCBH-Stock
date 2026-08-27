@@ -10,14 +10,16 @@ Vercel และไม่รวม object bytes ใน Supabase Storage
 Command Prompt:
 
 1. ติดตั้งแอป แล้วเปิด `LABCBH Backup`
-2. เลือกโปรเจคที่ต้องการสำรองจากตัวเลือกด้านบน:
-   - `LABCBH Stock` — `stogulcfwsvunydmwrex`
-   - `LabManagement Portal` — `fslagsuorkcckvvtrmyi`
-3. กรอก Supabase project URL, service role key และ PostgreSQL connection string ของโปรเจคนั้น
-4. เลือกโฟลเดอร์ปลายทาง และเลือก `pg_dump.exe` หากแอปหาเองไม่พบ
+2. เลือกชื่อระบบจากตัวเลือกด้านบน:
+   - `LABCBH Stock` — ฐานข้อมูล Production `fslagsuorkcckvvtrmyi`
+   - `LabManagement Portal` — ใช้ฐานข้อมูล Production เดียวกัน
+3. กรอก Supabase project URL `https://fslagsuorkcckvvtrmyi.supabase.co`, service role key และ PostgreSQL connection string ของ Production
+4. เลือกโฟลเดอร์ปลายทางร่วม และเลือก `pg_dump.exe` หากแอปหาเองไม่พบ
 5. กดบันทึกและตรวจสอบการเชื่อมต่อ จากนั้นกด `สำรองข้อมูลตอนนี้`
-6. หากต้องการสำรองทั้งสองโปรเจค ให้ตั้งค่าซ้ำทีละโปรไฟล์ แอปจะแยกโฟลเดอร์ ประวัติ และสถานะให้
-7. หากต้องการอัตโนมัติ ให้เปิดสำรองอัตโนมัติของโปรไฟล์นั้น แอปจะสร้าง Windows Task Scheduler แยกให้
+6. การสำรองครั้งเดียวครอบคลุมทั้ง LABCBH Stock และ LabManagement Portal เพราะใช้ฐานข้อมูลเดียวกัน ไม่ต้องตั้งค่าซ้ำ
+7. หากต้องการอัตโนมัติ ให้เปิดสำรองอัตโนมัติที่โปรไฟล์ `LABCBH Stock` เพียงโปรไฟล์เดียว เพื่อไม่ให้สร้างงานซ้ำ
+
+โปรเจค Staging `stogulcfwsvunydmwrex` ไม่อยู่ในรายการเป้าหมายและแอปจะปฏิเสธ URL นี้
 
 ตัว installer ไม่ฝัง `pg_dump.exe` ที่เป็น binary ภายนอกไว้ใน repository โดยค่าเริ่มต้น จึงควรติดตั้ง
 PostgreSQL client ที่เชื่อถือได้ก่อน หรือวางชุด client ที่ได้รับอนุญาตไว้ใน `desktop/postgresql/` แล้ว build ใหม่
@@ -36,10 +38,10 @@ npm run backup:desktop:build
 `.env.local` ของโปรเจกต์บนเครื่อง Local เท่านั้น:
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://fslagsuorkcckvvtrmyi.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-BACKUP_DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>:5432/postgres?sslmode=require
-BACKUP_EXPECTED_PROJECT_REF=<project-ref>
+BACKUP_DATABASE_URL=postgresql://<db-user>:<db-password>@db.fslagsuorkcckvvtrmyi.supabase.co:5432/postgres?sslmode=require
+BACKUP_EXPECTED_PROJECT_REF=fslagsuorkcckvvtrmyi
 BACKUP_ROOT=D:\LABCBH-Backups
 BACKUP_RUNNER_ID=labcbh-stock-runner-01
 ```
@@ -62,19 +64,17 @@ npm run backup:database -- --once
 npm run backup:database -- --watch
 ```
 
-ไฟล์ของแต่ละโปรไฟล์จะอยู่ใต้โฟลเดอร์ Local ที่เลือก เช่น
-`LABCBH Backups\LABCBH Stock\database\<run-id>\` หรือ
-`LABCBH Backups\LabManagement Portal\database\<run-id>\` พร้อม `manifest.json`
+ไฟล์ของฐานข้อมูลร่วมจะอยู่ใต้โฟลเดอร์ Local ที่เลือก เช่น
+`LABCBH Backups\LABCBH Production (Stock + Portal)\database\<run-id>\` พร้อม `manifest.json`
 และ checksum SHA-256 โดยเก็บไฟล์สำเร็จล่าสุดเสมอ และล้างไฟล์อื่นที่เกิน 30 วัน
 
 ## ตั้ง Windows Task Scheduler
 
-ถ้าใช้โหมดติดตั้งบน Windows ให้เปิดตารางเวลาแยกในแต่ละโปรไฟล์ แอปจะสร้างงานชื่อ
-`LABCBH Database Backup - stock` และ/หรือ `LABCBH Database Backup - portal` ให้เอง
-โดยไม่ต้องสร้าง Basic Task ด้วยมือ
+ถ้าใช้โหมดติดตั้งบน Windows ให้เปิดตารางเวลาที่โปรไฟล์ `LABCBH Stock` เพียงจุดเดียว
+แอปจะสร้างงานชื่อ `LABCBH Database Backup - stock` ให้เอง โดยไม่ต้องสร้าง Basic Task ด้วยมือ
 
-ถ้าต้องสร้างเองด้วย CLI ให้สร้าง Basic Task แยกต่อโปรเจค และใช้โฟลเดอร์โปรเจค/
-ไฟล์ environment ของโปรเจคนั้นเป็น working directory:
+ถ้าต้องสร้างเองด้วย CLI ให้สร้าง Basic Task เดียวสำหรับ Production และใช้โฟลเดอร์
+โปรเจค/ไฟล์ environment ของ runner เป็น working directory:
 
 1. Trigger: Monthly, วันที่ 1, เวลา 02:00 น.
 2. Action: Start a program

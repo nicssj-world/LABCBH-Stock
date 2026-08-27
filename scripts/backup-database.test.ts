@@ -57,6 +57,7 @@ async function main() {
   assert.match(runnerSource, /PGPASSWORD/)
   assert.match(runnerSource, /--no-password/)
   assert.match(runnerSource, /mark_lab_stock_backup_pruned/)
+  assert.match(runnerSource, /EXCLUDED_STAGING_PROJECT_REF/)
   assert.match(runnerSource, /process\.once\('SIGINT'/)
 
   console.log('database backup runner contracts: ok')

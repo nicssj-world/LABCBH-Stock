@@ -22,10 +22,13 @@ try {
   const paths = artifactPaths(root, runId)
   assert.equal(paths.relativePath, `database/${runId}/database-${runId}.dump`)
   assert.throws(() => artifactPaths(root, '../outside'), /invalid/)
-  assert.equal(parseProjectRefFromUrl('https://stogulcfwsvunydmwrex.supabase.co/'), 'stogulcfwsvunydmwrex')
+  assert.equal(parseProjectRefFromUrl('https://fslagsuorkcckvvtrmyi.supabase.co/'), 'fslagsuorkcckvvtrmyi')
   assert.throws(() => parseProjectRefFromUrl('https://example.com'), /Supabase project URL/)
   assert.deepEqual(PROFILE_DEFINITIONS.map((profile) => profile.id), ['stock', 'portal'])
   assert.equal(normalizeProfileId('PORTAL'), 'portal')
+  assert.equal(defaultProfile('stock', root).expectedProjectRef, 'fslagsuorkcckvvtrmyi')
+  assert.equal(defaultProfile('stock', root).expectedProjectRef, defaultProfile('portal', root).expectedProjectRef)
+  assert.equal(defaultProfile('stock', root).backupRoot, defaultProfile('portal', root).backupRoot)
   assert.equal(defaultProfile('portal', root).expectedProjectRef, 'fslagsuorkcckvvtrmyi')
 
   const manifest = decodeManifest(JSON.stringify({
@@ -33,7 +36,7 @@ try {
     tool: 'pg_dump',
     runnerVersion: 'test',
     runId,
-    projectRef: 'stogulcfwsvunydmwrex',
+    projectRef: 'fslagsuorkcckvvtrmyi',
     runnerId: 'test-runner',
     triggerSource: 'manual',
     createdAt: '2026-08-27T00:00:00.000Z',
@@ -55,12 +58,12 @@ try {
   const pgDump = path.join(root, 'pg_dump.exe')
   writeFileSync(pgDump, 'test')
   const engine = new BackupEngine({
-    supabaseUrl: 'https://stogulcfwsvunydmwrex.supabase.co',
+    supabaseUrl: 'https://fslagsuorkcckvvtrmyi.supabase.co',
     serviceRoleKey: secret,
     databaseUrl: 'postgresql://backup-user:db-password@db.example.com:5432/postgres?sslmode=require',
     backupRoot: root,
     runnerId: 'desktop-test',
-    expectedProjectRef: 'stogulcfwsvunydmwrex',
+    expectedProjectRef: 'fslagsuorkcckvvtrmyi',
     pgDumpPath: pgDump,
   })
   const command = engine.databaseCommand(paths.partialDumpPath, pgDump)
@@ -86,12 +89,12 @@ try {
   const failedPaths = artifactPaths(root, failedRunId)
   const failedCalls = []
   const failedEngine = new BackupEngine({
-    supabaseUrl: 'https://stogulcfwsvunydmwrex.supabase.co',
+    supabaseUrl: 'https://fslagsuorkcckvvtrmyi.supabase.co',
     serviceRoleKey: secret,
     databaseUrl: 'postgresql://backup-user:db-password@db.example.com:5432/postgres?sslmode=require',
     backupRoot: root,
     runnerId: 'desktop-test',
-    expectedProjectRef: 'stogulcfwsvunydmwrex',
+    expectedProjectRef: 'fslagsuorkcckvvtrmyi',
     pgDumpPath: pgDump,
   })
   failedEngine.resolvePgDumpPath = async () => pgDump
@@ -121,11 +124,15 @@ try {
   assert.match(main, /--profile/)
   assert.match(main, /TASK_PREFIX = 'LABCBH Database Backup'/)
   assert.match(main, /function taskName\(profileId\)/)
+  assert.match(main, /EXCLUDED_STAGING_PROJECT_REF/)
+  assert.match(main, /ไม่รองรับการสำรอง Staging/)
   assert.match(main, /if \(profileId === 'stock'\) await removeTaskByName\(LEGACY_TASK_NAME\)/)
   assert.match(engineSource, /request_lab_stock_backup_from_runner/)
   assert.match(preload, /contextBridge\.exposeInMainWorld/)
   assert.equal(/gradient|backdrop-filter/i.test(css), false)
   assert.equal(/<script[^>]+src=["']https?:/i.test(html), false)
+  assert.match(html, /fslagsuorkcckvvtrmyi/)
+  assert.match(html, /ฐานข้อมูล Production ร่วม/)
   assert.match(html, /aria-live/)
   console.log('backup desktop contract test passed')
 } finally {

@@ -36,9 +36,9 @@
           <div class="setup-layout">
             <aside class="setup-aside">
               <div class="setup-aside__line" aria-hidden="true"></div>
-              <p class="setup-aside__label">LOCAL RUNNER · 2 PROJECTS</p>
-              <h1>เลือกโปรเจค แล้วตั้งค่า backup แยกกัน</h1>
-              <p class="setup-aside__copy">Stock และ LabManagement Portal อยู่คนละ Supabase project จึงต้องตั้งค่า connection และโฟลเดอร์แยกกันในโปรแกรมนี้</p>
+              <p class="setup-aside__label">LOCAL RUNNER · SHARED DATABASE</p>
+              <h1>เลือกระบบ แล้วสำรองฐานข้อมูล Production ร่วมกัน</h1>
+              <p class="setup-aside__copy">LABCBH Stock และ LabManagement Portal ใช้ Supabase Production project เดียวกัน ตั้งค่าครั้งเดียวแล้วสำรองครอบคลุมทั้งสองระบบ</p>
               <div class="setup-assurance">
                 <div class="assurance-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" role="presentation">
@@ -56,9 +56,9 @@
             <form class="panel setup-panel" id="setup-form" novalidate>
               <div class="setup-heading setup-heading--profiles">
                 <div>
-                  <p class="setup-kicker">ตั้งค่าแยกตามปลายทาง</p>
-                  <h2 id="setup-title">เลือกโปรเจคที่จะตั้งค่า</h2>
-                  <p>ค่าของแต่ละโปรเจคจะไม่ถูกใช้ปะปนกัน และสามารถตั้งเวลาสำรองคนละรอบได้</p>
+                  <p class="setup-kicker">SHARED PRODUCTION DATABASE</p>
+                  <h2 id="setup-title">เลือกระบบที่ต้องการตั้งค่า</h2>
+                  <p>ทั้งสองระบบชี้ไปที่ฐานข้อมูลเดียวกัน ตั้งค่าการเชื่อมต่อเพียงครั้งเดียวก็พร้อมสำรองทั้ง Stock และ Portal</p>
                 </div>
                 <span class="profile-count" id="setup-profile-count">0/2 พร้อมใช้งาน</span>
               </div>
@@ -80,7 +80,7 @@
                 <span class="active-profile-band__marker" aria-hidden="true">S</span>
                 <div>
                   <strong id="setup-profile-name">LABCBH Stock</strong>
-                  <span id="setup-profile-ref">stogulcfwsvunydmwrex</span>
+                  <span id="setup-profile-ref">fslagsuorkcckvvtrmyi</span>
                 </div>
                 <span class="active-profile-band__hint">กำลังตั้งค่า</span>
               </div>
@@ -126,7 +126,7 @@
 
                 <div class="setup-callout setup-callout--info">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 10.5v5M12 7.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                  <p>ข้อมูลลับของ Stock และ Portal จะถูกเข้ารหัสแยกกันด้วยบัญชี Windows ของผู้ใช้คนนี้ และไม่ถูกส่งผ่านเว็บแอป</p>
+                  <p>ข้อมูลลับจะถูกเข้ารหัสไว้ใน Windows ของผู้ใช้คนนี้ และไม่ถูกส่งผ่านเว็บแอป การตั้งค่าชุดเดียวใช้กับฐานข้อมูล Production ร่วมของ Stock และ Portal</p>
                 </div>
 
                 <div class="setup-actions setup-actions--end">
@@ -137,7 +137,7 @@
               <div class="setup-step" data-setup-step="2" hidden>
                 <div class="setup-heading">
                   <h2>กำหนดปลายทางและรอบเวลาของโปรเจคนี้</h2>
-                  <p>ไฟล์ของแต่ละโปรเจคจะอยู่คนละโฟลเดอร์ ค่าแนะนำคือเก็บไว้ 30 วันและสำรองเดือนละครั้งเวลา 02:00 น.</p>
+                  <p>ไฟล์จะอยู่ในโฟลเดอร์ Production เดียวกันเพื่อไม่ให้สำรองซ้ำ ค่าแนะนำคือเก็บไว้ 30 วันและสำรองเดือนละครั้งเวลา 02:00 น.</p>
                 </div>
 
                 <div class="field-stack">
@@ -173,7 +173,7 @@
                   <label class="switch-row" for="schedule-enabled">
                     <span class="switch-copy">
                       <strong>เปิดสำรองอัตโนมัติสำหรับโปรเจคนี้</strong>
-                      <small>สร้าง Windows Task Scheduler แยกตามโปรเจค · เครื่องต้องเปิดและบัญชีนี้เข้าสู่ Windows</small>
+                      <small>สร้าง Windows Task Scheduler สำหรับฐานข้อมูลร่วม · เครื่องต้องเปิดและบัญชีนี้เข้าสู่ Windows</small>
                     </span>
                     <span class="switch-control">
                       <input id="schedule-enabled" type="checkbox">
@@ -218,7 +218,7 @@
             <div>
               <p class="dashboard-kicker">LOCAL BACKUP CONSOLE</p>
               <h1 id="dashboard-title">สำรองฐานข้อมูล</h1>
-              <p id="dashboard-subtitle">เลือกโปรเจคด้านล่างเพื่อดูสถานะและสั่งสำรองแยกกัน</p>
+              <p id="dashboard-subtitle">เลือกชื่อระบบด้านล่างเพื่อดูสถานะ การตั้งค่า และไฟล์สำรองของฐานข้อมูล Production ร่วม</p>
             </div>
             <div class="heading-actions">
               <button class="button button--secondary" type="button" id="open-settings">ตั้งค่าโปรเจค</button>
@@ -306,7 +306,7 @@
           <details class="panel help-panel">
             <summary><span>ต้องการความช่วยเหลือ?</span><span class="summary-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
             <div class="help-content">
-              <div><strong>เลือกโปรเจค</strong><p>ใช้แถบโปรเจคด้านบนเพื่อสลับระหว่าง Stock และ LabManagement Portal ก่อนกดสำรอง</p></div>
+              <div><strong>เลือกชื่อระบบ</strong><p>ใช้แถบด้านบนเพื่อสลับระหว่าง Stock และ LabManagement Portal ได้ แต่ทั้งสองชื่อสำรองฐานข้อมูล Production เดียวกัน</p></div>
               <div><strong>ถ้าพบว่าไม่พบ pg_dump.exe</strong><p>ติดตั้ง PostgreSQL client แล้วเลือกไฟล์ pg_dump.exe ในการตั้งค่าของโปรเจคใดก็ได้ เครื่องมือเดียวกันใช้ร่วมกันได้</p></div>
               <div><strong>ถ้าการเชื่อมต่อไม่สำเร็จ</strong><p>ตรวจสอบว่า project URL และ database connection string เป็นของโปรเจคเดียวกัน รหัสผ่านถูกต้อง และเครื่องออกอินเทอร์เน็ตไปยัง Supabase ได้</p></div>
             </div>
@@ -316,7 +316,7 @@
 
       <footer class="app-footer">
         <span>LABCBH · Local backup runner</span>
-        <span>ไฟล์สำรองแยกตามโปรเจคและไม่ถูกส่งผ่านเว็บแอป</span>
+        <span>ไฟล์สำรองอยู่บนเครื่อง Local และไม่ถูกส่งผ่านเว็บแอป</span>
       </footer>
     </div>
   </body>
