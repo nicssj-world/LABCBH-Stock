@@ -115,6 +115,10 @@ assert.match(form, /ContractItemPicker/)
 assert.match(form, /requestedQuantity: number \| ''/, 'PR quantity state must allow an empty value while editing')
 assert.match(form, /unitPrice: number \| ''/, 'PR unit-price state must allow an empty value while editing')
 assert.match(form, /value === '' \? '' : Number\(value\)/, 'clearing a PR numeric field must remain blank instead of becoming zero')
+assert.match(form, /requestedQuantity: option\.contractItemId !== null \? '' : 1/, 'contract quantities must start blank while other methods retain their default')
+assert.match(form, /required=\{!isContractPurchase\}/, 'a blank contract quantity must pass native form validation')
+assert.match(form, /quantityIsBlankOrZero/, 'blank and zero contract quantities must be treated as zero')
+assert.match(form, /\.filter\(\(line\) => isFiniteDraftNumber\(line\.requestedQuantity\) && line\.requestedQuantity > 0\)/, 'zero contract lines must be omitted from the submitted PR')
 assert.match(form, /departments: readonly string\[\]/)
 assert.match(form, /<select required value=\{department\}/)
 assert.match(form, /\{departments\.map\(\(department\)/)
@@ -145,9 +149,11 @@ assert.match(form, /isOverContractLimit/, 'requesting more than a contract line 
 assert.match(form, /isLowContractBalance/, 'a line under 30% remaining must be flagged, matching the dashboard watchlist threshold')
 assert.match(
   form,
-  /disabled=\{isPending \|\| \(!isLease && lines\.length === 0\) \|\| methodSelectionMissing \|\| hasInvalidLine \|\| hasOverLimitLine \|\| !checklistComplete\}/,
-  'submit must stay blocked for invalid contract quantities or an incomplete checklist, but a complete lease with zero lines must still be submittable',
+  /disabled=\{isPending \|\| \(!isLease && !hasPositiveRequestedQuantity\) \|\| methodSelectionMissing \|\| hasInvalidLine \|\| hasOverLimitLine \|\| !checklistComplete\}/,
+  'submit must stay blocked until a non-lease PR has at least one positive quantity, while a complete lease with zero lines remains submittable',
 )
+const purchaseMethodFields = read('components/pr/PurchaseMethodFields.tsx')
+assert.match(purchaseMethodFields, /contract-purchase-note/, 'contract purchase guidance must appear beneath the selected contract')
 assert.match(form, /const isLease = method\?\.kind === 'equipment_lease'/, 'a lease originates a contract with zero line items')
 assert.match(form, /คงเหลือในสัญญา/, 'the request-lines table must show each line\'s remaining contract balance')
 assert.match(form, /changeDepartment/, 'changing the requesting department must re-filter its contract lists')

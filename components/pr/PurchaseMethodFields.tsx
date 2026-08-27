@@ -211,6 +211,7 @@ export function PurchaseMethodFields({
                     <select
                       required
                       value={method.contractId}
+                      aria-describedby="contract-purchase-note"
                       onChange={(event) => {
                         const contractId = Number(event.target.value)
                         const contract = contracts.find((option) => option.id === contractId)
@@ -222,6 +223,9 @@ export function PurchaseMethodFields({
                         <option key={contract.id} value={contract.id}>{contract.label}</option>
                       ))}
                     </select>
+                    <small id="contract-purchase-note">
+                      หมายเหตุ: ช่องจำนวนที่ขอเริ่มต้นเป็นค่าว่าง หากไม่กรอกหรือกรอก 0 ระบบจะไม่รวมรายการนั้นในใบ PR
+                    </small>
                   </label>
                   <label className="field-row">
                     <span>ครั้งที่ซื้อ <span className="field-required" aria-hidden="true">*</span></span>

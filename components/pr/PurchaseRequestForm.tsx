@@ -406,7 +406,10 @@ export function PurchaseRequestForm({
     name: option.name,
     unit: option.unit,
     unitPrice: option.unitPrice,
-    requestedQuantity: 1,
+    // Contract lines are prefilled as choices, not as quantities. A blank
+    // value means zero and is omitted from the submitted PR until the user
+    // enters a positive amount.
+    requestedQuantity: option.contractItemId !== null ? '' : 1,
     contractRemaining: option.contractRemaining,
     contractedQuantity: option.contractedQuantity,
     averageMonthlyUsage: option.averageMonthlyUsage,
@@ -535,6 +538,7 @@ export function PurchaseRequestForm({
   // A lease originates a contract with zero line items — it never picks from
   // the reagent catalogue or draws down a contract balance.
   const isLease = method?.kind === 'equipment_lease'
+  const isContractPurchase = method?.kind === 'contract'
 
   const methodSelectionMissing =
     method === null ||
@@ -543,12 +547,20 @@ export function PurchaseRequestForm({
     (isContractOriginationMethod && method.contractDraft.contractDurationYears == null)
 
   const hasOverLimitLine = lines.some(isOverContractLimit)
-  const hasInvalidLine = lines.some(
-    (line) =>
-      !isFiniteDraftNumber(line.requestedQuantity) ||
-      line.requestedQuantity <= 0 ||
-      !isFiniteDraftNumber(line.unitPrice) ||
-      line.unitPrice < 0,
+  const hasInvalidLine = lines.some((line) => {
+    const quantityIsBlankOrZero = line.requestedQuantity === '' || (
+      isFiniteDraftNumber(line.requestedQuantity) && line.requestedQuantity === 0
+    )
+    const invalidQuantity = isContractPurchase
+      ? (!quantityIsBlankOrZero && (
+          !isFiniteDraftNumber(line.requestedQuantity) || line.requestedQuantity < 0
+        ))
+      : (!isFiniteDraftNumber(line.requestedQuantity) || line.requestedQuantity <= 0)
+
+    return invalidQuantity || !isFiniteDraftNumber(line.unitPrice) || line.unitPrice < 0
+  })
+  const hasPositiveRequestedQuantity = lines.some(
+    (line) => isFiniteDraftNumber(line.requestedQuantity) && line.requestedQuantity > 0,
   )
 
   const total = lines.reduce(
@@ -642,6 +654,11 @@ export function PurchaseRequestForm({
 
     if (method === null) {
       setError('กรุณาเลือกจุดประสงค์และวิธีจัดซื้อก่อนส่งใบ PR')
+      return
+    }
+
+    if (!isLease && !hasPositiveRequestedQuantity) {
+      setError('กรุณาระบุจำนวนที่ต้องการซื้ออย่างน้อย 1 รายการ')
       return
     }
 
@@ -983,7 +1000,7 @@ export function PurchaseRequestForm({
                         type="number"
                         min="0"
                         step="1"
-                        required
+                        required={!isContractPurchase}
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
@@ -1106,7 +1123,7 @@ export function PurchaseRequestForm({
                         type="number"
                         min="0"
                         step="1"
-                        required
+                        required={!isContractPurchase}
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
@@ -1236,7 +1253,7 @@ export function PurchaseRequestForm({
           >
             ยกเลิก
           </Button>
-          <Button type="submit" disabled={isPending || (!isLease && lines.length === 0) || methodSelectionMissing || hasInvalidLine || hasOverLimitLine || !checklistComplete}>
+          <Button type="submit" disabled={isPending || (!isLease && !hasPositiveRequestedQuantity) || methodSelectionMissing || hasInvalidLine || hasOverLimitLine || !checklistComplete}>
             {isPending ? (isEditMode ? 'กำลังบันทึก…' : 'กำลังส่ง…') : isEditMode ? 'บันทึกการแก้ไข' : 'ส่งใบ PR'}
           </Button>
         </div>
