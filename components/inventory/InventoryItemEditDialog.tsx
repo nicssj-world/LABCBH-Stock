@@ -1,6 +1,7 @@
 'use client'
 
 import { EditIcon } from '@/components/inventory/InventoryDetailIcons'
+import { Button } from '@/components/ui/Button'
 import { InventoryItemForm } from '@/components/inventory/InventoryItemForm'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
 import type { InventoryItemRecord } from '@/lib/inventory/types'
@@ -8,24 +9,31 @@ import type { InventoryItemRecord } from '@/lib/inventory/types'
 interface InventoryItemEditDialogProps {
   item: InventoryItemRecord
   departments: readonly string[]
+  trigger?: 'icon' | 'button'
 }
 
-export function InventoryItemEditDialog({ item, departments }: InventoryItemEditDialogProps) {
+export function InventoryItemEditDialog({ item, departments, trigger = 'icon' }: InventoryItemEditDialogProps) {
   // The catalogue renders one of these per item, in both the table and the
   // card layout, so the form below is built only once someone opens it.
   const { dialogRef, isRendered, open, close } = useDeferredDialog()
 
   return (
     <>
-      <button
-        type="button"
-        className="inventory-action-icon"
-        onClick={open}
-        aria-label={`แก้ไขข้อมูล ${item.name}`}
-        title="แก้ไขข้อมูลน้ำยา"
-      >
-        <EditIcon />
-      </button>
+      {trigger === 'button' ? (
+        <Button variant="secondary" onClick={open} aria-haspopup="dialog">
+          แก้ไขข้อมูล
+        </Button>
+      ) : (
+        <button
+          type="button"
+          className="inventory-action-icon"
+          onClick={open}
+          aria-label={`แก้ไขข้อมูล ${item.name}`}
+          title="แก้ไขข้อมูลน้ำยา"
+        >
+          <EditIcon />
+        </button>
+      )}
 
       {isRendered && (
         <dialog

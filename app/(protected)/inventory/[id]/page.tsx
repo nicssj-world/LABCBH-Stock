@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { InventoryItemActiveControl } from '@/components/inventory/InventoryItemActiveControl'
+import { InventoryItemEditDialog } from '@/components/inventory/InventoryItemEditDialog'
 import { CheckCircleIcon, LayersIcon, PriceTagIcon, StockBoxIcon, ThresholdIcon, TrendIcon } from '@/components/inventory/InventoryDetailIcons'
 import { LotTable } from '@/components/inventory/LotTable'
 import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
@@ -25,7 +26,9 @@ import {
   bangkokToday,
   completedMonthKeys,
   getInventoryItem,
+  listInventoryDepartments,
 } from '@/lib/inventory/queries'
+import { DEPARTMENTS } from '@/lib/organization/departments'
 import { parsePage } from '@/lib/pagination'
 
 interface InventoryDetailPageProps {
@@ -55,15 +58,19 @@ export default async function InventoryDetailPage({ params, searchParams }: Inve
   const actor = await requireActor()
   const canEdit = canOperateStock(actor)
 
-  const item = await getInventoryItem(id, {
-    movementPage: expandedLedger ? requestedLedgerPage : 1,
-    movementPageSize: expandedLedger ? INVENTORY_MOVEMENT_PAGE_SIZE : INVENTORY_MOVEMENT_PREVIEW_SIZE,
-  })
+  const [item, existingDepartments] = await Promise.all([
+    getInventoryItem(id, {
+      movementPage: expandedLedger ? requestedLedgerPage : 1,
+      movementPageSize: expandedLedger ? INVENTORY_MOVEMENT_PAGE_SIZE : INVENTORY_MOVEMENT_PREVIEW_SIZE,
+    }),
+    canEdit ? listInventoryDepartments() : Promise.resolve<string[]>([]),
+  ])
   if (!item) notFound()
   if (expandedLedger && item.movementPagination.currentPage !== requestedLedgerPage) {
     redirect(`/inventory/${id}?ledger=expanded&ledgerPage=${item.movementPagination.currentPage}`)
   }
 
+  const departments = [...new Set([...DEPARTMENTS, ...existingDepartments])].sort((left, right) => left.localeCompare(right, 'th'))
   const monthKeys = completedMonthKeys(bangkokToday())
   const usableLots = item.lots.filter((lot) => lot.isActive && lot.expiryStatus !== 'expired' && lot.balance > 0)
 
@@ -98,9 +105,7 @@ export default async function InventoryDetailPage({ params, searchParams }: Inve
                 unit={item.baseUnit}
                 lots={item.lots}
               />
-              <Link className="lab-link-button lab-link-button--secondary" href={`/inventory/${item.id}/edit`}>
-                แก้ไขข้อมูล
-              </Link>
+              <InventoryItemEditDialog item={item} departments={departments} trigger="button" />
               <InventoryItemActiveControl itemId={item.id} isActive={item.isActive} />
             </>
           )}

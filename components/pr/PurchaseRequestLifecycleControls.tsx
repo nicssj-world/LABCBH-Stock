@@ -4,24 +4,28 @@ import { useRef, useState, useTransition, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { cancelPurchaseRequest } from '@/lib/pr/actions'
+import { cancelPurchaseRequest, hardDeletePurchaseRequest } from '@/lib/pr/actions'
 
 interface PurchaseRequestLifecycleControlsProps {
   requestId: string
   documentNumber: string
+  canHardDelete: boolean
 }
 
 export function PurchaseRequestLifecycleControls({
   requestId,
   documentNumber,
+  canHardDelete,
 }: PurchaseRequestLifecycleControlsProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [isHardDeleteConfirming, setIsHardDeleteConfirming] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const openDialog = () => {
     setError(null)
+    setIsHardDeleteConfirming(false)
     dialogRef.current?.showModal()
   }
 
@@ -45,6 +49,21 @@ export function PurchaseRequestLifecycleControls({
     })
   }
 
+  const confirmHardDelete = () => {
+    if (!canHardDelete) return
+    setError(null)
+    startTransition(async () => {
+      try {
+        await hardDeletePurchaseRequest(requestId)
+        dialogRef.current?.close()
+        router.push('/purchase-requests')
+        router.refresh()
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'ลบใบ PR ถาวรไม่สำเร็จ กรุณาลองใหม่')
+      }
+    })
+  }
+
   return (
     <div className="pr-lifecycle-controls">
       <Link
@@ -59,7 +78,7 @@ export function PurchaseRequestLifecycleControls({
 
       <dialog
         ref={dialogRef}
-        className="app-dialog"
+        className="app-dialog pr-cancel-dialog"
         aria-labelledby="cancel-pr-dialog-title"
         aria-describedby="cancel-pr-dialog-description"
         onCancel={(event) => { event.preventDefault(); closeDialog() }}
@@ -78,13 +97,54 @@ export function PurchaseRequestLifecycleControls({
             </svg>
           </button>
         </header>
-        <form className="app-dialog__body" onSubmit={submit}>
+        <form className="app-dialog__body pr-cancel-dialog__body" onSubmit={submit}>
           <div className="decision-panel decision-panel--danger">
-            <strong>การดำเนินการนี้ใช้ได้เฉพาะ PR ที่ยังรอการยืนยัน</strong>
-            <p>หากต้องการทำรายการใหม่ ให้สร้างใบ PR ใหม่หลังยกเลิกใบนี้</p>
+            <strong>ยกเลิกแบบเก็บประวัติ</strong>
+            <p>ใบ PR จะเปลี่ยนเป็นสถานะยกเลิกและยังเปิดดูย้อนหลังได้ หากต้องการทำรายการใหม่ ให้สร้างใบ PR ใหม่หลังยกเลิกใบนี้</p>
           </div>
+          {canHardDelete && (
+            <section className="pr-cancel-hard-delete" aria-labelledby="hard-delete-pr-title">
+              <div className="pr-cancel-hard-delete__header">
+                <div>
+                  <h3 id="hard-delete-pr-title">ลบใบ PR ถาวร</h3>
+                  <p>เฉพาะผู้ดูแลระบบเท่านั้น การดำเนินการนี้ลบข้อมูลออกจากระบบและย้อนคืนไม่ได้</p>
+                </div>
+                <span className="pr-cancel-hard-delete__badge">Admin เท่านั้น</span>
+              </div>
+              {!isHardDeleteConfirming ? (
+                <>
+                  <p id="hard-delete-pr-warning" className="pr-cancel-hard-delete__warning">
+                    ลบใบ {documentNumber} และไฟล์แนบของใบนี้ถาวร โดยจะไม่เหลือประวัติให้กู้คืน
+                  </p>
+                  <Button
+                    className="pr-cancel-hard-delete__trigger"
+                    variant="ghost"
+                    type="button"
+                    aria-describedby="hard-delete-pr-warning"
+                    onClick={() => { setError(null); setIsHardDeleteConfirming(true) }}
+                    disabled={isPending}
+                  >
+                    ลบถาวร
+                  </Button>
+                </>
+              ) : (
+                <div className="pr-cancel-hard-delete__confirm" role="alert" aria-live="assertive">
+                  <strong>ยืนยันการลบถาวร</strong>
+                  <p>คุณกำลังจะลบใบ {documentNumber} และข้อมูลที่เกี่ยวข้องทั้งหมด การดำเนินการนี้ไม่สามารถกู้คืนได้</p>
+                  <div className="pr-cancel-hard-delete__confirm-actions">
+                    <Button variant="secondary" type="button" onClick={() => setIsHardDeleteConfirming(false)} disabled={isPending}>
+                      กลับไป
+                    </Button>
+                    <Button variant="danger" type="button" onClick={confirmHardDelete} disabled={isPending}>
+                      {isPending ? 'กำลังลบถาวร…' : 'ยืนยันลบถาวร'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
           {error && <p className="form-error" role="alert">{error}</p>}
-          <div className="decision-panel__actions">
+          <div className="decision-panel__actions pr-cancel-dialog__actions">
             <Button variant="secondary" type="button" onClick={closeDialog} disabled={isPending}>
               ไม่ยกเลิก
             </Button>

@@ -11,7 +11,7 @@ import {
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { StickyScroll } from '@/components/ui/StickyScroll'
-import { canOperateStock, hasAppRole } from '@/lib/auth/access'
+import { canOperateStock, hasAppRole, isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getLineNotificationConfig } from '@/lib/line/config'
@@ -125,6 +125,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
               <PurchaseRequestLifecycleControls
                 requestId={request.id}
                 documentNumber={request.documentNumber}
+                canHardDelete={isAdministrator(actor)}
               />
             )}
             <PurchaseRequestOutsideStockReceiveControl

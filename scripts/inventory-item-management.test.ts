@@ -110,6 +110,9 @@ assert.match(table, /InventoryItemEditDialog/, 'the catalog edit action must ope
 const detailPage = readFileSync(join(process.cwd(), 'app', '(protected)', 'inventory', '[id]', 'page.tsx'), 'utf8')
 assert.match(detailPage, /formatBaht/, 'the detail page must show price too')
 assert.match(detailPage, /InventoryItemActiveControl/)
+assert.match(detailPage, /InventoryItemEditDialog/, 'the detail edit action must open a popup')
+assert.match(detailPage, /listInventoryDepartments/, 'the detail edit popup must receive department options')
+assert.doesNotMatch(detailPage, /href=\{`\/inventory\/\$\{item\.id\}\/edit`\}/, 'the detail edit action must not navigate away')
 assert.match(detailPage, /canOperateStock/, 'edit/deactivate controls must be gated by the stock-operator role')
 
 const editPage = readFileSync(join(process.cwd(), 'app', '(protected)', 'inventory', '[id]', 'edit', 'page.tsx'), 'utf8')

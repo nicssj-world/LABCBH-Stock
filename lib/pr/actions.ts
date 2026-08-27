@@ -1,7 +1,9 @@
 'use server'
 
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { currentFiscalYear, fiscalYearOfIsoDate } from '@/lib/annual-plans/fiscal'
 import {
@@ -43,12 +45,107 @@ import type {
 } from '@/lib/pr/types'
 import type { PurchaseRequestChecklistSubmission } from '@/lib/pr/checklist-schema'
 import { getPurchaseRequest } from '@/lib/pr/queries'
+import { PO_IMAGE_BUCKET, isPurchaseRequestPoFilePathAllowed } from '@/lib/po/storage'
+import { isPurchaseRequestChecklistStorageKey } from '@/lib/pr/checklist-storage'
+import { getR2BucketName, getR2Client } from '@/lib/r2/client'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 import { omitNullishProperties } from '@/lib/validation/json'
 import { formatPurchaseRequestMutationError } from './errors'
 import { cleanupPurchaseRequestChecklistObjects } from './checklist-cleanup'
 
 const purchaseRequestIdSchema = z.string().uuid()
+
+interface PurchaseRequestHardDeleteFile {
+  storageBackend: 'r2' | 'supabase_storage'
+  bucketName: string
+  storageKey: string
+}
+
+async function removeHardDeletedPurchaseRequestFiles({
+  purchaseRequestId,
+  fiscalYear,
+  r2Paths,
+  supabaseStoragePaths,
+}: {
+  purchaseRequestId: string
+  fiscalYear: number
+  r2Paths: string[]
+  supabaseStoragePaths: string[]
+}) {
+  const uniqueR2Paths = [...new Set(r2Paths)]
+  const uniqueSupabaseStoragePaths = [...new Set(supabaseStoragePaths)]
+
+  if (uniqueR2Paths.some((path) => !isPurchaseRequestChecklistStorageKey(path))) {
+    throw new Error('พบเส้นทางไฟล์ checklist ของ PR ที่ไม่ถูกต้อง จึงหยุดการลบไฟล์เพื่อความปลอดภัย')
+  }
+  if (uniqueSupabaseStoragePaths.some((path) => !isPurchaseRequestPoFilePathAllowed(path, fiscalYear, purchaseRequestId))) {
+    throw new Error('พบเส้นทางไฟล์ PO ของ PR ที่ไม่ถูกต้อง จึงหยุดการลบไฟล์เพื่อความปลอดภัย')
+  }
+
+  const r2Files: PurchaseRequestHardDeleteFile[] = uniqueR2Paths.map((storageKey) => ({
+    storageBackend: 'r2',
+    bucketName: '__r2__',
+    storageKey,
+  }))
+  const supabaseStorageFiles: PurchaseRequestHardDeleteFile[] = uniqueSupabaseStoragePaths.map((storageKey) => ({
+    storageBackend: 'supabase_storage',
+    bucketName: PO_IMAGE_BUCKET,
+    storageKey,
+  }))
+  const failedFiles: PurchaseRequestHardDeleteFile[] = []
+
+  for (const file of r2Files) {
+    try {
+      await getR2Client().send(new DeleteObjectCommand({
+        Bucket: getR2BucketName(),
+        Key: file.storageKey,
+      }))
+    } catch (error) {
+      failedFiles.push(file)
+      console.error('ลบไฟล์ checklist ของ PR หลัง hard delete ไม่สำเร็จ', {
+        purchaseRequestId,
+        storageKey: file.storageKey,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  for (let index = 0; index < supabaseStorageFiles.length; index += 100) {
+    const batch = supabaseStorageFiles.slice(index, index + 100)
+    try {
+      const removed = await supabaseAdmin.storage
+        .from(PO_IMAGE_BUCKET)
+        .remove(batch.map((file) => file.storageKey))
+      if (removed.error) {
+        failedFiles.push(...batch)
+        console.error('ลบไฟล์ PO ของ PR หลัง hard delete ไม่สำเร็จ', {
+          purchaseRequestId,
+          paths: batch.map((file) => file.storageKey),
+          error: removed.error.message,
+        })
+      }
+    } catch (error) {
+      failedFiles.push(...batch)
+      console.error('ลบไฟล์ PO ของ PR หลัง hard delete ไม่สำเร็จ', {
+        purchaseRequestId,
+        paths: batch.map((file) => file.storageKey),
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  for (const file of failedFiles) {
+    await enqueueStorageCleanupJobBestEffort({
+      storageBackend: file.storageBackend,
+      bucketName: file.bucketName,
+      storageKey: file.storageKey,
+      jobKind: 'storage_upload_rollback',
+    })
+  }
+
+  return failedFiles
+}
 
 function unwrapMutation(
   operation: string,
@@ -242,6 +339,53 @@ export async function cancelPurchaseRequest(purchaseRequestId: string) {
   const cancelled = unwrapMutation('ยกเลิก PR', result)
   revalidatePurchaseRequest(parsedId)
   return cancelled
+}
+
+/**
+ * Hard deletion is intentionally a separate administrator-only operation.
+ * The database removes the PR graph atomically; storage objects are removed
+ * immediately afterwards and queued for retry if an external storage call
+ * fails.
+ */
+export async function hardDeletePurchaseRequest(purchaseRequestId: string) {
+  const actor = await requireActor()
+  if (!isAdministrator(actor)) throw new Error('เฉพาะผู้ดูแลระบบเท่านั้นที่ลบใบ PR ถาวรได้')
+
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  const result = await supabaseAdmin.rpc('hard_delete_purchase_request', {
+    p_pr_id: parsedId,
+    p_actor_id: actor.id,
+  })
+  if (result.error) {
+    throw new Error(formatPurchaseRequestMutationError('ลบใบ PR ถาวร', result.error.message))
+  }
+
+  const deleted = z.object({
+    id: z.string().uuid(),
+    deleted: z.literal(true),
+    fiscalYear: z.number().int(),
+    r2Paths: z.array(z.string()),
+    supabaseStoragePaths: z.array(z.string()),
+  }).parse(result.data)
+
+  // Refresh the list as soon as the transaction has committed. Storage cleanup
+  // is an external side effect and may need the durable retry queue.
+  revalidatePurchaseRequest(parsedId)
+  const failedFiles = await removeHardDeletedPurchaseRequestFiles({
+    purchaseRequestId: deleted.id,
+    fiscalYear: deleted.fiscalYear,
+    r2Paths: deleted.r2Paths,
+    supabaseStoragePaths: deleted.supabaseStoragePaths,
+  })
+  if (failedFiles.length > 0) {
+    throw new Error(`ลบใบ PR ถาวรแล้ว แต่ยังรอลบไฟล์ ${failedFiles.length} รายการ ระบบจะลองลบให้อัตโนมัติอีกครั้ง`)
+  }
+
+  return {
+    id: deleted.id,
+    deleted: true,
+    deletedFileCount: deleted.r2Paths.length + deleted.supabaseStoragePaths.length,
+  }
 }
 
 /**

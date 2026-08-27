@@ -457,6 +457,10 @@ for (const path of [
 
 const lifecycleControls = read('components/pr/PurchaseRequestLifecycleControls.tsx')
 assert.match(lifecycleControls, /cancelPurchaseRequest/)
+assert.match(lifecycleControls, /hardDeletePurchaseRequest/)
+assert.match(lifecycleControls, /canHardDelete/)
+assert.match(lifecycleControls, /ลบถาวร/)
+assert.match(lifecycleControls, /ยืนยันการลบถาวร/)
 assert.match(lifecycleControls, /ยืนยันการยกเลิก PR/)
 assert.match(lifecycleControls, /เก็บประวัติไว้/, 'deleting a PR keeps an audit trail')
 assert.match(lifecycleControls, /router\.push\('\/purchase-requests'\)/)

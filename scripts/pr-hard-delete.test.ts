@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const read = (path: string) => readFileSync(path, 'utf8')
+
+const migration = read('supabase/migrations/20260827120000_pr_admin_hard_delete.sql')
+const actions = read('lib/pr/actions.ts')
+const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
+
+assert.match(migration, /create or replace function public\.hard_delete_purchase_request\(/i)
+assert.match(migration, /security invoker/i, 'hard delete must not bypass database security with a definer function')
+assert.doesNotMatch(migration, /security definer/i)
+assert.match(migration, /assert_lab_stock_admin_actor\(p_actor_id\)/i, 'the RPC must enforce the admin boundary')
+assert.match(migration, /status <> 'pending'/i, 'only pending PRs may be hard-deleted')
+assert.match(migration, /purchase_request_checklist_events/i)
+assert.match(migration, /purchase_request_annual_plan_line_references/i)
+assert.match(migration, /purchase_request_annual_plan_references/i)
+assert.match(migration, /purchase_request_committees/i)
+assert.match(migration, /purchase_request_attachments/i)
+assert.match(migration, /purchase_request_upload_tickets/i)
+assert.match(migration, /delete from public\.purchase_request_items/i)
+assert.match(migration, /delete from public\.purchase_requests/i)
+assert.match(migration, /source_contract_id is null/i, 'shared contract files must not be returned for storage deletion')
+assert.match(migration, /purchase_request_line_notifications/i, 'notification history must be protected from hard deletion')
+assert.match(migration, /revoke execute on function public\.hard_delete_purchase_request\([^)]*\) from public, anon, authenticated/i)
+assert.match(migration, /grant execute on function public\.hard_delete_purchase_request\([^)]*\) to service_role/i)
+
+assert.match(actions, /if \(!isAdministrator\(actor\)\)/)
+assert.match(actions, /supabaseAdmin\.rpc\('hard_delete_purchase_request'/)
+assert.match(actions, /enqueueStorageCleanupJobBestEffort/)
+assert.match(detailPage, /canHardDelete=\{isAdministrator\(actor\)\}/)
+
+console.log('PR hard-delete contract checks passed')

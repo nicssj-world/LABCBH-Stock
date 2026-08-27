@@ -32,6 +32,7 @@ import type {
   LeaseContractSummary,
   LeaseDurationSummary,
 } from './executive-types'
+import { executiveFollowUpHref } from './follow-up'
 
 const numericSchema = z
   .union([z.number(), z.string()])
@@ -424,7 +425,7 @@ function buildAlerts(
       tone: 'danger',
       label: 'มีรายการรับเข้าต้องตรวจสอบ',
       detail: `${qualityCount.toLocaleString('th-TH')} รายการ${qualityAmount > 0 ? ` · ${qualityAmount.toLocaleString('th-TH')} บาท` : ''}`,
-      href: '/receipts',
+      href: executiveFollowUpHref(fiscalYear, 'receiving-data-quality'),
     })
   }
 
@@ -434,7 +435,7 @@ function buildAlerts(
       tone: 'danger',
       label: 'ค่าเช่าบางรายการไม่มีเดือนอ้างอิง',
       detail: `${dataQuality.missingUsageMonthCount.toLocaleString('th-TH')} รายการไม่ถูกจัดเข้าปีงบประมาณ`,
-      href: '/contracts?contractType=equipment_lease',
+      href: executiveFollowUpHref(fiscalYear, 'lease-usage-data-quality'),
     })
   }
 
@@ -447,7 +448,7 @@ function buildAlerts(
       tone: 'attention',
       label: 'ข้อมูลสัญญาเช่าเครื่องยังไม่ครบ',
       detail: parts.join(' · '),
-      href: '/contracts?contractType=equipment_lease',
+      href: executiveFollowUpHref(fiscalYear, 'lease-contract-metadata'),
     })
   }
 
@@ -467,7 +468,7 @@ function buildAlerts(
       tone: 'attention',
       label: 'สัญญาเช่าเครื่องที่ต้องติดตาม',
       detail: `${riskCount.toLocaleString('th-TH')} สัญญา · ใกล้สิ้นสุดหรือมีงบคงเหลือต่ำ`,
-      href: '/contracts?contractType=equipment_lease',
+      href: executiveFollowUpHref(fiscalYear, 'lease-risk'),
     })
   }
 
@@ -480,7 +481,7 @@ function buildAlerts(
       tone: 'attention',
       label: 'สัญญาที่ยังอยู่ระหว่างดำเนินการ',
       detail: `${pendingCount.toLocaleString('th-TH')} สัญญาในปีงบประมาณ ${fiscalYear}`,
-      href: '/contracts?fiscalYear=' + fiscalYear,
+      href: executiveFollowUpHref(fiscalYear, 'pending-contracts'),
     })
   }
 

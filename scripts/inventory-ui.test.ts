@@ -131,6 +131,8 @@ assert.match(
 // same number something else.
 assert.doesNotMatch(detailPage, /เกณฑ์ขั้นต่ำ/, 'one number, one name across the page')
 assert.match(detailPage, /StockAdjustmentDialog/, 'stock operators need a balance-adjustment control on every item detail')
+assert.match(detailPage, /InventoryItemEditDialog/, 'detail editing must open an in-page popup')
+assert.doesNotMatch(detailPage, /href=\{`\/inventory\/\$\{item\.id\}\/edit`\}/, 'detail editing must not navigate away')
 assert.match(detailPage, /โหลดเพิ่มเติม/, 'the ledger must expose older movements after the five-row preview')
 assert.match(detailPage, /ListPagination/, 'the expanded ledger must expose previous/next page controls')
 

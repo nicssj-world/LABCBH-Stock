@@ -139,6 +139,16 @@ const styles = read('app/globals.css')
 assert.match(styles, /inventory-checklist-table--desktop/)
 assert.match(styles, /inventory-checklist-cards/)
 assert.match(styles, /stock-adjustment-dialog__actions/)
+assert.match(
+  styles,
+  /\.stock-adjustment-dialog\[open\]\s*\{[\s\S]*display:\s*flex;/,
+  'the stock-adjustment dialog layout must only apply while the native dialog is open',
+)
+assert.match(
+  styles,
+  /\.stock-adjustment-dialog:not\(\[open\]\)\s*\{[\s\S]*opacity:\s*0;[\s\S]*transform:\s*scale\(\.97\);/,
+  'the stock-adjustment dialog must animate to a defined closed state',
+)
 assert.match(styles, /safe-area-inset-bottom/)
 
 console.log('inventory stock checklist tests passed')

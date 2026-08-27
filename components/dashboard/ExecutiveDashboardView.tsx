@@ -3,6 +3,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { DownloadIcon } from '@/components/dashboard/DashboardIcons'
 import { ExecutiveLeaseTable } from '@/components/dashboard/ExecutiveLeaseTable'
 import { formatThaiDate } from '@/lib/inventory/presenter'
+import { executiveFollowUpHref } from '@/lib/dashboard/follow-up'
 import type {
   ExecutiveAlert,
   ExecutiveComparison,
@@ -155,13 +156,13 @@ function LeaseDurationSummary({ data }: { data: ExecutiveOverview }) {
   )
 }
 
-function AlertList({ alerts }: { alerts: ExecutiveAlert[] }) {
+function AlertList({ alerts, fiscalYear }: { alerts: ExecutiveAlert[]; fiscalYear: number }) {
   const actionableCount = alerts.filter((alert) => alert.tone !== 'neutral').length
   return (
     <section className="bench-panel executive-panel executive-alert-panel" aria-labelledby="executive-alert-title">
-      <div className="bench-panel__header"><div><p className="section-kicker">DECISION QUEUE</p><h2 id="executive-alert-title">รายการที่ต้องติดตาม</h2></div><StatusChip tone={alerts.some((alert) => alert.tone === 'danger') ? 'danger' : alerts.some((alert) => alert.tone === 'attention') ? 'attention' : 'success'}>{actionableCount ? `${actionableCount} ประเด็น` : 'ไม่มีประเด็น'}</StatusChip></div>
+      <div className="bench-panel__header"><div><p className="section-kicker">DECISION QUEUE</p><h2 id="executive-alert-title"><Link className="executive-alert-panel__title-link" href={executiveFollowUpHref(fiscalYear)}>รายการที่ต้องติดตาม</Link></h2></div><StatusChip tone={alerts.some((alert) => alert.tone === 'danger') ? 'danger' : alerts.some((alert) => alert.tone === 'attention') ? 'attention' : 'success'}>{actionableCount ? `${actionableCount} ประเด็น` : 'ไม่มีประเด็น'}</StatusChip></div>
       <ul className="executive-alert-list">
-        {alerts.map((alert) => <li className={`executive-alert executive-alert--${alert.tone}`} key={alert.key}><span className="executive-alert__dot" aria-hidden="true" /><div><strong>{alert.href ? <Link href={alert.href}>{alert.label}</Link> : alert.label}</strong><small>{alert.detail}</small></div></li>)}
+        {alerts.map((alert) => <li className={`executive-alert executive-alert--${alert.tone}`} key={alert.key}><span className="executive-alert__dot" aria-hidden="true" />{alert.href ? <Link className="executive-alert__link" href={alert.href}><strong>{alert.label}</strong><small>{alert.detail}</small></Link> : <div><strong>{alert.label}</strong><small>{alert.detail}</small></div>}</li>)}
       </ul>
     </section>
   )
@@ -204,7 +205,7 @@ export function ExecutiveDashboardView({ data }: { data: ExecutiveOverview }) {
       <DataQualityNote data={data} />
 
       <div className="executive-priority-grid">
-        <AlertList alerts={data.alerts} />
+        <AlertList alerts={data.alerts} fiscalYear={data.fiscalYear} />
         <CategoryBreakdown data={data} />
       </div>
 
