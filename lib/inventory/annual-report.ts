@@ -11,6 +11,7 @@ const REPORT_SHEET_NAME = 'เทคนิคการแพทย์'
 const DATA_START_ROW = 7
 const THAI_SARABUN_BODY = 'TH SarabunPSK'
 const THAI_SARABUN_TITLE = 'TH SarabunIT๙'
+const INTEGER_FORMAT = '#,##0;(#,##0);0'
 const QUANTITY_FORMAT = '#,##0.###'
 const MONEY_FORMAT = '#,##0.##;(#,##0.##);-'
 const BORDER_COLOR = 'FF000000'
@@ -167,7 +168,7 @@ function styleHeaderCell(cell: ExcelJS.Cell) {
 }
 
 function styleBodyRow(sheet: ExcelJS.Worksheet, rowNumber: number) {
-  for (let column = 1; column <= 11; column += 1) {
+  for (let column = 1; column <= 12; column += 1) {
     const cell = sheet.getCell(rowNumber, column)
     cell.font = { name: THAI_SARABUN_BODY, size: 14 }
     cell.border = thinBorder()
@@ -183,6 +184,10 @@ function styleBodyRow(sheet: ExcelJS.Worksheet, rowNumber: number) {
 
 function setFormula(cell: ExcelJS.Cell, formula: string, result: number) {
   cell.value = { formula, result }
+}
+
+function setNumberFormat(cell: ExcelJS.Cell, value: number, decimalFormat: string) {
+  cell.numFmt = Number.isInteger(value) ? INTEGER_FORMAT : decimalFormat
 }
 
 function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReportModel) {
@@ -311,8 +316,15 @@ export async function generateInventoryAnnualReportWorkbook(
     sheet.getCell(rowNumber, 12).value = item.note
     sheet.getCell(rowNumber, 13).value = item.lsCode
 
-    for (const column of [5, 6, 7, 8, 9]) sheet.getCell(rowNumber, column).numFmt = QUANTITY_FORMAT
-    for (const column of [10, 11]) sheet.getCell(rowNumber, column).numFmt = MONEY_FORMAT
+    setNumberFormat(sheet.getCell(rowNumber, 5), item.openingBalance, QUANTITY_FORMAT)
+    setNumberFormat(sheet.getCell(rowNumber, 6), item.receivedDuringYear, QUANTITY_FORMAT)
+    setNumberFormat(sheet.getCell(rowNumber, 7), item.totalReceived, QUANTITY_FORMAT)
+    setNumberFormat(sheet.getCell(rowNumber, 8), item.issuedDuringYear, QUANTITY_FORMAT)
+    setNumberFormat(sheet.getCell(rowNumber, 9), item.closingBalance, QUANTITY_FORMAT)
+    if (item.latestUnitPrice !== null) {
+      setNumberFormat(sheet.getCell(rowNumber, 10), item.latestUnitPrice, MONEY_FORMAT)
+      setNumberFormat(sheet.getCell(rowNumber, 11), item.totalValue ?? 0, MONEY_FORMAT)
+    }
   })
 
   const totalRowNumber = DATA_START_ROW + model.items.length
@@ -324,7 +336,7 @@ export async function generateInventoryAnnualReportWorkbook(
     `SUM(K${DATA_START_ROW}:K${Math.max(DATA_START_ROW, totalRowNumber - 1)})`,
     model.totalValue,
   )
-  sheet.getCell(totalRowNumber, 11).numFmt = MONEY_FORMAT
+  setNumberFormat(sheet.getCell(totalRowNumber, 11), model.totalValue, MONEY_FORMAT)
   sheet.getCell(totalRowNumber, 11).font = { name: THAI_SARABUN_BODY, size: 14, bold: true }
   sheet.pageSetup.printArea = `A1:L${totalRowNumber}`
 
