@@ -68,7 +68,10 @@ export interface PurchaseRequestFormOptions {
  */
 export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: string): Promise<PurchaseRequestFormOptions> {
   const [inventoryItems, allContracts, profileResult, annualPlan, hiringPlan] = await Promise.all([
-    listInventoryItems({}, { includeAlertScope: false }),
+    // Contract lines may still reference an item that was later deactivated.
+    // The contract picker must resolve the identity first; the normal manual
+    // catalogue below remains active-only.
+    listInventoryItems({ includeInactive: true }, { includeAlertScope: false }),
     listContractFormOptions(),
     supabaseAdmin
       .from('profiles')
@@ -121,9 +124,28 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
     rows.push({ committee_kind: row.committee_kind, seat: Number(row.seat) })
     committeesByContract.set(Number(row.contract_id), rows)
   }
+  const inventoryById = new Map(inventoryItems.map((item) => [item.id, item]))
   const inventoryByLsCode = new Map(inventoryItems.map((item) => [normalizeLsCode(item.lsCode), item]))
+  const inventoryByNameAndUnit = new Map<string, (typeof inventoryItems)[number] | null>()
+  for (const item of inventoryItems) {
+    const key = `${item.name.trim().toLocaleLowerCase('th-TH')}\u0000${item.baseUnit.trim().toLocaleLowerCase('th-TH')}`
+    inventoryByNameAndUnit.set(key, inventoryByNameAndUnit.has(key) ? null : item)
+  }
 
-  const catalog = inventoryItems.map((item) => ({
+  const findInventoryItem = (option: (typeof contractItems)[number]) => {
+    if (option.inventoryItemId) {
+      const linkedInventoryItem = inventoryById.get(option.inventoryItemId)
+      if (linkedInventoryItem) return linkedInventoryItem
+    }
+
+    const codeInventoryItem = inventoryByLsCode.get(normalizeLsCode(option.lsCode))
+    if (codeInventoryItem) return codeInventoryItem
+
+    const key = `${option.name.trim().toLocaleLowerCase('th-TH')}\u0000${option.unit.trim().toLocaleLowerCase('th-TH')}`
+    return inventoryByNameAndUnit.get(key) ?? null
+  }
+
+  const catalog = inventoryItems.filter((item) => item.isActive).map((item) => ({
     inventoryItemId: item.id,
     lsCode: item.lsCode,
     name: item.name,
@@ -137,7 +159,7 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
   }))
 
   const contractLines = contractItems.flatMap((option) => {
-    const inventoryItem = inventoryByLsCode.get(normalizeLsCode(option.lsCode))
+    const inventoryItem = findInventoryItem(option)
     if (!inventoryItem) return []
 
     return [{
@@ -146,7 +168,9 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
       contractId: option.contractId,
       contractRemaining: option.remainingQuantity,
       contractedQuantity: option.contractedQuantity,
-      lsCode: option.lsCode,
+      // The inventory code is canonical. The contract name/unit/price remain
+      // the terms of the selected contract line.
+      lsCode: inventoryItem.lsCode,
       name: option.name,
       unit: option.unit,
       defaultUnitPrice: option.unitPrice,
@@ -157,6 +181,15 @@ export async function loadPurchaseRequestFormOptions(excludePurchaseRequestId?: 
       belowMinimum: inventoryItem.stockLevel !== 'healthy',
     }]
   })
+
+  const unresolvedContractLines = contractItems.filter(
+    (option) => option.remainingQuantity > 0 && !findInventoryItem(option),
+  )
+  if (unresolvedContractLines.length > 0) {
+    throw new Error(
+      `contract lines are not linked to inventory items: ${unresolvedContractLines.map((line) => line.id).join(', ')}`,
+    )
+  }
 
   return {
     annualPlan,

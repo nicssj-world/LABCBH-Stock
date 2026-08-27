@@ -15,12 +15,14 @@ const numericSchema = z
 const contractItemReadRowSchema = z.object({
   id: z.string().uuid(),
   line_number: z.number().int().positive(),
+  inventory_item_id: z.string().uuid().nullable(),
   ls_code: z.string(),
   name: z.string(),
   quantity: numericSchema,
   unit: z.string(),
   unit_price: numericSchema,
   line_total: numericSchema,
+  inventory_items: z.object({ ls_code: z.string() }).nullable(),
   contract_item_allocations: z.array(z.object({ quantity: numericSchema, allocation_kind: z.string() })).nullable().default([]),
 })
 
@@ -97,12 +99,14 @@ const CONTRACT_ITEMS_READ_SELECT = `
   contract_items (
     id,
     line_number,
+    inventory_item_id,
     ls_code,
     name,
     quantity,
     unit,
     unit_price,
     line_total,
+    inventory_items (ls_code),
     contract_item_allocations (quantity, allocation_kind)
   )`
 
@@ -240,7 +244,7 @@ function mapContractRow(
       return {
         id: item.id,
         lineNumber: item.line_number,
-        lsCode: item.ls_code,
+        lsCode: item.inventory_items?.ls_code ?? item.ls_code,
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,

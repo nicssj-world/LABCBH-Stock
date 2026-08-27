@@ -556,6 +556,7 @@ export interface ContractItemOption {
   id: string
   contractId: number
   contractName: string
+  inventoryItemId: string | null
   lsCode: string
   name: string
   unit: string
@@ -567,11 +568,13 @@ export interface ContractItemOption {
 const contractItemOptionRowSchema = z.object({
   id: z.string().uuid(),
   contract_id: numericSchema.pipe(z.number().int().positive()),
+  inventory_item_id: z.string().uuid().nullable(),
   ls_code: z.string(),
   name: z.string(),
   unit: z.string(),
   quantity: numericSchema,
   unit_price: numericSchema,
+  inventory_items: z.object({ id: z.string().uuid(), ls_code: z.string() }).nullable(),
   contracts: z.object({ display_name: z.string().nullable(), product: z.string() }).nullable(),
   contract_item_allocations: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
   purchase_request_items: z
@@ -604,11 +607,13 @@ export async function listContractItemOptions(
     .select(`
       id,
       contract_id,
+      inventory_item_id,
       ls_code,
       name,
       unit,
       quantity,
       unit_price,
+      inventory_items (id, ls_code),
       contracts (display_name, product),
       contract_item_allocations (quantity),
       purchase_request_items (
@@ -644,7 +649,11 @@ export async function listContractItemOptions(
         id: row.id,
         contractId: row.contract_id,
         contractName: row.contracts?.display_name?.trim() || row.contracts?.product || 'ไม่ระบุสัญญา',
-        lsCode: row.ls_code,
+        // Inventory is the source of truth for the item identity. Keep the
+        // contract snapshot as a compatibility fallback for rows that have
+        // not been relinked by the inventory-source migration yet.
+        inventoryItemId: row.inventory_item_id ?? row.inventory_items?.id ?? null,
+        lsCode: row.inventory_items?.ls_code ?? row.ls_code,
         name: row.name,
         unit: row.unit,
         unitPrice: row.unit_price,

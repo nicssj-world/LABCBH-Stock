@@ -19,8 +19,18 @@ assert.doesNotMatch(
 )
 assert.match(
   formOptions,
-  /listInventoryItems\(\{\}, \{ includeAlertScope: false \}\)/,
-  'the PR form does not need inventory alert-scope reads before an item is selected',
+  /listInventoryItems\(\{ includeInactive: true \}, \{ includeAlertScope: false \}\)/,
+  'the PR form must resolve contract-linked items even when an inventory row is inactive',
+)
+assert.match(
+  formOptions,
+  /lsCode: inventoryItem\.lsCode/,
+  'contract PR lines must display the inventory master LS code',
+)
+assert.match(
+  formOptions,
+  /const inventoryById = new Map/,
+  'contract PR lines must prefer the stable inventory item relationship',
 )
 assert.match(
   formOptions,
