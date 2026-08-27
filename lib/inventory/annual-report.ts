@@ -12,7 +12,7 @@ const DATA_START_ROW = 7
 const THAI_SARABUN_BODY = 'TH SarabunPSK'
 const THAI_SARABUN_TITLE = 'TH SarabunIT๙'
 const QUANTITY_FORMAT = '#,##0.###'
-const MONEY_FORMAT = '#,##0.00;(#,##0.00);-'
+const MONEY_FORMAT = '#,##0.##;(#,##0.##);-'
 const BORDER_COLOR = 'FF000000'
 
 export interface InventoryAnnualReportLine {
@@ -173,11 +173,11 @@ function styleBodyRow(sheet: ExcelJS.Worksheet, rowNumber: number) {
     cell.border = thinBorder()
     cell.alignment = {
       vertical: 'middle',
-      horizontal: column === 1 || column === 3 ? 'center' : undefined,
+      horizontal: column === 1 || column === 2 || column === 4 ? 'center' : undefined,
     }
   }
-  sheet.getCell(rowNumber, 2).alignment = { vertical: 'middle' }
-  sheet.getCell(rowNumber, 11).alignment = { vertical: 'middle', wrapText: true }
+  sheet.getCell(rowNumber, 3).alignment = { vertical: 'middle' }
+  sheet.getCell(rowNumber, 12).alignment = { vertical: 'middle', wrapText: true }
   sheet.getRow(rowNumber).height = 19.5
 }
 
@@ -188,6 +188,7 @@ function setFormula(cell: ExcelJS.Cell, formula: string, result: number) {
 function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReportModel) {
   sheet.columns = [
     { key: 'sequence', width: 5.26953125 },
+    { key: 'itemCodeVisible', width: 14 },
     { key: 'name', width: 53.90625 },
     { key: 'unit', width: 8.26953125 },
     { key: 'opening', width: 10.7265625 },
@@ -200,7 +201,7 @@ function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReport
     { key: 'note', width: 12.54296875 },
     { key: 'itemCode', width: 11.81640625 },
   ]
-  sheet.getColumn(12).hidden = true
+  sheet.getColumn(13).hidden = true
   sheet.properties.defaultRowHeight = 20
   sheet.properties.showGridLines = false
   sheet.views = [{ state: 'frozen', ySplit: 6, showGridLines: false }]
@@ -215,15 +216,17 @@ function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReport
     printTitlesRow: '1:6',
   }
   sheet.headerFooter = { oddFooter: 'หน้า &P / &N' }
-  sheet.mergeCells('B1:L1')
-  sheet.mergeCells('B2:L2')
-  sheet.mergeCells('B3:L3')
+  sheet.mergeCells('B1:M1')
+  sheet.mergeCells('B2:M2')
+  sheet.mergeCells('B3:M3')
+  sheet.mergeCells('D4:L4')
   sheet.mergeCells('A5:A6')
   sheet.mergeCells('B5:B6')
-  sheet.mergeCells('F5:F6')
+  sheet.mergeCells('C5:C6')
   sheet.mergeCells('G5:G6')
-  sheet.mergeCells('H5:J5')
-  sheet.mergeCells('K5:K6')
+  sheet.mergeCells('H5:H6')
+  sheet.mergeCells('I5:K5')
+  sheet.mergeCells('L5:L6')
 
   sheet.getCell('B1').value = `รายงานตรวจสอบพัสดุประจำปีงบประมาณ ${model.fiscalYear} โรงพยาบาลชลบุรี`
   sheet.getCell('B2').value = 'ตามพระราชบัญญัติการจัดซื้อจัดจ้างและบริหารพัสดุภาครัฐ พ.ศ.2560'
@@ -231,6 +234,7 @@ function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReport
   sheet.getCell('B4').value = model.departmentLabel === 'ทุกหน่วยงาน'
     ? 'ประเภทวัสดุวิทยาศาสตร์  คลังวัสดุวิทยาศาสตร์'
     : `ประเภทวัสดุวิทยาศาสตร์  คลังวัสดุวิทยาศาสตร์  หน่วยงาน ${model.departmentLabel}`
+  sheet.getCell('D4').value = `ข้อมูล ณ วันที่ ${formatThaiDate(model.generatedOn)}`
 
   for (const rowNumber of [1, 2, 3]) {
     const cell = sheet.getCell(`B${rowNumber}`)
@@ -238,31 +242,33 @@ function setupReportSheet(sheet: ExcelJS.Worksheet, model: InventoryAnnualReport
     cell.alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getRow(rowNumber).height = 20
   }
-  for (let column = 2; column <= 12; column += 1) {
+  for (let column = 2; column <= 13; column += 1) {
     sheet.getCell(4, column).font = { name: THAI_SARABUN_TITLE, size: 14, bold: true }
   }
   sheet.getCell('B4').alignment = { horizontal: 'left', vertical: 'middle' }
+  sheet.getCell('D4').alignment = { horizontal: 'right', vertical: 'middle' }
 
   for (let rowNumber = 5; rowNumber <= 6; rowNumber += 1) {
-    for (let column = 1; column <= 11; column += 1) styleHeaderCell(sheet.getCell(rowNumber, column))
+    for (let column = 1; column <= 12; column += 1) styleHeaderCell(sheet.getCell(rowNumber, column))
   }
-  styleHeaderCell(sheet.getCell('L5'))
-  sheet.getCell('L5').value = 'itemcode'
+  styleHeaderCell(sheet.getCell('M5'))
+  sheet.getCell('M5').value = 'itemcode'
   sheet.getCell('A5').value = 'ลำดับ'
-  sheet.getCell('B5').value = 'รายการ'
-  sheet.getCell('C5').value = 'บรรจุ'
-  sheet.getCell('C6').value = 'หน่วยนับ'
-  sheet.getCell('D5').value = `ปีงบประมาณ ${model.fiscalYear - 1}`
-  sheet.getCell('D6').value = 'คงเหลือยกมา'
-  sheet.getCell('E5').value = `ปีงบประมาณ ${model.fiscalYear}`
-  sheet.getCell('E6').value = 'รับระหว่างปี'
-  sheet.getCell('F5').value = 'รวมจำนวนรับ'
-  sheet.getCell('G5').value = 'รวมจำนวนจ่าย'
-  sheet.getCell('H5').value = `คงเหลือสิ้นปีงบประมาณ ${model.fiscalYear}`
-  sheet.getCell('H6').value = 'จำนวน(หน่วย)'
-  sheet.getCell('I6').value = 'ราคา/หน่วยล่าสุด'
-  sheet.getCell('J6').value = 'ราคารวม'
-  sheet.getCell('K5').value = 'หมายเหตุ'
+  sheet.getCell('B5').value = 'รหัสพัสดุ'
+  sheet.getCell('C5').value = 'รายการ'
+  sheet.getCell('D5').value = 'บรรจุ'
+  sheet.getCell('D6').value = 'หน่วยนับ'
+  sheet.getCell('E5').value = `ปีงบประมาณ ${model.fiscalYear - 1}`
+  sheet.getCell('E6').value = 'คงเหลือยกมา'
+  sheet.getCell('F5').value = `ปีงบประมาณ ${model.fiscalYear}`
+  sheet.getCell('F6').value = 'รับระหว่างปี'
+  sheet.getCell('G5').value = 'รวมจำนวนรับ'
+  sheet.getCell('H5').value = 'รวมจำนวนจ่าย'
+  sheet.getCell('I5').value = `คงเหลือสิ้นปีงบประมาณ ${model.fiscalYear}`
+  sheet.getCell('I6').value = 'จำนวน(หน่วย)'
+  sheet.getCell('J6').value = 'ราคา/หน่วยล่าสุด'
+  sheet.getCell('K6').value = 'ราคารวม'
+  sheet.getCell('L5').value = 'หมายเหตุ'
   sheet.getRow(5).height = 37.5
   sheet.getRow(6).height = 39.75
 }
@@ -284,42 +290,43 @@ export async function generateInventoryAnnualReportWorkbook(
     const rowNumber = DATA_START_ROW + index
     styleBodyRow(sheet, rowNumber)
     sheet.getCell(rowNumber, 1).value = index + 1
-    sheet.getCell(rowNumber, 2).value = item.name
-    sheet.getCell(rowNumber, 3).value = item.baseUnit
-    sheet.getCell(rowNumber, 4).value = item.openingBalance
-    sheet.getCell(rowNumber, 5).value = item.receivedDuringYear
-    setFormula(sheet.getCell(rowNumber, 6), `ROUND(D${rowNumber}+E${rowNumber},3)`, item.totalReceived)
-    sheet.getCell(rowNumber, 7).value = item.issuedDuringYear
-    setFormula(sheet.getCell(rowNumber, 8), `ROUND(F${rowNumber}-G${rowNumber},3)`, item.closingBalance)
-    sheet.getCell(rowNumber, 9).value = item.latestUnitPrice
+    sheet.getCell(rowNumber, 2).value = item.lsCode
+    sheet.getCell(rowNumber, 3).value = item.name
+    sheet.getCell(rowNumber, 4).value = item.baseUnit
+    sheet.getCell(rowNumber, 5).value = item.openingBalance
+    sheet.getCell(rowNumber, 6).value = item.receivedDuringYear
+    setFormula(sheet.getCell(rowNumber, 7), `ROUND(E${rowNumber}+F${rowNumber},3)`, item.totalReceived)
+    sheet.getCell(rowNumber, 8).value = item.issuedDuringYear
+    setFormula(sheet.getCell(rowNumber, 9), `ROUND(G${rowNumber}-H${rowNumber},3)`, item.closingBalance)
+    sheet.getCell(rowNumber, 10).value = item.latestUnitPrice
     if (item.latestUnitPrice === null) {
-      sheet.getCell(rowNumber, 10).value = null
+      sheet.getCell(rowNumber, 11).value = null
     } else {
       setFormula(
-        sheet.getCell(rowNumber, 10),
-        `IF(I${rowNumber}="","",ROUND(H${rowNumber}*I${rowNumber},2))`,
+        sheet.getCell(rowNumber, 11),
+        `IF(J${rowNumber}="","",ROUND(I${rowNumber}*J${rowNumber},2))`,
         item.totalValue ?? 0,
       )
     }
-    sheet.getCell(rowNumber, 11).value = item.note
-    sheet.getCell(rowNumber, 12).value = item.lsCode
+    sheet.getCell(rowNumber, 12).value = item.note
+    sheet.getCell(rowNumber, 13).value = item.lsCode
 
-    for (const column of [4, 5, 6, 7, 8]) sheet.getCell(rowNumber, column).numFmt = QUANTITY_FORMAT
-    for (const column of [9, 10]) sheet.getCell(rowNumber, column).numFmt = MONEY_FORMAT
+    for (const column of [5, 6, 7, 8, 9]) sheet.getCell(rowNumber, column).numFmt = QUANTITY_FORMAT
+    for (const column of [10, 11]) sheet.getCell(rowNumber, column).numFmt = MONEY_FORMAT
   })
 
   const totalRowNumber = DATA_START_ROW + model.items.length
   styleBodyRow(sheet, totalRowNumber)
-  sheet.getCell(totalRowNumber, 2).value = 'รวมจำนวนเงินทั้งสิ้น'
-  sheet.getCell(totalRowNumber, 2).font = { name: THAI_SARABUN_BODY, size: 14, bold: true }
+  sheet.getCell(totalRowNumber, 3).value = 'รวมจำนวนเงินทั้งสิ้น'
+  sheet.getCell(totalRowNumber, 3).font = { name: THAI_SARABUN_BODY, size: 14, bold: true }
   setFormula(
-    sheet.getCell(totalRowNumber, 10),
-    `SUM(J${DATA_START_ROW}:J${Math.max(DATA_START_ROW, totalRowNumber - 1)})`,
+    sheet.getCell(totalRowNumber, 11),
+    `SUM(K${DATA_START_ROW}:K${Math.max(DATA_START_ROW, totalRowNumber - 1)})`,
     model.totalValue,
   )
-  sheet.getCell(totalRowNumber, 10).numFmt = MONEY_FORMAT
-  sheet.getCell(totalRowNumber, 10).font = { name: THAI_SARABUN_BODY, size: 14, bold: true }
-  sheet.pageSetup.printArea = `A1:K${totalRowNumber}`
+  sheet.getCell(totalRowNumber, 11).numFmt = MONEY_FORMAT
+  sheet.getCell(totalRowNumber, 11).font = { name: THAI_SARABUN_BODY, size: 14, bold: true }
+  sheet.pageSetup.printArea = `A1:L${totalRowNumber}`
 
   return new Uint8Array(await workbook.xlsx.writeBuffer())
 }

@@ -18,6 +18,10 @@ const overlapRuleMigration = readFileSync(
   join(migrationsDir, '20260825130000_purchase_request_committee_overlap_rule.sql'),
   'utf8',
 )
+const contractIdAmbiguityMigration = readFileSync(
+  join(migrationsDir, '20260827042519_purchase_request_contract_id_ambiguity.sql'),
+  'utf8',
+)
 
 for (const table of [
   'purchase_request_upload_tickets',
@@ -61,5 +65,16 @@ assert.match(rosterGuard, /expected_result_count/, 'contract roster must match i
 assert.match(rosterGuard, /profile\.status <> 'active'/, 'contract roster inheritance must reject inactive personnel')
 assert.match(rosterGuard, /before update of checklist_policy_version/, 'the roster guard must run inside checklist transactions')
 assert.doesNotMatch(rosterGuard, /delete\s+from\s+public\.contract_usage/i, 'the roster guard must never mutate contract_usage')
+assert.match(contractIdAmbiguityMigration, /apply_purchase_request_checklist/, 'the contract_id repair must rebuild the checklist RPC')
+assert.match(
+  contractIdAmbiguityMigration,
+  /apply_purchase_request_checklist_with_contract_file/,
+  'the contract_id repair must rebuild the shared-file RPC',
+)
+assert.match(contractIdAmbiguityMigration, /contract_id_value bigint/, 'contract checklist RPCs must use a distinct local variable')
+assert.match(contractIdAmbiguityMigration, /committee\.contract_id = contract_id_value/, 'committee lookup must use the distinct variable')
+assert.match(contractIdAmbiguityMigration, /where contract\.id = contract_id_value/, 'shared contract lookup must use the distinct variable')
+assert.match(contractIdAmbiguityMigration, /attachment\.source_contract_id = contract_id_value/, 'attachment lookup must use the distinct variable')
+assert.match(contractIdAmbiguityMigration, /contract_id_value::text/, 'shared contract path validation must use the distinct variable')
 
 console.log('purchase request checklist schema: ok')
