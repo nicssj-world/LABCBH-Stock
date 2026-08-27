@@ -26,6 +26,7 @@ import type {
   StockAdjustmentInput,
   UpdateInventoryItemInput,
   InventoryItemSummary,
+  InventoryLotStockCheckResult,
   InventoryStockCheckResult,
 } from '@/lib/inventory/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -236,6 +237,43 @@ export async function recordInventoryStockCheck(itemId: string): Promise<Invento
 
   return {
     id: check.id,
+    checkedAt: check.checked_at,
+    weekStart: check.week_start,
+  }
+}
+
+export async function recordInventoryLotStockCheck(
+  itemId: string,
+  lotId: string,
+): Promise<InventoryLotStockCheckResult> {
+  const actor = await requireStockOperator()
+  const parsedItemId = inventoryItemIdSchema.parse(itemId)
+  const parsedLotId = inventoryItemIdSchema.parse(lotId)
+
+  const result = await supabaseAdmin.rpc('record_inventory_lot_stock_check', {
+    p_inventory_item_id: parsedItemId,
+    p_inventory_lot_id: parsedLotId,
+    p_actor_id: actor.id,
+  })
+
+  if (result.error) throw new Error(`บันทึกการตรวจนับล็อตไม่สำเร็จ: ${result.error.message}`)
+
+  const check = z
+    .object({
+      id: z.string().uuid(),
+      inventory_lot_id: z.string().uuid(),
+      checked_at: z.string(),
+      week_start: z.string(),
+    })
+    .parse(result.data)
+
+  revalidatePath('/inventory')
+  revalidatePath('/inventory/checklist')
+  revalidatePath(`/inventory/${parsedItemId}`)
+
+  return {
+    id: check.id,
+    inventoryLotId: check.inventory_lot_id,
     checkedAt: check.checked_at,
     weekStart: check.week_start,
   }

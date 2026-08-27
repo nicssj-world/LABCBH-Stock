@@ -162,7 +162,7 @@ export default async function InventoryDetailPage({ params, searchParams }: Inve
           <strong className="executive-strip__date-value">
             {item.lastStockCheckedAt ? formatThaiDateTime(item.lastStockCheckedAt) : 'ยังไม่เคยตรวจ'}
           </strong>
-          <small>{item.isStockCheckedThisWeek ? 'ตรวจแล้วในสัปดาห์นี้' : 'ยังไม่ได้ตรวจสัปดาห์นี้'}</small>
+          <small>{item.isStockCheckedThisWeek ? 'ตรวจครบทุก lot ในสัปดาห์นี้' : 'ยังตรวจไม่ครบทุก lot ในสัปดาห์นี้'}</small>
         </div>
       </section>
 

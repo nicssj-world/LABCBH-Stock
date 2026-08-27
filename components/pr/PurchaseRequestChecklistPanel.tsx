@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DocumentPreview } from '@/components/ui/DocumentPreview'
 import {
   PR_ATTACHMENT_KIND_LABELS,
   PR_COMMITTEE_KIND_LABELS,
@@ -98,7 +99,12 @@ export function PurchaseRequestChecklistActions({ requestId, checklist }: Purcha
         </header>
         <div className="app-dialog__body file-preview-dialog__body">
           {isCommitteePdfOpen && (
-            <iframe title="ตัวอย่าง PDF รายชื่อกรรมการ" src={`/api/purchase-requests/${requestId}/checklist/committee-pdf`} />
+            <DocumentPreview
+              title="ตัวอย่าง PDF รายชื่อกรรมการ"
+              src={`/api/purchase-requests/${requestId}/checklist/committee-pdf`}
+              fileName="committee.pdf"
+              mimeType="application/pdf"
+            />
           )}
         </div>
       </dialog>
@@ -261,15 +267,12 @@ export function PurchaseRequestChecklistPanel({
           <Button type="button" variant="ghost" onClick={closePreview}>ปิด</Button>
         </div>
         {preview && (
-          preview.mimeType?.startsWith('image/') ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/purchase-requests/${requestId}/checklist/${preview.id}`} alt={preview.fileName} />
-          ) : (
-            <iframe
-              title={`ตัวอย่าง ${preview.fileName}`}
-              src={`/api/purchase-requests/${requestId}/checklist/${preview.id}`}
-            />
-          )
+          <DocumentPreview
+            title={`ตัวอย่าง ${preview.fileName}`}
+            src={`/api/purchase-requests/${requestId}/checklist/${preview.id}`}
+            fileName={preview.fileName}
+            mimeType={preview.mimeType}
+          />
         )}
       </dialog>
     </div>

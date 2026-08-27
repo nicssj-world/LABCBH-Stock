@@ -33,6 +33,14 @@ const purchaseRequestFileRowSchema = z.object({
 
 const visiblePurchaseRequestRowSchema = z.object({ id: z.string().uuid() })
 
+const purchaseRequestPoFileReadRowSchema = z.object({
+  id: z.string().uuid(),
+  fiscal_year: z.number().int(),
+  po_file_path: z.string().nullable(),
+  po_file_name: z.string().nullable(),
+  po_file_mime_type: z.string().nullable(),
+})
+
 const legacyPathRowSchema = z.object({
   id: z.string().uuid(),
   fiscal_year: z.number().int(),
@@ -165,6 +173,36 @@ async function isAllowedStoredPath(purchaseRequestId: string, path: string, fisc
   return legacyPathRowSchema.array().parse(data ?? []).some(
     (receipt) => receipt.po_image_path === path && isLegacyReceiptPoImagePathAllowed(path, receipt.fiscal_year, receipt.id),
   )
+}
+
+async function readPurchaseRequestPoFile(purchaseRequestId: string) {
+  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+  await assertPurchaseRequestVisible(parsedId)
+
+  const { data, error } = await supabaseAdmin
+    .from('purchase_requests')
+    .select('id, fiscal_year, po_file_path, po_file_name, po_file_mime_type')
+    .eq('id', parsedId)
+    .maybeSingle()
+  if (error) throw new Error(`อ่านไฟล์ PO ไม่สำเร็จ: ${error.message}`)
+
+  const row = purchaseRequestPoFileReadRowSchema.nullable().parse(data)
+  if (!row?.po_file_path) return null
+  if (!(await isAllowedStoredPath(parsedId, row.po_file_path, row.fiscal_year))) {
+    throw new Error('เส้นทางไฟล์ PO ไม่ถูกต้อง')
+  }
+
+  return {
+    purchaseRequestId: parsedId,
+    path: row.po_file_path,
+    fileName: row.po_file_name,
+    mimeType: row.po_file_mime_type,
+  }
+}
+
+export async function getPurchaseRequestPoFileMetadata(purchaseRequestId: string) {
+  await requireActor()
+  return readPurchaseRequestPoFile(purchaseRequestId)
 }
 
 export async function getPurchaseRequestPoFileUrl(

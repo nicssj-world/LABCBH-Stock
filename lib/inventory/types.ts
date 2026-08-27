@@ -128,6 +128,22 @@ export interface InventoryStockCheckResult {
   weekStart: string
 }
 
+export interface InventoryLotStockCheckResult extends InventoryStockCheckResult {
+  inventoryLotId: string
+}
+
+export interface InventoryChecklistLotRecord extends InventoryLotRecord {
+  /** The latest physical-check stamp for this lot, retained across weeks. */
+  lastStockCheckedAt: string | null
+  /** Whether the latest lot check belongs to the current Bangkok business week. */
+  isStockCheckedThisWeek: boolean
+}
+
+export interface InventoryChecklistItemRecord extends InventoryItemRecord {
+  /** Active lots with a positive balance that must be checked for this item. */
+  checklistLots: InventoryChecklistLotRecord[]
+}
+
 export interface InventoryExportLotRecord {
   id: string
   lotNumber: string

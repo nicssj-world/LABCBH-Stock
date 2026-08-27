@@ -19,6 +19,8 @@ import {
 import { EMPTY_STOCK_CHECK_STATUS, getStockCheckWeekStart, type StockCheckStatus } from './checklist'
 import type {
   InventoryCatalogEntry,
+  InventoryChecklistItemRecord,
+  InventoryChecklistLotRecord,
   InventoryExportFilters,
   InventoryExportItemRecord,
   InventoryFilters,
@@ -57,8 +59,15 @@ const openRequestRowSchema = z.object({
 
 const stockCheckRowSchema = z.object({
   inventory_item_id: z.string().uuid(),
+  checked_at: z.string().nullable(),
+  week_start: z.string().nullable(),
+})
+
+const lotStockCheckRowSchema = z.object({
+  inventory_lot_id: z.string().uuid(),
+  inventory_item_id: z.string().uuid(),
   checked_at: z.string(),
-  week_start: z.string(),
+  week_start: z.string().nullable(),
 })
 
 const monthlyIssueRowSchema = z.object({
@@ -394,6 +403,108 @@ export async function listInventoryItems(
       stockChecks.get(row.id),
     ),
   )
+}
+
+/**
+ * Reads the weekly checklist shape in batches: the catalogue still renders
+ * one parent row per item, while every active lot with stock becomes a child
+ * check target. Keeping this separate from listInventoryItems avoids loading
+ * lot data into the normal catalogue and picker queries.
+ */
+export async function listInventoryChecklistItems(
+  filters: InventoryFilters = {},
+): Promise<InventoryChecklistItemRecord[]> {
+  const items = await listInventoryItems(filters, { includeAlertScope: false })
+  const stockedItems = items.filter((item) => item.isActive && item.onHand > 0)
+  if (stockedItems.length === 0) {
+    return items.map((item) => ({ ...item, checklistLots: [] }))
+  }
+
+  const supabase = await createClient()
+  const itemIds = stockedItems.map((item) => item.id)
+  const [lotResult, lotBalanceResult, lotCheckResult] = await Promise.all([
+    supabase
+      .from('inventory_lots')
+      .select('inventory_item_id, id, lot_number, expiry_date, received_date, original_quantity, storage_location, is_active')
+      .in('inventory_item_id', itemIds),
+    supabase
+      .from('inventory_lot_balances')
+      .select('inventory_item_id, inventory_lot_id, balance')
+      .in('inventory_item_id', itemIds),
+    supabase
+      .from('inventory_lot_latest_stock_checks')
+      .select('inventory_item_id, inventory_lot_id, checked_at, week_start')
+      .in('inventory_item_id', itemIds),
+  ])
+
+  if (lotResult.error) throw new Error(`อ่านข้อมูลล็อตสำหรับ checklist ไม่สำเร็จ: ${lotResult.error.message}`)
+  if (lotBalanceResult.error) throw new Error(`อ่านยอดคงเหลือรายล็อตสำหรับ checklist ไม่สำเร็จ: ${lotBalanceResult.error.message}`)
+  if (lotCheckResult.error) throw new Error(`อ่านประวัติ checklist รายล็อตไม่สำเร็จ: ${lotCheckResult.error.message}`)
+
+  const balanceByLot = new Map(
+    lotBalanceRowSchema
+      .extend({ inventory_item_id: z.string().uuid() })
+      .array()
+      .parse(lotBalanceResult.data ?? [])
+      .map((row) => [row.inventory_lot_id, roundQuantity(row.balance)]),
+  )
+  const checkByLot = new Map(
+    lotStockCheckRowSchema
+      .array()
+      .parse(lotCheckResult.data ?? [])
+      .map((row) => [row.inventory_lot_id, row]),
+  )
+  const lotsByItem = new Map<string, Array<{
+    id: string
+    lotNumber: string
+    expiryDate: string | null
+    receivedAt: string
+    receivedDate: string
+    originalQuantity: number
+    storageLocation: string | null
+    balance: number
+    isActive: boolean
+  }>>()
+
+  for (const lot of exportLotRowSchema.array().parse(lotResult.data ?? [])) {
+    const balance = balanceByLot.get(lot.id) ?? 0
+    if (!lot.is_active || balance <= 0) continue
+
+    const itemLots = lotsByItem.get(lot.inventory_item_id) ?? []
+    itemLots.push({
+      id: lot.id,
+      lotNumber: lot.lot_number,
+      expiryDate: lot.expiry_date,
+      receivedAt: lot.received_date,
+      receivedDate: lot.received_date,
+      originalQuantity: lot.original_quantity,
+      storageLocation: lot.storage_location,
+      balance,
+      isActive: lot.is_active,
+    })
+    lotsByItem.set(lot.inventory_item_id, itemLots)
+  }
+
+  const today = bangkokToday()
+  const currentWeekStart = getStockCheckWeekStart(today)
+  const checklistLotsByItem = new Map<string, InventoryChecklistLotRecord[]>()
+  for (const [itemId, lots] of lotsByItem) {
+    const rankedLots = rankLotsForFifo(lots).map((lot) => {
+      const check = checkByLot.get(lot.id)
+      return {
+        ...lot,
+        expiryStatus: classifyLotExpiry(lot.expiryDate, today),
+        lastStockCheckedAt: check?.checked_at ?? null,
+        isStockCheckedThisWeek: check?.week_start === currentWeekStart,
+      }
+    })
+    checklistLotsByItem.set(itemId, rankedLots)
+  }
+
+  return items.map((item) => ({
+    ...item,
+    checklistLots: checklistLotsByItem.get(item.id) ?? [],
+  }))
 }
 
 /**

@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { contractFileUrl, removeContractFile } from '@/lib/contracts/file-actions'
+import { DocumentPreview } from '@/components/ui/DocumentPreview'
+import { removeContractFile } from '@/lib/contracts/file-actions'
 
 /** XMLHttpRequest, not fetch, is what exposes upload progress events. */
 function uploadWithProgress(contractId: number, formData: FormData, onProgress: (percent: number) => void) {
@@ -75,8 +76,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
     setPendingAction('open')
     startTransition(async () => {
       try {
-        const signedUrl = await contractFileUrl(contractId, filePath)
-        setOpenUrl(signedUrl)
+        setOpenUrl(`/api/contracts/${contractId}/file/view`)
         previewDialogRef.current?.showModal()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'เปิดไฟล์สัญญาไม่สำเร็จ')
@@ -224,7 +224,7 @@ export function ContractFileCard({ contractId, filePath, canEdit }: ContractFile
           </button>
         </header>
         <div className="app-dialog__body file-preview-dialog__body">
-          {openUrl && <iframe title="ตัวอย่างไฟล์สัญญา" src={openUrl} />}
+          {openUrl && <DocumentPreview src={openUrl} title="ตัวอย่างไฟล์สัญญา" fileName={filePath} />}
         </div>
       </dialog>
     </div>

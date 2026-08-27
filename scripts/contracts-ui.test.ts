@@ -207,7 +207,7 @@ const fileCard = read('components/contracts/ContractFileCard.tsx')
 assert.match(fileCard, /contract-file-control--view/, 'an uploaded contract must expose a compact view icon')
 assert.match(fileCard, /aria-label="เปิดดูไฟล์สัญญา"/, 'file view icon needs an accessible label')
 assert.match(fileCard, /<dialog/, 'contract preview must open in an in-page dialog')
-assert.match(fileCard, /<iframe/, 'contract preview must render inside the current page')
+assert.match(fileCard, /DocumentPreview/, 'contract preview must render inside the current page')
 
 const historyDisclosure = read('components/contracts/StageHistoryDisclosure.tsx')
 assert.match(historyDisclosure, /^['"]use client['"]/m, 'history disclosure must be an interactive client boundary')

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { annualPlanFileUrl, annualPlanVersionFileUrl } from '@/lib/annual-plans/actions'
+import { DocumentPreview } from '@/components/ui/DocumentPreview'
 
 export interface AnnualPlanPreviewDialogProps {
   planId: string | null
@@ -30,11 +30,11 @@ export function AnnualPlanPreviewDialog({ planId, planVersionId = null, fileName
 
     if (dialog && !dialog.open) dialog.showModal()
     let cancelled = false
-    const request = planVersionId
-      ? annualPlanVersionFileUrl(planVersionId, 'inline')
+    const request = Promise.resolve(planVersionId
+      ? `/api/annual-plans/versions/${encodeURIComponent(planVersionId)}/file`
       : planId
-        ? annualPlanFileUrl(planId, 'inline')
-        : Promise.reject(new Error('Annual plan file was not found'))
+        ? `/api/annual-plans/${encodeURIComponent(planId)}/file`
+        : '')
     void request
       .then((signedUrl) => {
         if (!cancelled) setResolved({ key: sourceKey, url: signedUrl })
@@ -103,7 +103,7 @@ export function AnnualPlanPreviewDialog({ planId, planVersionId = null, fileName
         </div>
         {loading && <p className="annual-plan-preview-dialog__status" role="status" aria-live="polite">กำลังเตรียมตัวอย่างเอกสาร…</p>}
         {error && <p className="annual-plan-preview-dialog__error" role="alert">{error}</p>}
-        {url && <iframe title={`ตัวอย่าง ${fileName ?? 'แผนประจำปี'}`} src={url} />}
+        {url && <DocumentPreview src={url} title={`ตัวอย่าง ${fileName ?? 'แผนประจำปี'}`} fileName={fileName} />}
         {url && <p className="annual-plan-preview-dialog__fallback">หากตัวอย่างไม่แสดง ให้ใช้ <a href={url} target="_blank" rel="noreferrer">เปิดแท็บใหม่</a></p>}
       </div>
     </dialog>

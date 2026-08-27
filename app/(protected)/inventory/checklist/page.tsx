@@ -5,10 +5,10 @@ import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
-import { bangkokToday, listInventoryDepartments, listInventoryItems } from '@/lib/inventory/queries'
+import { bangkokToday, listInventoryChecklistItems, listInventoryDepartments } from '@/lib/inventory/queries'
 import { getStockCheckWeekStart } from '@/lib/inventory/checklist'
 import { formatThaiDate } from '@/lib/inventory/presenter'
-import type { InventoryItemRecord } from '@/lib/inventory/types'
+import type { InventoryChecklistItemRecord } from '@/lib/inventory/types'
 
 interface InventoryChecklistPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -26,13 +26,13 @@ export default async function InventoryChecklistPage({ searchParams }: Inventory
   const search = first(params.search)?.trim() ?? ''
   const department = first(params.department)?.trim() ?? ''
 
-  let items: InventoryItemRecord[] = []
+  let items: InventoryChecklistItemRecord[] = []
   let departments: string[] = []
   let error: string | null = null
 
   try {
     ;[items, departments] = await Promise.all([
-      listInventoryItems({ search, department: department || undefined }, { includeAlertScope: false }),
+      listInventoryChecklistItems({ search, department: department || undefined }),
       listInventoryDepartments(),
     ])
   } catch (caught) {
@@ -40,7 +40,9 @@ export default async function InventoryChecklistPage({ searchParams }: Inventory
   }
 
   const stockedItems = items.filter((item) => item.isActive && item.onHand > 0)
-  const checkedCount = stockedItems.filter((item) => item.isStockCheckedThisWeek).length
+  const checkedCount = stockedItems.filter((item) => (
+    item.checklistLots.length > 0 && item.checklistLots.every((lot) => lot.isStockCheckedThisWeek)
+  )).length
   const weekStart = getStockCheckWeekStart(bangkokToday())
   const backParams = new URLSearchParams()
   if (search) backParams.set('search', search)
@@ -94,7 +96,7 @@ export default async function InventoryChecklistPage({ searchParams }: Inventory
               <p className="section-kicker">CURRENT WEEK · {formatThaiDate(weekStart)}</p>
               <h2 id="inventory-checklist-title">รายการที่ต้องตรวจ</h2>
             </div>
-            <p>คลิกชื่อน้ำยาเพื่อปรับยอดก่อนกดตรวจแล้ว</p>
+            <p>ตรวจทีละ lot · คลิกชื่อน้ำยาเพื่อปรับยอดก่อนกดตรวจแล้ว</p>
           </div>
           {stockedItems.length > 0 ? (
             <InventoryChecklistTable key={weekStart} items={stockedItems} currentWeekStart={weekStart} />

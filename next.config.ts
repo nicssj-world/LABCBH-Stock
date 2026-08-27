@@ -24,9 +24,9 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // The app intentionally previews same-origin PDFs and attachments in
-          // modal iframes. Keep cross-origin framing blocked while allowing
-          // those in-app previews to render.
+          // The app intentionally previews private files through same-origin
+          // document routes inside modal viewers. Keep cross-origin framing
+          // blocked for any remaining external embeds.
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },

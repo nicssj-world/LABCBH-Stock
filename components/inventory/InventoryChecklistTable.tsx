@@ -5,24 +5,37 @@ import { useRouter } from 'next/navigation'
 import { CheckCircleIcon } from '@/components/inventory/InventoryDetailIcons'
 import { StockAdjustmentDialog } from '@/components/inventory/StockAdjustmentDialog'
 import { Button } from '@/components/ui/Button'
-import { formatQuantity, formatThaiDateTime } from '@/lib/inventory/presenter'
-import { recordInventoryStockCheck } from '@/lib/inventory/actions'
-import type { InventoryItemRecord, InventoryStockCheckResult } from '@/lib/inventory/types'
+import { StatusChip } from '@/components/ui/StatusChip'
+import {
+  INACTIVE_STATUS_TONE,
+  LOT_EXPIRY_LABELS,
+  LOT_EXPIRY_TONES,
+  formatQuantity,
+  formatThaiDate,
+  formatThaiDateTime,
+} from '@/lib/inventory/presenter'
+import { recordInventoryLotStockCheck } from '@/lib/inventory/actions'
+import type {
+  InventoryChecklistItemRecord,
+  InventoryChecklistLotRecord,
+  InventoryLotStockCheckResult,
+} from '@/lib/inventory/types'
 
 const WEEKLY_STOCK_CHECK_REASON = 'ตรวจนับสต๊อกประจำสัปดาห์'
 
 interface InventoryChecklistTableProps {
-  items: InventoryItemRecord[]
+  items: InventoryChecklistItemRecord[]
   currentWeekStart: string
 }
 
-interface StockCheckButtonProps {
-  item: InventoryItemRecord
+interface LotStockCheckButtonProps {
+  item: InventoryChecklistItemRecord
+  lot: InventoryChecklistLotRecord
   isChecked: boolean
-  onChecked: (result: InventoryStockCheckResult) => void
+  onChecked: (result: InventoryLotStockCheckResult) => void
 }
 
-function StockCheckButton({ item, isChecked, onChecked }: StockCheckButtonProps) {
+function LotStockCheckButton({ item, lot, isChecked, onChecked }: LotStockCheckButtonProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -31,11 +44,11 @@ function StockCheckButton({ item, isChecked, onChecked }: StockCheckButtonProps)
     setError(null)
     startTransition(async () => {
       try {
-        const result = await recordInventoryStockCheck(item.id)
+        const result = await recordInventoryLotStockCheck(item.id, lot.id)
         onChecked(result)
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'บันทึกการตรวจนับไม่สำเร็จ กรุณาลองใหม่')
+        setError(caught instanceof Error ? caught.message : 'บันทึกการตรวจนับล็อตไม่สำเร็จ กรุณาลองใหม่')
       }
     })
   }
@@ -48,12 +61,12 @@ function StockCheckButton({ item, isChecked, onChecked }: StockCheckButtonProps)
         type="button"
         aria-pressed={isChecked}
         aria-busy={isPending}
-        aria-label={isChecked ? `บันทึกการตรวจนับซ้ำ ${item.name}` : `บันทึกว่าตรวจนับแล้ว ${item.name}`}
+        aria-label={isChecked ? `บันทึกการตรวจนับซ้ำ lot ${lot.lotNumber}` : `บันทึกว่าตรวจนับแล้ว lot ${lot.lotNumber}`}
         onClick={handleCheck}
         disabled={isPending}
       >
         <CheckCircleIcon />
-        <span>{isPending ? 'กำลังบันทึก…' : 'ตรวจแล้ว'}</span>
+        <span>{isPending ? 'กำลังบันทึก…' : isChecked ? 'ตรวจซ้ำ' : 'ตรวจ lot นี้'}</span>
       </Button>
       <small>{isChecked ? 'กดซ้ำเพื่อบันทึกการตรวจครั้งใหม่' : 'ปรับยอดให้ตรงก่อนกดตรวจ'}</small>
       {error && <span className="inventory-checklist__error" role="alert">{error}</span>}
@@ -61,7 +74,7 @@ function StockCheckButton({ item, isChecked, onChecked }: StockCheckButtonProps)
   )
 }
 
-function ChecklistIdentity({ item, onAdjust }: { item: InventoryItemRecord; onAdjust: () => void }) {
+function ChecklistIdentity({ item, onAdjust }: { item: InventoryChecklistItemRecord; onAdjust: () => void }) {
   return (
     <div className="inventory-checklist__identity">
       <button
@@ -88,42 +101,122 @@ function LatestCheck({ checkedAt }: { checkedAt: string | null }) {
   )
 }
 
+function LotChecklist({
+  item,
+  isLotChecked,
+  getLotCheckedAt,
+  onChecked,
+}: {
+  item: InventoryChecklistItemRecord
+  isLotChecked: (lot: InventoryChecklistLotRecord) => boolean
+  getLotCheckedAt: (lot: InventoryChecklistLotRecord) => string | null
+  onChecked: (result: InventoryLotStockCheckResult) => void
+}) {
+  const checkedCount = item.checklistLots.filter(isLotChecked).length
+
+  if (item.checklistLots.length === 0) {
+    return (
+      <div className="inventory-checklist__lot-empty">
+        <strong>ไม่พบ lot ที่มี stock</strong>
+        <small>กรุณาตรวจสอบและผูกยอดคงเหลือกับ lot ก่อน</small>
+      </div>
+    )
+  }
+
+  return (
+    <details className="inventory-checklist__lots" open>
+      <summary>
+        <span>ตรวจ lot แล้ว {checkedCount}/{item.checklistLots.length}</span>
+        <span className="inventory-checklist__lots-summary-hint">ดูรายละเอียด</span>
+      </summary>
+      <ul className="inventory-checklist__lot-list">
+        {item.checklistLots.map((lot) => {
+          const isChecked = isLotChecked(lot)
+          return (
+            <li className={`inventory-checklist__lot${isChecked ? ' is-checked' : ''}`} key={lot.id}>
+              <div className="inventory-checklist__lot-copy">
+                <div className="inventory-checklist__lot-heading">
+                  <strong className="identifier">LOT {lot.lotNumber}</strong>
+                  {!lot.isActive ? (
+                    <StatusChip tone={INACTIVE_STATUS_TONE}>ปิดใช้งาน</StatusChip>
+                  ) : (
+                    <StatusChip tone={LOT_EXPIRY_TONES[lot.expiryStatus]}>
+                      {LOT_EXPIRY_LABELS[lot.expiryStatus]}
+                    </StatusChip>
+                  )}
+                </div>
+                <div className="inventory-checklist__lot-facts">
+                  <span>หมดอายุ {formatThaiDate(lot.expiryDate)}</span>
+                  <span className="identifier">ระบบ {formatQuantity(lot.balance, item.baseUnit)}</span>
+                </div>
+                <LatestCheck checkedAt={getLotCheckedAt(lot)} />
+              </div>
+              <LotStockCheckButton item={item} lot={lot} isChecked={isChecked} onChecked={onChecked} />
+            </li>
+          )
+        })}
+      </ul>
+    </details>
+  )
+}
+
 export function InventoryChecklistTable({ items, currentWeekStart }: InventoryChecklistTableProps) {
   const [adjustmentItemId, setAdjustmentItemId] = useState<string | null>(null)
   const [activeWeekStart, setActiveWeekStart] = useState(currentWeekStart)
-  const [checkOverrides, setCheckOverrides] = useState<Record<string, InventoryStockCheckResult>>({})
+  const [checkOverrides, setCheckOverrides] = useState<Record<string, InventoryLotStockCheckResult>>({})
 
   // The server supplies the business-week boundary. If a check crosses the
   // boundary while this page is still open, the returned week_start becomes
   // authoritative immediately; the following refresh then remounts the table
   // with the new server-derived week.
-  const getOverride = (itemId: string) => {
-    const override = checkOverrides[itemId]
+  const getOverride = (lotId: string) => {
+    const override = checkOverrides[lotId]
     return override?.weekStart === activeWeekStart ? override : undefined
   }
 
+  const isLotChecked = (lot: InventoryChecklistLotRecord) => (
+    Boolean(getOverride(lot.id)) || (activeWeekStart === currentWeekStart && lot.isStockCheckedThisWeek)
+  )
+
+  const getLotCheckedAt = (lot: InventoryChecklistLotRecord) => (
+    getOverride(lot.id)?.checkedAt ?? ((activeWeekStart === currentWeekStart) ? lot.lastStockCheckedAt : null)
+  )
+
+  const isItemChecked = (item: InventoryChecklistItemRecord) => (
+    item.checklistLots.length > 0 && item.checklistLots.every(isLotChecked)
+  )
+
+  const getItemCheckedAt = (item: InventoryChecklistItemRecord) => {
+    const latestLotCheck = item.checklistLots
+      .map(getLotCheckedAt)
+      .filter((checkedAt): checkedAt is string => Boolean(checkedAt))
+      .sort()
+      .at(-1)
+
+    return latestLotCheck ?? ((activeWeekStart === currentWeekStart) ? item.lastStockCheckedAt : null)
+  }
+
   const orderedItems = [...items].sort((left, right) => {
-    const leftChecked = Boolean(getOverride(left.id)) || (activeWeekStart === currentWeekStart && left.isStockCheckedThisWeek)
-    const rightChecked = Boolean(getOverride(right.id)) || (activeWeekStart === currentWeekStart && right.isStockCheckedThisWeek)
+    const leftChecked = isItemChecked(left)
+    const rightChecked = isItemChecked(right)
     if (leftChecked !== rightChecked) return Number(leftChecked) - Number(rightChecked)
     return left.lsCode.localeCompare(right.lsCode, 'th', { numeric: true, sensitivity: 'base' })
   })
 
-  const checkedCount = orderedItems.filter((item) => Boolean(getOverride(item.id)) || (activeWeekStart === currentWeekStart && item.isStockCheckedThisWeek)).length
+  const checkedCount = orderedItems.filter(isItemChecked).length
+  const checkedLotCount = orderedItems.reduce((total, item) => total + item.checklistLots.filter(isLotChecked).length, 0)
+  const totalLotCount = orderedItems.reduce((total, item) => total + item.checklistLots.length, 0)
   const adjustmentItem = orderedItems.find((item) => item.id === adjustmentItemId) ?? null
-
-  const getCheckedAt = (item: InventoryItemRecord) => getOverride(item.id)?.checkedAt ?? ((activeWeekStart === currentWeekStart) ? item.lastStockCheckedAt : null)
-  const isChecked = (item: InventoryItemRecord) => Boolean(getOverride(item.id)) || (activeWeekStart === currentWeekStart && item.isStockCheckedThisWeek)
-  const markChecked = (itemId: string, result: InventoryStockCheckResult) => {
+  const markLotChecked = (result: InventoryLotStockCheckResult) => {
     setActiveWeekStart(result.weekStart)
-    setCheckOverrides((current) => ({ ...current, [itemId]: result }))
+    setCheckOverrides((current) => ({ ...current, [result.inventoryLotId]: result }))
   }
 
   return (
     <>
       <div className="inventory-checklist__progress" aria-live="polite">
         <strong>{checkedCount} / {orderedItems.length}</strong>
-        <span>รายการตรวจแล้วในสัปดาห์นี้</span>
+        <span>รายการตรวจครบทุก lot ในสัปดาห์นี้ · {checkedLotCount}/{totalLotCount} lot</span>
       </div>
 
       <div className="inventory-checklist-table--desktop">
@@ -131,28 +224,38 @@ export function InventoryChecklistTable({ items, currentWeekStart }: InventoryCh
           <thead>
             <tr>
               <th>น้ำยา / รหัส LS</th>
-              <th className="numeric-cell">ยอดคงเหลือปัจจุบัน</th>
+              <th className="numeric-cell">ยอดคงเหลือรวม</th>
+              <th>รายการ lot</th>
               <th>ตรวจนับล่าสุด</th>
-              <th>สถานะและการดำเนินการ</th>
+              <th>สถานะ</th>
             </tr>
           </thead>
           <tbody>
             {orderedItems.map((item) => {
-              const currentIsChecked = isChecked(item)
+              const currentIsChecked = isItemChecked(item)
+              const checkedLots = item.checklistLots.filter(isLotChecked).length
               return (
                 <tr key={item.id}>
                   <td><ChecklistIdentity item={item} onAdjust={() => setAdjustmentItemId(item.id)} /></td>
                   <td className="numeric-cell identifier inventory-checklist__balance">
                     {formatQuantity(item.onHand, item.baseUnit)}
                   </td>
-                  <td><LatestCheck checkedAt={getCheckedAt(item)} /></td>
+                  <td className="inventory-checklist__lot-cell">
+                    <LotChecklist
+                      item={item}
+                      isLotChecked={isLotChecked}
+                      getLotCheckedAt={getLotCheckedAt}
+                      onChecked={markLotChecked}
+                    />
+                    {item.checklistLots.length > 0 && (
+                      <span className="inventory-checklist__lot-count">{checkedLots}/{item.checklistLots.length} lot ตรวจแล้ว</span>
+                    )}
+                  </td>
+                  <td><LatestCheck checkedAt={getItemCheckedAt(item)} /></td>
                   <td>
-                    <div className="inventory-checklist__status">
-                      <span className={`inventory-checklist__status-copy${currentIsChecked ? ' is-complete' : ''}`}>
-                        {currentIsChecked ? 'ตรวจแล้วในสัปดาห์นี้' : 'ยังไม่ได้ตรวจสัปดาห์นี้'}
-                      </span>
-                      <StockCheckButton item={item} isChecked={currentIsChecked} onChecked={(result) => markChecked(item.id, result)} />
-                    </div>
+                    <span className={`inventory-checklist__status-copy${currentIsChecked ? ' is-complete' : ''}`}>
+                      {currentIsChecked ? 'ตรวจครบทุก lot แล้ว' : item.checklistLots.length > 0 ? `ตรวจแล้ว ${checkedLots}/${item.checklistLots.length} lot` : 'ต้องจัดการ lot ก่อนตรวจ'}
+                    </span>
                   </td>
                 </tr>
               )
@@ -163,26 +266,32 @@ export function InventoryChecklistTable({ items, currentWeekStart }: InventoryCh
 
       <ul className="inventory-checklist-cards">
         {orderedItems.map((item) => {
-          const currentIsChecked = isChecked(item)
+          const currentIsChecked = isItemChecked(item)
+          const checkedLots = item.checklistLots.filter(isLotChecked).length
           return (
             <li className="inventory-checklist__card" key={item.id}>
               <div className="inventory-checklist__card-topline">
                 <ChecklistIdentity item={item} onAdjust={() => setAdjustmentItemId(item.id)} />
                 <span className={`inventory-checklist__status-copy${currentIsChecked ? ' is-complete' : ''}`}>
-                  {currentIsChecked ? 'ตรวจแล้ว' : 'รอตรวจ'}
+                  {currentIsChecked ? 'ตรวจครบทุก lot' : item.checklistLots.length > 0 ? `${checkedLots}/${item.checklistLots.length} lot` : 'ต้องจัดการ lot'}
                 </span>
               </div>
               <dl className="inventory-checklist__card-facts">
                 <div>
-                  <dt>ยอดคงเหลือปัจจุบัน</dt>
+                  <dt>ยอดคงเหลือรวม</dt>
                   <dd className="identifier">{formatQuantity(item.onHand, item.baseUnit)}</dd>
                 </div>
                 <div>
                   <dt>ตรวจนับล่าสุด</dt>
-                  <dd><LatestCheck checkedAt={getCheckedAt(item)} /></dd>
+                  <dd><LatestCheck checkedAt={getItemCheckedAt(item)} /></dd>
                 </div>
               </dl>
-              <StockCheckButton item={item} isChecked={currentIsChecked} onChecked={(result) => markChecked(item.id, result)} />
+              <LotChecklist
+                item={item}
+                isLotChecked={isLotChecked}
+                getLotCheckedAt={getLotCheckedAt}
+                onChecked={markLotChecked}
+              />
             </li>
           )
         })}

@@ -45,7 +45,8 @@ const previewRoute = read('app/api/purchase-requests/[id]/checklist/[attachmentI
 assert.match(previewRoute, /getPurchaseRequestChecklistAttachment/)
 assert.match(read('lib/pr/checklist-queries.ts'), /getPurchaseRequestChecklistAccess/)
 assert.match(previewRoute, /GetObjectCommand/)
-assert.match(previewRoute, /ResponseContentDisposition/)
+assert.match(previewRoute, /transformToByteArray/)
+assert.match(previewRoute, /Content-Disposition/)
 
 const zipRoute = read('app/api/purchase-requests/[id]/checklist/download-all/route.ts')
 assert.match(zipRoute, /assertPurchaseRequestChecklistStockAccess/)

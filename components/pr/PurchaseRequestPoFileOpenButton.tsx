@@ -3,10 +3,21 @@
 import { useId, useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DocumentOpenIcon } from '@/components/ui/DocumentOpenIcon'
+import { DocumentPreview } from '@/components/ui/DocumentPreview'
 
-export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: string }) {
+export function PurchaseRequestPoFileOpenButton({
+  requestId,
+  mimeType = null,
+  fileName = null,
+}: {
+  requestId: string
+  mimeType?: string | null
+  fileName?: string | null
+}) {
   const previewDialogRef = useRef<HTMLDialogElement>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewMimeType, setPreviewMimeType] = useState<string | null>(mimeType)
+  const [previewFileName, setPreviewFileName] = useState<string | null>(fileName)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const titleId = `pr-po-file-open-preview-title-${useId().replaceAll(':', '')}`
@@ -19,10 +30,17 @@ export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: stri
           `/api/purchase-requests/${encodeURIComponent(requestId)}/po-file`,
           { cache: 'no-store', headers: { Accept: 'application/json' } },
         )
-        const body = (await response.json()) as { url?: string; error?: string }
+        const body = (await response.json()) as {
+          url?: string
+          error?: string
+          fileName?: string | null
+          mimeType?: string | null
+        }
         if (!response.ok) throw new Error(body.error ?? 'เปิดไฟล์ PO ไม่สำเร็จ')
         if (!body.url) throw new Error('ไม่พบไฟล์ PO ที่เปิดดูได้')
-        setPreviewUrl(body.url)
+        setPreviewUrl(`/api/purchase-requests/${encodeURIComponent(requestId)}/po-file/view`)
+        setPreviewMimeType(body.mimeType ?? mimeType ?? null)
+        setPreviewFileName(body.fileName ?? fileName ?? null)
         previewDialogRef.current?.showModal()
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'เปิดไฟล์ PO ไม่สำเร็จ')
@@ -33,6 +51,8 @@ export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: stri
   const closePreview = () => {
     previewDialogRef.current?.close()
     setPreviewUrl(null)
+    setPreviewMimeType(mimeType ?? null)
+    setPreviewFileName(fileName ?? null)
   }
 
   return (
@@ -74,7 +94,14 @@ export function PurchaseRequestPoFileOpenButton({ requestId }: { requestId: stri
           </button>
         </header>
         <div className="app-dialog__body file-preview-dialog__body">
-          {previewUrl && <iframe title="ตัวอย่างไฟล์ PO" src={previewUrl} />}
+          {previewUrl && (
+            <DocumentPreview
+              src={previewUrl}
+              title="ตัวอย่างไฟล์ PO"
+              fileName={previewFileName}
+              mimeType={previewMimeType}
+            />
+          )}
         </div>
       </dialog>
     </>

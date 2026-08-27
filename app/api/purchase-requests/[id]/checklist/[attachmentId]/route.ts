@@ -1,5 +1,4 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { NextResponse } from 'next/server'
 import { getActor } from '@/lib/auth/actor'
 import {
@@ -7,9 +6,9 @@ import {
   PurchaseRequestChecklistAccessError,
 } from '@/lib/pr/checklist-queries'
 import { isPurchaseRequestChecklistStorageKey } from '@/lib/pr/checklist-storage'
-import { contractFileUrl } from '@/lib/contracts/file-actions'
-import { isContractFilePathAllowed } from '@/lib/contracts/files'
+import { CONTRACT_FILE_BUCKET, isContractFilePathAllowed } from '@/lib/contracts/files'
 import { getR2BucketName, getR2Client } from '@/lib/r2/client'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 interface RouteContext {
   params: Promise<{ id: string; attachmentId: string }>
@@ -33,23 +32,42 @@ export async function GET(_request: Request, context: RouteContext) {
       ) {
         return NextResponse.json({ error: 'เส้นทางไฟล์หน้าสัญญาไม่ถูกต้อง' }, { status: 422 })
       }
-      const signedUrl = await contractFileUrl(Number(attachment.source_contract_id), attachment.storage_key)
-      return NextResponse.redirect(signedUrl)
+      const file = await supabaseAdmin.storage
+        .from(CONTRACT_FILE_BUCKET)
+        .download(attachment.storage_key)
+      if (file.error || !file.data) {
+        return NextResponse.json({ error: `อ่านไฟล์ ${attachment.file_name} จากพื้นที่สัญญาไม่สำเร็จ` }, { status: 404 })
+      }
+      return new Response(file.data, {
+        headers: {
+          'Content-Type': attachment.mime_type ?? 'application/pdf',
+          'Content-Disposition': contentDisposition(attachment.file_name),
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      })
     }
     if (!isPurchaseRequestChecklistStorageKey(attachment.storage_key)) {
       return NextResponse.json({ error: 'เส้นทางเอกสารไม่ถูกต้อง' }, { status: 422 })
     }
-    const signedUrl = await getSignedUrl(
-      getR2Client(),
+    const response = await getR2Client().send(
       new GetObjectCommand({
         Bucket: getR2BucketName(),
         Key: attachment.storage_key,
-        ResponseContentType: attachment.mime_type ?? undefined,
-        ResponseContentDisposition: contentDisposition(attachment.file_name),
       }),
-      { expiresIn: 300 },
     )
-    return NextResponse.redirect(signedUrl)
+    if (!response.Body) {
+      return NextResponse.json({ error: `อ่านไฟล์ ${attachment.file_name} จาก R2 ไม่สำเร็จ` }, { status: 404 })
+    }
+    const bytes = await response.Body.transformToByteArray()
+    return new Response(Buffer.from(bytes), {
+      headers: {
+        'Content-Type': attachment.mime_type ?? 'application/pdf',
+        'Content-Disposition': contentDisposition(attachment.file_name),
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
   } catch (error) {
     const status = error instanceof PurchaseRequestChecklistAccessError ? 403 : 500
     return NextResponse.json(

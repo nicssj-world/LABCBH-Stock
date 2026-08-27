@@ -120,7 +120,11 @@ export function PurchaseRequestPoFileCard({
   const fileActions = file.path || isCleanupPending ? (
     <div className="po-file-card__actions">
       {file.path && (
-        <PurchaseRequestPoFileOpenButton requestId={requestId} />
+        <PurchaseRequestPoFileOpenButton
+          requestId={requestId}
+          fileName={file.fileName}
+          mimeType={file.mimeType}
+        />
       )}
       {isCleanupPending && (
         <Button variant="secondary" onClick={retry} disabled={isPending}>

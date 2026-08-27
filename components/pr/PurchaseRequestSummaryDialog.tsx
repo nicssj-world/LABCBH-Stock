@@ -95,7 +95,11 @@ export function PurchaseRequestSummaryDialog({
                 <dd className="identifier list-summary-dialog__po-value">
                   <span>{request.poNumber ?? 'ยังไม่มี'}</span>
                   {request.poFile.path && !request.poFile.deletedAt && (
-                    <PurchaseRequestPoFileOpenButton requestId={request.id} />
+                    <PurchaseRequestPoFileOpenButton
+                      requestId={request.id}
+                      fileName={request.poFile.fileName}
+                      mimeType={request.poFile.mimeType}
+                    />
                   )}
                 </dd>
               </div>

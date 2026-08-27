@@ -142,7 +142,7 @@ export function InventoryItemSummaryDialog({ item, variant = 'table' }: Inventor
                       {summary.lastStockCheckedAt ? formatThaiDateTime(summary.lastStockCheckedAt) : 'ยังไม่เคยตรวจ'}
                     </dd>
                     <small>
-                      {summary.isStockCheckedThisWeek ? 'ตรวจแล้วในสัปดาห์นี้' : 'ยังไม่ได้ตรวจสัปดาห์นี้'}
+                      {summary.isStockCheckedThisWeek ? 'ตรวจครบทุก lot ในสัปดาห์นี้' : 'ยังตรวจไม่ครบทุก lot ในสัปดาห์นี้'}
                     </small>
                   </div>
                   <div>

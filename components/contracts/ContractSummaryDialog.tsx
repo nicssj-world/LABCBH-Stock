@@ -5,10 +5,10 @@ import { ContractRemainingGauge } from '@/components/contracts/ContractRemaining
 import { StageProgress } from '@/components/contracts/StageProgress'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
+import { DocumentPreview } from '@/components/ui/DocumentPreview'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
 import { contractMode } from '@/lib/contracts/budget'
-import { contractFileUrl } from '@/lib/contracts/file-actions'
 import type { PresentedContract } from '@/lib/contracts/presenter'
 import { formatBaht, formatThaiDate } from '@/lib/inventory/presenter'
 
@@ -45,8 +45,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
     setPreviewError(null)
     startPreviewTransition(async () => {
       try {
-        const signedUrl = await contractFileUrl(contract.id, contract.fileUrl!)
-        setPreviewUrl(signedUrl)
+        setPreviewUrl(`/api/contracts/${contract.id}/file/view`)
         closeDialog()
         previewDialogRef.current?.showModal()
       } catch (caught) {
@@ -211,7 +210,7 @@ export function ContractSummaryDialog({ contract, variant = 'table' }: ContractS
             </button>
           </header>
           <div className="app-dialog__body file-preview-dialog__body">
-            {previewUrl && <iframe title="ตัวอย่างไฟล์สัญญา" src={previewUrl} />}
+            {previewUrl && <DocumentPreview src={previewUrl} title="ตัวอย่างไฟล์สัญญา" fileName={contract.fileUrl} />}
           </div>
         </dialog>
         </>
