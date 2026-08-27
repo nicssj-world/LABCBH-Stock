@@ -1,0 +1,8 @@
+{
+  "name": "labcbh-backup-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "author": "LABCBH",
+  "description": "LABCBH local PostgreSQL backup runner for Windows",
+  "main": "main.cjs"
+}

@@ -78,7 +78,7 @@ export const servicePlanHistoricalExpenseSchema = z
     planId: z.string().uuid(),
     amount: moneySchema.refine((value) => value > 0, 'ยอดค่าใช้จ่ายต้องมากกว่า 0'),
     expenseDate: isoDateSchema,
-    reason: z.string().trim().min(1, 'กรุณาระบุเหตุผล').max(1000),
+    reason: z.string().trim().max(1000).nullable().optional(),
     sourceReference: z.string().trim().min(1, 'กรุณาระบุแหล่งอ้างอิง').max(240),
   })
   .strict()

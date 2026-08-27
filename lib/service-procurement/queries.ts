@@ -58,7 +58,7 @@ function mapLedger(row: Record<string, unknown>, planId: string): ServicePlanLed
     id: String(row.id), planId, entryKind: row.entry_kind as ServicePlanLedgerRecord['entryKind'],
     amount: toNumber(row.amount), eventDate: String(row.event_date), purchaseRequestId: (row.purchase_request_id as string | null) ?? null,
     usageEventId: (row.usage_event_id as string | null) ?? null, referenceLedgerId: (row.reference_ledger_id as string | null) ?? null,
-    reason: String(row.reason), sourceReference: (row.source_reference as string | null) ?? null,
+    reason: (row.reason as string | null) ?? null, sourceReference: (row.source_reference as string | null) ?? null,
     actorName: actor?.name ?? null, createdAt: String(row.created_at),
   }
 }

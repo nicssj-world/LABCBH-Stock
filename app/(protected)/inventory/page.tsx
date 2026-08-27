@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { InventoryAnnualReportExportDialog } from '@/components/inventory/InventoryAnnualReportExportDialog'
 import { InventoryExportDialog } from '@/components/inventory/InventoryExportDialog'
 import { InventoryMinimumStockSettings } from '@/components/inventory/InventoryMinimumStockSettings'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
@@ -6,6 +7,7 @@ import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { classifyStockAlert } from '@/lib/inventory/balance'
+import { currentFiscalYear } from '@/lib/annual-plans/fiscal'
 import { canOperateStock, hasAppRole } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import {
@@ -65,6 +67,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const stockedItemCount = items.filter((item) => item.isActive && item.onHand > 0).length
   const paginatedItems = paginate(visibleItems, page, LIST_PAGE_SIZE)
   const departmentOptions = [...new Set([...DEPARTMENTS, ...departments])].sort((left, right) => left.localeCompare(right, 'th'))
+  const reportDefaultFiscalYear = currentFiscalYear()
+  const reportFiscalYears = Array.from({ length: 5 }, (_, index) => reportDefaultFiscalYear - index)
 
   const activeParams = new URLSearchParams()
   if (search) activeParams.set('search', search)
@@ -126,6 +130,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           </Link>
           <div className="page-heading__actions inventory-heading__actions">
             <InventoryExportDialog departments={departmentOptions} />
+            <InventoryAnnualReportExportDialog
+              departments={departmentOptions}
+              fiscalYears={reportFiscalYears}
+              defaultFiscalYear={reportDefaultFiscalYear}
+            />
             {hasAppRole(actor, 'admin') && (
               <InventoryMinimumStockSettings minimumStockMonths={minimumStockMonths} />
             )}

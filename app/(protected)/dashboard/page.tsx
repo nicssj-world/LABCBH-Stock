@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { ContractValueCards } from '@/components/dashboard/ContractValueCards'
 import { DashboardWatchlist } from '@/components/dashboard/DashboardWatchlist'
+import { ExecutiveDashboardView } from '@/components/dashboard/ExecutiveDashboardView'
 import {
   ContractStackIcon,
   PendingClockIcon,
@@ -10,7 +11,11 @@ import {
 } from '@/components/dashboard/DashboardIcons'
 import { CONTRACT_TYPE_LABELS, PROCUREMENT_STAGE_LABELS } from '@/lib/contracts/presenter'
 import { getExecutiveDashboard } from '@/lib/dashboard/contracts'
+import { getExecutiveOverview } from '@/lib/dashboard/executive'
+import type { ExecutiveOverview } from '@/lib/dashboard/executive-types'
 import type { ExecutiveDashboard } from '@/lib/dashboard/types'
+import { bangkokIsoDate } from '@/lib/date/thai'
+import { fiscalYearFromDate } from '@/lib/service-procurement/domain'
 
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -196,45 +201,103 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
   )
 }
 
-export default async function DashboardPage() {
-  let data: ExecutiveDashboard | null = null
+type DashboardSearchParams = Promise<Record<string, string | string[] | undefined>>
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function currentFiscalYear() {
+  return fiscalYearFromDate(bangkokIsoDate())
+}
+
+function fiscalYearOptions(selected: number) {
+  const current = currentFiscalYear()
+  return [...new Set([selected, ...Array.from({ length: 7 }, (_, index) => current - index)])]
+    .filter((year) => year >= 2500 && year <= 3000)
+}
+
+function DashboardModeSwitch({ view, fiscalYear }: { view: 'operations' | 'executive'; fiscalYear: number }) {
+  return (
+    <nav className="dashboard-view-switcher" aria-label="มุมมอง Dashboard">
+      <Link className="dashboard-view-switcher__link" href="/dashboard" aria-current={view === 'operations' ? 'page' : undefined}>
+        ปฏิบัติการ
+      </Link>
+      <Link className="dashboard-view-switcher__link" href={`/dashboard?view=executive&fiscalYear=${fiscalYear}`} aria-current={view === 'executive' ? 'page' : undefined}>
+        ผู้บริหาร
+      </Link>
+    </nav>
+  )
+}
+
+function ExecutiveFiscalYearFilter({ fiscalYear }: { fiscalYear: number }) {
+  return (
+    <form className="executive-fiscal-filter" action="/dashboard" method="get">
+      <input type="hidden" name="view" value="executive" />
+      <label htmlFor="dashboard-fiscal-year">ปีงบประมาณ</label>
+      <select id="dashboard-fiscal-year" name="fiscalYear" defaultValue={String(fiscalYear)}>
+        {fiscalYearOptions(fiscalYear).map((year) => <option key={year} value={year}>พ.ศ. {year}</option>)}
+      </select>
+      <button className="lab-button lab-button--secondary" type="submit">แสดงข้อมูล</button>
+    </form>
+  )
+}
+
+export default async function DashboardPage({ searchParams }: { searchParams: DashboardSearchParams }) {
+  const params = await searchParams
+  const view = firstParam(params.view) === 'executive' ? 'executive' : 'operations'
+  const requestedFiscalYear = Number(firstParam(params.fiscalYear))
+  const fiscalYear = Number.isInteger(requestedFiscalYear) && requestedFiscalYear >= 2500 && requestedFiscalYear <= 3000
+    ? requestedFiscalYear
+    : currentFiscalYear()
+  let operationsData: ExecutiveDashboard | null = null
+  let executiveData: ExecutiveOverview | null = null
   let error: string | null = null
   try {
-    data = await getExecutiveDashboard({ watchlistLimit: 5 })
+    if (view === 'executive') {
+      executiveData = await getExecutiveOverview({ fiscalYear })
+    } else {
+      operationsData = await getExecutiveDashboard({ watchlistLimit: 5 })
+    }
   } catch (caught) {
-    error = caught instanceof Error ? caught.message : 'อ่านข้อมูลภาพรวมไม่สำเร็จ'
+    error = caught instanceof Error
+      ? caught.message
+      : view === 'executive' ? 'อ่านรายงานผู้บริหารไม่สำเร็จ' : 'อ่านข้อมูลภาพรวมไม่สำเร็จ'
   }
 
   return (
     <div className="dashboard-composition-c">
       <header className="page-heading page-heading--actions">
         <div>
-          <p className="section-kicker">EXECUTIVE CONTROL BENCH</p>
-          <h1>Dashboard บริหารสัญญา</h1>
-          <p>สถานะงานจัดซื้อ มูลค่าคงเหลือ และรายการน้ำยาที่ต้องติดตามจากข้อมูลธุรกรรมจริง</p>
+          <p className="section-kicker">{view === 'executive' ? 'EXECUTIVE BRIEFING' : 'EXECUTIVE CONTROL BENCH'}</p>
+          <h1>{view === 'executive' ? 'ภาพรวมผู้บริหาร' : 'Dashboard บริหารสัญญา'}</h1>
+          <p>{view === 'executive' ? 'สรุปยอดตามปีงบประมาณ งานซื้อ งานจ้าง และเช่าเครื่องจากข้อมูลที่บันทึกจริง' : 'สถานะงานจัดซื้อ มูลค่าคงเหลือ และรายการน้ำยาที่ต้องติดตามจากข้อมูลธุรกรรมจริง'}</p>
         </div>
         <div className="dashboard-heading-tools">
           {error && <StatusChip tone="danger">ข้อมูลขัดข้อง</StatusChip>}
-          <nav className="dashboard-quick-actions" aria-label="ทางลัดงานหลัก">
-            <Link className="lab-link-button lab-link-button--secondary dashboard-quick-action" href="/purchase-requests/new">
-              <span className="dashboard-quick-action__icon" aria-hidden="true"><PurchaseRequestIcon /></span>
-              <span>สร้างใบ PR</span>
-            </Link>
-            <Link className="lab-link-button lab-link-button--primary dashboard-quick-action" href="/requisitions/new">
-              <span className="dashboard-quick-action__icon" aria-hidden="true"><RequisitionIcon /></span>
-              <span>สร้างใบเบิก</span>
-            </Link>
-          </nav>
+          <DashboardModeSwitch view={view} fiscalYear={fiscalYear} />
+          {view === 'executive' ? <ExecutiveFiscalYearFilter fiscalYear={fiscalYear} /> : (
+            <nav className="dashboard-quick-actions" aria-label="ทางลัดงานหลัก">
+              <Link className="lab-link-button lab-link-button--secondary dashboard-quick-action" href="/purchase-requests/new">
+                <span className="dashboard-quick-action__icon" aria-hidden="true"><PurchaseRequestIcon /></span>
+                <span>สร้างใบ PR</span>
+              </Link>
+              <Link className="lab-link-button lab-link-button--primary dashboard-quick-action" href="/requisitions/new">
+                <span className="dashboard-quick-action__icon" aria-hidden="true"><RequisitionIcon /></span>
+                <span>สร้างใบเบิก</span>
+              </Link>
+            </nav>
+          )}
         </div>
       </header>
 
-      {error || !data ? (
+      {error || (view === 'executive' ? !executiveData : !operationsData) ? (
         <section className="error-state" role="alert">
           <h2>ไม่สามารถแสดง Dashboard ได้</h2>
           <p>{error}</p>
-          <Link className="text-link" href="/dashboard">ลองโหลดข้อมูลอีกครั้ง</Link>
+          <Link className="text-link" href={view === 'executive' ? `/dashboard?view=executive&fiscalYear=${fiscalYear}` : '/dashboard'}>ลองโหลดข้อมูลอีกครั้ง</Link>
         </section>
-      ) : <DashboardContent data={data} />}
+      ) : view === 'executive' && executiveData ? <ExecutiveDashboardView data={executiveData} /> : operationsData ? <DashboardContent data={operationsData} /> : null}
     </div>
   )
 }

@@ -1,6 +1,12 @@
 import Link from 'next/link'
-import { formatBaht, formatServiceBalance, servicePlanTypeLabel } from '@/lib/service-procurement/presenter'
+import { ContractRemainingGauge } from '@/components/contracts/ContractRemainingGauge'
+import { formatBaht, servicePlanTypeLabel } from '@/lib/service-procurement/presenter'
 import type { ServicePlanRecord } from '@/lib/service-procurement/types'
+
+function planRemainingPercent(plan: ServicePlanRecord) {
+  if (plan.balance.budget <= 0) return null
+  return (plan.balance.available / plan.balance.budget) * 100
+}
 
 export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
   return (
@@ -13,9 +19,7 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
               <th>หน่วยงาน</th>
               <th>ประเภท</th>
               <th className="service-plan-table__number">วงเงิน</th>
-              <th className="service-plan-table__number">ใช้จริง</th>
-              <th className="service-plan-table__number">สำรอง</th>
-              <th className="service-plan-table__number">คงเหลือ</th>
+              <th>สถานะวงเงิน</th>
             </tr>
           </thead>
           <tbody>
@@ -25,16 +29,12 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
                   <Link className="text-link" href={`/service-procurement/plans/${plan.id}`}>
                     {plan.name}
                   </Link>
-                  <small>ผู้รับผิดชอบ {plan.responsibles.length || 'ยังไม่กำหนด'} คน</small>
                 </td>
                 <td>{plan.department}</td>
                 <td>{servicePlanTypeLabel(plan.type)}</td>
                 <td className="identifier service-plan-table__number">{formatBaht(plan.balance.budget)}</td>
-                <td className="identifier service-plan-table__number">{formatBaht(plan.balance.spent)}</td>
-                <td className="identifier service-plan-table__number">{formatBaht(plan.balance.reserved)}</td>
-                <td className={`identifier service-plan-table__number${plan.balance.available < 0 ? ' is-danger' : ''}`}>
-                  <strong>{formatBaht(plan.balance.available)}</strong>
-                  <small>{formatServiceBalance(plan.balance)}</small>
+                <td className="service-plan-table__gauge">
+                  <ContractRemainingGauge percent={planRemainingPercent(plan)} />
                 </td>
               </tr>
             ))}
@@ -52,10 +52,14 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
               </div>
             </div>
             <dl className="service-plan-card__balance">
-              <div><dt>วงเงิน</dt><dd>{formatBaht(plan.balance.budget)}</dd></div>
-              <div><dt>ใช้จริง</dt><dd>{formatBaht(plan.balance.spent)}</dd></div>
-              <div><dt>สำรอง</dt><dd>{formatBaht(plan.balance.reserved)}</dd></div>
-              <div><dt>คงเหลือ</dt><dd><strong>{formatBaht(plan.balance.available)}</strong></dd></div>
+              <div>
+                <dt>วงเงิน</dt>
+                <dd className="identifier">{formatBaht(plan.balance.budget)}</dd>
+              </div>
+              <div className="service-plan-card__balance-gauge">
+                <dt>สถานะวงเงิน</dt>
+                <dd><ContractRemainingGauge percent={planRemainingPercent(plan)} /></dd>
+              </div>
             </dl>
           </li>
         ))}

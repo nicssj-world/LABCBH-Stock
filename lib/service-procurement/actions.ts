@@ -91,9 +91,9 @@ export async function recordServicePlanHistoricalExpense(input: unknown) {
   const parsed = servicePlanHistoricalExpenseSchema.parse(input)
   const result = await supabaseAdmin.rpc('record_service_plan_historical_expense', {
     p_actor_id: actor.id, p_plan_id: parsed.planId, p_amount: parsed.amount, p_expense_date: parsed.expenseDate,
-    p_reason: parsed.reason, p_source_reference: parsed.sourceReference,
+    p_reason: parsed.reason ?? null, p_source_reference: parsed.sourceReference,
   })
-  const entry = unwrap('บันทึกค่าใช้จ่ายย้อนหลัง', result)
+  const entry = unwrap('บันทึกค่าใช้จ่าย', result)
   revalidatePlan(parsed.planId)
   return entry
 }

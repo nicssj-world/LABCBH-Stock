@@ -120,3 +120,10 @@ export const inventoryExportFiltersSchema = z
     onlyInStock: z.boolean().default(false),
   })
   .strict()
+
+export const inventoryAnnualReportFiltersSchema = z
+  .object({
+    fiscalYear: z.coerce.number().int().min(2500).max(3000),
+    department: z.string().trim().max(200).optional(),
+  })
+  .strict()

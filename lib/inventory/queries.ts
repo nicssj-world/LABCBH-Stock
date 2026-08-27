@@ -2,6 +2,7 @@ import 'server-only'
 
 import { cache } from 'react'
 import { z } from 'zod'
+import { fiscalYearBounds } from '@/lib/annual-plans/fiscal'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { rankLotsForFifo } from '@/lib/requisitions/fifo'
 import { createClient } from '@/lib/supabase/server'
@@ -19,6 +20,8 @@ import {
 import { EMPTY_STOCK_CHECK_STATUS, getStockCheckWeekStart, type StockCheckStatus } from './checklist'
 import type {
   InventoryCatalogEntry,
+  InventoryAnnualReportData,
+  InventoryAnnualReportFilters,
   InventoryChecklistItemRecord,
   InventoryChecklistLotRecord,
   InventoryExportFilters,
@@ -105,6 +108,14 @@ const movementRowSchema = z.object({
   inventory_lots: z.object({ lot_number: z.string() }).nullable(),
 })
 
+const annualReportMovementRowSchema = z.object({
+  id: z.string().uuid(),
+  inventory_item_id: z.string().uuid(),
+  movement_type: z.enum(MOVEMENT_TYPES),
+  quantity: numericSchema,
+  occurred_on: z.string(),
+})
+
 const ITEM_SELECT = `
   id,
   ls_code,
@@ -119,6 +130,7 @@ const ITEM_SELECT = `
 
 export const INVENTORY_MOVEMENT_PREVIEW_SIZE = 5
 export const INVENTORY_MOVEMENT_PAGE_SIZE = 20
+export const INVENTORY_ANNUAL_REPORT_MOVEMENT_PAGE_SIZE = 1000
 
 /** Hospital operations run on Bangkok dates, not the server's locale. */
 export function bangkokToday(): string {
@@ -582,6 +594,67 @@ export async function listInventoryExportItems(
   }))
 
   return filters.onlyInStock ? items.filter((item) => item.onHand > 0) : items
+}
+
+/**
+ * Reads the catalogue and every ledger movement through the selected fiscal
+ * year. The annual report needs the pre-period balance as well as the in-period
+ * movements, so it cannot use the current-balance view alone.
+ */
+export async function getInventoryAnnualReportData(
+  filters: InventoryAnnualReportFilters,
+): Promise<InventoryAnnualReportData> {
+  const supabase = await createClient()
+  const { endDate } = fiscalYearBounds(filters.fiscalYear)
+  let itemQuery = supabase
+    .from('inventory_items')
+    .select(ITEM_SELECT)
+    .order('ls_code')
+
+  if (filters.department) itemQuery = itemQuery.eq('responsible_department', filters.department)
+
+  const { data, error } = await itemQuery
+  if (error) throw new Error(`อ่านรายการคลังสำหรับรายงานประจำปีไม่สำเร็จ: ${error.message}`)
+
+  const itemRows = itemRowSchema.array().parse(data ?? [])
+  const items = itemRows.map((row) => ({
+    id: row.id,
+    lsCode: row.ls_code,
+    name: row.name,
+    baseUnit: row.base_unit,
+    responsibleDepartment: row.responsible_department,
+    defaultUnitPrice: row.default_unit_price,
+    note: row.note,
+    isActive: row.is_active,
+  }))
+  if (items.length === 0) return { items, movements: [] }
+
+  const itemIds = items.map((item) => item.id)
+  const movements: InventoryAnnualReportData['movements'] = []
+
+  for (let from = 0; ; from += INVENTORY_ANNUAL_REPORT_MOVEMENT_PAGE_SIZE) {
+    const movementResult = await supabase
+      .from('stock_movements')
+      .select('id, inventory_item_id, movement_type, quantity, occurred_on')
+      .in('inventory_item_id', itemIds)
+      .lte('occurred_on', endDate)
+      .order('occurred_on', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + INVENTORY_ANNUAL_REPORT_MOVEMENT_PAGE_SIZE - 1)
+
+    if (movementResult.error) throw new Error(`อ่านประวัติการเคลื่อนไหวสำหรับรายงานประจำปีไม่สำเร็จ: ${movementResult.error.message}`)
+
+    const page = annualReportMovementRowSchema.array().parse(movementResult.data ?? [])
+    movements.push(...page.map((row) => ({
+      inventoryItemId: row.inventory_item_id,
+      movementType: row.movement_type,
+      quantity: row.quantity,
+      occurredOn: row.occurred_on,
+    })))
+    if (page.length < INVENTORY_ANNUAL_REPORT_MOVEMENT_PAGE_SIZE) break
+  }
+
+  return { items, movements }
 }
 
 export async function listInventoryDepartments(): Promise<string[]> {

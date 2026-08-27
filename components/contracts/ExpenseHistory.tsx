@@ -83,7 +83,7 @@ export function ExpenseHistory({
             </select>
           </label>
           <div className="expense-history__exports" aria-label="ดาวน์โหลดประวัติการใช้จ่าย">
-            <span>ส่งออกข้อมูล</span>
+            <span>Export ข้อมูล</span>
             <div>
               <Button
                 variant="secondary"

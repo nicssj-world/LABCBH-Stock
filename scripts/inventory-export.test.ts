@@ -82,7 +82,7 @@ async function runPdfAssertions() {
   const listPage = read('app/(protected)/inventory/page.tsx')
   assert.match(listPage, /InventoryExportDialog/)
   const dialog = read('components/inventory/InventoryExportDialog.tsx')
-  assert.match(dialog, /ส่งออกคงคลังเป็น PDF/)
+  assert.match(dialog, /Export คงคลังเป็น PDF/)
   assert.match(dialog, /ทุกหน่วยงาน/)
   assert.match(dialog, /onlyInStock/)
   assert.match(dialog, /มีอยู่ในคลัง/)

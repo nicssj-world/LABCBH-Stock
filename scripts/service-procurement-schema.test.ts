@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 const schema = readFileSync('supabase/migrations/20260826100000_service_procurement.sql', 'utf8')
 const rpc = readFileSync('supabase/migrations/20260826101000_service_procurement_rpc.sql', 'utf8')
 const cleanup = readFileSync('supabase/migrations/20260826102000_service_procurement_cleanup.sql', 'utf8')
+const expenseNote = readFileSync('supabase/migrations/20260827110000_service_plan_expense_note.sql', 'utf8')
 
 for (const table of [
   'service_procurement_plans',
@@ -62,5 +63,8 @@ assert.doesNotMatch(`${schema}\n${rpc}`, /security definer/i)
 assert.match(cleanup, /delete from public\.storage_cleanup_jobs[\s\S]*storage_key like 'out-lab\/%'/i)
 assert.match(cleanup, /storage_key like 'service-procurement\/%'/i)
 assert.doesNotMatch(cleanup, /or storage_key like 'out-lab\/%'/i)
+assert.match(expenseNote, /alter column reason drop not null/i, 'expense notes must be optional')
+assert.match(expenseNote, /requires a source reference/i, 'PR/PO reference must remain required')
+assert.doesNotMatch(expenseNote, /requires a reason and source reference/i, 'expense notes must not be required')
 
 console.log('service procurement schema: ok')

@@ -2,6 +2,7 @@ import type { z } from 'zod'
 import type { LotExpiryStatus, MovementType, StockLevel } from './balance'
 import type {
   createInventoryItemInputSchema,
+  inventoryAnnualReportFiltersSchema,
   inventoryExportFiltersSchema,
   inventoryFiltersSchema,
   inventoryMinimumStockSettingsInputSchema,
@@ -23,6 +24,7 @@ export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>
 export type StockBalanceInput = z.infer<typeof stockBalanceInputSchema>
 export type InventoryFilters = z.infer<typeof inventoryFiltersSchema>
 export type InventoryExportFilters = z.infer<typeof inventoryExportFiltersSchema>
+export type InventoryAnnualReportFilters = z.infer<typeof inventoryAnnualReportFiltersSchema>
 
 export interface InventoryLotRecord {
   id: string
@@ -161,4 +163,27 @@ export interface InventoryExportItemRecord {
   note: string | null
   onHand: number
   lots: InventoryExportLotRecord[]
+}
+
+export interface InventoryAnnualReportItemSource {
+  id: string
+  lsCode: string
+  name: string
+  baseUnit: string
+  responsibleDepartment: string | null
+  defaultUnitPrice: number | null
+  note: string | null
+  isActive: boolean
+}
+
+export interface InventoryAnnualReportMovementSource {
+  inventoryItemId: string
+  movementType: MovementType
+  quantity: number
+  occurredOn: string
+}
+
+export interface InventoryAnnualReportData {
+  items: InventoryAnnualReportItemSource[]
+  movements: InventoryAnnualReportMovementSource[]
 }

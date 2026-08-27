@@ -1,0 +1,30 @@
+appId: th.go.cbh.labcbh.backup
+productName: LABCBH Backup
+electronVersion: 44.0.0
+artifactName: LABCBH-Backup-Setup-${version}.${ext}
+asar: true
+directories:
+  output: ../release
+  buildResources: build
+files:
+  - "**/*"
+  - "!postgresql/**/*"
+extraResources:
+  - from: postgresql
+    to: postgresql
+    filter:
+      - "**/*"
+win:
+  icon: ../public/images/cbh-lab-logo-v3.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: LABCBH Backup
+  runAfterFinish: false

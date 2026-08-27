@@ -57,3 +57,13 @@ export function RequisitionIcon() {
     </svg>
   )
 }
+
+export function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M12 3v11" />
+      <path d="m8 10 4 4 4-4" />
+      <path d="M4 17.5v2A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-2" />
+    </svg>
+  )
+}

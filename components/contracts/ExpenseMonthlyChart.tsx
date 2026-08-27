@@ -7,28 +7,38 @@ const fullMonthLabel = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { year: 'n
 
 interface ExpenseMonthlyChartProps {
   series: ExpenseMonthlySeriesEntry[]
+  title?: string
+  summaryLabel?: string
+  legendLabel?: string
+  emptyMessage?: string
 }
 
 /**
  * A small dependency-free bar chart. The ledger table remains directly below
  * it for exact values, while every bar carries its own text alternative.
  */
-export function ExpenseMonthlyChart({ series }: ExpenseMonthlyChartProps) {
+export function ExpenseMonthlyChart({
+  series,
+  title = 'การใช้จ่ายตั้งแต่เริ่มสัญญา',
+  summaryLabel = 'รวม',
+  legendLabel = 'ยอดใช้จ่ายต่อเดือน',
+  emptyMessage = 'ยังไม่มีช่วงเวลาสำหรับแสดงกราฟรายเดือน',
+}: ExpenseMonthlyChartProps) {
   const maximum = Math.max(...series.map((entry) => entry.amount), 0)
   const total = series.reduce((sum, entry) => sum + entry.amount, 0)
 
   if (series.length === 0) {
-    return <p className="expense-monthly-chart__empty">ยังไม่มีช่วงเวลาสัญญาสำหรับแสดงกราฟรายเดือน</p>
+    return <p className="expense-monthly-chart__empty">{emptyMessage}</p>
   }
 
   return (
     <figure className="expense-monthly-chart" aria-labelledby="expense-monthly-chart-title">
       <div className="expense-monthly-chart__heading">
         <div>
-          <h3 id="expense-monthly-chart-title">การใช้จ่ายตั้งแต่เริ่มสัญญา</h3>
-          <p>{series.length} เดือน · รวม {money.format(total)}</p>
+          <h3 id="expense-monthly-chart-title">{title}</h3>
+          <p>{series.length} เดือน · {summaryLabel} {money.format(total)}</p>
         </div>
-        <span className="expense-monthly-chart__legend"><i aria-hidden="true" />ยอดใช้จ่ายต่อเดือน</span>
+        <span className="expense-monthly-chart__legend"><i aria-hidden="true" />{legendLabel}</span>
       </div>
 
       <ol

@@ -39,7 +39,7 @@ export interface ServicePlanLedgerRecord {
   purchaseRequestId: string | null
   usageEventId: string | null
   referenceLedgerId: string | null
-  reason: string
+  reason: string | null
   sourceReference: string | null
   actorName: string | null
   createdAt: string

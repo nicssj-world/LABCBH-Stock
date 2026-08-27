@@ -24,7 +24,7 @@ export function InventoryExportDialog({ departments }: InventoryExportDialogProp
 
   return (
     <>
-      <Button variant="secondary" onClick={open}>ส่งออก PDF</Button>
+      <Button variant="secondary" onClick={open}>Export PDF</Button>
 
       <dialog
         ref={dialogRef}
@@ -40,10 +40,10 @@ export function InventoryExportDialog({ departments }: InventoryExportDialogProp
       >
         <header className="app-dialog__header">
           <div>
-            <h2 id={titleId}>ส่งออกคงคลังเป็น PDF</h2>
+            <h2 id={titleId}>Export คงคลังเป็น PDF</h2>
             <p>เลือกขอบเขตรายงานก่อนสร้างไฟล์ PDF จากยอดคงเหลือล่าสุด</p>
           </div>
-          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างส่งออก PDF" onClick={close}>
+          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่าง Export PDF" onClick={close}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>

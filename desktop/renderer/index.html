@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LABCBH Backup</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none" role="presentation">
+              <path d="M10 4h12M13 4v8.2L6.8 22.3A4.7 4.7 0 0 0 10.8 29h10.4a4.7 4.7 0 0 0 4-6.7L19 12.2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.3 20h13.4M12 16.2h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <strong>LABCBH Backup</strong>
+            <span>เครื่องมือสำรองฐานข้อมูลประจำเครื่อง</span>
+          </div>
+        </div>
+        <div class="header-meta" id="header-meta" aria-live="polite">
+          <span class="status-dot status-dot--neutral" aria-hidden="true"></span>
+          <span id="header-profile">—</span>
+          <span class="header-meta__separator" aria-hidden="true">·</span>
+          <span id="header-status">กำลังเตรียมระบบ</span>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <section class="view view--setup" id="setup-view" aria-labelledby="setup-title" hidden>
+          <div class="setup-layout">
+            <aside class="setup-aside">
+              <div class="setup-aside__line" aria-hidden="true"></div>
+              <p class="setup-aside__label">LOCAL RUNNER · 2 PROJECTS</p>
+              <h1>เลือกโปรเจค แล้วตั้งค่า backup แยกกัน</h1>
+              <p class="setup-aside__copy">Stock และ LabManagement Portal อยู่คนละ Supabase project จึงต้องตั้งค่า connection และโฟลเดอร์แยกกันในโปรแกรมนี้</p>
+              <div class="setup-assurance">
+                <div class="assurance-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" role="presentation">
+                    <path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    <path d="m8.8 12 2.1 2.1 4.5-4.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <strong>ค่าลับถูกปกป้องใน Windows</strong>
+                  <span>แต่ละโปรเจคใช้ key และ connection string ของตัวเอง และเก็บด้วย Windows protected storage</span>
+                </div>
+              </div>
+            </aside>
+
+            <form class="panel setup-panel" id="setup-form" novalidate>
+              <div class="setup-heading setup-heading--profiles">
+                <div>
+                  <p class="setup-kicker">ตั้งค่าแยกตามปลายทาง</p>
+                  <h2 id="setup-title">เลือกโปรเจคที่จะตั้งค่า</h2>
+                  <p>ค่าของแต่ละโปรเจคจะไม่ถูกใช้ปะปนกัน และสามารถตั้งเวลาสำรองคนละรอบได้</p>
+                </div>
+                <span class="profile-count" id="setup-profile-count">0/2 พร้อมใช้งาน</span>
+              </div>
+              <div class="profile-picker" id="setup-profile-picker" role="tablist" aria-label="โปรเจคสำหรับการสำรอง"></div>
+
+              <div class="setup-progress" aria-label="ความคืบหน้าการตั้งค่า">
+                <div class="progress-step is-active" data-progress-step="1">
+                  <span>1</span>
+                  <strong>การเชื่อมต่อ</strong>
+                </div>
+                <div class="progress-rule" aria-hidden="true"></div>
+                <div class="progress-step" data-progress-step="2">
+                  <span>2</span>
+                  <strong>ไฟล์และเวลา</strong>
+                </div>
+              </div>
+
+              <div class="active-profile-band" id="setup-active-profile">
+                <span class="active-profile-band__marker" aria-hidden="true">S</span>
+                <div>
+                  <strong id="setup-profile-name">LABCBH Stock</strong>
+                  <span id="setup-profile-ref">stogulcfwsvunydmwrex</span>
+                </div>
+                <span class="active-profile-band__hint">กำลังตั้งค่า</span>
+              </div>
+
+              <div class="setup-step" data-setup-step="1">
+                <div class="setup-heading">
+                  <h2>เชื่อมต่อฐานข้อมูลของโปรเจคนี้</h2>
+                  <p>กรอกข้อมูลจาก Supabase ครั้งเดียว แอปจะจดจำอย่างปลอดภัยบนเครื่องนี้</p>
+                </div>
+
+                <div class="field-stack">
+                  <label class="field">
+                    <span class="field-label">Supabase project URL <em>จำเป็น</em></span>
+                    <input id="supabase-url" name="supabaseUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://ชื่อโปรเจกต์.supabase.co">
+                    <span class="field-help">ระบบจะตรวจ project ref จาก URL และป้องกันการจับคู่กับ database ผิดโปรเจค</span>
+                    <span class="field-error" id="supabase-url-error" role="alert"></span>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Supabase service role key <em>จำเป็นครั้งแรก</em></span>
+                    <span class="field-control">
+                      <input id="service-role-key" name="serviceRoleKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="วาง service role key ของโปรเจคนี้">
+                      <button class="field-icon-button" type="button" data-toggle-secret="service-role-key" aria-label="แสดงหรือซ่อน service role key">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.7"/></svg>
+                      </button>
+                    </span>
+                    <span class="field-help">ใช้เฉพาะ key จากฝั่ง server ห้ามใช้ anon/publishable key</span>
+                    <span class="field-error" id="service-role-key-error" role="alert"></span>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">PostgreSQL connection string <em>จำเป็นครั้งแรก</em></span>
+                    <span class="field-control">
+                      <input id="database-url" name="databaseUrl" type="password" autocomplete="new-password" spellcheck="false" placeholder="postgresql://postgres:รหัสผ่าน@โฮสต์:5432/postgres?sslmode=require">
+                      <button class="field-icon-button" type="button" data-toggle-secret="database-url" aria-label="แสดงหรือซ่อน PostgreSQL connection string">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.7"/></svg>
+                      </button>
+                    </span>
+                    <span class="field-help">หาได้จาก Connect → Direct connection ของโปรเจคที่เลือก</span>
+                    <span class="field-error" id="database-url-error" role="alert"></span>
+                  </label>
+                </div>
+
+                <div class="setup-callout setup-callout--info">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 10.5v5M12 7.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <p>ข้อมูลลับของ Stock และ Portal จะถูกเข้ารหัสแยกกันด้วยบัญชี Windows ของผู้ใช้คนนี้ และไม่ถูกส่งผ่านเว็บแอป</p>
+                </div>
+
+                <div class="setup-actions setup-actions--end">
+                  <button class="button button--primary" type="button" id="setup-next">ถัดไป: เลือกไฟล์และเวลา <span aria-hidden="true">→</span></button>
+                </div>
+              </div>
+
+              <div class="setup-step" data-setup-step="2" hidden>
+                <div class="setup-heading">
+                  <h2>กำหนดปลายทางและรอบเวลาของโปรเจคนี้</h2>
+                  <p>ไฟล์ของแต่ละโปรเจคจะอยู่คนละโฟลเดอร์ ค่าแนะนำคือเก็บไว้ 30 วันและสำรองเดือนละครั้งเวลา 02:00 น.</p>
+                </div>
+
+                <div class="field-stack">
+                  <label class="field">
+                    <span class="field-label">โฟลเดอร์เก็บไฟล์สำรอง <em>จำเป็น</em></span>
+                    <span class="field-control field-control--action">
+                      <input id="backup-root" name="backupRoot" type="text" autocomplete="off" spellcheck="false">
+                      <button class="button button--quiet" type="button" id="choose-folder">เลือกโฟลเดอร์</button>
+                    </span>
+                    <span class="field-help">ไฟล์จะอยู่ในโฟลเดอร์ย่อย database และล้างไฟล์เก่าตาม retention 30 วัน</span>
+                    <span class="field-error" id="backup-root-error" role="alert"></span>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">ไฟล์ pg_dump.exe <span class="optional-label">ถ้ามีอยู่ใน PATH เว้นว่างได้</span></span>
+                    <span class="field-control field-control--action">
+                      <input id="pg-dump-path" name="pgDumpPath" type="text" autocomplete="off" spellcheck="false" placeholder="ระบบจะค้นหา pg_dump.exe อัตโนมัติ">
+                      <button class="button button--quiet" type="button" id="choose-pg-dump">เลือกไฟล์</button>
+                    </span>
+                    <span class="field-help">ใช้ไฟล์เดียวกันได้ทั้งสองโปรเจค หากเป็น PostgreSQL major version ที่รองรับ</span>
+                    <span class="field-error" id="pg-dump-path-error" role="alert"></span>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">ชื่อเครื่อง runner</span>
+                    <input id="runner-id" name="runnerId" type="text" autocomplete="off" spellcheck="false">
+                    <span class="field-help">ใช้ร่วมกันทั้งสองโปรเจคเพื่อระบุว่า backup ทำจากเครื่องใด</span>
+                    <span class="field-error" id="runner-id-error" role="alert"></span>
+                  </label>
+                </div>
+
+                <div class="schedule-box">
+                  <label class="switch-row" for="schedule-enabled">
+                    <span class="switch-copy">
+                      <strong>เปิดสำรองอัตโนมัติสำหรับโปรเจคนี้</strong>
+                      <small>สร้าง Windows Task Scheduler แยกตามโปรเจค · เครื่องต้องเปิดและบัญชีนี้เข้าสู่ Windows</small>
+                    </span>
+                    <span class="switch-control">
+                      <input id="schedule-enabled" type="checkbox">
+                      <span class="switch-track" aria-hidden="true"><span></span></span>
+                    </span>
+                  </label>
+                  <div class="schedule-fields" id="schedule-fields">
+                    <label class="field field--compact">
+                      <span class="field-label">วันที่ของเดือน</span>
+                      <select id="schedule-day">
+                        <option value="1">วันที่ 1</option>
+                        <option value="7">วันที่ 7</option>
+                        <option value="15">วันที่ 15</option>
+                        <option value="28">วันที่ 28</option>
+                      </select>
+                    </label>
+                    <label class="field field--compact">
+                      <span class="field-label">เวลา</span>
+                      <input id="schedule-time" type="time" value="02:00">
+                    </label>
+                  </div>
+                </div>
+
+                <div class="setup-callout setup-callout--warning">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 4 8.5 15H3.5L12 4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9v4.5M12 16.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <p>ต้องติดตั้ง PostgreSQL client ที่มี pg_dump.exe ก่อนจึงจะสร้างไฟล์ได้ แอปจะไม่อัปโหลดไฟล์ dump ขึ้น cloud</p>
+                </div>
+
+                <div class="setup-actions">
+                  <button class="button button--secondary" type="button" id="setup-back"><span aria-hidden="true">←</span> ย้อนกลับ</button>
+                  <button class="button button--primary" type="submit" id="setup-save">บันทึกโปรเจคนี้และตรวจสอบ</button>
+                </div>
+              </div>
+
+              <div class="form-feedback" id="setup-feedback" role="alert" aria-live="assertive" hidden></div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view view--dashboard" id="dashboard-view" aria-labelledby="dashboard-title" hidden>
+          <div class="dashboard-heading">
+            <div>
+              <p class="dashboard-kicker">LOCAL BACKUP CONSOLE</p>
+              <h1 id="dashboard-title">สำรองฐานข้อมูล</h1>
+              <p id="dashboard-subtitle">เลือกโปรเจคด้านล่างเพื่อดูสถานะและสั่งสำรองแยกกัน</p>
+            </div>
+            <div class="heading-actions">
+              <button class="button button--secondary" type="button" id="open-settings">ตั้งค่าโปรเจค</button>
+              <button class="button button--primary button--prominent" type="button" id="backup-now">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                สำรองโปรเจคนี้
+              </button>
+            </div>
+          </div>
+
+          <div class="profile-picker profile-picker--dashboard" id="dashboard-profile-picker" role="tablist" aria-label="เลือกโปรเจคที่ต้องการดูสถานะ"></div>
+          <div class="dashboard-feedback" id="dashboard-feedback" role="status" aria-live="polite" hidden></div>
+
+          <div class="summary-grid">
+            <article class="panel status-panel" id="latest-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>สำรองล่าสุด</h2>
+                  <p id="latest-subtitle">กำลังอ่านสถานะจากเครื่องนี้</p>
+                </div>
+                <span class="status-chip status-chip--neutral" id="latest-status-chip"><span class="status-chip__dot" aria-hidden="true"></span><span>ยังไม่มีข้อมูล</span></span>
+              </div>
+              <div class="latest-result" id="latest-result">
+                <div class="latest-result__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h10l4 4v12H5V4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15 4v5h4M8 13h8M8 16.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </div>
+                <div>
+                  <strong id="latest-value">ยังไม่มี backup ของโปรเจคนี้</strong>
+                  <span id="latest-detail">เมื่อสำเร็จจะแสดงเวลา ขนาด และ checksum ที่นี่</span>
+                </div>
+              </div>
+              <dl class="fact-grid">
+                <div><dt>ขนาดไฟล์</dt><dd id="latest-size">—</dd></div>
+                <div><dt>Runner</dt><dd class="mono" id="latest-runner">—</dd></div>
+                <div><dt>จำนวนไฟล์ในเครื่อง</dt><dd id="local-count">0</dd></div>
+                <div><dt>อายุการเก็บ</dt><dd>30 วัน</dd></div>
+              </dl>
+            </article>
+
+            <article class="panel command-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>ความพร้อมของโปรเจค</h2>
+                  <p id="runner-subtitle">ตรวจสอบก่อนเริ่มงาน</p>
+                </div>
+                <span class="status-chip status-chip--neutral" id="runner-status-chip"><span class="status-chip__dot" aria-hidden="true"></span><span>กำลังตรวจสอบ</span></span>
+              </div>
+              <div class="command-list">
+                <div class="command-row">
+                  <span class="command-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 9h8M8 13h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+                  <div><strong>pg_dump</strong><span id="pg-dump-status">กำลังตรวจสอบไฟล์เครื่องมือ</span></div>
+                </div>
+                <div class="command-row">
+                  <span class="command-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 6v6l3.5 2M20 12a8 8 0 1 1-2.3-5.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3.5v3.8h-3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <div><strong>รอบอัตโนมัติ</strong><span id="schedule-status">ยังไม่ได้ตั้งเวลา</span></div>
+                </div>
+                <div class="command-row">
+                  <span class="command-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5h16M7 4v3.5M17 4v3.5M5.5 10.5h4M5.5 14h4M5.5 17.5h4M14.5 10.5h4M14.5 14h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/></svg></span>
+                  <div><strong>ตำแหน่งไฟล์</strong><span class="mono command-path" id="backup-root-status">—</span></div>
+                </div>
+              </div>
+              <div class="command-actions">
+                <button class="button button--quiet" type="button" id="test-connection">ตรวจสอบการเชื่อมต่อ</button>
+                <button class="button button--quiet" type="button" id="open-folder">เปิดโฟลเดอร์สำรอง</button>
+              </div>
+            </article>
+          </div>
+
+          <section class="panel history-panel" aria-labelledby="history-title">
+            <div class="panel-heading panel-heading--history">
+              <div>
+                <h2 id="history-title">การทำงานของโปรเจคนี้บนเครื่อง</h2>
+                <p>แสดง log ล่าสุดโดยไม่เปิดเผย key หรือ connection string</p>
+              </div>
+              <button class="button button--quiet" type="button" id="refresh-status">รีเฟรชสถานะ</button>
+            </div>
+            <div class="history-table-wrap">
+              <table class="history-table">
+                <thead><tr><th scope="col">เวลา</th><th scope="col">เหตุการณ์</th><th scope="col">รายละเอียด</th></tr></thead>
+                <tbody id="history-body"><tr><td colspan="3" class="empty-cell">ยังไม่มี log ของโปรเจคนี้</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <details class="panel help-panel">
+            <summary><span>ต้องการความช่วยเหลือ?</span><span class="summary-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+            <div class="help-content">
+              <div><strong>เลือกโปรเจค</strong><p>ใช้แถบโปรเจคด้านบนเพื่อสลับระหว่าง Stock และ LabManagement Portal ก่อนกดสำรอง</p></div>
+              <div><strong>ถ้าพบว่าไม่พบ pg_dump.exe</strong><p>ติดตั้ง PostgreSQL client แล้วเลือกไฟล์ pg_dump.exe ในการตั้งค่าของโปรเจคใดก็ได้ เครื่องมือเดียวกันใช้ร่วมกันได้</p></div>
+              <div><strong>ถ้าการเชื่อมต่อไม่สำเร็จ</strong><p>ตรวจสอบว่า project URL และ database connection string เป็นของโปรเจคเดียวกัน รหัสผ่านถูกต้อง และเครื่องออกอินเทอร์เน็ตไปยัง Supabase ได้</p></div>
+            </div>
+          </details>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>LABCBH · Local backup runner</span>
+        <span>ไฟล์สำรองแยกตามโปรเจคและไม่ถูกส่งผ่านเว็บแอป</span>
+      </footer>
+    </div>
+  </body>
+</html>

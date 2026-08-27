@@ -17,7 +17,7 @@ import { RouteProgress } from '@/components/ui/RouteProgress'
 import type { Actor } from '@/lib/auth/actor'
 import { EMPTY_NOTIFICATION_SNAPSHOT, type NotificationSnapshot } from '@/lib/notifications/types'
 
-type BenchIconName = 'overview' | 'contract' | 'service' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual'
+type BenchIconName = 'overview' | 'contract' | 'service' | 'pr' | 'receipt' | 'issue' | 'inventory' | 'settings' | 'annual' | 'backup'
 type NavTone = 'blue' | 'violet' | 'teal' | 'cyan' | 'amber' | 'rose' | 'green' | 'slate'
 const PORTAL_DASHBOARD_URL = 'https://lab-management-cbh.vercel.app/staff/dashboard'
 
@@ -48,6 +48,7 @@ const stockOfficerNavigation = {
   label: 'เจ้าหน้าที่คลัง',
   items: [
   { href: '/settings/access', label: 'สิทธิ์ผู้ใช้งาน', icon: 'settings', tone: 'slate' },
+  { href: '/settings/backup', label: 'สำรองฐานข้อมูล', icon: 'backup', tone: 'blue' },
   ] satisfies NavigationItem[],
 }
 
@@ -62,6 +63,7 @@ function BenchIcon({ name }: { name: BenchIconName }) {
     inventory: <><path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z" /><path d="M12 11v10" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></>,
     annual: <><path d="M5 5h14v16H5V5Z" /><path d="M8 3v4M16 3v4M5 10h14M8 14h2M14 14h2M8 17h2M14 17h2" /></>,
+    backup: <><ellipse cx="12" cy="5" rx="7" ry="3" /><path d="M5 5v7c0 1.7 3.1 3 7 3s7-1.3 7-3V5" /><path d="M5 12v7c0 1.7 3.1 3 7 3s7-1.3 7-3v-7" /></>,
   }
 
   return (

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {
   deriveServiceChecklist,
+  servicePlanHistoricalExpenseSchema,
   servicePurchaseRequestInputSchema,
   servicePlanInputSchema,
 } from '@/lib/service-procurement/schema'
@@ -11,6 +12,9 @@ import {
   fiscalYearRange,
   formatServiceRequestNumber,
   planBalance,
+  servicePlanAverageMonthly,
+  servicePlanExpenseMonthOptions,
+  servicePlanMonthlySeries,
 } from '@/lib/service-procurement/domain'
 
 assert.equal(fiscalYearFromDate('2025-09-30'), 2568)
@@ -33,6 +37,25 @@ assert.deepEqual(planBalance({ budget: 1000, spent: 250, reserved: 300 }), {
 assert.equal(deriveServiceFulfillment(10, 0), 'not_started')
 assert.equal(deriveServiceFulfillment(10, 5), 'partial')
 assert.equal(deriveServiceFulfillment(10, 10), 'complete')
+
+const monthlySeries = servicePlanMonthlySeries(2569, [
+  { eventDate: '2025-10-10', entryKind: 'historical_expense', amount: 100 },
+  { eventDate: '2025-10-20', entryKind: 'reservation', amount: 500 },
+  { eventDate: '2026-01-03', entryKind: 'expense', amount: 50 },
+], new Date('2026-08-27T00:00:00+07:00'))
+assert.equal(monthlySeries.find((entry) => entry.month === '2025-10-01')?.amount, 100)
+assert.equal(monthlySeries.find((entry) => entry.month === '2025-11-01')?.amount, 0)
+assert.equal(monthlySeries.at(-1)?.month, '2026-08-01')
+assert.equal(servicePlanAverageMonthly(1200), 100)
+assert.equal(servicePlanExpenseMonthOptions(2569, new Date('2026-08-27T00:00:00+07:00')).at(-1), '2026-08')
+
+const optionalNoteExpense = servicePlanHistoricalExpenseSchema.parse({
+  planId: '00000000-0000-0000-0000-000000000001',
+  amount: 100,
+  expenseDate: '2026-01-01',
+  sourceReference: 'PR-2569-0001',
+})
+assert.equal(optionalNoteExpense.reason, undefined)
 
 const underQuote = deriveServiceChecklist('annual_items', 49_999.99)
 assert.equal(underQuote.attachments.filter((entry) => entry.kind === 'quotation').length, 1)

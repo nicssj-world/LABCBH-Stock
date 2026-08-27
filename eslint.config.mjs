@@ -17,4 +17,12 @@ export default defineConfig([
     'playwright-report/**',
     'test-results/**',
   ]),
+  {
+    files: ['desktop/**/*.cjs'],
+    rules: {
+      // Electron's CommonJS entrypoints are intentionally loaded by the
+      // Electron runtime, which does not expose these modules as ESM imports.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 ])
