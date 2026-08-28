@@ -43,3 +43,17 @@ assert.doesNotMatch(noteSql, /delete\s+from\s+public\.inventory_items/i)
 assert.doesNotMatch(noteSql, /truncate\s+/i)
 
 console.log(`retired note encoding repair: ok (${noteMigrationNames[0]})`)
+
+const rewordMigrationNames = readdirSync(migrationsDir).filter((name) =>
+  name.endsWith('_reword_lpst02_retired_note.sql'),
+)
+assert.equal(rewordMigrationNames.length, 1, 'exactly one retired-note reword migration must exist')
+
+const rewordSql = readFileSync(join(migrationsDir, rewordMigrationNames[0]), 'utf8')
+assert.match(rewordSql, /convert_from\(\s*decode\(\s*'[0-9a-f]+'\s*,\s*'hex'\s*\)/i)
+assert.match(rewordSql, /'UTF8'/i)
+assert.match(rewordSql, /LPST02-RETIRED-20260828/i)
+assert.doesNotMatch(rewordSql, /delete\s+from\s+public\.inventory_items/i)
+assert.doesNotMatch(rewordSql, /truncate\s+/i)
+
+console.log(`retired note reword: ok (${rewordMigrationNames[0]})`)
