@@ -3807,6 +3807,7 @@ input[type="number"] {
 .receipt-post__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .requisition-lines { display: grid; gap: 16px; padding: 8px 22px 20px; }
+.requisition-picker-status { margin: -2px 0 0; padding: 10px 12px; color: var(--lab-muted); background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); font-size: 12px; font-weight: 600; }
 
 .requisition-line-list {
   display: grid;

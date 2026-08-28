@@ -65,8 +65,8 @@ assert.match(form, /readOnly/, 'the inventory note field must not be editable')
 const catalogCombobox = read('components/ui/CatalogItemCombobox.tsx')
 assert.match(catalogCombobox, /พิมพ์รหัสพัสดุ หรือชื่อรายการ/, 'requisition item search must provide a hint')
 
-// The item picker only offers the requester's work unit plus the two shared
-// stock units. Unassigned and unrelated items must stay out of the picker.
+// The browsable dropdown offers the requester's work unit plus the four shared
+// operational units. The type-ahead search deliberately has a wider scope.
 
 // Items with no currently available quantity never reach the picker. Physical
 // on-hand can exist while another waiting requisition has already reserved it.
@@ -84,10 +84,17 @@ assert.match(
 assert.match(
   form,
   /item\.responsibleDepartment !== null && eligibleDepartments\.includes\(item\.responsibleDepartment\)/,
-  'the item picker must include only assigned items in eligible departments',
+  'the dropdown must include only assigned items in eligible departments',
 )
-assert.match(form, /departmentCatalog\.map/, 'the picker options must come from the department-filtered catalog')
-assert.match(form, /ยังไม่มีรายการน้ำยาที่เบิกได้ในขณะนี้/)
+assert.match(form, /selectableDepartmentCatalog\.map/, 'the dropdown options must come from the department-filtered catalog')
+assert.match(form, /searchableCatalog = availableCatalog\.filter/, 'the type-ahead search must use the full available catalog')
+assert.match(form, /ขณะนี้ไม่มีรายการน้ำยาที่เบิกได้ในขอบเขตหน่วยงานของ dropdown/)
+assert.match(form, /selectedItemIds = new Set\(lines\.map\(\(line\) => line\.inventoryItemId\)\)/, 'selected reagents must be removed from both picker controls')
+assert.match(form, /selectableDepartmentCatalog = departmentCatalog\.filter\(\(item\) => !selectedItemIds\.has\(item\.inventoryItemId\)\)/, 'the dropdown must use the unselected department catalog')
+assert.match(form, /disabled=\{selectableDepartmentCatalog\.length === 0\}/, 'the dropdown must be disabled when there is no remaining scoped choice')
+assert.match(form, /disabled=\{searchableCatalog\.length === 0\}/, 'the type-ahead must be disabled when the full available catalog is exhausted')
+assert.match(form, /Active ที่ยังเบิกได้ทุกหน่วยงาน/, 'the type-ahead scope must be explained to the requester')
+assert.match(form, /เลือกรายการน้ำยาที่เบิกได้ในหน่วยงานนี้ครบแล้ว/, 'the dropdown must distinguish all-scoped-selected from no-stock states')
 
 // The requester picks straight from the dropdown, so the option itself must
 // carry the total on hand. Lot detail belongs to the officer choosing FIFO
@@ -108,14 +115,15 @@ assert.doesNotMatch(form, /showingUnfilteredCatalog|scopedCatalog/, 'the picker 
 
 assert.deepEqual(
   getRequisitionItemDepartments('งานอณูชีววิทยา'),
-  ['งานอณูชีววิทยา', 'สำนักงานกลุ่มงานเทคนิคการแพทย์', 'คลังน้ำยาและวัสดุวิทยาศาสตร์'],
-  'the requisition picker must include the requester work unit and both shared stock units',
+  ['งานอณูชีววิทยา', 'สำนักงานกลุ่มงานเทคนิคการแพทย์', 'คลังน้ำยาและวัสดุวิทยาศาสตร์', 'POCT', 'งานบริการผู้ป่วยนอก'],
+  'the requisition dropdown must include the requester work unit and four shared stock units',
 )
 
 // A real <select> lets the requester browse every eligible item at once,
 // alongside the type-ahead combobox for a faster path when they know the code.
-assert.match(form, /<select[\s\S]{0,120}onChange=\{\(event\) => \{[\s\S]{0,200}departmentCatalog\.find/, 'a browsable dropdown must exist in addition to the search combobox')
+assert.match(form, /<select[\s\S]{0,120}onChange=\{\(event\) => \{[\s\S]{0,220}selectableDepartmentCatalog\.find/, 'a browsable dropdown must exist in addition to the search combobox')
 assert.match(form, /CatalogItemCombobox/, 'the search combobox must remain available as an alternative')
+assert.match(catalogCombobox, /disabled\?: boolean/, 'the type-ahead picker must support a disabled exhausted state')
 
 const queries = read('lib/requisitions/queries.ts')
 assert.match(queries, /department\?: string/, 'requisition queries accept a department filter')
@@ -183,8 +191,8 @@ assert.doesNotMatch(signaturePad, /createBrowserClient|supabase\.from/, 'the bro
 const requisitionActions = read('lib/requisitions/actions.ts')
 const actorSource = read('lib/auth/actor.ts')
 assert.match(actorSource, /name,dept,avatar_url/, 'the signed-in actor must carry profiles.dept')
-assert.match(requisitionActions, /assertCreateItemScope/, 'the server must validate the selected department scope')
-assert.match(requisitionActions, /requisition\.department/, 'the server must validate against the department selected in the form')
+assert.match(requisitionActions, /assertCreateItemCatalog/, 'the server must validate selected items against the active catalog')
+assert.match(requisitionActions, /item\.is_active/, 'the server must reject inactive inventory items')
 assert.match(requisitionActions, /export async function signRequisitionReceipt/)
 assert.match(requisitionActions, /supabaseAdmin\.rpc\('sign_requisition_receipt'/)
 assert.match(requisitionActions, /assertStockOperator/)

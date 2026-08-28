@@ -116,13 +116,29 @@ export function RequisitionForm({
   // while the item is no longer available for a new request.
   const availableCatalog = catalog.filter((item) => item.availableToRequest > 0)
 
-  // The selected requesting department can draw from its work unit and the two
-  // shared stock units. Do not fall back to the whole catalogue: an unassigned
-  // or unrelated item must stay out of the requisition picker.
+  // The browsable dropdown is deliberately scoped to the requester's work
+  // unit and the four shared operational units. The type-ahead search below
+  // uses the full active, reservation-aware catalogue instead.
   const eligibleDepartments = getRequisitionItemDepartments(department)
   const departmentCatalog = availableCatalog.filter(
     (item) => item.responsibleDepartment !== null && eligibleDepartments.includes(item.responsibleDepartment),
   )
+  const selectedItemIds = new Set(lines.map((line) => line.inventoryItemId))
+  const selectableDepartmentCatalog = departmentCatalog.filter((item) => !selectedItemIds.has(item.inventoryItemId))
+  // Search is intentionally not department-scoped. `availableCatalog` already
+  // contains active inventory only, and its availability value accounts for
+  // usable lots minus waiting requisition reservations.
+  const searchableCatalog = availableCatalog.filter((item) => !selectedItemIds.has(item.inventoryItemId))
+  const departmentPickerInstruction = departmentCatalog.length === 0
+    ? 'ขณะนี้ไม่มีรายการน้ำยาที่เบิกได้ในขอบเขตหน่วยงานของ dropdown'
+    : selectableDepartmentCatalog.length === 0
+      ? 'เลือกรายการน้ำยาที่เบิกได้ในหน่วยงานนี้ครบแล้ว'
+      : undefined
+  const searchPickerInstruction = availableCatalog.length === 0
+    ? 'ขณะนี้ไม่มีรายการน้ำยา Active ที่มีจำนวนเบิกได้'
+    : searchableCatalog.length === 0
+      ? 'เลือกรายการน้ำยาในคลังครบแล้ว'
+      : 'พิมพ์รหัสพัสดุ หรือชื่อรายการ เพื่อค้นหาจากน้ำยา Active ที่ยังเบิกได้ทุกหน่วยงาน'
 
   const hasAvailabilityError = lines.some((line) => {
     const quantity = line.requestedQuantity
@@ -251,14 +267,15 @@ export function RequisitionForm({
           <label className="field-row">
             เลือกน้ำยาจากรายการ
             <select
+              disabled={selectableDepartmentCatalog.length === 0}
               value=""
               onChange={(event) => {
-                const choice = departmentCatalog.find((item) => item.inventoryItemId === event.target.value)
+                const choice = selectableDepartmentCatalog.find((item) => item.inventoryItemId === event.target.value)
                 if (choice) addLine(choice)
               }}
             >
               <option value="" disabled>เลือกน้ำยา…</option>
-              {departmentCatalog.map((item) => (
+              {selectableDepartmentCatalog.map((item) => (
                 <option key={item.inventoryItemId} value={item.inventoryItemId}>
                   {item.lsCode} · {item.name} · เบิกได้อีก {formatQuantity(item.availableToRequest, item.unit)}
                 </option>
@@ -269,19 +286,24 @@ export function RequisitionForm({
           <CatalogItemCombobox
             label="หรือพิมพ์ค้นหาน้ำยา"
             placeholder="พิมพ์รหัสพัสดุ หรือชื่อน้ำยา…"
-            options={departmentCatalog.map((item) => ({
+            options={searchableCatalog.map((item) => ({
               id: item.inventoryItemId,
               label: `${item.lsCode} · ${item.name}`,
               hint: `เบิกได้อีก ${formatQuantity(item.availableToRequest, item.unit)} · คงเหลือจริง ${formatQuantity(item.onHand, item.unit)}`,
               searchText: `${item.lsCode} ${item.name}`,
             }))}
+            instruction={searchPickerInstruction}
+            disabled={searchableCatalog.length === 0}
             onSelect={(id) => {
-              const choice = departmentCatalog.find((item) => item.inventoryItemId === id)
+              const choice = searchableCatalog.find((item) => item.inventoryItemId === id)
               if (choice) addLine(choice)
             }}
           />
           {departmentCatalog.length === 0 && (
-            <p className="empty-state">ยังไม่มีรายการน้ำยาที่เบิกได้ในขณะนี้</p>
+            <p className="requisition-picker-status" role="status">{departmentPickerInstruction}</p>
+          )}
+          {departmentCatalog.length > 0 && selectableDepartmentCatalog.length === 0 && (
+            <p className="requisition-picker-status" role="status">{departmentPickerInstruction}</p>
           )}
 
           {lines.length === 0 ? (

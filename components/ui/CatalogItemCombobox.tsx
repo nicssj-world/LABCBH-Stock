@@ -15,6 +15,7 @@ export interface CatalogItemComboboxProps {
   options: readonly CatalogItemComboboxOption[]
   onSelect: (id: string) => void
   instruction?: string
+  disabled?: boolean
 }
 
 export function CatalogItemCombobox({
@@ -23,6 +24,7 @@ export function CatalogItemCombobox({
   options,
   onSelect,
   instruction = 'พิมพ์รหัสพัสดุ หรือชื่อรายการ แล้วเลือกจากคำแนะนำ',
+  disabled = false,
 }: CatalogItemComboboxProps) {
   const inputId = useId()
   const hintId = `${inputId}-hint`
@@ -64,6 +66,7 @@ export function CatalogItemCombobox({
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          disabled={disabled}
           autoComplete="off"
           role="combobox"
           aria-autocomplete="list"
@@ -74,7 +77,7 @@ export function CatalogItemCombobox({
       </label>
       <small className="catalog-combobox__hint" id={hintId}>{instruction}</small>
 
-      {matches.length > 0 && (
+      {!disabled && matches.length > 0 && (
         <div className="catalog-combobox__suggestions" id={listId} role="listbox" aria-label="คำแนะนำรายการ">
           {matches.map((option) => (
             <button type="button" role="option" aria-selected={false} key={option.id} onClick={() => choose(option.id)}>
@@ -85,7 +88,7 @@ export function CatalogItemCombobox({
         </div>
       )}
 
-      {normalizedQuery && matches.length === 0 && (
+      {!disabled && normalizedQuery && matches.length === 0 && (
         <p className="catalog-combobox__empty" role="status">
           ไม่พบรายการ ลองพิมพ์รหัสพัสดุ หรือชื่อรายการอื่น
         </p>
