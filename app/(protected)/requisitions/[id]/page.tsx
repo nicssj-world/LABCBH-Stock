@@ -46,7 +46,13 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
     canFulfil ? listSelectableLots(itemIds) : null,
     listOnHand(itemIds),
   ])
-  const signaturePreview = canReceive ? await loadPortalSignatureDataUri(actor.id) : null
+  const signaturePreview = canReceive
+    ? await loadPortalSignatureDataUri({
+      id: actor.id,
+      ephisId: actor.ephisId,
+      name: actor.name,
+    })
+    : null
 
   if (lots) {
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots

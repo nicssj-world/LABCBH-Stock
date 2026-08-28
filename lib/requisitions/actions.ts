@@ -22,10 +22,12 @@ import {
   normalizeDrawnSignature,
   PORTAL_PROFILE_PATH,
   profileSignaturePath,
+  resolvePortalSignatureProfile,
   SIGNATURE_BUCKET,
 } from '@/lib/requisitions/signature'
 import type { DrawnSignatureInput, FulfillRequisitionInput, RequisitionInput } from '@/lib/requisitions/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getPortalSupabaseAdmin } from '@/lib/supabase/portal-admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 
 const requisitionIdSchema = z.string().uuid()
@@ -172,18 +174,28 @@ export async function saveDrawnSignature(
   }
   assertRequisitionReceiver(actor, existing.requesterId)
 
-  const normalized = await normalizeDrawnSignature(parsed.signature)
-  await ensureSignatureBucket()
+  const portalProfile = await resolvePortalSignatureProfile({
+    id: actor.id,
+    ephisId: actor.ephisId,
+    name: actor.name,
+  })
+  if (!portalProfile) {
+    throw new Error(`ไม่พบโปรไฟล์ผู้ตรวจรับใน Portal กรุณาเปิด ${PORTAL_PROFILE_PATH}`)
+  }
 
-  const { data: currentProfile, error: profileError } = await supabaseAdmin
+  const normalized = await normalizeDrawnSignature(parsed.signature)
+  const portalAdmin = getPortalSupabaseAdmin()
+  await ensureSignatureBucket(portalAdmin)
+
+  const { data: currentProfile, error: profileError } = await portalAdmin
     .from('profiles')
     .select('signature_url')
-    .eq('id', actor.id)
+    .eq('id', portalProfile.id)
     .maybeSingle()
   if (profileError) throw new Error(`อ่านโปรไฟล์ลายเซ็นต์ไม่สำเร็จ: ${profileError.message}`)
 
-  const signaturePath = profileSignaturePath(actor.id)
-  const { error: uploadError } = await supabaseAdmin.storage
+  const signaturePath = profileSignaturePath(portalProfile.id)
+  const { error: uploadError } = await portalAdmin.storage
     .from(SIGNATURE_BUCKET)
     .upload(signaturePath, normalized.buffer, {
       contentType: 'image/png',
@@ -192,8 +204,8 @@ export async function saveDrawnSignature(
   if (uploadError) throw new Error(`บันทึกลายเซ็นต์ลง Portal ไม่สำเร็จ: ${uploadError.message}`)
 
   try {
-    const result = await supabaseAdmin.rpc('save_profile_signature', {
-      p_actor_id: actor.id,
+    const result = await portalAdmin.rpc('save_profile_signature', {
+      p_actor_id: portalProfile.id,
       p_signature_path: signaturePath,
     })
 
@@ -202,7 +214,7 @@ export async function saveDrawnSignature(
       ? saved.previous_signature_path
       : currentProfile?.signature_url
     if (previousPath && previousPath !== signaturePath) {
-      await supabaseAdmin.storage.from(SIGNATURE_BUCKET).remove([previousPath])
+      await portalAdmin.storage.from(SIGNATURE_BUCKET).remove([previousPath])
     }
 
     revalidateRequisition(parsedId)
@@ -211,7 +223,7 @@ export async function saveDrawnSignature(
     // Do not remove an overwritten actor.id.png: the profile still points to
     // that path and the new image is safer than leaving a broken signature.
     if (currentProfile?.signature_url !== signaturePath) {
-      await supabaseAdmin.storage.from(SIGNATURE_BUCKET).remove([signaturePath])
+      await portalAdmin.storage.from(SIGNATURE_BUCKET).remove([signaturePath])
     }
     throw caught
   }
@@ -230,7 +242,11 @@ export async function receiveRequisition(requisitionId: string) {
   const receivedByName = actor.name?.trim()
   if (!receivedByName) throw new Error('ไม่พบชื่อผู้ตรวจรับในโปรไฟล์ Portal')
 
-  const signature = await loadPortalSignatureDataUri(actor.id)
+  const signature = await loadPortalSignatureDataUri({
+    id: actor.id,
+    ephisId: actor.ephisId,
+    name: actor.name,
+  })
   if (!signature) {
     throw new Error(`ไม่พบลายเซ็นต์ใน Portal กรุณาวาดลายเซ็นต์ หรือเปิด ${PORTAL_PROFILE_PATH}`)
   }

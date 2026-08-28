@@ -31,6 +31,7 @@ export function RequisitionReceiptDialog({
   const { dialogRef, isRendered, open: openDialog, unmount: unmountDialog } = useDeferredDialog()
   const [signature, setSignature] = useState(signaturePreview)
   const [drawnSignature, setDrawnSignature] = useState<string | null>(null)
+  const [isReplacingSignature, setIsReplacingSignature] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSavingSignature, setIsSavingSignature] = useState(false)
   const [isReceiving, setIsReceiving] = useState(false)
@@ -55,7 +56,24 @@ export function RequisitionReceiptDialog({
 
   const closeDialog = () => {
     if (isPending) return
+    setError(null)
+    setDrawnSignature(null)
+    setIsReplacingSignature(false)
     unmountDialog()
+  }
+
+  const startSignatureReplacement = () => {
+    if (isPending) return
+    setError(null)
+    setDrawnSignature(null)
+    setIsReplacingSignature(true)
+  }
+
+  const keepExistingSignature = () => {
+    if (isPending) return
+    setError(null)
+    setDrawnSignature(null)
+    setIsReplacingSignature(false)
   }
 
   const saveSignature = async () => {
@@ -70,6 +88,7 @@ export function RequisitionReceiptDialog({
       const saved = await saveDrawnSignature(requisitionId, { signature: drawnSignature })
       setSignature(saved.signature)
       setDrawnSignature(null)
+      setIsReplacingSignature(false)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'บันทึกลายเซ็นต์ไม่สำเร็จ กรุณาลองใหม่')
     } finally {
@@ -78,6 +97,11 @@ export function RequisitionReceiptDialog({
   }
 
   const confirmReceipt = async () => {
+    if (isReplacingSignature) {
+      setError('กรุณาบันทึกลายเซ็นต์ใหม่ หรือเลือกใช้ลายเซ็นต์เดิมก่อนยืนยัน')
+      return
+    }
+
     if (!signature || !actorName?.trim()) {
       setError('ต้องมีลายเซ็นต์และชื่อผู้ตรวจรับจาก Portal ก่อนยืนยัน')
       return
@@ -191,11 +215,63 @@ export function RequisitionReceiptDialog({
               </div>
 
               {signature ? (
-                <div className="requisition-receipt-dialog__signature-preview">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- the private Portal signature is sent as an in-memory data URI */}
-                  <img src={signature} alt="ลายเซ็นต์ประจำตัวจาก Portal" />
-                  <p>ใช้ลายเซ็นต์ประจำตัวที่บันทึกไว้ใน Portal</p>
-                </div>
+                <>
+                  <div className="requisition-receipt-dialog__signature-preview">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- the private Portal signature is sent as an in-memory data URI */}
+                    <img src={signature} alt="ลายเซ็นต์ประจำตัวจาก Portal" />
+                    <p>ใช้ลายเซ็นต์ประจำตัวที่บันทึกไว้ใน Portal</p>
+                  </div>
+                  {isReplacingSignature ? (
+                    <div className="requisition-receipt-dialog__signature-replacement">
+                      <div className="requisition-receipt-dialog__signature-notice">
+                        <strong>กำลังวาดลายเซ็นต์ใหม่</strong>
+                        <p>
+                          เมื่อบันทึก ระบบจะบันทึกลายเซ็นต์ใหม่นี้ทับลายเซ็นต์เดิมใน Portal
+                        </p>
+                      </div>
+                      <SignaturePad
+                        onChange={setDrawnSignature}
+                        disabled={isPending}
+                      />
+                      <p id={signatureHelpId} className="form-field-note">
+                        ลายเซ็นต์ใหม่จะเป็นลายเซ็นต์ประจำตัวของคุณใน Portal และใช้กับการตรวจรับครั้งต่อไป
+                      </p>
+                      <div className="requisition-receipt-dialog__signature-replacement-actions">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={keepExistingSignature}
+                          disabled={isPending}
+                        >
+                          ใช้ลายเซ็นต์เดิม
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={saveSignature}
+                          disabled={isPending || !drawnSignature}
+                          aria-describedby={signatureHelpId}
+                        >
+                          {isSavingSignature ? 'กำลังบันทึกลายเซ็นต์…' : 'บันทึกลายเซ็นต์ใหม่แทนของเดิม'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="requisition-receipt-dialog__signature-existing-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={startSignatureReplacement}
+                        disabled={isPending}
+                      >
+                        วาดลายเซ็นต์ใหม่
+                      </Button>
+                      <p>
+                        หากต้องการเปลี่ยน ลายเซ็นต์ใหม่จะถูกบันทึกทับลายเซ็นต์เดิมใน Portal
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="requisition-receipt-dialog__signature-fallback">
                   <div className="requisition-receipt-dialog__signature-notice">
@@ -242,8 +318,8 @@ export function RequisitionReceiptDialog({
             <Button
               type="button"
               onClick={confirmReceipt}
-              disabled={isPending || !signature || !actorName?.trim()}
-              aria-describedby={signature ? undefined : signatureHelpId}
+              disabled={isPending || isReplacingSignature || !signature || !actorName?.trim()}
+              aria-describedby={signature && !isReplacingSignature ? undefined : signatureHelpId}
             >
               {isReceiving ? 'กำลังยืนยันตรวจรับ…' : 'ยืนยันตรวจรับของ'}
             </Button>

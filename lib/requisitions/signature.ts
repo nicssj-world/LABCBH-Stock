@@ -1,6 +1,7 @@
 import 'server-only'
 
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { getPortalSupabaseAdmin } from '@/lib/supabase/portal-admin'
 
 export const SIGNATURE_BUCKET = 'signatures'
 export const MAX_SIGNATURE_UPLOAD_BYTES = 2 * 1024 * 1024
@@ -12,6 +13,21 @@ const NORMALIZED_SIGNATURE_WIDTH = 900
 const NORMALIZED_SIGNATURE_HEIGHT = 260
 const NORMALIZED_CONTENT_WIDTH = 820
 const NORMALIZED_CONTENT_HEIGHT = 170
+
+export interface PortalSignatureIdentity {
+  id: string
+  ephisId: string | null
+  name: string | null
+}
+
+export interface PortalSignatureProfile {
+  id: string
+  ephisId: string | null
+  name: string | null
+  signatureUrl: string | null
+}
+
+const PORTAL_PROFILE_SELECT = 'id,ephis_id,name,signature_url,status,deleted_at'
 
 function decodePngDataUri(dataUri: string): Buffer {
   if (!dataUri.startsWith(PNG_DATA_URI_PREFIX)) {
@@ -89,19 +105,19 @@ export async function normalizeDrawnSignature(dataUri: string) {
   }
 }
 
-export async function ensureSignatureBucket() {
-  const { data, error } = await supabaseAdmin.storage.listBuckets()
+export async function ensureSignatureBucket(client: SupabaseClient = getPortalSupabaseAdmin()) {
+  const { data, error } = await client.storage.listBuckets()
   if (error) throw new Error(`ตรวจสอบพื้นที่ลายเซ็นต์ไม่สำเร็จ: ${error.message}`)
   if (!data?.some((bucket) => bucket.id === SIGNATURE_BUCKET)) {
-    const { error: createError } = await supabaseAdmin.storage.createBucket(SIGNATURE_BUCKET, { public: false })
+    const { error: createError } = await client.storage.createBucket(SIGNATURE_BUCKET, { public: false })
     if (createError && !/already exists/i.test(createError.message)) {
       throw new Error(`เตรียมพื้นที่ลายเซ็นต์ไม่สำเร็จ: ${createError.message}`)
     }
   }
 }
 
-async function downloadSignature(path: string): Promise<Buffer | null> {
-  const { data, error } = await supabaseAdmin.storage.from(SIGNATURE_BUCKET).download(path)
+async function downloadSignature(client: SupabaseClient, path: string): Promise<Buffer | null> {
+  const { data, error } = await client.storage.from(SIGNATURE_BUCKET).download(path)
   if (error || !data) return null
 
   const bytes = Buffer.from(await data.arrayBuffer())
@@ -109,22 +125,74 @@ async function downloadSignature(path: string): Promise<Buffer | null> {
   return bytes
 }
 
+function mapPortalProfile(row: Record<string, unknown>): PortalSignatureProfile | null {
+  if (row.status !== 'active' || row.deleted_at !== null) return null
+  if (typeof row.id !== 'string') return null
+
+  return {
+    id: row.id,
+    ephisId: typeof row.ephis_id === 'string' ? row.ephis_id : null,
+    name: typeof row.name === 'string' ? row.name : null,
+    signatureUrl: typeof row.signature_url === 'string' ? row.signature_url : null,
+  }
+}
+
+async function findPortalProfile(
+  client: SupabaseClient,
+  field: 'id' | 'ephis_id' | 'name',
+  value: string,
+): Promise<PortalSignatureProfile | null> {
+  const { data, error } = await client
+    .from('profiles')
+    .select(PORTAL_PROFILE_SELECT)
+    .eq(field, value)
+    .limit(2)
+
+  if (error) throw new Error(`อ่านโปรไฟล์จาก Lab Management Portal ไม่สำเร็จ: ${error.message}`)
+  if (!data || data.length === 0) return null
+  if (data.length > 1) {
+    throw new Error(`พบโปรไฟล์ Portal ซ้ำหลายรายการสำหรับ ${field}`)
+  }
+
+  return mapPortalProfile(data[0] as Record<string, unknown>)
+}
+
+/**
+ * Resolve a Stock actor to the Portal profile that owns the reusable
+ * signature. UUIDs are shared in the production project, while staging can
+ * use a different auth/profile project; ephis_id is the stable cross-project
+ * identity in that case. Name is a last-resort migration bridge only when no
+ * ephis_id is available and must still be unique.
+ */
+export async function resolvePortalSignatureProfile(
+  identity: PortalSignatureIdentity,
+): Promise<PortalSignatureProfile | null> {
+  const client = getPortalSupabaseAdmin()
+  const byId = await findPortalProfile(client, 'id', identity.id)
+  if (byId) return byId
+
+  const ephisId = identity.ephisId?.trim()
+  if (ephisId) {
+    const byEphisId = await findPortalProfile(client, 'ephis_id', ephisId)
+    if (byEphisId) return byEphisId
+  }
+
+  const name = identity.name?.trim()
+  return name ? findPortalProfile(client, 'name', name) : null
+}
+
 /**
  * Reads the current Portal profile signature server-side. The browser receives
  * a short-lived in-memory data URI preview; the private Storage path never
  * leaves the server.
  */
-export async function loadPortalSignatureDataUri(profileId: string): Promise<string | null> {
-  const { data, error } = await supabaseAdmin
-    .from('profiles')
-    .select('signature_url')
-    .eq('id', profileId)
-    .maybeSingle()
+export async function loadPortalSignatureDataUri(
+  identity: PortalSignatureIdentity,
+): Promise<string | null> {
+  const profile = await resolvePortalSignatureProfile(identity)
+  if (!profile?.signatureUrl) return null
 
-  if (error) throw new Error(`อ่านลายเซ็นต์จาก Portal ไม่สำเร็จ: ${error.message}`)
-  if (!data?.signature_url) return null
-
-  const bytes = await downloadSignature(data.signature_url)
+  const bytes = await downloadSignature(getPortalSupabaseAdmin(), profile.signatureUrl)
   if (!bytes) return null
 
   try {

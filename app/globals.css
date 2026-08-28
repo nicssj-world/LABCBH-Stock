@@ -4900,6 +4900,30 @@ frozen on screen with nothing to say the click was received.
   border-radius: 8px;
 }
 
+.requisition-receipt-dialog__signature-existing-actions,
+.requisition-receipt-dialog__signature-replacement {
+  display: grid;
+  gap: 12px;
+}
+
+.requisition-receipt-dialog__signature-existing-actions {
+  align-items: start;
+}
+
+.requisition-receipt-dialog__signature-existing-actions p {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.requisition-receipt-dialog__signature-replacement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .requisition-receipt-dialog__receiver {
   display: flex;
   flex-wrap: wrap;
@@ -4969,9 +4993,15 @@ frozen on screen with nothing to say the click was received.
   }
 
   .requisition-receipt-dialog__actions .lab-button,
-  .requisition-receipt-dialog__signature-fallback > .lab-button {
+  .requisition-receipt-dialog__signature-fallback > .lab-button,
+  .requisition-receipt-dialog__signature-replacement-actions .lab-button {
     width: 100%;
     min-width: 0;
+  }
+
+  .requisition-receipt-dialog__signature-replacement-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
 
