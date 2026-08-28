@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { CONTRACT_TYPES } from '@/lib/contracts/schema'
+import { PURCHASE_METHODS } from '@/lib/pr/schema'
+import type { PurchaseMethodKind } from '@/lib/pr/schema'
 import type {
   ContractDurationYears,
   ContractStatus,
@@ -28,6 +30,7 @@ import type {
   LeaseDurationSummary,
 } from './executive-types'
 import { contractMatchesExecutiveFollowUp, executiveFollowUpHref } from './follow-up'
+import { canClassifyExecutivePurchaseReceipt } from './purchase-classification'
 
 const numericSchema = z
   .union([z.number(), z.string()])
@@ -85,6 +88,11 @@ const purchaseRequestItemRowSchema = z.object({
   ]).nullable().optional(),
 })
 
+const purchaseRequestRowSchema = z.object({
+  id: z.string(),
+  purchase_method: z.enum(PURCHASE_METHODS),
+})
+
 const servicePlanRowSchema = z.object({
   id: z.string(),
   fiscal_year: numericSchema.pipe(z.number().int()),
@@ -135,6 +143,7 @@ export interface ExecutivePurchaseRequestItemInput {
   unitPrice: number | null
   contractItemId: string | null
   contractId: number | null
+  purchaseMethod: PurchaseMethodKind | null
 }
 
 export interface ExecutiveServicePlanInput {
@@ -335,7 +344,7 @@ function buildCategories(spend: ExecutiveSpendTotals, accumulator: PeriodAccumul
       amount: spend.purchase,
       count: accumulator.purchaseCount,
       share: share(spend.purchase, spend.total),
-      note: 'มูลค่ารับเข้าคลังจากสัญญาที่ไม่ใช่เช่าเครื่อง',
+      note: 'มูลค่ารับเข้าคลังของงานซื้อ · ไม่รวมเช่าเครื่อง',
     },
     {
       key: 'hiring',
@@ -570,7 +579,7 @@ export function aggregateExecutiveOverview(input: ExecutiveAggregationInput): Ex
         if (receiptFiscalYear === fiscalYear) dataQuality.missingReceiptPriceCount += 1
         continue
       }
-      if (!contract || contract.contractType === 'equipment_lease') {
+      if (!canClassifyExecutivePurchaseReceipt(source.purchaseMethod, source.contractId, contract?.contractType)) {
         if (receiptFiscalYear === fiscalYear) {
           dataQuality.unclassifiedReceiptCount += 1
           if (amount !== null) dataQuality.unclassifiedReceiptAmount += amount
@@ -590,8 +599,8 @@ export function aggregateExecutiveOverview(input: ExecutiveAggregationInput): Ex
           quantity: receiptItem.quantity,
           unitPrice: source.unitPrice,
           amount,
-          contractId: contract.id,
-          contractName: safeName(contract.displayName, contract.product),
+          contractId: contract?.id ?? null,
+          contractName: contract ? safeName(contract.displayName, contract.product) : null,
         })
       }
     }
@@ -708,7 +717,7 @@ export async function getExecutiveOverview({ fiscalYear }: { fiscalYear: number 
   const requestIds = [...new Set(receiptRows.map((row) => row.purchase_request_id).filter((id): id is string => Boolean(id)))]
   const planIds = servicePlanRows.map((row) => row.id)
 
-  const [purchaseItemsResult, serviceLedgerResult] = await Promise.all([
+  const [purchaseItemsResult, purchaseRequestsResult, serviceLedgerResult] = await Promise.all([
     requestIds.length
       ? supabase
         .from('purchase_request_items')
@@ -722,6 +731,12 @@ export async function getExecutiveOverview({ fiscalYear }: { fiscalYear: number 
         `)
         .in('purchase_request_id', requestIds)
       : Promise.resolve({ data: [], error: null }),
+    requestIds.length
+      ? supabase
+        .from('purchase_requests')
+        .select('id, purchase_method')
+        .in('id', requestIds)
+      : Promise.resolve({ data: [], error: null }),
     planIds.length
       ? supabase
         .from('service_plan_ledger')
@@ -731,9 +746,14 @@ export async function getExecutiveOverview({ fiscalYear }: { fiscalYear: number 
   ])
 
   if (purchaseItemsResult.error) throw new Error(`อ่านรายการ PR สำหรับ Dashboard ผู้บริหารไม่สำเร็จ: ${purchaseItemsResult.error.message}`)
+  if (purchaseRequestsResult.error) throw new Error(`อ่านวิธีจัดซื้อของ PR สำหรับ Dashboard ผู้บริหารไม่สำเร็จ: ${purchaseRequestsResult.error.message}`)
   if (serviceLedgerResult.error) throw new Error(`อ่าน ledger งานจ้างสำหรับ Dashboard ผู้บริหารไม่สำเร็จ: ${serviceLedgerResult.error.message}`)
 
   const purchaseItemRows = purchaseRequestItemRowSchema.array().parse(purchaseItemsResult.data ?? [])
+  const purchaseRequestRows = purchaseRequestRowSchema.array().parse(purchaseRequestsResult.data ?? [])
+  const purchaseMethodsByRequestId = new Map<string, PurchaseMethodKind>(
+    purchaseRequestRows.map((row) => [row.id, row.purchase_method]),
+  )
   const ledgerRows = serviceLedgerRowSchema.array().parse(serviceLedgerResult.data ?? [])
 
   return aggregateExecutiveOverview({
@@ -769,6 +789,7 @@ export async function getExecutiveOverview({ fiscalYear }: { fiscalYear: number 
         unitPrice: row.unit_price,
         contractItemId: row.contract_item_id,
         contractId: relationContractId(row.contract_items),
+        purchaseMethod: purchaseMethodsByRequestId.get(row.purchase_request_id) ?? null,
       }
     }),
     servicePlans: servicePlanRows.map((row) => ({

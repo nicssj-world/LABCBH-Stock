@@ -197,7 +197,7 @@ export function ExecutiveDashboardView({ data }: { data: ExecutiveOverview }) {
 
       <section className="executive-kpi-grid" aria-label="ตัวเลขสำคัญรายปี">
         <KpiCard className="executive-kpi-card--total" label="ยอดรวมตามหมวด" value={data.spend.total} hint="งานซื้อ + งานจ้างทั้งหมด" comparison={comparison} />
-        <KpiCard className="executive-kpi-card--purchase" label="งานซื้อ" value={data.spend.purchase} hint="ยอดจากรายการรับเข้าคลังที่บันทึกเรียบร้อยแล้ว · เฉพาะสัญญาที่ไม่ใช่เช่าเครื่อง" />
+        <KpiCard className="executive-kpi-card--purchase" label="งานซื้อ" value={data.spend.purchase} hint="ยอดจากรายการรับเข้าคลังที่บันทึกเรียบร้อยแล้ว · ไม่รวมเช่าเครื่อง" />
         <KpiCard className="executive-kpi-card--hiring" label="งานจ้างทั้งหมด" value={data.spend.hiringTotal} hint={serviceHint} />
         <KpiCard className="executive-kpi-card--lease" label="เช่าเครื่อง" value={data.spend.lease} hint="รายละเอียดภายในงานจ้าง · ไม่บวกซ้ำ" />
       </section>

@@ -9,6 +9,7 @@ import {
   contractMatchesExecutiveFollowUp,
   executiveSourceHref,
 } from '../lib/dashboard/follow-up'
+import { canClassifyExecutivePurchaseReceipt } from '../lib/dashboard/purchase-classification'
 
 const overview = aggregateExecutiveOverview({
   fiscalYear: 2569,
@@ -73,6 +74,14 @@ const overview = aggregateExecutiveOverview({
       items: [{ inventoryItemId: 'item-1', quantity: 10 }],
     },
     {
+      id: 'receipt-annual-plan',
+      fiscalYear: 2569,
+      purchaseRequestId: 'pr-annual',
+      receivedDate: '2026-01-15',
+      status: 'posted',
+      items: [{ inventoryItemId: 'item-annual', quantity: 2 }],
+    },
+    {
       id: 'receipt-draft',
       fiscalYear: 2569,
       purchaseRequestId: 'pr-1',
@@ -96,6 +105,15 @@ const overview = aggregateExecutiveOverview({
     unitPrice: 50,
     contractItemId: 'line-1',
     contractId: 10,
+    purchaseMethod: 'contract',
+  }, {
+    purchaseRequestId: 'pr-annual',
+    inventoryItemId: 'item-annual',
+    itemName: 'น้ำยาตามแผนจัดซื้อ',
+    unitPrice: 25,
+    contractItemId: null,
+    contractId: null,
+    purchaseMethod: 'annual_plan',
   }],
   servicePlans: [{ id: 'plan-1', fiscalYear: 2569, name: 'งานตรวจวิเคราะห์', department: 'ห้องปฏิบัติการ' }],
   serviceLedger: [
@@ -106,11 +124,11 @@ const overview = aggregateExecutiveOverview({
 })
 
 assert.deepEqual(overview.spend, {
-  purchase: 500,
+  purchase: 550,
   service: 250,
   lease: 330,
   hiringTotal: 580,
-  total: 1080,
+  total: 1130,
 })
 assert.equal(overview.priorYearSpend.total, 0)
 assert.equal(overview.comparison.trend, 'no-baseline')
@@ -126,6 +144,19 @@ assert.equal(overview.categories.find((row) => row.key === 'hiring')?.amount, 58
 assert.equal(overview.categories.find((row) => row.key === 'lease')?.amount, 330)
 assert.equal(overview.dataQuality.unclassifiedReceiptCount, 1)
 assert.equal(overview.dataQuality.missingReceiptPriceCount, 0)
+assert.deepEqual(overview.purchaseSourceRows.find((row) => row.purchaseRequestId === 'pr-annual'), {
+  receiptId: 'receipt-annual-plan',
+  receivedDate: '2026-01-15',
+  purchaseRequestId: 'pr-annual',
+  itemName: 'น้ำยาตามแผนจัดซื้อ',
+  quantity: 2,
+  unitPrice: 25,
+  amount: 50,
+  contractId: null,
+  contractName: null,
+})
+assert.equal(canClassifyExecutivePurchaseReceipt('annual_plan', null, null), true)
+assert.equal(canClassifyExecutivePurchaseReceipt('contract', null, null), false)
 
 assert.equal(
   executiveSourceHref(2569, 'receiving-data-quality'),
@@ -200,6 +231,9 @@ async function runExportAssertions() {
   assert.match(page, /view=executive/)
   assert.match(page, /ExecutiveFiscalYearFilter/)
   assert.match(page, /ExecutiveDashboardView/)
+  const executiveQueries = readFileSync('lib/dashboard/executive.ts', 'utf8')
+  assert.match(executiveQueries, /purchase_method/, 'executive purchase totals must read the PR purchase method')
+  assert.match(executiveQueries, /canClassifyExecutivePurchaseReceipt/, 'executive purchase totals must share the receipt classification rule')
   const route = readFileSync('app/api/dashboard/executive/export/route.ts', 'utf8')
   assert.match(route, /format: z\.enum\(\['pdf', 'xlsx'\]\)/)
   assert.match(route, /generateExecutivePdf/)

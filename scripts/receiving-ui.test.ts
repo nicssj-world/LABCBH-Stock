@@ -166,6 +166,8 @@ assert.doesNotMatch(actions, /uploadPoImage|getPoImageUrl|set_goods_receipt_imag
 const queries = read('lib/receipts/queries.ts')
 assert.match(queries, /server-only/)
 assert.match(queries, /createClient/)
+assert.match(queries, /purchase_method/, 'data-quality checks must read the PR purchase method')
+assert.match(queries, /canClassifyExecutivePurchaseReceipt/, 'data-quality checks must share the dashboard purchase classification rule')
 assert.match(queries, /department\?: string/, 'receipt queries accept a department filter')
 assert.match(queries, /filters\.department/, 'receipt queries apply the department filter')
 assert.match(queries, /purchase_request_items/, 'receivable PRs include their line items')

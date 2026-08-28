@@ -1,7 +1,9 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { PURCHASE_METHODS_BY_PURPOSE } from '@/lib/pr/schema'
+import { PURCHASE_METHODS, PURCHASE_METHODS_BY_PURPOSE } from '@/lib/pr/schema'
+import type { PurchaseMethodKind } from '@/lib/pr/schema'
+import { canClassifyExecutivePurchaseReceipt } from '@/lib/dashboard/purchase-classification'
 import { fiscalYearRange } from '@/lib/service-procurement/domain'
 import { createClient } from '@/lib/supabase/server'
 import { GOODS_RECEIPT_STATUSES } from './schema'
@@ -59,6 +61,11 @@ const qualityPurchaseItemRowSchema = z.object({
     contractItemRelationSchema,
     z.array(contractItemRelationSchema),
   ]).nullable().optional(),
+})
+
+const qualityPurchaseRequestRowSchema = z.object({
+  id: z.string().uuid(),
+  purchase_method: z.enum(PURCHASE_METHODS),
 })
 
 const qualityContractRowSchema = z.object({
@@ -163,16 +170,29 @@ async function findDataQualityReceiptIds(receipts: GoodsReceiptRecord[]): Promis
     .map((receipt) => receipt.purchaseRequestId)
     .filter((id): id is string => Boolean(id)))]
   const supabase = await createClient()
-  const purchaseItemsResult = requestIds.length
-    ? await supabase
-      .from('purchase_request_items')
-      .select('purchase_request_id, inventory_item_id, unit_price, contract_item_id, contract_items (contract_id)')
-      .in('purchase_request_id', requestIds)
-    : { data: [], error: null }
+  const [purchaseItemsResult, purchaseRequestsResult] = await Promise.all([
+    requestIds.length
+      ? supabase
+        .from('purchase_request_items')
+        .select('purchase_request_id, inventory_item_id, unit_price, contract_item_id, contract_items (contract_id)')
+        .in('purchase_request_id', requestIds)
+      : Promise.resolve({ data: [], error: null }),
+    requestIds.length
+      ? supabase
+        .from('purchase_requests')
+        .select('id, purchase_method')
+        .in('id', requestIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
 
   if (purchaseItemsResult.error) throw new Error(`อ่านรายการ PR เพื่อตรวจสอบใบรับเข้าไม่สำเร็จ: ${purchaseItemsResult.error.message}`)
+  if (purchaseRequestsResult.error) throw new Error(`อ่านวิธีจัดซื้อของ PR เพื่อตรวจสอบใบรับเข้าไม่สำเร็จ: ${purchaseRequestsResult.error.message}`)
 
   const purchaseItems = qualityPurchaseItemRowSchema.array().parse(purchaseItemsResult.data ?? [])
+  const purchaseRequests = qualityPurchaseRequestRowSchema.array().parse(purchaseRequestsResult.data ?? [])
+  const purchaseMethodsByRequestId = new Map<string, PurchaseMethodKind>(
+    purchaseRequests.map((request) => [request.id, request.purchase_method]),
+  )
   const sourceByKey = new Map(purchaseItems.map((item) => [
     `${item.purchase_request_id}:${item.inventory_item_id}`,
     item,
@@ -192,18 +212,21 @@ async function findDataQualityReceiptIds(receipts: GoodsReceiptRecord[]): Promis
   const flaggedIds = new Set<string>()
 
   for (const receipt of candidates) {
-    if (!receipt.purchaseRequestId || receipt.items.length === 0) {
+    const purchaseRequestId = receipt.purchaseRequestId
+
+    if (!purchaseRequestId || receipt.items.length === 0) {
       flaggedIds.add(receipt.id)
       continue
     }
 
     const needsReview = receipt.items.some((item) => {
-      const source = sourceByKey.get(`${receipt.purchaseRequestId}:${item.inventoryItemId}`)
+      const source = sourceByKey.get(`${purchaseRequestId}:${item.inventoryItemId}`)
       if (!source || source.unit_price === null) return true
 
       const contractId = relationContractId(source.contract_items)
       const contractType = contractId === null ? null : contractTypes.get(contractId)
-      return contractType === null || contractType === undefined || contractType === 'equipment_lease'
+      const purchaseMethod = purchaseMethodsByRequestId.get(purchaseRequestId)
+      return !canClassifyExecutivePurchaseReceipt(purchaseMethod, contractId, contractType)
     })
     if (needsReview) flaggedIds.add(receipt.id)
   }

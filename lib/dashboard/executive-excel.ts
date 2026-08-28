@@ -63,7 +63,7 @@ export async function generateExecutiveWorkbook(data: ExecutiveOverview): Promis
     { label: 'ปีงบประมาณ', value: data.fiscalYear, note: `${formatThaiDate(data.fiscalYearRange.start)} – ${formatThaiDate(data.fiscalYearRange.end)}` },
     { label: 'ข้อมูล ณ วันที่', value: formatThaiDate(data.generatedOn), note: 'เวลาที่สร้างไฟล์รายงาน' },
     { label: 'ยอดรวมตามหมวด', value: data.spend.total, note: 'งานซื้อ + งานจ้างทั้งหมด' },
-    { label: 'งานซื้อ', value: data.spend.purchase, note: 'ยอดจากรายการรับเข้าคลังที่บันทึกเรียบร้อยแล้วจากสัญญาที่ไม่ใช่เช่าเครื่อง' },
+    { label: 'งานซื้อ', value: data.spend.purchase, note: 'ยอดจากรายการรับเข้าคลังที่บันทึกเรียบร้อยแล้ว · ไม่รวมเช่าเครื่อง' },
     { label: 'งานจ้างทั้งหมด', value: data.spend.hiringTotal, note: `งานจ้างระบบ ${data.spend.service.toLocaleString('th-TH')} บาท + เช่าเครื่อง ${data.spend.lease.toLocaleString('th-TH')} บาท` },
     { label: 'เช่าเครื่อง', value: data.spend.lease, note: 'รายละเอียดภายในงานจ้าง ไม่บวกซ้ำในยอดรวม' },
     { label: 'ยอดรวมปีก่อน', value: data.priorYearSpend.total, note: 'ใช้สำหรับเปรียบเทียบแนวโน้ม' },
@@ -173,7 +173,7 @@ export async function generateExecutiveWorkbook(data: ExecutiveOverview): Promis
   ]
   alerts.addRows(data.alerts.map((alert) => ({ type: 'รายการต้องติดตาม', label: alert.label, detail: alert.detail, count: '', amount: '' })))
   alerts.addRows([
-    { type: 'Data Quality', label: 'รับเข้าไม่สามารถจัดหมวด', detail: 'ไม่มี PR/สัญญาที่เชื่อมโยง หรือเชื่อมกับเช่าเครื่อง', count: data.dataQuality.unclassifiedReceiptCount, amount: data.dataQuality.unclassifiedReceiptAmount },
+    { type: 'Data Quality', label: 'รับเข้าไม่สามารถจัดหมวด', detail: 'ไม่มี PR/ข้อมูลอ้างอิงที่จำเป็น หรือเชื่อมกับเช่าเครื่อง', count: data.dataQuality.unclassifiedReceiptCount, amount: data.dataQuality.unclassifiedReceiptAmount },
     { type: 'Data Quality', label: 'รับเข้าไม่มีราคา', detail: 'ไม่สามารถคำนวณมูลค่ารับเข้าจากราคาของ PR', count: data.dataQuality.missingReceiptPriceCount, amount: data.dataQuality.missingReceiptPriceAmount },
     { type: 'Data Quality', label: 'ค่าเช่าไม่มีเดือนอ้างอิง', detail: 'ไม่ถูกจัดเข้าปีงบประมาณ', count: data.dataQuality.missingUsageMonthCount, amount: data.dataQuality.missingUsageMonthAmount },
     { type: 'Data Quality', label: 'สัญญาเช่าไม่ระบุระยะเวลา', detail: 'ไม่สามารถจัดกลุ่ม 1 ปี/3 ปีได้', count: data.dataQuality.missingLeaseDurationCount, amount: '' },

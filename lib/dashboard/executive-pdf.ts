@@ -291,7 +291,7 @@ export async function generateExecutivePdf(data: ExecutiveOverview): Promise<Uin
     { header: 'รายละเอียด', width: TABLE_WIDTH - 350, align: 'left' },
   ], data.alerts.map((alert) => [alert.tone === 'danger' ? 'เร่งด่วน' : alert.tone === 'attention' ? 'ติดตาม' : 'ข้อมูล', alert.label, alert.detail]), font, { rowMinHeight: 31 }).top
   top -= 30
-  const qualityNote = 'หมายเหตุ: รายการรับเข้าที่ไม่มี PR ราคา หรือสัญญาที่เชื่อมโยง จะไม่ถูกจัดหมวดโดยการคาดเดา และแสดงแยกไว้ใน Data Quality ของไฟล์ Excel'
+  const qualityNote = 'หมายเหตุ: รายการรับเข้าที่ไม่มี PR ราคา หรือข้อมูลอ้างอิงที่จำเป็น จะไม่ถูกจัดหมวดโดยการคาดเดา และแสดงแยกไว้ใน Data Quality ของไฟล์ Excel'
   const qualityLines = wrapText(qualityNote, font, 10, TABLE_WIDTH, 3)
   qualityLines.forEach((line, index) => finalPage.drawText(line, { x: MARGIN_X, y: top - index * 14, font, size: 10, color: MUTED }))
 
