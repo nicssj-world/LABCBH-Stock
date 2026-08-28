@@ -3,6 +3,13 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingIncludes: {
+    // sharp is externalized by Next.js. Include its Linux native runtime in
+    // the requisition server action, otherwise Vercel can deploy the JS
+    // wrapper without libvips and signature saves fail at runtime.
+    '/requisitions/[id]': [
+      './node_modules/sharp/**/*',
+      './node_modules/@img/**/*',
+    ],
     '/api/purchase-requests/*/checklist/committee-pdf': [
       './node_modules/font-th-sarabun-new/fonts/*.ttf',
     ],

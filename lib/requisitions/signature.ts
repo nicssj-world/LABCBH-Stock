@@ -53,6 +53,9 @@ function decodePngDataUri(dataUri: string): Buffer {
   if (buffer.length === 0 || buffer.length > MAX_SIGNATURE_UPLOAD_BYTES) {
     throw new Error('ลายเซ็นต์ต้องมีขนาดไม่เกิน 2 MB')
   }
+  if (!isPngBuffer(buffer)) {
+    throw new Error('Canvas signature must contain a valid PNG file')
+  }
   return buffer
 }
 
@@ -108,7 +111,20 @@ async function normalizeSignatureBuffer(input: Buffer): Promise<Buffer> {
 
 export async function normalizeDrawnSignature(dataUri: string) {
   const input = decodePngDataUri(dataUri)
-  const output = await normalizeSignatureBuffer(input)
+  let output: Buffer
+  try {
+    output = await normalizeSignatureBuffer(input)
+  } catch (caught) {
+    // The canvas has already produced a valid PNG. Keep the workflow usable
+    // if a serverless image runtime is temporarily unavailable; the normal
+    // path above still enforces the Portal dimensions whenever sharp loads.
+    const fallback = toPngDataUri(input)
+    if (!fallback) throw caught
+    console.warn('[requisition.signature] saving validated canvas PNG without normalization', {
+      error: caught instanceof Error ? caught.message : String(caught),
+    })
+    return { buffer: input, dataUri: fallback }
+  }
   return {
     buffer: output,
     dataUri: `${PNG_DATA_URI_PREFIX}${output.toString('base64')}`,
