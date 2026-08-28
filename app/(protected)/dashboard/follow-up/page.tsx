@@ -49,14 +49,25 @@ function toneLabel(tone: ExecutiveAlert['tone']) {
   return 'ข้อมูล'
 }
 
-function FollowUpAlertCard({ alert, fiscalYear }: { alert: ExecutiveAlert; fiscalYear: number }) {
+function FollowUpAlertCard({
+  alert,
+  fiscalYear,
+  isCurrentCategory,
+}: {
+  alert: ExecutiveAlert
+  fiscalYear: number
+  isCurrentCategory: boolean
+}) {
   const href = isExecutiveFollowUpCategory(alert.key)
     ? executiveSourceHref(fiscalYear, alert.key)
     : null
   const label = sourceLabel(alert)
-  const filterHref = isExecutiveFollowUpCategory(alert.key)
+  const filterHref = isCurrentCategory
+    ? executiveFollowUpHref(fiscalYear)
+    : isExecutiveFollowUpCategory(alert.key)
     ? executiveFollowUpHref(fiscalYear, alert.key)
     : executiveFollowUpHref(fiscalYear)
+  const filterLabel = isCurrentCategory ? 'กลับไปดูรายการทั้งหมด' : 'ดูเฉพาะรายการนี้'
 
   return (
     <li className={`follow-up-item follow-up-item--${alert.tone}`} data-testid={`follow-up-${alert.key}`}>
@@ -70,7 +81,7 @@ function FollowUpAlertCard({ alert, fiscalYear }: { alert: ExecutiveAlert; fisca
       </div>
       <div className="follow-up-item__actions">
         {href && label && <Link className="lab-link-button lab-link-button--primary" href={href}>{label}</Link>}
-        <Link className="text-link" href={filterHref}>ดูเฉพาะประเด็นนี้ในคิว</Link>
+        <Link className="text-link" href={filterHref}>{filterLabel}</Link>
       </div>
     </li>
   )
@@ -179,7 +190,14 @@ export default async function ExecutiveFollowUpPage({ searchParams }: { searchPa
             </StatusChip>
           </div>
           <ul className="follow-up-list">
-            {alerts.map((alert) => <FollowUpAlertCard key={alert.key} alert={alert} fiscalYear={fiscalYear} />)}
+            {alerts.map((alert) => (
+              <FollowUpAlertCard
+                key={alert.key}
+                alert={alert}
+                fiscalYear={fiscalYear}
+                isCurrentCategory={category === alert.key}
+              />
+            ))}
           </ul>
         </section>
       )}

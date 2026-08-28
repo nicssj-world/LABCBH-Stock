@@ -244,6 +244,8 @@ async function runExportAssertions() {
   assert.match(leaseView, /PAGE_SIZE/)
   const followUpPage = readFileSync('app/(protected)/dashboard/follow-up/page.tsx', 'utf8')
   assert.match(followUpPage, /executiveSourceHref/, 'follow-up actions must open the underlying filtered register')
+  assert.match(followUpPage, /isCurrentCategory/, 'the current follow-up filter must not render a self-link')
+  assert.match(followUpPage, /กลับไปดูรายการทั้งหมด/, 'an already-filtered queue must offer a link back to all issues')
   assert.match(followUpPage, /เปิดทะเบียนสัญญาที่พบ|เปิดรายการรับเข้าที่พบ/, 'follow-up actions must identify the filtered source list')
   const contractPage = readFileSync('app/(protected)/contracts/page.tsx', 'utf8')
   assert.match(contractPage, /contractMatchesExecutiveFollowUp/, 'contract source links must apply the same issue predicate as the alert')
