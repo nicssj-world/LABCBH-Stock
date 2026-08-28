@@ -4437,6 +4437,7 @@ input[type="number"] {
 
 .print-signature__line { margin: 0 0 6px !important; }
 .print-signature__image { display: block; max-width: 100%; max-height: 60px; margin: 0 auto 6px; }
+.print-signature__missing { color: #666666; font-size: 9px; }
 .print-signature__role { font-weight: 700; }
 .print-signature__hint { color: #444444; }
 .print-signature__date { margin-top: 8px !important; }

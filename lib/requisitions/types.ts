@@ -49,6 +49,7 @@ export interface RequisitionRecord {
   status: RequisitionStatus
   note: string | null
   fulfilledAt: string | null
+  fulfilledBy: string | null
   fulfilledByName: string | null
   receivedBy: string | null
   receivedByName: string | null

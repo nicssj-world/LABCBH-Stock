@@ -6,6 +6,9 @@ const read = (path: string) => readFileSync(path, 'utf8')
 const printPage = read('app/(protected)/requisitions/[id]/print/page.tsx')
 assert.match(printPage, /params:\s*Promise</)
 assert.match(printPage, /RequisitionPrint/)
+assert.match(printPage, /loadPortalSignatureDataUri/)
+assert.match(printPage, /requisition\.fulfilledBy/)
+assert.match(printPage, /fulfilledBySignature/)
 
 const printComponent = read('components/requisitions/RequisitionPrint.tsx')
 
@@ -36,6 +39,9 @@ assert.match(printComponent, /ลงชื่อ/)
 // sign the printed form by hand. The fulfilment date is repeated in that block.
 assert.match(printComponent, /requisition\.fulfilledByName/)
 assert.match(printComponent, /requisition\.fulfilledAt\?\.slice\(0, 10\)/)
+assert.match(printComponent, /fulfilledBySignature/)
+assert.match(printComponent, /ลายเซ็นต์เจ้าหน้าที่คลังผู้จ่ายของ/)
+assert.match(printComponent, /ไม่พบลายเซ็นต์ใน Portal/)
 assert.match(printComponent, /\(\{block\.hint\}\)/, 'signature roles use the requested parenthesized labels')
 assert.match(printComponent, /print-signature__mark/, 'signature content reserves a shared row for alignment')
 

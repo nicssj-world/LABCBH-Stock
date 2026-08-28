@@ -6,7 +6,13 @@ import type { RequisitionRecord } from '@/lib/requisitions/types'
  * The paper form. Semantic markup only — layout and pagination live in the
  * print rules in globals.css so the same document renders on screen and on A4.
  */
-export function RequisitionPrint({ requisition }: { requisition: RequisitionRecord }) {
+export function RequisitionPrint({
+  requisition,
+  fulfilledBySignature = null,
+}: {
+  requisition: RequisitionRecord
+  fulfilledBySignature?: string | null
+}) {
   return (
     <article className="print-sheet">
       <header className="print-header">
@@ -119,13 +125,20 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
             )
           }
 
-          // The stock officer is identified by the fulfilment snapshot rather
-          // than signing the printed form by hand. The same fulfilment date is
-          // also shown here so the issuer block remains self-contained.
+          // The stock officer is identified by the fulfilment snapshot. Their
+          // reusable signature is loaded from the private Portal bucket on the
+          // server, while the name/date remain tied to this requisition.
           if (isIssuerBlock && requisition.fulfilledByName) {
             return (
               <div key={block.role} className="print-signature">
-                <div className="print-signature__mark" aria-hidden="true" />
+                <div className="print-signature__mark">
+                  {fulfilledBySignature ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- a server-rendered Portal signature is an in-memory data URI
+                    <img className="print-signature__image" src={fulfilledBySignature} alt="ลายเซ็นต์เจ้าหน้าที่คลังผู้จ่ายของ" />
+                  ) : (
+                    <span className="print-signature__missing">ไม่พบลายเซ็นต์ใน Portal</span>
+                  )}
+                </div>
                 <p className="print-signature__role">{requisition.fulfilledByName}</p>
                 <p className="print-signature__hint">({block.hint})</p>
                 <p className="print-signature__date">วันที่ {toThaiPrintDate(requisition.fulfilledAt?.slice(0, 10) ?? null)}</p>
