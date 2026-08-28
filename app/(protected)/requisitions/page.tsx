@@ -9,9 +9,11 @@ import { formatThaiDate } from '@/lib/inventory/presenter'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 import { RequisitionSummaryDialog } from '@/components/requisitions/RequisitionSummaryDialog'
+import { canReceiveRequisition } from '@/lib/requisitions/authorization'
 import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requisitions/presenter'
 import { listRequisitions } from '@/lib/requisitions/queries'
 import { REQUISITION_STATUSES } from '@/lib/requisitions/schema'
+import { loadPortalSignatureDataUri } from '@/lib/requisitions/signature'
 import type { RequisitionRecord } from '@/lib/requisitions/types'
 import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
 
@@ -20,6 +22,7 @@ interface RequisitionsPageProps {
 }
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+const PORTAL_PROFILE_URL = 'https://lab-management-cbh.vercel.app/staff/profile'
 
 export default async function RequisitionsPage({ searchParams }: RequisitionsPageProps) {
   const actor = await requireActor()
@@ -67,6 +70,22 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
     return query ? `/requisitions?${query}` : '/requisitions'
   }
   const showCancelledControl = cancelledCount > 0 || status === 'cancelled' || showCancelled
+  const hasReceivableRequisition = paginatedRequisitions.items.some(
+    (requisition) => requisition.status === 'fulfilled' && canReceiveRequisition(actor, requisition.requesterId),
+  )
+  let receiptSignaturePreview: string | null = null
+
+  if (hasReceivableRequisition) {
+    try {
+      receiptSignaturePreview = await loadPortalSignatureDataUri({
+        id: actor.id,
+        ephisId: actor.ephisId,
+        name: actor.name,
+      })
+    } catch (caught) {
+      console.error('[requisitions] unable to prepare receipt signature preview', caught)
+    }
+  }
 
   return (
     <div className="route-stack">
@@ -174,7 +193,17 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                 <tbody>
                   {paginatedRequisitions.items.map((requisition) => (
                     <tr key={requisition.id}>
-                      <td className="identifier requisition-register-table__document-cell"><RequisitionSummaryDialog requisition={requisition} /></td>
+                      <td className="identifier requisition-register-table__document-cell"><RequisitionSummaryDialog requisition={requisition}
+                        receiptAction={
+                          requisition.status === 'fulfilled' && canReceiveRequisition(actor, requisition.requesterId)
+                            ? {
+                              actorName: actor.name,
+                              signaturePreview: receiptSignaturePreview,
+                              portalProfileHref: PORTAL_PROFILE_URL,
+                            }
+                            : undefined
+                        }
+                      /></td>
                       <td className="requisition-register-table__date-cell">{formatThaiDate(requisition.desiredDate)}</td>
                       <td className="requisition-register-table__requester-cell">
                         {requisition.requesterName}

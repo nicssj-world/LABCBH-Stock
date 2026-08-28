@@ -25,6 +25,11 @@ const migrationName = readdirSync(migrationsDir).find((name) =>
 )
 assert.ok(migrationName, 'the requisition receipt migration must exist')
 const sql = readFileSync(join(migrationsDir, migrationName), 'utf8')
+const liveMigrationName = readdirSync(migrationsDir).find((name) =>
+  name.endsWith('_requisition_live_receipt_signature.sql'),
+)
+assert.ok(liveMigrationName, 'the live receipt signature migration must exist')
+const liveSql = readFileSync(join(migrationsDir, liveMigrationName), 'utf8')
 
 for (const column of ['received_by', 'received_by_name', 'signature', 'signed_at']) {
   assert.match(sql, new RegExp(`\\b${column}\\b`, 'i'))
@@ -44,6 +49,9 @@ assert.match(sql, /signed_at is not null/i)
 assert.match(sql, /signature is not null/i)
 assert.match(sql, /nullif\(btrim\(received_by_name\), ''\) is not null/i)
 assert.match(sql, /revoke execute on function public\.sign_requisition_receipt\(uuid, uuid, text, text\) from service_role/i)
+assert.match(liveSql, /drop function if exists public\.receive_requisition\(uuid, uuid, text, text\)/i)
+assert.match(liveSql, /signature = null/i)
+assert.match(liveSql, /signature_source.*portal_live/i)
 assert.ok(
   sql.indexOf('drop constraint if exists requisitions_fulfilled_audit_check')
     < sql.indexOf('update public.requisitions as requisition'),
@@ -67,7 +75,7 @@ assert.match(saveFunction, /for update/i)
 assert.match(saveFunction, /requisition\.receipt_signature_drawn/i)
 assert.match(saveFunction, /signature_url = v_signature_path/i)
 
-const receiveFunction = sql.match(
+const receiveFunction = liveSql.match(
   /create or replace function public\.receive_requisition[\s\S]*?\$function\$;/i,
 )?.[0]
 assert.ok(receiveFunction, 'receive_requisition must exist')
@@ -76,7 +84,7 @@ assert.match(receiveFunction, /set search_path = ''/i)
 assert.match(receiveFunction, /p_requisition_id/i)
 assert.match(receiveFunction, /p_actor_id/i)
 assert.match(receiveFunction, /p_received_by_name/i)
-assert.match(receiveFunction, /p_signature/i)
+assert.doesNotMatch(receiveFunction, /p_signature/i)
 assert.match(receiveFunction, /for update/i)
 assert.match(receiveFunction, /status <> 'fulfilled'/i)
 assert.match(receiveFunction, /already been received/i)
@@ -89,14 +97,17 @@ assert.ok(
   'receipt status must be re-read under the row lock',
 )
 
-for (const fn of ['save_profile_signature', 'receive_requisition']) {
+for (const [fn, functionSql] of [
+  ['save_profile_signature', sql],
+  ['receive_requisition', liveSql],
+] as const) {
   for (const role of ['public', 'anon', 'authenticated']) {
     assert.match(
-      sql,
+      functionSql,
       new RegExp(`revoke execute on function public\\.${fn}[\\s\\S]*?from ${role}`, 'i'),
     )
   }
-  assert.match(sql, new RegExp(`grant execute on function public\\.${fn}[\\s\\S]*?to service_role`, 'i'))
+  assert.match(functionSql, new RegExp(`grant execute on function public\\.${fn}[\\s\\S]*?to service_role`, 'i'))
 }
 
 const actions = readFileSync(join(process.cwd(), 'lib', 'requisitions', 'actions.ts'), 'utf8')
@@ -111,6 +122,7 @@ assert.match(actions, /p_actor_id: portalProfile\.id/)
 assert.match(actions, /supabaseAdmin\.rpc\('receive_requisition'/)
 assert.match(actions, /loadPortalSignatureDataUri/)
 assert.match(actions, /PORTAL_PROFILE_PATH/)
+assert.doesNotMatch(actions, /p_signature:\s*signature/)
 assert.doesNotMatch(actions, /supabaseAdmin\.storage/, 'Portal signatures must not be stored in the Stock client')
 assert.doesNotMatch(actions, /signRequisitionReceipt|sign_requisition_receipt/)
 

@@ -1,20 +1,32 @@
 import type {
   ServiceAttachmentKind,
   ServiceCommitteeKind,
+  ServiceExpenseFrequency,
   ServiceFulfillmentStatus,
+  ServicePlanDocumentKind,
   ServicePlanInput,
+  ServicePlanStatus,
   ServicePlanType,
   ServicePoStatus,
   ServicePrStatus,
   ServicePurchaseMethod,
   ServicePurchaseRequestInput,
-  ServiceUsageInput,
 } from './schema'
 
-export type { ServiceAttachmentKind, ServiceCommitteeKind, ServicePlanType, ServicePoStatus, ServicePrStatus, ServicePurchaseMethod, ServiceFulfillmentStatus }
+export type {
+  ServiceAttachmentKind,
+  ServiceCommitteeKind,
+  ServiceExpenseFrequency,
+  ServicePlanDocumentKind,
+  ServicePlanStatus,
+  ServicePlanType,
+  ServicePoStatus,
+  ServicePrStatus,
+  ServicePurchaseMethod,
+  ServiceFulfillmentStatus,
+}
 export type ServicePlanInputRecord = ServicePlanInput
 export type ServicePurchaseRequestInputRecord = ServicePurchaseRequestInput
-export type ServiceUsageInputRecord = ServiceUsageInput
 
 export interface ServicePlanBalance {
   budget: number
@@ -28,6 +40,24 @@ export interface ServiceResponsibleRecord {
   name: string
   department: string | null
   assignedAt: string
+}
+
+export interface ServicePlanTestItemRecord {
+  id: string
+  lineNumber: number
+  name: string
+  unit: string
+}
+
+export interface ServicePlanDocumentRecord {
+  id: string
+  kind: ServicePlanDocumentKind
+  fileName: string
+  mimeType: string
+  sizeBytes: number
+  storageKey: string
+  checksum: string | null
+  uploadedAt: string
 }
 
 export interface ServicePlanLedgerRecord {
@@ -53,6 +83,12 @@ export interface ServicePlanRecord {
   type: ServicePlanType
   budget: number
   balance: ServicePlanBalance
+  status: ServicePlanStatus
+  closedAt: string | null
+  isRedCross: boolean
+  requiresContract: boolean
+  testItems: ServicePlanTestItemRecord[]
+  documents: ServicePlanDocumentRecord[]
   responsibles: ServiceResponsibleRecord[]
   createdAt: string
   updatedAt: string
@@ -61,8 +97,9 @@ export interface ServicePlanRecord {
 export interface ServicePurchaseRequestItemRecord {
   id: string
   lineNumber: number
-  inventoryItemId: string
-  lsCode: string
+  planItemId: string
+  inventoryItemId: string | null
+  lsCode: string | null
   name: string
   unit: string
   requestedQuantity: number
@@ -77,7 +114,10 @@ export interface ServiceUsageEventRecord {
   kind: 'annual_usage' | 'lab_expense' | 'expense_adjustment' | 'expense_reversal'
   expenseDate: string
   amount: number
+  invoiceNumber: string | null
   note: string | null
+  status: 'active' | 'cancelled'
+  referenceEventId: string | null
   actorName: string | null
   createdAt: string
 }
@@ -122,10 +162,12 @@ export interface ServicePurchaseRequestRecord {
   department: string
   requestedDate: string
   note: string | null
-  planId: string | null
+  planId: string
   planName: string | null
   purchaseMethod: ServicePurchaseMethod
   requestedAmount: number
+  usageStartDate: string
+  usageEndDate: string
   requestedPoMonth: string | null
   status: ServicePrStatus
   poStatus: ServicePoStatus
@@ -135,9 +177,13 @@ export interface ServicePurchaseRequestRecord {
   poFilePath: string | null
   fulfillment: ServiceFulfillmentStatus
   actualAmount: number
+  expenseFrequency: ServiceExpenseFrequency
+  isRedCross: boolean
+  requiresContract: boolean
   items: ServicePurchaseRequestItemRecord[]
   usageEvents: ServiceUsageEventRecord[]
   attachments: ServiceAttachmentRecord[]
+  planDocuments: ServicePlanDocumentRecord[]
   committees: ServiceCommitteeRecord[]
   poEvents: ServicePoEventRecord[]
   createdAt: string

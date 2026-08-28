@@ -28,7 +28,7 @@ export default async function ServicePlansPage({ searchParams }: Props) {
   return (
     <div className="route-stack">
       <header className="page-heading page-heading--actions">
-        <div><p className="section-kicker">SERVICE PROCUREMENT · PLANS</p><h1>แผนงานจ้าง</h1><p>ติดตามยอดคงเหลือของแผนและบันทึกค่าใช้จ่ายรายเดือนตามปีงบประมาณ</p></div>
+        <div><p className="section-kicker">SERVICE PROCUREMENT · PLANS</p><h1>แผนงานจ้าง</h1><p>แสดงวงเงิน รายการส่งตรวจ และ PR/PO ที่อ้างอิง ยอดใช้จริงจะเกิดเมื่อปิด PO</p></div>
         <div className="page-heading__actions">
           {canManageServicePlans(actor) && <Link className="lab-link-button lab-link-button--primary" href="/service-procurement/plans/new">เพิ่มแผนงานจ้าง</Link>}
         </div>

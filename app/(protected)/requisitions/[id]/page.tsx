@@ -53,6 +53,22 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
       name: actor.name,
     })
     : null
+  let receivedBySignature: string | null = null
+  if (requisition.signedAt && requisition.receivedBy && requisition.receivedByName) {
+    try {
+      receivedBySignature = await loadPortalSignatureDataUri({
+        id: requisition.receivedBy,
+        ephisId: null,
+        name: requisition.receivedByName,
+      })
+    } catch (error) {
+      console.error('[requisition.detail] unable to load receiver signature', {
+        requisitionId: requisition.id,
+        receivedBy: requisition.receivedBy,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
 
   if (lots) {
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots
@@ -86,15 +102,6 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
               {REQUISITION_STATUS_LABELS[requisition.status]}
             </StatusChip>
             <span>{requisition.department}</span>
-            {canReceive && (
-              <RequisitionReceiptDialog
-                requisitionId={requisition.id}
-                items={requisition.items}
-                actorName={actor.name}
-                signaturePreview={signaturePreview}
-                portalProfileHref={PORTAL_PROFILE_URL}
-              />
-            )}
             {canManage && (
               <RequisitionLifecycleControls
                 requisitionId={requisition.id}
@@ -253,11 +260,23 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
             <div><dt>ผู้รับของ</dt><dd>{requisition.receivedByName}</dd></div>
             <div><dt>เซ็นต์รับเมื่อ</dt><dd className="identifier">{formatThaiDateTime(requisition.signedAt)}</dd></div>
           </dl>
-          {requisition.signature && (
+          {(receivedBySignature ?? requisition.signature) && (
             // eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through
-            <img className="requisition-signature__evidence" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+            <img className="requisition-signature__evidence" src={receivedBySignature ?? requisition.signature ?? undefined} alt="ลายเซ็นต์ผู้รับของ" />
           )}
         </section>
+      )}
+
+      {canReceive && (
+        <footer className="requisition-detail-actions" aria-label="การดำเนินการใบเบิก">
+          <RequisitionReceiptDialog
+            requisitionId={requisition.id}
+            items={requisition.items}
+            actorName={actor.name}
+            signaturePreview={signaturePreview}
+            portalProfileHref={PORTAL_PROFILE_URL}
+          />
+        </footer>
       )}
     </div>
   )

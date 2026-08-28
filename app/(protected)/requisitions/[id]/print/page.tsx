@@ -23,6 +23,7 @@ export default async function RequisitionPrintPage({ params }: RequisitionPrintP
   // currently viewing the print page. Keep this lookup server-side because
   // the Portal signature bucket is private.
   let fulfilledBySignature: string | null = null
+  let receivedBySignature: string | null = null
   if (requisition.fulfilledBy && requisition.fulfilledByName) {
     try {
       fulfilledBySignature = await loadPortalSignatureDataUri({
@@ -39,13 +40,36 @@ export default async function RequisitionPrintPage({ params }: RequisitionPrintP
     }
   }
 
+  // Resolve the receiver's current Portal signature from the actor recorded
+  // on the receipt. The legacy requisition snapshot remains a component-level
+  // fallback for rows written before the live-signature migration.
+  if (requisition.receivedBy && requisition.receivedByName) {
+    try {
+      receivedBySignature = await loadPortalSignatureDataUri({
+        id: requisition.receivedBy,
+        ephisId: null,
+        name: requisition.receivedByName,
+      })
+    } catch (error) {
+      console.error('[requisition.print] unable to load receiver signature', {
+        requisitionId: requisition.id,
+        receivedBy: requisition.receivedBy,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   return (
     <div className="print-route">
       <div className="print-route__toolbar">
         <Link className="back-link" href={`/requisitions/${requisition.id}`}>← กลับไปหน้าใบเบิก</Link>
         <p>ใช้คำสั่งพิมพ์ของเบราว์เซอร์ (Ctrl+P) เอกสารจัดหน้าสำหรับกระดาษ A4 ไว้แล้ว</p>
       </div>
-      <RequisitionPrint requisition={requisition} fulfilledBySignature={fulfilledBySignature} />
+      <RequisitionPrint
+        requisition={requisition}
+        fulfilledBySignature={fulfilledBySignature}
+        receivedBySignature={receivedBySignature}
+      />
     </div>
   )
 }

@@ -1,88 +1,37 @@
 'use client'
 
-import { useState, useTransition, type DragEvent, type FormEvent } from 'react'
+import { useMemo, useState, useTransition, type DragEvent, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ContractItemPicker, type ManualItemInput, type PickerOption } from '@/components/pr/ContractItemPicker'
 import { CommitteeMemberCombobox } from '@/components/pr/PurchaseRequestChecklistFields'
-import { StickyScroll } from '@/components/ui/StickyScroll'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { Button } from '@/components/ui/Button'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { createServicePurchaseRequest } from '@/lib/service-procurement/actions'
-import { calculateAnnualRequestTotal, fiscalYearFromDate, fiscalYearRange, isDateInFiscalYear } from '@/lib/service-procurement/domain'
+import { fiscalYearRange, isDateRangeWithinFiscalYear, isDateInFiscalYear } from '@/lib/service-procurement/domain'
 import type { PurchaseRequestCommitteeCandidate } from '@/lib/pr/form-options'
 import type { ServicePlanRecord } from '@/lib/service-procurement/types'
 import { formatBaht } from '@/lib/service-procurement/presenter'
 
-interface CatalogItem {
-  inventoryItemId: string
-  lsCode: string
-  name: string
-  unit: string
-  unitPrice: number
+const MAX_FILE_BYTES = 20 * 1024 * 1024
+const DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+
+function fileError(file: File | undefined, required: boolean, label: string) {
+  if (!file) return required ? `กรุณาแนบ${label}` : null
+  if (file.size <= 0 || file.size > MAX_FILE_BYTES) return `${label}ต้องมีขนาดไม่เกิน 20 MB`
+  if (!DOCUMENT_TYPES.includes(file.type)) return `${label}ต้องเป็น PDF, JPG, PNG หรือ WEBP`
+  if (label.includes('TOR') && file.type !== 'application/pdf') return 'TOR ต้องเป็นไฟล์ PDF เท่านั้น'
+  return null
 }
 
-interface Line extends CatalogItem {
-  key: string
-  requestedQuantity: number
-  unitPrice: number
-}
-
-function toPickerOption(item: CatalogItem): PickerOption {
-  return {
-    ...item,
-    contractItemId: null,
-    contractRemaining: null,
-    contractedQuantity: null,
-    onHand: 0,
-    averageMonthlyUsage: 0,
-    belowMinimum: false,
-  }
-}
-
-type ServiceAttachmentKind = 'tor' | 'quotation'
-
-interface ServiceAttachmentDescriptor {
-  kind: ServiceAttachmentKind
-  slot: number
-  field: string
-  label: string
-  accept: string
-  hint: string
-}
-
-const SERVICE_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
-
-function formatFileSize(size: number) {
-  if (!Number.isFinite(size)) return 'ไม่ระบุขนาด'
-  return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(size / 1024)} KB`
-}
-
-function validateSelectedAttachment(kind: ServiceAttachmentKind, file: File) {
-  const errors: string[] = []
-  if (file.size <= 0 || file.size > SERVICE_ATTACHMENT_MAX_BYTES) errors.push('ไฟล์แนบแต่ละไฟล์ต้องมีขนาดไม่เกิน 20 MB')
-  if (kind === 'tor' && file.type !== 'application/pdf') errors.push('เอกสาร TOR ต้องเป็นไฟล์ PDF เท่านั้น')
-  if (kind === 'quotation' && !['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    errors.push('รองรับเฉพาะ PDF, JPG, PNG หรือ WEBP')
-  }
-  return errors
-}
-
-export function ServicePurchaseRequestForm({
-  department,
-  departments,
-  requesterName,
-  plans,
-  catalog,
-  candidates,
-}: {
+interface Props {
   department: string
   departments: readonly string[]
   requesterName: string
   plans: ServicePlanRecord[]
-  catalog: CatalogItem[]
   candidates: PurchaseRequestCommitteeCandidate[]
-}) {
+}
+
+export function ServicePurchaseRequestForm({ department, departments, requesterName, plans, candidates }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -90,75 +39,37 @@ export function ServicePurchaseRequestForm({
   const [requestedDate, setRequestedDate] = useState(bangkokIsoDate)
   const [note, setNote] = useState('')
   const [planId, setPlanId] = useState('')
-  const [method, setMethod] = useState<'annual_items' | 'laboratory_testing'>('annual_items')
   const [amount, setAmount] = useState('')
-  const [requestedPoMonth, setRequestedPoMonth] = useState('')
-  const [lines, setLines] = useState<Line[]>([])
+  const [usageStartDate, setUsageStartDate] = useState('')
+  const [usageEndDate, setUsageEndDate] = useState('')
+  const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [committees, setCommittees] = useState<Array<{ kind: 'specification' | 'inspection'; seat: number; profileId: string }>>([])
-  const [checklistFiles, setChecklistFiles] = useState<Record<string, File | undefined>>({})
-  const [draggingAttachment, setDraggingAttachment] = useState<string | null>(null)
+  const [tor, setTor] = useState<File | undefined>()
+  const [quotation, setQuotation] = useState<File | undefined>()
+  const [contractPage, setContractPage] = useState<File | undefined>()
+  const [dragging, setDragging] = useState<string | null>(null)
 
-  const selectedPlan = plans.find((plan) => plan.id === planId) ?? null
-  const requestedFiscalYear = selectedPlan?.fiscalYear ?? fiscalYearFromDate(requestedDate)
-  const poMonthOptions = Array.from({ length: 12 }, (_, index) => {
-    const [startYear, startMonth] = fiscalYearRange(requestedFiscalYear).start.split('-').map(Number)
-    const date = new Date(Date.UTC(startYear, startMonth - 1 + index, 1))
-    return {
-      value: date.toISOString().slice(0, 7),
-      label: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' }).format(date),
-    }
-  })
-  const pickerOptions = catalog.map(toPickerOption)
-  const total = method === 'annual_items' ? calculateAnnualRequestTotal(lines) : Number(amount || 0)
-  const quoteCount = total >= 50_000 ? 3 : 1
-  const committeeSeats = total >= 100_000 ? 3 : 1
-  const attachmentDescriptors: ServiceAttachmentDescriptor[] = [
-    { kind: 'tor', slot: 1, field: 'tor', label: 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', accept: 'application/pdf', hint: 'PDF เท่านั้น' },
-    ...Array.from({ length: quoteCount }, (_, index) => ({
-      kind: 'quotation' as const,
-      slot: index + 1,
-      field: `quotation${index + 1}`,
-      label: `ใบเสนอราคาบริษัทที่ ${index + 1}`,
-      accept: 'application/pdf,image/jpeg,image/png,image/webp',
-      hint: 'PDF, JPG, PNG หรือ WEBP',
-    })),
-  ]
-  const completeAttachmentCount = attachmentDescriptors.filter((descriptor) => {
-    const file = checklistFiles[descriptor.field]
-    return file && validateSelectedAttachment(descriptor.kind, file).length === 0
-  }).length
-  const checklistComplete = completeAttachmentCount === attachmentDescriptors.length && committees.length === committeeSeats * 2
+  const plan = plans.find((row) => row.id === planId) ?? null
+  const fiscalRange = plan ? fiscalYearRange(plan.fiscalYear) : null
+  const committeeSeats = Number(amount || 0) >= 100_000 ? 3 : 1
+  const quoteExisting = Boolean(plan?.documents.some((document) => document.kind === 'quotation'))
+  const contractExisting = Boolean(plan?.documents.some((document) => document.kind === 'contract_page'))
+  const totalQuantity = useMemo(() => plan?.testItems.reduce((sum, item) => sum + Number(quantities[item.id] || 0), 0) ?? 0, [plan, quantities])
 
-  function addLine(item: PickerOption) {
-    if (lines.some((line) => line.inventoryItemId === item.inventoryItemId)) return
-    setLines((current) => [...current, {
-      inventoryItemId: item.inventoryItemId,
-      lsCode: item.lsCode,
-      name: item.name,
-      unit: item.unit,
-      unitPrice: item.unitPrice,
-      key: item.inventoryItemId,
-      requestedQuantity: 1,
-    }])
-  }
-
-  function addManualLine(input: ManualItemInput): string | null {
-    const key = `manual-${input.lsCode.trim().toLowerCase()}`
-    if (lines.some((line) => line.key === key)) return 'มีรายการรหัส LS นี้ในใบ PR แล้ว'
-    setLines((current) => [...current, {
-      inventoryItemId: '',
-      key,
-      lsCode: input.lsCode.trim(),
-      name: input.name.trim(),
-      unit: input.unit.trim(),
-      unitPrice: Number(input.unitPrice || 0),
-      requestedQuantity: 1,
-    }])
-    return null
-  }
-
-  function updateLine(key: string, patch: Partial<Pick<Line, 'requestedQuantity' | 'unitPrice'>>) {
-    setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line))
+  function choosePlan(nextId: string) {
+    setPlanId(nextId)
+    // Plan-level documents belong to the selected plan. Do not carry a file
+    // chosen for the previous plan into the next PR request.
+    setQuotation(undefined)
+    setContractPage(undefined)
+    const nextPlan = plans.find((row) => row.id === nextId)
+    if (!nextPlan) { setUsageStartDate(''); setUsageEndDate(''); return }
+    const range = fiscalYearRange(nextPlan.fiscalYear)
+    const nextRequested = isDateInFiscalYear(requestedDate, nextPlan.fiscalYear) ? requestedDate : range.start
+    setRequestedDate(nextRequested)
+    setUsageStartDate(range.start)
+    setUsageEndDate(range.end)
+    setQuantities(Object.fromEntries(nextPlan.testItems.map((item) => [item.id, ''])))
   }
 
   function setCommittee(kind: 'specification' | 'inspection', seat: number, profileId: string | null) {
@@ -168,444 +79,98 @@ export function ServicePurchaseRequestForm({
     })
   }
 
-  function setChecklistFile(field: string, file: File | undefined) {
-    setChecklistFiles((current) => {
-      const next = { ...current }
-      if (file) next[field] = file
-      else delete next[field]
-      return next
-    })
-  }
-
-  function handleAttachmentDragOver(event: DragEvent<HTMLLabelElement>, field: string) {
-    event.preventDefault()
-    event.stopPropagation()
-    event.dataTransfer.dropEffect = pending ? 'none' : 'copy'
-    if (!pending) setDraggingAttachment(field)
-  }
-
-  function handleAttachmentDragLeave(event: DragEvent<HTMLLabelElement>, field: string) {
-    const relatedTarget = event.relatedTarget
-    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) return
-    setDraggingAttachment((current) => current === field ? null : current)
-  }
-
-  function handleAttachmentDrop(event: DragEvent<HTMLLabelElement>, field: string) {
-    event.preventDefault()
-    event.stopPropagation()
-    setDraggingAttachment((current) => current === field ? null : current)
-    if (pending) return
-    const droppedFile = event.dataTransfer.files?.[0]
-    if (droppedFile) setChecklistFile(field, droppedFile)
-  }
-
   function disabledCommitteeIds(kind: 'specification' | 'inspection', seat: number) {
-    return new Set(
-      committees
-        .filter((row) => row.kind === kind && row.seat !== seat)
-        .map((row) => row.profileId),
-    )
+    return new Set(committees.filter((row) => row.kind === kind && row.seat !== seat).map((row) => row.profileId))
   }
 
-  function renderAttachmentCard(descriptor: ServiceAttachmentDescriptor) {
-    const file = checklistFiles[descriptor.field]
-    const errors = file ? validateSelectedAttachment(descriptor.kind, file) : []
-    const complete = Boolean(file) && errors.length === 0
-    const isDragging = draggingAttachment === descriptor.field
-    const hintId = `service-checklist-${descriptor.field}-hint`
-    const errorId = `service-checklist-${descriptor.field}-error`
+  function setFile(kind: 'tor' | 'quotation' | 'contractPage', file: File | undefined) {
+    if (kind === 'tor') setTor(file)
+    else if (kind === 'quotation') setQuotation(file)
+    else setContractPage(file)
+  }
 
+  function dragHandlers(kind: 'tor' | 'quotation' | 'contractPage') {
+    return {
+      onDragEnter: (event: DragEvent<HTMLLabelElement>) => { event.preventDefault(); if (!pending) setDragging(kind) },
+      onDragOver: (event: DragEvent<HTMLLabelElement>) => { event.preventDefault() },
+      onDragLeave: () => setDragging((current) => current === kind ? null : current),
+      onDrop: (event: DragEvent<HTMLLabelElement>) => { event.preventDefault(); setDragging(null); if (!pending) setFile(kind, event.dataTransfer.files?.[0]) },
+    }
+  }
+
+  function documentCard(kind: 'tor' | 'quotation' | 'contractPage', label: string, file: File | undefined, existing: boolean, required: boolean) {
+    const selectedError = fileError(file, required && !existing, label)
     return (
-      <article className={`pr-checklist__file${complete ? ' is-complete' : ''}`} key={descriptor.field}>
-        <div className="pr-checklist__file-copy">
-          <div>
-            <strong>{descriptor.label}</strong>
-            <small>{descriptor.hint} · สูงสุด 20 MB</small>
-          </div>
-          <span className={`pr-checklist__file-state${complete ? ' is-complete' : ''}`}>
-            {complete && (
-              <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-                <path d="m2.25 6.25 2.2 2.2 5.3-5.3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-              </svg>
-            )}
-            {complete ? 'แนบแล้ว' : 'รอแนบ'}
-          </span>
-        </div>
-        {file && <p className="pr-checklist__file-name">{file.name} · {formatFileSize(file.size)}</p>}
-        {errors.length > 0 && (
-          <div id={errorId} className="pr-checklist__file-errors" aria-live="polite">
-            {errors.map((message) => <p className="field-error" key={message}>{message}</p>)}
-          </div>
-        )}
-        <div className="pr-checklist__file-actions">
-          <label
-            className={`pr-checklist__dropzone${isDragging ? ' is-dragging' : ''}`}
-            aria-disabled={pending}
-            onDragEnter={(event) => handleAttachmentDragOver(event, descriptor.field)}
-            onDragOver={(event) => handleAttachmentDragOver(event, descriptor.field)}
-            onDragLeave={(event) => handleAttachmentDragLeave(event, descriptor.field)}
-            onDrop={(event) => handleAttachmentDrop(event, descriptor.field)}
-          >
-            <svg className="pr-checklist__dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-              <path d="M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-            </svg>
-            <span className="pr-checklist__dropzone-copy">
-              <strong>{isDragging ? 'วางไฟล์ที่นี่' : file ? 'ลากไฟล์ใหม่มาวางเพื่อเปลี่ยน' : 'ลากไฟล์มาวางที่นี่'}</strong>
-              <small id={hintId}>หรือคลิกเลือกไฟล์ · {descriptor.hint}</small>
-            </span>
-            <input
-              key={file ? `${file.name}:${file.size}:${file.lastModified}` : 'empty'}
-              type="file"
-              name={descriptor.field}
-              accept={descriptor.accept}
-              disabled={pending}
-              aria-label={`แนบ ${descriptor.label}`}
-              aria-invalid={errors.length > 0}
-              aria-describedby={errors.length > 0 ? `${hintId} ${errorId}` : hintId}
-              onChange={(event) => setChecklistFile(descriptor.field, event.target.files?.[0])}
-            />
-          </label>
-          {file && (
-            <Button variant="ghost" type="button" disabled={pending} onClick={() => setChecklistFile(descriptor.field, undefined)}>
-              ยกเลิกไฟล์ที่เลือก
-            </Button>
-          )}
-        </div>
+      <article className={`pr-checklist__file${file && !selectedError ? ' is-complete' : ''}`} key={kind}>
+        <div className="pr-checklist__file-copy"><div><strong>{label}{required && <span className="field-required" aria-hidden="true"> *</span>}</strong><small>{existing ? 'มีไฟล์ระดับแผนแล้ว · แนบใหม่เพื่อแทนที่' : 'PDF, JPG, PNG หรือ WEBP · สูงสุด 20 MB'}</small></div><span className="pr-checklist__file-state">{file ? 'ไฟล์ใหม่' : existing ? 'ใช้ไฟล์เดิม' : 'รอแนบ'}</span></div>
+        {file && <p className="pr-checklist__file-name">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>}
+        {selectedError && <p className="field-error" role="alert">{selectedError}</p>}
+        <label className={`pr-checklist__dropzone${dragging === kind ? ' is-dragging' : ''}`} {...dragHandlers(kind)}>
+          <span className="pr-checklist__dropzone-copy"><strong>{file ? 'ลากไฟล์ใหม่มาวางเพื่อเปลี่ยน' : 'ลากไฟล์มาวางที่นี่'}</strong><small>หรือคลิกเลือกไฟล์</small></span>
+          <input type="file" accept={DOCUMENT_TYPES.join(',')} disabled={pending} onChange={(event) => setFile(kind, event.target.files?.[0])} aria-label={`แนบ${label}`} />
+        </label>
+        {file && <Button type="button" variant="ghost" disabled={pending} onClick={() => setFile(kind, undefined)}>ยกเลิกไฟล์ใหม่</Button>}
       </article>
     )
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-    if (method === 'annual_items' && lines.length === 0) return setError('กรุณาเลือกรายการที่ต้องการขอซื้อ')
-    if (selectedPlan && total > selectedPlan.balance.available) return setError(`วงเงินแผนคงเหลือ ${formatBaht(selectedPlan.balance.available)} ไม่พอสำหรับคำขอ ${formatBaht(total)}`)
-    if (committees.length !== committeeSeats * 2) return setError(`กรุณาเลือกรายชื่อกรรมการให้ครบ ${committeeSeats} คนต่อชุด`)
-    for (const kind of ['specification', 'inspection'] as const) {
-      const ids = committees.filter((row) => row.kind === kind).map((row) => row.profileId)
-      if (new Set(ids).size !== ids.length) return setError('ห้ามใช้ชื่อกรรมการซ้ำกันภายในชุดเดียวกัน')
-    }
+    event.preventDefault(); setError(null)
+    if (!plan) return setError('กรุณาเลือกแผนงานจ้าง')
+    const numericAmount = Number(amount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return setError('กรุณาระบุวงเงินที่มากกว่า 0 บาท')
+    if (numericAmount > plan.balance.available) return setError(`วงเงินแผนคงเหลือ ${formatBaht(plan.balance.available)} ไม่พอสำหรับคำขอ`)
+    if (!isDateRangeWithinFiscalYear(usageStartDate, usageEndDate, plan.fiscalYear)) return setError('ช่วงวันที่ใช้ PO ต้องอยู่ในปีงบประมาณของแผนทั้งหมด')
+    if (!isDateInFiscalYear(requestedDate, plan.fiscalYear)) return setError('วันที่ขอต้องอยู่ในปีงบประมาณของแผน')
+    const activeCommittees = committees.filter((row) => row.seat <= committeeSeats)
+    if (activeCommittees.length !== committeeSeats * 2) return setError(`กรุณาเลือกรายชื่อกรรมการให้ครบ ${committeeSeats} คนต่อชุด`)
+    const duplicate = ['specification', 'inspection'].some((kind) => { const ids = activeCommittees.filter((row) => row.kind === kind).map((row) => row.profileId); return new Set(ids).size !== ids.length })
+    if (duplicate) return setError('ห้ามใช้ชื่อกรรมการซ้ำกันภายในชุดเดียวกัน')
+    const torMessage = fileError(tor, true, ' TOR')
+    if (torMessage) return setError(torMessage)
+    const quoteMessage = fileError(quotation, !quoteExisting, 'ใบเสนอราคา')
+    if (quoteMessage) return setError(quoteMessage)
+    const contractMessage = plan.requiresContract ? fileError(contractPage, !contractExisting, 'หน้าสัญญา') : null
+    if (contractMessage) return setError(contractMessage)
     const formData = new FormData(event.currentTarget)
-    for (const descriptor of attachmentDescriptors) {
-      const file = checklistFiles[descriptor.field]
-      if (file) formData.set(descriptor.field, file, file.name)
-    }
-    const torFile = formData.get('tor')
-    if (!(torFile instanceof File) || torFile.size === 0 || torFile.type !== 'application/pdf' || torFile.size > 20 * 1024 * 1024) return setError('กรุณาแนบ TOR เป็น PDF ขนาดไม่เกิน 20 MB')
-    for (let index = 1; index <= quoteCount; index += 1) {
-      const quoteFile = formData.get(`quotation${index}`)
-      if (!(quoteFile instanceof File) || quoteFile.size === 0 || !['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(quoteFile.type) || quoteFile.size > 20 * 1024 * 1024) return setError(`กรุณาแนบใบเสนอราคาที่ ${index} ให้ถูกชนิดและขนาดไม่เกิน 20 MB`)
-    }
+    if (tor) formData.set('tor', tor, tor.name)
+    if (quotation) formData.set('quotation', quotation, quotation.name)
+    if (contractPage) formData.set('contractPage', contractPage, contractPage.name)
     formData.set('payload', JSON.stringify({
-      department: selectedDepartment,
-      requesterName,
-      requestedDate,
-      note: note || null,
-      planId: planId || null,
-      method,
-      amount: total,
-      requestedPoMonth: method === 'laboratory_testing' ? requestedPoMonth : null,
-      items: lines.map((line) => ({
-        inventoryItemId: line.inventoryItemId || null,
-        lsCode: line.lsCode,
-        name: line.name,
-        unit: line.unit,
-        requestedQuantity: Number(line.requestedQuantity),
-        unitPrice: Number(line.unitPrice),
-      })),
-      committees,
+      department: selectedDepartment, requesterName, requestedDate, note: note || null, planId,
+      amount: numericAmount, usageStartDate, usageEndDate,
+      items: plan.testItems.map((item) => ({ planItemId: item.id, name: item.name, unit: item.unit, requestedQuantity: Number(quantities[item.id] || 0) })),
+      committees: activeCommittees, documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
     }))
     startTransition(async () => {
-      try {
-        const saved = await createServicePurchaseRequest(formData)
-        router.push(`/service-procurement/purchase-requests/${saved.id}`)
-        router.refresh()
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'ส่งใบ PR งานจ้างไม่สำเร็จ')
-      }
+      try { const saved = await createServicePurchaseRequest(formData); router.push(`/service-procurement/purchase-requests/${saved.id}`); router.refresh() }
+      catch (caught) { setError(caught instanceof Error ? caught.message : 'ส่งใบ PR งานจ้างไม่สำเร็จ') }
     })
   }
 
   return (
     <form className="route-stack service-pr-form" onSubmit={submit}>
-      <section className="bench-panel" aria-labelledby="service-header-title">
-        <div className="bench-panel__header">
-          <div>
-            <p className="section-kicker">REQUEST HEADER</p>
-            <h2 id="service-header-title">ข้อมูลผู้ขอ</h2>
-          </div>
-        </div>
-        <div className="form-grid">
-          <label className="field-row">
-            <span>หน่วยงานผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
-            <select required value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)}>
-              {departments.map((value) => <option key={value}>{value}</option>)}
-            </select>
-          </label>
-          <label className="field-row">
-            <span>ชื่อผู้ขอ <span className="field-required" aria-hidden="true">*</span></span>
-            <input type="text" required readOnly value={requesterName} title="ชื่อผู้สร้างใบ PR แก้ไขไม่ได้" />
-          </label>
-          <label className="field-row">
-            <span>วันที่ขอ <span className="field-required" aria-hidden="true">*</span></span>
-            <ThaiDateInput required value={requestedDate} onChange={setRequestedDate} />
-          </label>
-          <label className="field-row">
-            <span>หมายเหตุ</span>
-            <textarea rows={3} maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} />
-          </label>
-        </div>
-      </section>
+      <section className="bench-panel" aria-labelledby="service-header-title"><div className="bench-panel__header"><div><p className="section-kicker">REQUEST HEADER</p><h2 id="service-header-title">ข้อมูลผู้ขอ</h2></div></div><div className="form-grid">
+        <label className="field-row"><span>หน่วยงานผู้ขอ <span className="field-required" aria-hidden="true">*</span></span><select required value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)}>{departments.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label className="field-row"><span>ชื่อผู้ขอ <span className="field-required" aria-hidden="true">*</span></span><input readOnly value={requesterName} /></label>
+        <label className="field-row"><span>วันที่ขอ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={requestedDate} onChange={setRequestedDate} /></label>
+        <label className="field-row"><span>หมายเหตุ</span><textarea rows={3} maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} /></label>
+      </div></section>
 
-      <section className="bench-panel" aria-labelledby="service-method-title">
-        <div className="bench-panel__header">
-          <div>
-            <p className="section-kicker">PLAN & METHOD</p>
-            <h2 id="service-method-title">อ้างแผนและวิธีจัดซื้อ</h2>
-          </div>
-        </div>
-        <div className="form-grid">
-          <label className="field-row form-grid__wide">
-            <span>แผนงานจ้าง</span>
-            <select value={planId} onChange={(event) => {
-              const nextId = event.target.value
-              setPlanId(nextId)
-              const nextPlan = plans.find((plan) => plan.id === nextId)
-              if (nextPlan && !isDateInFiscalYear(requestedDate, nextPlan.fiscalYear)) setRequestedDate(fiscalYearRange(nextPlan.fiscalYear).start)
-            }}>
-              <option value="">นอกแผน</option>
-              {plans.map((plan) => <option key={plan.id} value={plan.id}>ปีงบ {plan.fiscalYear} · {plan.name} · คงเหลือ {formatBaht(plan.balance.available)}</option>)}
-            </select>
-          </label>
-          <label className="field-row">
-            <span>วิธีจัดซื้อ <span className="field-required" aria-hidden="true">*</span></span>
-            <select required value={method} onChange={(event) => { setMethod(event.target.value as typeof method); setLines([]) }}>
-              <option value="annual_items">ซื้อในแผนทั้งปี</option>
-              <option value="laboratory_testing">จ้างตรวจทางห้องปฏิบัติการ</option>
-            </select>
-          </label>
-          {method === 'laboratory_testing' && (
-            <>
-              <label className="field-row">
-                <span>วงเงิน (บาท) <span className="field-required" aria-hidden="true">*</span></span>
-                <input required type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} />
-              </label>
-              <label className="field-row">
-                <span>เดือนที่ขอทำ PO <span className="field-required" aria-hidden="true">*</span></span>
-                <select required value={requestedPoMonth} onChange={(event) => setRequestedPoMonth(event.target.value)}>
-                  <option value="">เลือกเดือน</option>
-                  {poMonthOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-              </label>
-            </>
-          )}
-        </div>
-        {selectedPlan && (
-          <p className={`service-budget-callout${total > selectedPlan.balance.available ? ' is-danger' : ''}`} role={total > selectedPlan.balance.available ? 'alert' : 'status'}>
-            แผน {selectedPlan.name}: ใช้จริง {formatBaht(selectedPlan.balance.spent)} · สำรอง {formatBaht(selectedPlan.balance.reserved)} · คงเหลือ {formatBaht(selectedPlan.balance.available)}
-          </p>
-        )}
-      </section>
+      <section className="bench-panel" aria-labelledby="service-plan-title"><div className="bench-panel__header"><div><p className="section-kicker">PLAN REFERENCE</p><h2 id="service-plan-title">อ้างอิงแผนงานจ้าง</h2></div><p>จ้างตรวจทางห้องปฏิบัติการ</p></div><div className="form-grid">
+        <label className="field-row form-grid__wide"><span>แผนงานจ้าง <span className="field-required" aria-hidden="true">*</span></span><select required value={planId} onChange={(event) => choosePlan(event.target.value)}><option value="">เลือกแผนที่อ้างอิง</option>{plans.filter((row) => row.status === 'active').map((row) => <option key={row.id} value={row.id}>ปีงบ {row.fiscalYear} · {row.name} · คงเหลือ {formatBaht(row.balance.available)}</option>)}</select></label>
+        <label className="field-row"><span>วงเงิน (บาท) <span className="field-required" aria-hidden="true">*</span></span><input required type="number" min="0.01" step="0.01" max={plan?.balance.available} value={amount} onChange={(event) => setAmount(event.target.value)} /><small className="field-help">ต้องไม่เกินวงเงินคงเหลือของแผน</small></label>
+        <label className="field-row"><span>ช่วงวันที่ที่จะใช้ PO นี้ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageStartDate} min={fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageStartDate} /></label>
+        <label className="field-row"><span>ถึงวันที่ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageEndDate} min={usageStartDate || fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageEndDate} /></label>
+      </div>{plan && <p className="service-budget-callout" role="status">แผน {plan.name}: วงเงินตั้งต้น {formatBaht(plan.budget)} · ใช้จริง {formatBaht(plan.balance.spent)} · สำรอง {formatBaht(plan.balance.reserved)} · คงเหลือ {formatBaht(plan.balance.available)}</p>}</section>
 
-      {method === 'annual_items' && (
-        <>
-          <section className="bench-panel" aria-labelledby="service-picker-title">
-            <div className="bench-panel__header">
-              <div>
-                <p className="section-kicker">SELECT ITEMS</p>
-                <h2 id="service-picker-title">เลือกรายการที่ต้องการขอซื้อ</h2>
-              </div>
-              <p>{lines.length} รายการ</p>
-            </div>
-            <ContractItemPicker
-              options={pickerOptions}
-              selectedIds={lines.map((line) => line.key)}
-              onAdd={addLine}
-              onAddManual={addManualLine}
-              variant="service"
-              manualUnitPrice
-            />
-          </section>
+      {plan?.isRedCross && <section className="bench-panel" aria-labelledby="service-test-items-title"><div className="bench-panel__header"><div><p className="section-kicker">RED CROSS TEST ITEMS</p><h2 id="service-test-items-title">รายการส่งตรวจ</h2></div><p>{plan.testItems.length} รายการ · จำนวนรวม {totalQuantity}</p></div>{plan.testItems.length === 0 ? <p className="empty-state">แผนนี้ยังไม่มีรายการส่งตรวจ</p> : <div className="service-ledger-table-wrap"><table className="data-table"><thead><tr><th>รายการส่งตรวจ</th><th>หน่วย</th><th>จำนวน</th></tr></thead><tbody>{plan.testItems.map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.unit}</td><td><input aria-label={`จำนวน ${item.name}`} type="number" min="0" step="0.001" placeholder="0" value={quantities[item.id] ?? ''} onChange={(event) => setQuantities((current) => ({ ...current, [item.id]: event.target.value }))} /></td></tr>)}</tbody></table></div>}</section>}
 
-          <section className="bench-panel" aria-labelledby="service-lines-title">
-            <div className="bench-panel__header">
-              <div>
-                <p className="section-kicker">REQUEST LINES</p>
-                <h2 id="service-lines-title">รายการในใบ PR งานจ้าง</h2>
-              </div>
-              <p>{lines.length} รายการ</p>
-            </div>
-            {lines.length === 0 ? (
-              <p className="empty-state">ยังไม่ได้เลือกรายการ กรุณาเลือกจากรายการด้านบน</p>
-            ) : (
-              <>
-                <StickyScroll className="detail-items-table service-lines pr-form-lines-table--desktop" ariaLabel="รายการในใบ PR งานจ้าง เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>รหัส LS</th>
-                        <th>รายการ</th>
-                        <th className="pr-line-cell--center">จำนวนที่ขอ</th>
-                        <th className="pr-line-cell--center">หน่วย</th>
-                        <th className="pr-line-cell--center">ราคาต่อหน่วย</th>
-                        <th className="pr-line-cell--center">รวม</th>
-                        <th><span className="visually-hidden">นำออก</span></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((line) => (
-                        <tr key={line.key}>
-                          <td className="identifier">{line.lsCode}</td>
-                          <td className="pr-line-cell--name"><strong>{line.name}</strong></td>
-                          <td className="pr-line-cell--center">
-                            <input aria-label={`จำนวนที่ขอของ ${line.name}`} type="number" min="0.001" step="0.001" value={line.requestedQuantity} onChange={(event) => updateLine(line.key, { requestedQuantity: Number(event.target.value) })} />
-                          </td>
-                          <td className="pr-line-cell--center">{line.unit}</td>
-                          <td className="pr-line-cell--center">
-                            <input aria-label={`ราคาต่อหน่วยของ ${line.name}`} type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })} />
-                          </td>
-                          <td className="identifier pr-line-cell--center">{formatBaht(line.requestedQuantity * line.unitPrice)}</td>
-                          <td><Button variant="ghost" onClick={() => setLines((current) => current.filter((row) => row.key !== line.key))}>นำออก</Button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </StickyScroll>
+      <section className="bench-panel" aria-labelledby="service-documents-title"><div className="bench-panel__header"><div><p className="section-kicker">DOCUMENTS</p><h2 id="service-documents-title">เอกสารประกอบ</h2></div><p>ไฟล์ระดับแผนจะใช้ซ้ำใน PR ครั้งถัดไป</p></div><div className="pr-checklist__file-grid pr-checklist__file-grid--primary">{documentCard('tor', 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', tor, false, true)}{documentCard('quotation', 'ใบเสนอราคา', quotation, quoteExisting, true)}{plan?.requiresContract && documentCard('contractPage', 'หน้าสัญญา', contractPage, contractExisting, true)}</div></section>
 
-                <ul className="pr-form-line-cards" aria-label="รายการในใบ PR งานจ้าง">
-                  {lines.map((line) => (
-                    <li key={line.key} className="pr-form-line-card">
-                      <div className="pr-form-line-card__heading">
-                        <div className="pr-form-line-card__identity">
-                          <span className="identifier">{line.lsCode}</span>
-                          <strong>{line.name}</strong>
-                        </div>
-                        <Button variant="ghost" onClick={() => setLines((current) => current.filter((row) => row.key !== line.key))}>นำออก</Button>
-                      </div>
-                      <dl className="pr-form-line-card__facts">
-                        <div><dt>หน่วย</dt><dd>{line.unit}</dd></div>
-                        <div><dt>รวม</dt><dd className="identifier">{formatBaht(line.requestedQuantity * line.unitPrice)}</dd></div>
-                      </dl>
-                      <div className="pr-form-line-card__fields">
-                        <label className="field-row">
-                          <span>จำนวนที่ขอ ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
-                          <input aria-label={`จำนวนที่ขอของ ${line.name}`} type="number" min="0.001" step="0.001" required value={line.requestedQuantity} onChange={(event) => updateLine(line.key, { requestedQuantity: Number(event.target.value) })} />
-                        </label>
-                        <label className="field-row">
-                          <span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span>
-                          <input aria-label={`ราคาต่อหน่วยของ ${line.name}`} type="number" min="0" step="0.01" required value={line.unitPrice} onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })} />
-                        </label>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <p className="items-editor__grand-total"><span>ยอดรวม</span><strong>{formatBaht(total)}</strong></p>
-              </>
-            )}
-          </section>
-        </>
-      )}
-
-      <section className="bench-panel pr-checklist" aria-labelledby="service-checklist-title">
-        <div className="bench-panel__header pr-checklist__header">
-          <div>
-            <p className="section-kicker">REQUIRED CHECKLIST</p>
-            <h2 id="service-checklist-title">เอกสารและรายชื่อกรรมการก่อนส่งใบ PR</h2>
-            <p>ต้องครบทุกช่องจึงจะกดส่งได้ · ไฟล์ละไม่เกิน 20 MB</p>
-          </div>
-          <span className={checklistComplete ? 'pr-checklist__status is-complete' : 'pr-checklist__status'}>
-            {checklistComplete ? 'ครบแล้ว' : 'ยังไม่ครบ'}
-          </span>
-        </div>
-
-        <div className="pr-checklist__section">
-          <div className="pr-checklist__section-heading">
-            <h3>เอกสารแนบ</h3>
-            <span aria-live="polite">แนบแล้ว {completeAttachmentCount}/{attachmentDescriptors.length} ไฟล์</span>
-          </div>
-          <div className="pr-checklist__attachment-groups">
-            <section className="pr-checklist__file-group" aria-labelledby="service-checklist-primary-files">
-              <div className="pr-checklist__file-group-heading">
-                <h4 id="service-checklist-primary-files">เอกสารหลัก</h4>
-                <span>แนบแล้ว {checklistFiles.tor && validateSelectedAttachment('tor', checklistFiles.tor).length === 0 ? 1 : 0}/1</span>
-              </div>
-              <div className="pr-checklist__file-grid pr-checklist__file-grid--primary">
-                {renderAttachmentCard(attachmentDescriptors[0])}
-              </div>
-            </section>
-            <section className="pr-checklist__file-group" aria-labelledby="service-checklist-quotation-files">
-              <div className="pr-checklist__file-group-heading">
-                <h4 id="service-checklist-quotation-files">ใบเสนอราคาจากบริษัท</h4>
-                <span>แนบแล้ว {attachmentDescriptors.slice(1).filter((descriptor) => {
-                  const file = checklistFiles[descriptor.field]
-                  return file && validateSelectedAttachment(descriptor.kind, file).length === 0
-                }).length}/{quoteCount}</span>
-              </div>
-              <div className="pr-checklist__file-grid pr-checklist__file-grid--quotation">
-                {attachmentDescriptors.slice(1).map(renderAttachmentCard)}
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div className="pr-checklist__section">
-          <div className="pr-checklist__section-heading">
-            <h3>รายชื่อคณะกรรมการ</h3>
-            <span>เลือกจากบุคลากรในระบบเท่านั้น</span>
-          </div>
-          <p className="pr-checklist__committee-note">พิมพ์ค้นหาด้วยชื่อหรือรหัส E-Phis · ตำแหน่งดึงจากข้อมูลบุคลากรและแก้ในช่องนี้ไม่ได้</p>
-          <div className="pr-checklist__committees">
-            <fieldset>
-              <legend>คณะกรรมการกำหนดราคากลางและคุณลักษณะเฉพาะ · {committeeSeats} คน</legend>
-              <div className="pr-checklist__committee-grid">
-                {Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => (
-                  <CommitteeMemberCombobox
-                    key={seat}
-                    kind="specification"
-                    seat={seat}
-                    candidates={candidates}
-                    selectedProfileId={committees.find((row) => row.kind === 'specification' && row.seat === seat)?.profileId ?? null}
-                    disabledProfileIds={disabledCommitteeIds('specification', seat)}
-                    disabled={pending}
-                    onSelect={(profileId) => setCommittee('specification', seat, profileId)}
-                  />
-                ))}
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend>คณะกรรมการตรวจรับพัสดุ · {committeeSeats} คน</legend>
-              <div className="pr-checklist__committee-grid">
-                {Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => (
-                  <CommitteeMemberCombobox
-                    key={seat}
-                    kind="inspection"
-                    seat={seat}
-                    candidates={candidates}
-                    selectedProfileId={committees.find((row) => row.kind === 'inspection' && row.seat === seat)?.profileId ?? null}
-                    disabledProfileIds={disabledCommitteeIds('inspection', seat)}
-                    disabled={pending}
-                    onSelect={(profileId) => setCommittee('inspection', seat, profileId)}
-                  />
-                ))}
-              </div>
-            </fieldset>
-          </div>
-        </div>
-      </section>
-
+      <section className="bench-panel" aria-labelledby="service-committee-title"><div className="bench-panel__header"><div><p className="section-kicker">CHECKLIST</p><h2 id="service-committee-title">รายชื่อคณะกรรมการ</h2></div><p>{committeeSeats} คนต่อชุด</p></div><div className="pr-checklist__committees"><fieldset><legend>คณะกรรมการกำหนดราคากลางและคุณลักษณะเฉพาะ · {committeeSeats} คน</legend><div className="pr-checklist__committee-grid">{Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => <CommitteeMemberCombobox key={seat} kind="specification" seat={seat} candidates={candidates} selectedProfileId={committees.find((row) => row.kind === 'specification' && row.seat === seat)?.profileId ?? null} disabledProfileIds={disabledCommitteeIds('specification', seat)} disabled={pending} onSelect={(id) => setCommittee('specification', seat, id)} />)}</div></fieldset><fieldset><legend>คณะกรรมการตรวจรับพัสดุ · {committeeSeats} คน</legend><div className="pr-checklist__committee-grid">{Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => <CommitteeMemberCombobox key={seat} kind="inspection" seat={seat} candidates={candidates} selectedProfileId={committees.find((row) => row.kind === 'inspection' && row.seat === seat)?.profileId ?? null} disabledProfileIds={disabledCommitteeIds('inspection', seat)} disabled={pending} onSelect={(id) => setCommittee('inspection', seat, id)} />)}</div></fieldset></div></section>
       {error && <p className="form-error" role="alert">{error}</p>}
-
-      <div className="form-action-bar">
-        <p>
-          {selectedPlan && `ระบบจะสำรองวงเงิน ${formatBaht(total)} เมื่อส่งใบ PR`}
-          {method === 'annual_items' && lines.length > 0 && ` · ${lines.length} รายการ · รวม ${formatBaht(total)}`}
-        </p>
-        <div className="form-action-bar__buttons">
-          <Button variant="secondary" onClick={() => router.push('/service-procurement/purchase-requests')} disabled={pending}>ยกเลิก</Button>
-          <Button type="submit" disabled={pending || !checklistComplete || (selectedPlan !== null && total > selectedPlan.balance.available)}>{pending ? 'กำลังส่ง…' : 'ส่งใบ PR งานจ้าง'}</Button>
-        </div>
-      </div>
+      <div className="form-action-bar"><p>{plan ? `ระบบจะสำรองวงเงิน ${formatBaht(Number(amount || 0))} เมื่อส่งใบ PR (ยังไม่ใช่ยอดใช้จริง)` : 'เลือกแผนเพื่อเริ่มสร้าง PR'}</p><div className="form-action-bar__buttons"><Button type="button" variant="secondary" onClick={() => router.push('/service-procurement/purchase-requests')} disabled={pending}>ยกเลิก</Button><Button type="submit" disabled={pending || !plan}>{pending ? 'กำลังส่ง…' : 'ส่งใบ PR งานจ้าง'}</Button></div></div>
     </form>
   )
 }

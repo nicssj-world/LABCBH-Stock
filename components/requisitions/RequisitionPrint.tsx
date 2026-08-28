@@ -9,9 +9,11 @@ import type { RequisitionRecord } from '@/lib/requisitions/types'
 export function RequisitionPrint({
   requisition,
   fulfilledBySignature = null,
+  receivedBySignature = null,
 }: {
   requisition: RequisitionRecord
   fulfilledBySignature?: string | null
+  receivedBySignature?: string | null
 }) {
   return (
     <article className="print-sheet">
@@ -107,16 +109,22 @@ export function RequisitionPrint({
 
       <div className="print-signatures">
         {SIGNATURE_BLOCKS.map((block) => {
-          // The receiving head's block already has a digital signature —
-          // print what was actually captured instead of a blank line to sign.
+          // Resolve the receiving head's current Portal signature using the
+          // actor recorded on the receipt. Legacy snapshots are only a
+          // compatibility fallback for rows written by the old workflow.
           const isReceiverBlock = block.role === 'หัวหน้าหน่วยงานผู้รับ'
           const isIssuerBlock = block.role === 'ผู้จ่ายของ'
-          if (isReceiverBlock && requisition.signature) {
+          if (isReceiverBlock && requisition.receivedByName) {
+            const signature = receivedBySignature ?? requisition.signature
             return (
               <div key={block.role} className="print-signature">
                 <div className="print-signature__mark">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- a data URI signature has no Next.js Image loader to optimize through */}
-                  <img className="print-signature__image" src={requisition.signature} alt="ลายเซ็นต์ผู้รับของ" />
+                  {signature ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- a server-rendered Portal signature is an in-memory data URI
+                    <img className="print-signature__image" src={signature} alt="ลายเซ็นต์ผู้รับของ" />
+                  ) : (
+                    <span className="print-signature__missing">ไม่พบลายเซ็นต์ใน Portal</span>
+                  )}
                 </div>
                 <p className="print-signature__role">{requisition.receivedByName}</p>
                 <p className="print-signature__hint">({block.hint})</p>
@@ -126,8 +134,9 @@ export function RequisitionPrint({
           }
 
           // The stock officer is identified by the fulfilment snapshot. Their
-          // reusable signature is loaded from the private Portal bucket on the
-          // server, while the name/date remain tied to this requisition.
+          // current reusable signature is loaded from the private Portal
+          // bucket on the server, while the name/date remain tied to this
+          // requisition.
           if (isIssuerBlock && requisition.fulfilledByName) {
             return (
               <div key={block.role} className="print-signature">

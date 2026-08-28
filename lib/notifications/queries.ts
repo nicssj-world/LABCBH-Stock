@@ -70,7 +70,8 @@ export async function getNotificationSnapshot(actor: Actor): Promise<Notificatio
     supabaseAdmin
       .from('service_purchase_requests')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending'),
+      .eq('status', 'pending')
+      .not('plan_id', 'is', null),
     supabaseAdmin
       .from('requisitions')
       .select('id', { count: 'exact', head: true })

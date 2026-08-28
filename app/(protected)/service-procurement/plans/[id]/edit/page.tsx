@@ -12,5 +12,6 @@ export default async function EditServicePlanPage({ params }: { params: Promise<
   const { id } = await params
   const result = await getServicePlan(id)
   if (!result) notFound()
-  return <div className="route-stack"><header className="page-heading"><Link className="back-link" href={`/service-procurement/plans/${id}`}>← รายละเอียดแผน</Link><p className="section-kicker">EDIT SERVICE PLAN</p><h1>แก้ไขแผนงานจ้าง</h1></header><ServicePlanForm mode="edit" departments={DEPARTMENTS} initial={result.plan} /></div>
+  if (result.plan.status !== 'active') redirect(`/service-procurement/plans/${id}`)
+  return <div className="route-stack"><header className="page-heading"><Link className="back-link" href={`/service-procurement/plans/${id}`}>← รายละเอียดแผน</Link><p className="section-kicker">EDIT SERVICE PLAN</p><h1>แก้ไขแผนงานจ้าง</h1></header><ServicePlanForm mode="edit" departments={DEPARTMENTS} initial={result.plan} hasRequests={result.requests.length > 0} /></div>
 }

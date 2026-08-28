@@ -6,13 +6,15 @@ export const SERVICE_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
 export const SERVICE_PO_MAX_BYTES = 10 * 1024 * 1024
 export const SERVICE_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
 
-export function serviceFilePath(ownerId: string, filename: string, kind: 'checklist' | 'po'): string {
+export type ServiceFileKind = 'checklist' | 'po' | 'plan-document'
+
+export function serviceFilePath(ownerId: string, filename: string, kind: ServiceFileKind): string {
   const safe = filename.split(/[\\/]/).pop()?.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.{2,}/g, '_') || 'document'
   const unique = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
   return `service-procurement/${kind}/${ownerId}/${Date.now()}-${unique}-${safe}`
 }
 
-export function isServiceFilePathAllowed(path: string, ownerId: string, kind: 'checklist' | 'po'): boolean {
+export function isServiceFilePathAllowed(path: string, ownerId: string, kind: ServiceFileKind): boolean {
   if (!path || path.includes('..')) return false
   const prefix = `service-procurement/${kind}/${ownerId}/`
   return path.startsWith(prefix) && !path.slice(prefix.length).includes('/')

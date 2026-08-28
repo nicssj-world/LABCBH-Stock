@@ -106,7 +106,7 @@ export function ServicePlanResponsibleDialog({
         <header className="app-dialog__header">
           <div>
             <h2 id={titleId}>กำหนดผู้รับผิดชอบแผน</h2>
-            <p id={descriptionId}>เลือกผู้ที่สามารถบันทึกและปรับยอดค่าใช้จ่ายของแผนนี้ได้</p>
+            <p id={descriptionId}>เลือกผู้ที่สามารถบันทึกค่าใช้จ่ายและปิด PO ของแผนนี้ได้</p>
           </div>
           <button
             type="button"

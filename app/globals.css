@@ -2083,6 +2083,7 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .list-summary-dialog__item-value small { margin-top: 3px; color: var(--lab-muted); font-size: 10px; font-weight: 600; }
 .list-summary-dialog__items-empty { margin: 0; padding: 16px; color: var(--lab-muted); font-size: 12px; }
 .list-summary-dialog__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 20px; }
+.list-summary-dialog__receipt-trigger { margin-right: auto; }
 .pr-outside-stock-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pr-outside-stock-control .form-error { flex: 1 0 100%; margin: 0; }
 .list-summary-dialog__footer > .pr-outside-stock-control { margin-right: auto; }
@@ -4286,6 +4287,8 @@ input[type="number"] {
   .list-summary-dialog__footer > .pr-outside-stock-control,
   .contract-detail-heading__status > .pr-outside-stock-control { width: 100%; margin: 4px 0 0; }
   .pr-outside-stock-control > .lab-button { width: 100%; }
+  .requisition-detail-actions { align-items: stretch; padding-inline: 0; }
+  .requisition-detail-actions .lab-button { width: 100%; min-width: 0; }
   .inventory-export-dialog__actions { display: grid; grid-template-columns: 1fr; }
   .inventory-export-dialog__actions .lab-button,
   .inventory-export-dialog__actions .lab-link-button { width: 100%; }
@@ -4681,6 +4684,17 @@ frozen on screen with nothing to say the click was received.
 }
 
 /* Requisition receipt workflow ------------------------------------------- */
+.requisition-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 4px 2px;
+}
+
+.requisition-detail-actions .lab-button {
+  min-width: 160px;
+}
+
 .requisition-list__header-actions {
   display: flex;
   flex-wrap: wrap;
@@ -5781,6 +5795,22 @@ body {
   background: var(--lab-red);
 }
 
+.notification-center__item.is-service-cancelled {
+  background: color-mix(in srgb, var(--lab-red) 7%, var(--lab-surface));
+}
+
+.notification-center__item.is-service-cancelled .notification-center__item-marker {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  place-items: center;
+  color: #fff;
+  background: var(--lab-red);
+  border-radius: 50%;
+  font: 800 13px/1 var(--font-sans);
+}
+
 .notification-center__item.is-resolved .notification-center__item-marker {
   background: var(--lab-green);
 }
@@ -6178,6 +6208,16 @@ body {
   .annual-plan-preview-dialog__body { max-height: calc(100dvh - 108px); }
   .annual-plan-preview-dialog__body > .pdf-document-viewer,
   .annual-plan-preview-dialog__body > .document-preview--image { min-height: 280px; }
+}
+
+.notification-center__toast.is-service-cancelled {
+  border-color: color-mix(in srgb, var(--lab-red) 55%, var(--lab-border-strong));
+  box-shadow: 0 12px 32px rgb(157 45 55 / 20%);
+}
+
+.notification-center__toast.is-service-cancelled .notification-center__toast-copy p,
+.notification-center__toast.is-service-cancelled .notification-center__toast-copy strong {
+  color: var(--lab-red);
 }
 
 @media (max-width: 540px) {

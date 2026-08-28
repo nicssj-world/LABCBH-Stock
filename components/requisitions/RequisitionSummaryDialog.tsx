@@ -7,8 +7,20 @@ import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requisitions/presenter'
 import type { RequisitionRecord } from '@/lib/requisitions/types'
+import { RequisitionReceiptDialog } from './RequisitionReceiptDialog'
 
-export function RequisitionSummaryDialog({ requisition }: { requisition: RequisitionRecord }) {
+interface RequisitionReceiptAction {
+  actorName: string | null
+  signaturePreview: string | null
+  portalProfileHref: string
+}
+
+interface RequisitionSummaryDialogProps {
+  requisition: RequisitionRecord
+  receiptAction?: RequisitionReceiptAction
+}
+
+export function RequisitionSummaryDialog({ requisition, receiptAction }: RequisitionSummaryDialogProps) {
   // One of these renders per row, in both the table and the card layout,
   // so the dialog body is built only once someone opens it.
   const { dialogRef, isRendered, open: openDialog, unmount: unmountDialog } = useDeferredDialog()
@@ -145,6 +157,16 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
           </div>
 
           <footer className="list-summary-dialog__footer">
+            {receiptAction && (
+              <RequisitionReceiptDialog
+                requisitionId={requisition.id}
+                items={requisition.items}
+                actorName={receiptAction.actorName}
+                signaturePreview={receiptAction.signaturePreview}
+                portalProfileHref={receiptAction.portalProfileHref}
+                triggerClassName="list-summary-dialog__receipt-trigger"
+              />
+            )}
             <DetailIconLink
               href={`/requisitions/${requisition.id}`}
               label={`เปิดรายละเอียดเต็มใบเบิก ${requisition.documentNumber}`}

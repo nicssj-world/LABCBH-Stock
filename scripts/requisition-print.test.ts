@@ -9,6 +9,8 @@ assert.match(printPage, /RequisitionPrint/)
 assert.match(printPage, /loadPortalSignatureDataUri/)
 assert.match(printPage, /requisition\.fulfilledBy/)
 assert.match(printPage, /fulfilledBySignature/)
+assert.match(printPage, /requisition\.receivedBy/)
+assert.match(printPage, /receivedBySignature/)
 
 const printComponent = read('components/requisitions/RequisitionPrint.tsx')
 
@@ -45,10 +47,11 @@ assert.match(printComponent, /ไม่พบลายเซ็นต์ใน P
 assert.match(printComponent, /\(\{block\.hint\}\)/, 'signature roles use the requested parenthesized labels')
 assert.match(printComponent, /print-signature__mark/, 'signature content reserves a shared row for alignment')
 
-// The receiver's block prints the digitally captured signature once it
-// exists, instead of a blank line the recipient has already signed on-screen.
+// The receiver's block resolves the current Portal signature for the actor
+// recorded at receipt, with the old snapshot available only for compatibility.
 assert.match(printComponent, /requisition\.signature/, 'the print view must check for a captured digital signature')
 assert.match(printComponent, /requisition\.receivedByName/)
+assert.match(printComponent, /receivedBySignature/)
 assert.match(printComponent, /print-signature__image/)
 
 const printCss = read('app/globals.css')

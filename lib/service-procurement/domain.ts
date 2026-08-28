@@ -1,5 +1,6 @@
 import { bangkokIsoDate } from '@/lib/date/thai'
-import type { ServiceFulfillmentStatus } from './schema'
+import type { ServiceFulfillmentStatus, ServiceExpenseFrequency, ServicePrStatus, ServicePoStatus } from './schema'
+import type { ServicePurchaseRequestRecord } from './types'
 
 export const SERVICE_PLAN_EXPENSE_ENTRY_KINDS = [
   'expense',
@@ -13,6 +14,58 @@ const SERVICE_PLAN_MONTH_COUNT = 12
 export interface ServicePlanMonthlySeriesEntry {
   month: string
   amount: number
+}
+
+export type ServiceRequestDisplayStatus =
+  | 'pending_confirmation'
+  | 'awaiting_po'
+  | 'po_incomplete'
+  | 'ready_for_expense'
+  | 'recording_expense'
+  | 'closed'
+  | 'cancelled'
+
+export interface ServiceRequestStatusInput {
+  status: ServicePrStatus
+  poStatus: ServicePoStatus
+  poNumber: string | null
+  poFileName: string | null
+  activeExpenseCount: number
+}
+
+/** Derives one user-facing workflow state from the two persisted state axes. */
+export function deriveServiceRequestDisplayStatus(input: ServiceRequestStatusInput): ServiceRequestDisplayStatus {
+  if (input.status === 'cancelled' || input.poStatus === 'cancelled') return 'cancelled'
+  if (input.status === 'closed' || input.poStatus === 'closed') return 'closed'
+  if (input.status === 'pending') return 'pending_confirmation'
+  const hasNumber = Boolean(input.poNumber?.trim())
+  const hasFile = Boolean(input.poFileName?.trim())
+  if (!hasNumber && !hasFile) return 'awaiting_po'
+  if (!hasNumber || !hasFile) return 'po_incomplete'
+  return input.activeExpenseCount > 0 ? 'recording_expense' : 'ready_for_expense'
+}
+
+export function serviceRequestDisplayStatus(request: Pick<ServicePurchaseRequestRecord, 'status' | 'poStatus' | 'poNumber' | 'poFileName' | 'usageEvents'>): ServiceRequestDisplayStatus {
+  return deriveServiceRequestDisplayStatus({
+    status: request.status,
+    poStatus: request.poStatus,
+    poNumber: request.poNumber,
+    poFileName: request.poFileName,
+    activeExpenseCount: request.usageEvents.filter((event) => event.kind === 'lab_expense' && event.status === 'active').length,
+  })
+}
+
+export function serviceExpenseFrequency(isRedCross: boolean): ServiceExpenseFrequency {
+  return isRedCross ? 'daily' : 'monthly'
+}
+
+export function isDateRangeWithinFiscalYear(start: string, end: string, fiscalYear: number): boolean {
+  const range = fiscalYearRange(fiscalYear)
+  return start <= end && start >= range.start && end <= range.end
+}
+
+export function isExpenseDateWithinRequest(expenseDate: string, usageStartDate: string, usageEndDate: string): boolean {
+  return expenseDate >= usageStartDate && expenseDate <= usageEndDate
 }
 
 export function fiscalYearFromDate(value: string | Date): number {

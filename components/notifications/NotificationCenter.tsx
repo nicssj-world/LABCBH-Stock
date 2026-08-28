@@ -302,6 +302,22 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
     }
   }
 
+  const toastContent = toast ? (
+    <>
+      <div className="notification-center__toast-copy">
+        <p>{toast.eventType === 'service_purchase_order_cancelled' ? 'งานจ้าง · ยกเลิก PO' : 'การแจ้งเตือนใหม่'}</p>
+        <strong>{toast.title}</strong>
+        <span>{toast.documentNumber} · {toast.body}</span>
+      </div>
+      <div className="notification-center__toast-actions">
+        <Link href={toast.href} onClick={() => { optimisticallyMarkRead(toast.id); setToast(null) }}>เปิดใบ PR</Link>
+        <button type="button" aria-label="ปิดการแจ้งเตือนใหม่" onClick={() => setToast(null)}>
+          <CloseIcon />
+        </button>
+      </div>
+    </>
+  ) : null
+
   return (
     <div className="notification-center">
       <button
@@ -346,7 +362,7 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
           ) : (
             <ul className="notification-center__list">
               {visibleNotifications.map((notification) => (
-                <li key={notification.id} className={`notification-center__item${notification.readAt ? '' : ' is-unread'}`}>
+                <li key={notification.id} className={`notification-center__item${notification.readAt ? '' : ' is-unread'}${notification.eventType === 'service_purchase_order_cancelled' ? ' is-service-cancelled' : ''}`}>
                   <Link
                     href={notification.href}
                     className="notification-center__item-link"
@@ -355,7 +371,7 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
                       setOpen(false)
                     }}
                   >
-                    <span className="notification-center__item-marker" aria-hidden="true" />
+                    <span className="notification-center__item-marker" aria-hidden="true">{notification.eventType === 'service_purchase_order_cancelled' ? '!' : ''}</span>
                     <span className="notification-center__item-copy">
                       <strong>{notification.title}</strong>
                       <span>{notification.body}</span>
@@ -372,21 +388,15 @@ export function NotificationCenter({ actorId, snapshot, onSnapshotChange }: Noti
         </div>
       )}
 
-      {toast && (
-        <div className="notification-center__toast" role="status" aria-live="polite">
-          <div className="notification-center__toast-copy">
-            <p>การแจ้งเตือนใหม่</p>
-            <strong>{toast.title}</strong>
-            <span>{toast.documentNumber} · {toast.body}</span>
-          </div>
-          <div className="notification-center__toast-actions">
-            <Link href={toast.href} onClick={() => { optimisticallyMarkRead(toast.id); setToast(null) }}>เปิดรายการ</Link>
-            <button type="button" aria-label="ปิดการแจ้งเตือนใหม่" onClick={() => setToast(null)}>
-              <CloseIcon />
-            </button>
-          </div>
+      {toast && (toast.eventType === 'service_purchase_order_cancelled' ? (
+        <div className="notification-center__toast is-service-cancelled" role="alert" aria-live="assertive">
+          {toastContent}
         </div>
-      )}
+      ) : (
+        <div className="notification-center__toast" role="status" aria-live="polite">
+          {toastContent}
+        </div>
+      ))}
     </div>
   )
 }

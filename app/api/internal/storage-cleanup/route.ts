@@ -4,6 +4,7 @@ import { cleanupExpiredAnnualPlans, retryAnnualPlanHardDelete } from '@/lib/annu
 import { cleanupPurchaseRequestChecklistObjects } from '@/lib/pr/checklist-cleanup'
 import type { PurchaseRequestChecklistDeletionReason } from '@/lib/pr/checklist-cleanup'
 import { cleanupTerminalPurchaseRequestPoFile } from '@/lib/po/cleanup'
+import { cleanupExpiredServicePlans } from '@/lib/service-procurement/cleanup'
 import { getR2BucketName, getR2Client } from '@/lib/r2/client'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -169,6 +170,14 @@ export async function POST(request: Request) {
     annualPlanRetentionError = error instanceof Error ? error.message : String(error)
   }
 
+  let servicePlanRetention = { closed: 0, deleted: 0, queued: 0 }
+  let servicePlanRetentionError: string | null = null
+  try {
+    servicePlanRetention = await cleanupExpiredServicePlans(await findSystemActorId())
+  } catch (error) {
+    servicePlanRetentionError = error instanceof Error ? error.message : String(error)
+  }
+
   const claimed = await supabaseAdmin.rpc('claim_storage_cleanup_jobs', { p_limit: 25 })
   if (claimed.error) {
     return NextResponse.json({ error: claimed.error.message }, { status: 500 })
@@ -201,14 +210,16 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      ok: failures.length === 0 && annualPlanRetentionError === null,
+      ok: failures.length === 0 && annualPlanRetentionError === null && servicePlanRetentionError === null,
       claimed: jobs.length,
       completed,
       failed: failures.length,
       failures,
       annualPlanRetention,
       annualPlanRetentionError,
+      servicePlanRetention,
+      servicePlanRetentionError,
     },
-    { status: failures.length === 0 && annualPlanRetentionError === null ? 200 : 500 },
+    { status: failures.length === 0 && annualPlanRetentionError === null && servicePlanRetentionError === null ? 200 : 500 },
   )
 }

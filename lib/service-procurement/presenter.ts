@@ -1,6 +1,7 @@
 import { formatBaht } from '@/lib/pr/presenter'
 import { SERVICE_PLAN_TYPE_LABELS, type ServicePlanType } from './schema'
 import type { ServicePlanBalance, ServicePlanLedgerRecord, ServicePurchaseRequestRecord } from './types'
+import { serviceRequestDisplayStatus, type ServiceRequestDisplayStatus } from './domain'
 
 export { formatBaht }
 
@@ -32,5 +33,26 @@ export function servicePoStatusLabel(status: ServicePurchaseRequestRecord['poSta
 }
 
 export function serviceMethodLabel(method: ServicePurchaseRequestRecord['purchaseMethod']): string {
-  return method === 'annual_items' ? 'ซื้อในแผนทั้งปี' : 'จ้างตรวจทางห้องปฏิบัติการ'
+  return method === 'laboratory_testing' ? 'จ้างตรวจทางห้องปฏิบัติการ' : 'จ้างตรวจทางห้องปฏิบัติการ'
+}
+
+export { serviceRequestDisplayStatus }
+
+export function serviceRequestDisplayStatusLabel(status: ServiceRequestDisplayStatus): string {
+  return ({
+    pending_confirmation: 'รอคลังยืนยัน PR',
+    awaiting_po: 'รอข้อมูล PO',
+    po_incomplete: 'ข้อมูล PO ยังไม่ครบ',
+    ready_for_expense: 'พร้อมบันทึกค่าใช้จ่าย',
+    recording_expense: 'กำลังบันทึกค่าใช้จ่าย',
+    closed: 'ปิด PO แล้ว',
+    cancelled: 'ยกเลิก',
+  })[status]
+}
+
+export function serviceRequestDisplayStatusTone(status: ServiceRequestDisplayStatus): 'neutral' | 'attention' | 'success' | 'danger' {
+  if (status === 'cancelled') return 'danger'
+  if (status === 'closed') return 'success'
+  if (status === 'po_incomplete' || status === 'recording_expense') return 'attention'
+  return 'neutral'
 }

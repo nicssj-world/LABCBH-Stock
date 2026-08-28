@@ -20,8 +20,9 @@ export const SERVICE_PLAN_TYPE_LABELS: Record<ServicePlanType, string> = {
   other_services: 'จ้างเหมาบริการอื่น',
 }
 
-export const SERVICE_PURCHASE_METHODS = ['annual_items', 'laboratory_testing'] as const
+export const SERVICE_PURCHASE_METHODS = ['laboratory_testing'] as const
 export type ServicePurchaseMethod = (typeof SERVICE_PURCHASE_METHODS)[number]
+type DeprecatedServicePurchaseMethod = ServicePurchaseMethod | 'annual_items'
 
 export const SERVICE_PR_STATUSES = ['pending', 'confirmed', 'closed', 'cancelled'] as const
 export type ServicePrStatus = (typeof SERVICE_PR_STATUSES)[number]
@@ -29,11 +30,20 @@ export type ServicePrStatus = (typeof SERVICE_PR_STATUSES)[number]
 export const SERVICE_PO_STATUSES = ['not_issued', 'open', 'closed', 'cancelled'] as const
 export type ServicePoStatus = (typeof SERVICE_PO_STATUSES)[number]
 
+export const SERVICE_PLAN_STATUSES = ['active', 'closing', 'closed'] as const
+export type ServicePlanStatus = (typeof SERVICE_PLAN_STATUSES)[number]
+
+export const SERVICE_EXPENSE_FREQUENCIES = ['monthly', 'daily'] as const
+export type ServiceExpenseFrequency = (typeof SERVICE_EXPENSE_FREQUENCIES)[number]
+
 export const SERVICE_FULFILLMENT_STATUSES = ['not_started', 'partial', 'complete'] as const
 export type ServiceFulfillmentStatus = (typeof SERVICE_FULFILLMENT_STATUSES)[number]
 
 export const SERVICE_ATTACHMENT_KINDS = ['tor', 'quotation'] as const
 export type ServiceAttachmentKind = (typeof SERVICE_ATTACHMENT_KINDS)[number]
+
+export const SERVICE_PLAN_DOCUMENT_KINDS = ['quotation', 'contract_page'] as const
+export type ServicePlanDocumentKind = (typeof SERVICE_PLAN_DOCUMENT_KINDS)[number]
 
 export const SERVICE_COMMITTEE_KINDS = ['specification', 'inspection'] as const
 export type ServiceCommitteeKind = (typeof SERVICE_COMMITTEE_KINDS)[number]
@@ -43,27 +53,47 @@ const moneySchema = z
   .finite()
   .nonnegative()
   .refine((value) => Math.round(value * 100) === value * 100, 'จำนวนเงินต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง')
-const signedMoneySchema = z
-  .number()
-  .finite()
-  .refine((value) => Math.round(value * 100) === value * 100, 'จำนวนเงินต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง')
+const responsibleIdsSchema = z.array(z.string().uuid()).max(20).refine((ids) => new Set(ids).size === ids.length, 'ผู้รับผิดชอบห้ามซ้ำกัน')
+const planTestItemSchema = z.object({
+  name: z.string().trim().min(1, 'กรุณาระบุชื่อรายการส่งตรวจ').max(240),
+  unit: z.string().trim().min(1, 'กรุณาระบุหน่วย').max(100),
+}).strict()
 
-const responsibleIdsSchema = z.array(z.string().uuid()).max(20)
-
-export const servicePlanInputSchema = z
-  .object({
+const servicePlanFields = z.object({
     fiscalYear: z.number().int().min(2500).max(3000),
     name: z.string().trim().min(1, 'กรุณาระบุชื่อแผน').max(240),
     department: z.enum(DEPARTMENTS, { errorMap: () => ({ message: 'กรุณาเลือกหน่วยงาน' }) }),
     budget: moneySchema.refine((value) => value > 0, 'วงเงินต้องมากกว่า 0'),
     type: z.enum(SERVICE_PLAN_TYPES),
+    isRedCross: z.boolean().default(false),
+    requiresContract: z.boolean().default(false),
+    testItems: z.array(planTestItemSchema).max(200).default([]),
     responsibleProfileIds: responsibleIdsSchema,
-  })
-  .strict()
-
-export const servicePlanUpdateSchema = servicePlanInputSchema.extend({
-  expectedUpdatedAt: z.string().datetime({ offset: true }).nullable(),
 }).strict()
+
+export const servicePlanInputSchema = servicePlanFields.superRefine((value, ctx) => {
+    if (!value.isRedCross && value.testItems.length > 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['testItems'], message: 'รายการส่งตรวจใช้ได้เฉพาะแผนสภากาชาดไทย' })
+    }
+    const duplicate = new Set<string>()
+    value.testItems.forEach((item, index) => {
+      const key = `${item.name.toLocaleLowerCase()}|${item.unit.toLocaleLowerCase()}`
+      if (duplicate.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['testItems', index, 'name'], message: 'มีรายการส่งตรวจซ้ำกัน' })
+      duplicate.add(key)
+    })
+})
+
+export const servicePlanUpdateSchema = servicePlanFields.extend({
+  expectedUpdatedAt: z.string().datetime({ offset: true }).nullable(),
+}).strict().superRefine((value, ctx) => {
+  if (!value.isRedCross && value.testItems.length > 0) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['testItems'], message: 'รายการส่งตรวจใช้ได้เฉพาะแผนสภากาชาดไทย' })
+  const keys = new Set<string>()
+  value.testItems.forEach((item, index) => {
+    const key = `${item.name.toLocaleLowerCase()}|${item.unit.toLocaleLowerCase()}`
+    if (keys.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['testItems', index, 'name'], message: 'มีรายการส่งตรวจซ้ำกัน' })
+    keys.add(key)
+  })
+})
 
 export const servicePlanBudgetRevisionSchema = z
   .object({
@@ -73,6 +103,7 @@ export const servicePlanBudgetRevisionSchema = z
   })
   .strict()
 
+/** Retained only for compatibility with old service data; the new UI never writes it. */
 export const servicePlanHistoricalExpenseSchema = z
   .object({
     planId: z.string().uuid(),
@@ -86,7 +117,7 @@ export const servicePlanHistoricalExpenseSchema = z
 export const servicePlanExpenseAdjustmentSchema = z
   .object({
     planId: z.string().uuid(),
-    amount: signedMoneySchema.refine((value) => value !== 0, 'ยอดปรับต้องไม่เป็น 0'),
+    amount: z.number().finite().refine((value) => value !== 0, 'ยอดปรับต้องไม่เป็น 0'),
     expenseDate: isoDateSchema,
     reason: z.string().trim().min(1, 'กรุณาระบุเหตุผล').max(1000),
     sourceReference: z.string().trim().min(1, 'กรุณาระบุแหล่งอ้างอิง').max(240),
@@ -95,18 +126,16 @@ export const servicePlanExpenseAdjustmentSchema = z
   .strict()
 
 const serviceLineSchema = z.object({
-  inventoryItemId: z.string().uuid().nullable(),
-  lsCode: z.string().trim().max(100).nullable(),
-  name: z.string().trim().max(240).nullable(),
-  unit: z.string().trim().min(1, 'กรุณาระบุหน่วย'),
-  requestedQuantity: z.number().finite().positive('จำนวนที่ขอต้องมากกว่า 0'),
-  unitPrice: moneySchema,
+  planItemId: z.string().uuid(),
+  name: z.string().trim().min(1, 'กรุณาระบุชื่อรายการ').max(240),
+  unit: z.string().trim().min(1, 'กรุณาระบุหน่วย').max(100),
+  requestedQuantity: z.number().finite().nonnegative('จำนวนต้องไม่ติดลบ'),
 }).strict()
 
 const serviceChecklistSchema = z.object({
   attachments: z.array(z.object({
-    kind: z.enum(SERVICE_ATTACHMENT_KINDS),
-    slot: z.number().int().min(1).max(3),
+    kind: z.literal('tor'),
+    slot: z.literal(1),
     uploadId: z.string().uuid().nullable(),
   }).strict()),
   committees: z.array(z.object({
@@ -116,7 +145,10 @@ const serviceChecklistSchema = z.object({
   }).strict()),
 }).strict()
 
-const fiscalMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'กรุณาเลือกเดือนที่ถูกต้อง')
+const documentChoicesSchema = z.object({
+  replaceQuotation: z.boolean().default(false),
+  replaceContractPage: z.boolean().default(false),
+}).strict().default({})
 
 export const servicePurchaseRequestInputSchema = z
   .object({
@@ -124,38 +156,21 @@ export const servicePurchaseRequestInputSchema = z
     requesterName: z.string().trim().min(1, 'กรุณาระบุชื่อผู้ขอ'),
     requestedDate: isoDateSchema,
     note: z.string().trim().max(1000).nullable(),
-    planId: z.string().uuid().nullable(),
-    method: z.enum(SERVICE_PURCHASE_METHODS),
-    amount: moneySchema,
-    requestedPoMonth: fiscalMonthSchema.nullable(),
+    planId: z.string().uuid(),
+    /** Rejected below; retained only so old saved-form payloads fail with a useful issue. */
+    method: z.literal('laboratory_testing').optional(),
+    amount: moneySchema.refine((value) => value > 0, 'กรุณาระบุวงเงิน'),
+    usageStartDate: isoDateSchema,
+    usageEndDate: isoDateSchema,
     items: z.array(serviceLineSchema),
     checklist: serviceChecklistSchema,
+    documentChoices: documentChoicesSchema,
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.method === 'annual_items') {
-      if (value.items.length === 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'กรุณาเลือกรายการอย่างน้อย 1 รายการ' })
-      }
-      if (value.requestedPoMonth !== null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['requestedPoMonth'], message: 'วิธีซื้อในแผนทั้งปีไม่ต้องระบุเดือนทำ PO' })
-      }
-      const calculated = value.items.reduce((sum, item) => sum + item.requestedQuantity * item.unitPrice, 0)
-      if (Math.round(calculated * 100) !== Math.round(value.amount * 100)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amount'], message: 'วงเงินไม่ตรงกับยอดรวมรายการ' })
-      }
-    }
-
-    if (value.method === 'laboratory_testing') {
-      if (value.items.length > 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'วิธีจ้างตรวจทางห้องปฏิบัติการไม่ต้องเลือกรายการ' })
-      }
-      if (!value.requestedPoMonth) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['requestedPoMonth'], message: 'กรุณาเลือกเดือนที่ขอทำ PO' })
-      }
-      if (value.amount <= 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amount'], message: 'กรุณาระบุวงเงิน' })
-      }
+    if (value.method !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['method'], message: 'งานจ้างไม่รับวิธีจัดซื้อจาก client' })
+    if (value.usageStartDate > value.usageEndDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['usageEndDate'], message: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น' })
     }
   })
 
@@ -165,26 +180,40 @@ export const servicePurchaseRequestHeaderSchema = z.object({
   note: z.string().trim().max(1000).nullable(),
 }).strict()
 
-export const serviceUsageInputSchema = z.object({
-  requestId: z.string().uuid(),
-  usageDate: isoDateSchema,
-  items: z.array(z.object({ itemId: z.string().uuid(), quantity: z.number().finite().positive() }).strict()).min(1),
-  note: z.string().trim().max(1000).nullable(),
-}).strict()
-
 export const serviceLabExpenseInputSchema = z.object({
   requestId: z.string().uuid(),
   expenseDate: isoDateSchema,
   amount: moneySchema.refine((value) => value > 0, 'ยอดค่าใช้จ่ายต้องมากกว่า 0'),
+  invoiceNumber: z.string().trim().max(240).nullable(),
   note: z.string().trim().max(1000).nullable(),
 }).strict()
 
+export const serviceLabExpenseUpdateSchema = serviceLabExpenseInputSchema.extend({
+  expenseId: z.string().uuid(),
+  reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลการแก้ไข').max(1000),
+}).strict()
+
+export const serviceLabExpenseCancelSchema = z.object({
+  requestId: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลการยกเลิก').max(1000),
+}).strict()
+
+/** Deprecated aliases kept so older server actions compile while the new
+ * expense RPCs use the three schemas above. */
 export const serviceLabExpenseAdjustmentSchema = z.object({
   requestId: z.string().uuid(),
   sourceEventId: z.string().uuid(),
   expenseDate: isoDateSchema,
-  amount: signedMoneySchema.refine((value) => value !== 0, 'ยอดปรับต้องไม่เป็น 0'),
-  note: z.string().trim().min(1, 'กรุณาระบุเหตุผลการปรับยอด').max(1000),
+  amount: z.number().finite().refine((value) => value !== 0),
+  note: z.string().trim().min(1).max(1000),
+}).strict()
+
+export const serviceUsageInputSchema = z.object({
+  requestId: z.string().uuid(),
+  usageDate: isoDateSchema,
+  items: z.array(z.object({ itemId: z.string().uuid(), quantity: z.number().finite().positive() }).strict()),
+  note: z.string().trim().max(1000).nullable(),
 }).strict()
 
 export const serviceCancellationSchema = z.object({
@@ -199,7 +228,6 @@ export const serviceClosePoSchema = z.object({
 
 export type ServicePlanInput = z.infer<typeof servicePlanInputSchema>
 export type ServicePurchaseRequestInput = z.infer<typeof servicePurchaseRequestInputSchema>
-export type ServiceUsageInput = z.infer<typeof serviceUsageInputSchema>
 export type ServiceLabExpenseInput = z.infer<typeof serviceLabExpenseInputSchema>
 
 export interface ServiceChecklistAttachmentRequirement {
@@ -223,22 +251,14 @@ export interface ServiceChecklistPolicy {
 }
 
 const PDF = ['application/pdf'] as const
-const PDF_OR_IMAGE = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
 
-export function deriveServiceChecklist(method: ServicePurchaseMethod, amount: number): ServiceChecklistPolicy {
-  const quoteCount = amount >= 50_000 ? 3 : 1
+export function deriveServiceChecklist(method: DeprecatedServicePurchaseMethod, amount: number): ServiceChecklistPolicy {
   const committeeSeats = amount >= 100_000 ? 3 : 1
   return {
     version: 1,
-    method,
+    method: 'laboratory_testing',
     attachments: [
       { kind: 'tor', slot: 1, label: 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', accept: PDF },
-      ...Array.from({ length: quoteCount }, (_, index) => ({
-        kind: 'quotation' as const,
-        slot: index + 1,
-        label: `ใบเสนอราคาบริษัทที่ ${index + 1}`,
-        accept: PDF_OR_IMAGE,
-      })),
     ],
     committees: [
       { kind: 'specification', seats: committeeSeats, label: 'คณะกรรมการกำหนดราคากลางและคุณลักษณะเฉพาะ' },

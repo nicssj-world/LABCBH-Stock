@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/Button'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -15,6 +16,7 @@ interface RequisitionReceiptDialogProps {
   actorName: string | null
   signaturePreview: string | null
   portalProfileHref: string
+  triggerClassName?: string
 }
 
 export function RequisitionReceiptDialog({
@@ -23,6 +25,7 @@ export function RequisitionReceiptDialog({
   actorName,
   signaturePreview,
   portalProfileHref,
+  triggerClassName = '',
 }: RequisitionReceiptDialogProps) {
   const router = useRouter()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -132,7 +135,7 @@ export function RequisitionReceiptDialog({
       <button
         ref={triggerRef}
         type="button"
-        className="lab-button lab-button--primary"
+        className={`lab-button lab-button--primary ${triggerClassName}`.trim()}
         aria-haspopup="dialog"
         aria-controls={isRendered ? dialogId : undefined}
         onClick={openDialog}
@@ -140,7 +143,7 @@ export function RequisitionReceiptDialog({
         ตรวจรับของ
       </button>
 
-      {isRendered && (
+      {isRendered && createPortal(
         <dialog
           ref={dialogRef}
           id={dialogId}
@@ -331,7 +334,8 @@ export function RequisitionReceiptDialog({
               {isReceiving ? 'กำลังยืนยันตรวจรับ…' : 'ยืนยันตรวจรับของ'}
             </Button>
           </footer>
-        </dialog>
+        </dialog>,
+        document.body,
       )}
     </>
   )

@@ -1,11 +1,12 @@
 import 'server-only'
 import ExcelJS from 'exceljs'
 import { getServicePlan } from './queries'
+import { serviceRequestDisplayStatus, serviceRequestDisplayStatusLabel } from './presenter'
 
 export async function buildServicePlanWorkbook(planId: string): Promise<Uint8Array | null> {
   const result = await getServicePlan(planId)
   if (!result) return null
-  const { plan, ledger } = result
+  const { plan, ledger, requests } = result
   const workbook = new ExcelJS.Workbook()
   workbook.creator = 'LABCBH Stock'
   workbook.created = new Date()
@@ -24,7 +25,28 @@ export async function buildServicePlanWorkbook(planId: string): Promise<Uint8Arr
     { label: 'ใช้จริง', value: plan.balance.spent },
     { label: 'สำรอง', value: plan.balance.reserved },
     { label: 'คงเหลือ', value: plan.balance.available },
+    { label: 'สถานะแผน', value: plan.status },
+    { label: 'สภากาชาดไทย', value: plan.isRedCross ? 'ใช่' : 'ไม่ใช่' },
+    { label: 'ทำสัญญา', value: plan.requiresContract ? 'ใช่' : 'ไม่ใช่' },
   ])
+
+  const testItems = workbook.addWorksheet('รายการส่งตรวจ')
+  testItems.columns = [
+    { header: 'ลำดับ', key: 'line', width: 12 },
+    { header: 'ชื่อรายการ', key: 'name', width: 44 },
+    { header: 'หน่วย', key: 'unit', width: 20 },
+  ]
+  plan.testItems.forEach((item) => testItems.addRow({ line: item.lineNumber, name: item.name, unit: item.unit }))
+
+  const requestSheet = workbook.addWorksheet('PR PO ที่อ้างแผน')
+  requestSheet.columns = [
+    { header: 'เลข PR', key: 'pr', width: 24 },
+    { header: 'เลข PO', key: 'po', width: 24 },
+    { header: 'ช่วงใช้ PO', key: 'range', width: 28 },
+    { header: 'วงเงิน', key: 'amount', width: 18 },
+    { header: 'สถานะ', key: 'status', width: 24 },
+  ]
+  requests.forEach((request) => requestSheet.addRow({ pr: request.documentNumber, po: request.poNumber ?? '', range: `${request.usageStartDate} – ${request.usageEndDate}`, amount: request.requestedAmount, status: serviceRequestDisplayStatusLabel(serviceRequestDisplayStatus(request)) }))
 
   const monthly = workbook.addWorksheet('ยอดรายเดือน')
   monthly.columns = [
@@ -59,7 +81,7 @@ export async function buildServicePlanWorkbook(planId: string): Promise<Uint8Arr
   ]
   ledger.forEach((entry) => detail.addRow({ id: entry.id, date: entry.eventDate, kind: entry.entryKind, amount: entry.amount, request: entry.sourceReference ?? entry.purchaseRequestId ?? '', actor: entry.actorName ?? '', reason: entry.reason, created: entry.createdAt }))
 
-  for (const sheet of [summary, monthly, detail]) {
+  for (const sheet of [summary, testItems, requestSheet, monthly, detail]) {
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } }
     sheet.views = [{ state: 'frozen', ySplit: 1 }]

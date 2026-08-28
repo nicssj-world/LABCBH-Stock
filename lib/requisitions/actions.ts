@@ -251,11 +251,13 @@ export async function receiveRequisition(requisitionId: string) {
     throw new Error(`ไม่พบลายเซ็นต์ใน Portal กรุณาวาดลายเซ็นต์ หรือเปิด ${PORTAL_PROFILE_PATH}`)
   }
 
+  // The Portal lookup is the confirmation gate. The receipt records the
+  // actor and timestamp only; print/detail pages resolve the actor's current
+  // Portal signature when they render.
   const result = await supabaseAdmin.rpc('receive_requisition', {
     p_requisition_id: parsedId,
     p_actor_id: actor.id,
     p_received_by_name: receivedByName,
-    p_signature: signature,
   })
 
   const received = unwrapMutation('บันทึกการตรวจรับของ', result)

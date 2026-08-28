@@ -17,9 +17,9 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
             <tr>
               <th>ชื่อแผน</th>
               <th>หน่วยงาน</th>
-              <th>ประเภท</th>
+              <th>ประเภท / เงื่อนไข</th>
               <th className="service-plan-table__number">วงเงิน</th>
-              <th>สถานะวงเงิน</th>
+              <th>สถานะ</th>
             </tr>
           </thead>
           <tbody>
@@ -31,10 +31,11 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
                   </Link>
                 </td>
                 <td>{plan.department}</td>
-                <td>{servicePlanTypeLabel(plan.type)}</td>
+                <td>{servicePlanTypeLabel(plan.type)}<small>{[plan.isRedCross ? 'สภากาชาดไทย' : '', plan.requiresContract ? 'ทำสัญญา' : ''].filter(Boolean).join(' · ') || 'ทั่วไป'}</small></td>
                 <td className="identifier service-plan-table__number">{formatBaht(plan.balance.budget)}</td>
                 <td className="service-plan-table__gauge">
-                  <ContractRemainingGauge percent={planRemainingPercent(plan)} />
+                  <span className="status-chip status-chip--service">{plan.status === 'active' ? 'ใช้งานอยู่' : plan.status === 'closing' ? 'อยู่ระหว่างปิด' : 'ปิดแล้ว'}</span>
+                  <small>คงเหลือ {formatBaht(plan.balance.available)}</small>
                 </td>
               </tr>
             ))}
@@ -48,7 +49,7 @@ export function ServicePlanTable({ plans }: { plans: ServicePlanRecord[] }) {
               <div>
                 <p className="section-kicker">ปีงบประมาณ {plan.fiscalYear}</p>
                 <h3><Link className="text-link" href={`/service-procurement/plans/${plan.id}`}>{plan.name}</Link></h3>
-                <p>{plan.department} · {servicePlanTypeLabel(plan.type)}</p>
+                <p>{plan.department} · {servicePlanTypeLabel(plan.type)} · {plan.status === 'active' ? 'ใช้งานอยู่' : plan.status === 'closing' ? 'อยู่ระหว่างปิด' : 'ปิดแล้ว'}</p>
               </div>
             </div>
             <dl className="service-plan-card__balance">
