@@ -9,6 +9,7 @@ export const MAX_SIGNATURE_DATA_URI_LENGTH = 500_000
 export const PORTAL_PROFILE_PATH = '/staff/profile'
 
 const PNG_DATA_URI_PREFIX = 'data:image/png;base64,'
+const PNG_FILE_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
 const NORMALIZED_SIGNATURE_WIDTH = 900
 const NORMALIZED_SIGNATURE_HEIGHT = 260
 const NORMALIZED_CONTENT_WIDTH = 820
@@ -28,6 +29,15 @@ export interface PortalSignatureProfile {
 }
 
 const PORTAL_PROFILE_SELECT = 'id,ephis_id,name,signature_url,status,deleted_at'
+
+function isPngBuffer(input: Buffer) {
+  return input.subarray(0, PNG_FILE_SIGNATURE.length).equals(PNG_FILE_SIGNATURE)
+}
+
+function toPngDataUri(input: Buffer): string | null {
+  const dataUri = `${PNG_DATA_URI_PREFIX}${input.toString('base64')}`
+  return dataUri.length <= MAX_SIGNATURE_DATA_URI_LENGTH ? dataUri : null
+}
 
 function decodePngDataUri(dataUri: string): Buffer {
   if (!dataUri.startsWith(PNG_DATA_URI_PREFIX)) {
@@ -198,7 +208,24 @@ export async function loadPortalSignatureDataUri(
   try {
     const normalized = await normalizeSignatureBuffer(bytes)
     return `${PNG_DATA_URI_PREFIX}${normalized.toString('base64')}`
-  } catch {
+  } catch (caught) {
+    // Portal already stores the production signature as a PNG. If the
+    // optional image normalizer is unavailable in a serverless runtime, do
+    // not turn a valid Portal signature into the misleading "no signature"
+    // state. The upload path still normalizes every newly drawn signature.
+    const portalPng = isPngBuffer(bytes) ? toPngDataUri(bytes) : null
+    if (portalPng) {
+      console.warn('[requisition.signature] using validated Portal PNG without normalization', {
+        profileId: profile.id,
+        error: caught instanceof Error ? caught.message : String(caught),
+      })
+      return portalPng
+    }
+
+    console.error('[requisition.signature] unable to prepare Portal signature preview', {
+      profileId: profile.id,
+      error: caught instanceof Error ? caught.message : String(caught),
+    })
     return null
   }
 }

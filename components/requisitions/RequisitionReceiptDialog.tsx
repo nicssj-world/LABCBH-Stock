@@ -35,12 +35,19 @@ export function RequisitionReceiptDialog({
   const [error, setError] = useState<string | null>(null)
   const [isSavingSignature, setIsSavingSignature] = useState(false)
   const [isReceiving, setIsReceiving] = useState(false)
+  const signaturePreviewRef = useRef(signaturePreview)
 
   const dialogId = `requisition-receipt-dialog-${requisitionId}`
   const titleId = `${dialogId}-title`
   const descriptionId = `${dialogId}-description`
   const signatureHelpId = `${dialogId}-signature-help`
   const isPending = isSavingSignature || isReceiving
+
+  useEffect(() => {
+    if (signaturePreview === signaturePreviewRef.current) return
+    signaturePreviewRef.current = signaturePreview
+    setSignature(signaturePreview)
+  }, [signaturePreview])
 
   useEffect(() => {
     if (isRendered) {
