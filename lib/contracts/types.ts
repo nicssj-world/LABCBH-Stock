@@ -120,6 +120,8 @@ export interface ContractRecord {
   total: number | null
   /** Percentage of the contract still available for the register gauge. */
   remainingPercent?: number | null
+  /** Lease usage entries are included so dashboard issue drill-downs can identify bad months. */
+  usage?: Array<{ amount: number; usageMonth: string | null }>
   responsibleUserIds: string[]
   fileUrl: string | null
   items: ContractItemRecord[]

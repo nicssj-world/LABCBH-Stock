@@ -5,6 +5,8 @@ const read = (path: string) => readFileSync(path, 'utf8')
 
 const migration = read('supabase/migrations/20260827120000_pr_admin_hard_delete.sql')
 const actions = read('lib/pr/actions.ts')
+const errors = read('lib/pr/errors.ts')
+const lifecycleControls = read('components/pr/PurchaseRequestLifecycleControls.tsx')
 const detailPage = read('app/(protected)/purchase-requests/[id]/page.tsx')
 
 assert.match(migration, /create or replace function public\.hard_delete_purchase_request\(/i)
@@ -27,7 +29,12 @@ assert.match(migration, /grant execute on function public\.hard_delete_purchase_
 
 assert.match(actions, /if \(!isAdministrator\(actor\)\)/)
 assert.match(actions, /supabaseAdmin\.rpc\('hard_delete_purchase_request'/)
+assert.match(actions, /ok: false as const[\s\S]*formatPurchaseRequestMutationError\('ลบใบ PR ถาวร'/, 'RPC failures must be returned as serializable action errors')
+assert.match(actions, /ok: true as const[\s\S]*deletedFileCount/, 'successful hard deletes must use the action result envelope')
 assert.match(actions, /enqueueStorageCleanupJobBestEffort/)
+assert.match(lifecycleControls, /isPurchaseRequestActionError\(result\)/, 'the dialog must render returned action errors instead of relying on thrown production errors')
+assert.match(errors, /only a pending purchase request can be hard-deleted/, 'hard-delete status errors need user-facing copy')
+assert.match(errors, /hard_delete_purchase_request[\s\S]*schema cache/, 'a missing deployed RPC needs actionable user-facing copy')
 assert.match(detailPage, /canHardDelete=\{isAdministrator\(actor\)\}/)
 
 console.log('PR hard-delete contract checks passed')

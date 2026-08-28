@@ -7,7 +7,9 @@ import { fiscalYearFromDate, fiscalYearRange } from '@/lib/service-procurement/d
 import { getExecutiveOverview } from '@/lib/dashboard/executive'
 import {
   EXECUTIVE_FOLLOW_UP_CATEGORIES,
+  executiveFollowUpCategoryLabel,
   executiveFollowUpHref,
+  executiveSourceHref,
   isExecutiveFollowUpCategory,
   type ExecutiveFollowUpCategory,
 } from '@/lib/dashboard/follow-up'
@@ -27,35 +29,15 @@ function fiscalYearOptions(selected: number) {
     .filter((year) => year >= 2500 && year <= 3000)
 }
 
-function followUpCategoryLabel(category: ExecutiveFollowUpCategory) {
-  return EXECUTIVE_FOLLOW_UP_CATEGORIES.find((option) => option.value === category)?.label ?? 'ทุกประเด็น'
-}
-
-function sourceHref(alert: ExecutiveAlert, fiscalYear: number): string | null {
-  switch (alert.key) {
-    case 'receiving-data-quality':
-      return '/receipts'
-    case 'lease-usage-data-quality':
-    case 'lease-contract-metadata':
-      return '/contracts?contractType=equipment_lease&showOlder=1'
-    case 'lease-risk':
-      return '/contracts?contractType=equipment_lease&watchlist=1&showOlder=1'
-    case 'pending-contracts':
-      return `/contracts?fiscalYear=${encodeURIComponent(String(fiscalYear))}&showOlder=1`
-    default:
-      return null
-  }
-}
-
 function sourceLabel(alert: ExecutiveAlert) {
   switch (alert.key) {
     case 'receiving-data-quality':
-      return 'เปิดรายการรับเข้า'
+      return 'เปิดรายการรับเข้าที่พบ'
     case 'lease-usage-data-quality':
     case 'lease-contract-metadata':
     case 'lease-risk':
     case 'pending-contracts':
-      return 'เปิดทะเบียนสัญญา'
+      return 'เปิดทะเบียนสัญญาที่พบ'
     default:
       return null
   }
@@ -68,7 +50,9 @@ function toneLabel(tone: ExecutiveAlert['tone']) {
 }
 
 function FollowUpAlertCard({ alert, fiscalYear }: { alert: ExecutiveAlert; fiscalYear: number }) {
-  const href = sourceHref(alert, fiscalYear)
+  const href = isExecutiveFollowUpCategory(alert.key)
+    ? executiveSourceHref(fiscalYear, alert.key)
+    : null
   const label = sourceLabel(alert)
   const filterHref = isExecutiveFollowUpCategory(alert.key)
     ? executiveFollowUpHref(fiscalYear, alert.key)
@@ -86,7 +70,7 @@ function FollowUpAlertCard({ alert, fiscalYear }: { alert: ExecutiveAlert; fisca
       </div>
       <div className="follow-up-item__actions">
         {href && label && <Link className="lab-link-button lab-link-button--primary" href={href}>{label}</Link>}
-        <Link className="text-link" href={filterHref}>เปิดตัวกรองประเด็นนี้</Link>
+        <Link className="text-link" href={filterHref}>ดูเฉพาะประเด็นนี้ในคิว</Link>
       </div>
     </li>
   )
@@ -141,7 +125,7 @@ export default async function ExecutiveFollowUpPage({ searchParams }: { searchPa
         <div className="follow-up-overview__card">
           <span>กำลังแสดง</span>
           <strong>{alerts.length.toLocaleString('th-TH')}</strong>
-          <small>{category === 'all' ? 'ทุกประเภทประเด็น' : followUpCategoryLabel(category)}</small>
+          <small>{category === 'all' ? 'ทุกประเภทประเด็น' : executiveFollowUpCategoryLabel(category)}</small>
         </div>
         <div className="follow-up-overview__card">
           <span>ช่วงข้อมูล</span>
@@ -180,7 +164,7 @@ export default async function ExecutiveFollowUpPage({ searchParams }: { searchPa
       ) : alerts.length === 0 ? (
         <section className="empty-state empty-state--panel">
           <h2>{category === 'all' ? 'ไม่พบประเด็นที่ต้องติดตาม' : 'ไม่พบรายการในประเภทที่เลือก'}</h2>
-          <p>{category === 'all' ? 'ข้อมูลปีงบประมาณนี้ยังไม่มีประเด็นที่ต้องดำเนินการ' : `ไม่พบ “${followUpCategoryLabel(category)}” ในปีงบประมาณ ${fiscalYear}`}</p>
+          <p>{category === 'all' ? 'ข้อมูลปีงบประมาณนี้ยังไม่มีประเด็นที่ต้องดำเนินการ' : `ไม่พบ “${executiveFollowUpCategoryLabel(category)}” ในปีงบประมาณ ${fiscalYear}`}</p>
           {category !== 'all' && <Link className="text-link" href={executiveFollowUpHref(fiscalYear)}>แสดงทุกประเด็น</Link>}
         </section>
       ) : (
@@ -188,7 +172,7 @@ export default async function ExecutiveFollowUpPage({ searchParams }: { searchPa
           <div className="bench-panel__header">
             <div>
               <p className="section-kicker">FILTERED DECISION QUEUE</p>
-              <h2 id="follow-up-results-title">{category === 'all' ? 'ทุกประเด็นที่ต้องติดตาม' : followUpCategoryLabel(category)}</h2>
+              <h2 id="follow-up-results-title">{category === 'all' ? 'ทุกประเด็นที่ต้องติดตาม' : executiveFollowUpCategoryLabel(category)}</h2>
             </div>
             <StatusChip tone={alerts.some((alert) => alert.tone === 'danger') ? 'danger' : alerts.some((alert) => alert.tone === 'attention') ? 'attention' : 'success'}>
               {alerts.length.toLocaleString('th-TH')} รายการ

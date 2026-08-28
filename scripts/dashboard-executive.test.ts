@@ -5,6 +5,10 @@ import { PDFDocument } from 'pdf-lib'
 import { aggregateExecutiveOverview } from '../lib/dashboard/executive'
 import { generateExecutivePdf } from '../lib/dashboard/executive-pdf'
 import { generateExecutiveWorkbook } from '../lib/dashboard/executive-excel'
+import {
+  contractMatchesExecutiveFollowUp,
+  executiveSourceHref,
+} from '../lib/dashboard/follow-up'
 
 const overview = aggregateExecutiveOverview({
   fiscalYear: 2569,
@@ -123,6 +127,45 @@ assert.equal(overview.categories.find((row) => row.key === 'lease')?.amount, 330
 assert.equal(overview.dataQuality.unclassifiedReceiptCount, 1)
 assert.equal(overview.dataQuality.missingReceiptPriceCount, 0)
 
+assert.equal(
+  executiveSourceHref(2569, 'receiving-data-quality'),
+  '/receipts?issue=receiving-data-quality&fiscalYear=2569',
+)
+assert.equal(
+  executiveSourceHref(2569, 'pending-contracts'),
+  '/contracts?issue=pending-contracts&followUpYear=2569',
+)
+assert.equal(contractMatchesExecutiveFollowUp({
+  contractType: 'equipment_lease',
+  fiscalYear: 2568,
+  durationYears: 1,
+  status: 'active',
+  total: 100000,
+  startDate: '2025-10-01',
+  endDate: '2028-09-30',
+  usages: [{ amount: 10, usageMonth: null }],
+}, 'lease-usage-data-quality', 2569), true)
+assert.equal(contractMatchesExecutiveFollowUp({
+  contractType: 'e_bidding',
+  fiscalYear: 2569,
+  durationYears: 1,
+  status: 'pending',
+  total: 100000,
+  startDate: null,
+  endDate: null,
+  usages: [],
+}, 'pending-contracts', 2569), true)
+assert.equal(contractMatchesExecutiveFollowUp({
+  contractType: 'e_bidding',
+  fiscalYear: 2568,
+  durationYears: 1,
+  status: 'pending',
+  total: 100000,
+  startDate: null,
+  endDate: null,
+  usages: [],
+}, 'pending-contracts', 2569), false)
+
 async function runExportAssertions() {
   const manyContracts = Array.from({ length: 28 }, (_, index) => ({
     ...overview.leaseContracts[0],
@@ -165,6 +208,13 @@ async function runExportAssertions() {
   assert.match(leaseView, /วันที่เริ่ม/)
   assert.match(leaseView, /วันที่สิ้นสุด/)
   assert.match(leaseView, /PAGE_SIZE/)
+  const followUpPage = readFileSync('app/(protected)/dashboard/follow-up/page.tsx', 'utf8')
+  assert.match(followUpPage, /executiveSourceHref/, 'follow-up actions must open the underlying filtered register')
+  assert.match(followUpPage, /เปิดทะเบียนสัญญาที่พบ|เปิดรายการรับเข้าที่พบ/, 'follow-up actions must identify the filtered source list')
+  const contractPage = readFileSync('app/(protected)/contracts/page.tsx', 'utf8')
+  assert.match(contractPage, /contractMatchesExecutiveFollowUp/, 'contract source links must apply the same issue predicate as the alert')
+  const receiptPage = readFileSync('app/(protected)/receipts/page.tsx', 'utf8')
+  assert.match(receiptPage, /dataQualityOnly/, 'receipt source links must apply the data-quality filter')
 
   console.log('executive dashboard aggregation and export: ok')
 }

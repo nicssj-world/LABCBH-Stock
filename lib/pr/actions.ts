@@ -357,7 +357,10 @@ export async function hardDeletePurchaseRequest(purchaseRequestId: string) {
     p_actor_id: actor.id,
   })
   if (result.error) {
-    throw new Error(formatPurchaseRequestMutationError('ลบใบ PR ถาวร', result.error.message))
+    return {
+      ok: false as const,
+      message: formatPurchaseRequestMutationError('ลบใบ PR ถาวร', result.error.message),
+    }
   }
 
   const deleted = z.object({
@@ -378,13 +381,19 @@ export async function hardDeletePurchaseRequest(purchaseRequestId: string) {
     supabaseStoragePaths: deleted.supabaseStoragePaths,
   })
   if (failedFiles.length > 0) {
-    throw new Error(`ลบใบ PR ถาวรแล้ว แต่ยังรอลบไฟล์ ${failedFiles.length} รายการ ระบบจะลองลบให้อัตโนมัติอีกครั้ง`)
+    return {
+      ok: false as const,
+      message: `ลบใบ PR ถาวรแล้ว แต่ยังรอลบไฟล์ ${failedFiles.length} รายการ ระบบจะลองลบให้อัตโนมัติอีกครั้ง`,
+    }
   }
 
   return {
-    id: deleted.id,
-    deleted: true,
-    deletedFileCount: deleted.r2Paths.length + deleted.supabaseStoragePaths.length,
+    ok: true as const,
+    data: {
+      id: deleted.id,
+      deleted: true,
+      deletedFileCount: deleted.r2Paths.length + deleted.supabaseStoragePaths.length,
+    },
   }
 }
 

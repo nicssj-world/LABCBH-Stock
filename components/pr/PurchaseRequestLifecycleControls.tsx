@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { cancelPurchaseRequest, hardDeletePurchaseRequest } from '@/lib/pr/actions'
+import { isPurchaseRequestActionError } from '@/lib/pr/errors'
 
 interface PurchaseRequestLifecycleControlsProps {
   requestId: string
@@ -54,7 +55,11 @@ export function PurchaseRequestLifecycleControls({
     setError(null)
     startTransition(async () => {
       try {
-        await hardDeletePurchaseRequest(requestId)
+        const result = await hardDeletePurchaseRequest(requestId)
+        if (isPurchaseRequestActionError(result)) {
+          setError(result.message)
+          return
+        }
         dialogRef.current?.close()
         router.push('/purchase-requests')
         router.refresh()

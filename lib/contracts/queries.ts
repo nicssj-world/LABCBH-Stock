@@ -26,7 +26,10 @@ const contractItemReadRowSchema = z.object({
   contract_item_allocations: z.array(z.object({ quantity: numericSchema, allocation_kind: z.string() })).nullable().default([]),
 })
 
-const contractUsageReadRowSchema = z.object({ amount: numericSchema })
+const contractUsageReadRowSchema = z.object({
+  amount: numericSchema,
+  usage_month: z.string().nullable(),
+})
 
 const contractStageHistoryReadRowSchema = z.object({
   id: z.string().uuid(),
@@ -111,7 +114,7 @@ const CONTRACT_ITEMS_READ_SELECT = `
   )`
 
 const CONTRACT_USAGE_READ_SELECT = `
-  contract_usage (amount)`
+  contract_usage (amount, usage_month)`
 
 const CONTRACT_STAGE_HISTORY_READ_SELECT = `
   contract_stage_history (
@@ -224,6 +227,10 @@ function mapContractRow(
     archivedAt: row.archived_at,
     archiveReason: row.archive_reason,
     total: row.total,
+    usage: (row.contract_usage ?? []).map((usage) => ({
+      amount: usage.amount,
+      usageMonth: usage.usage_month,
+    })),
     remainingPercent: contractRemainingPercent({
       contractType: row.contract_type,
       total: row.total,

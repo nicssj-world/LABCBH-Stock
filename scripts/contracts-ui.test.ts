@@ -287,7 +287,7 @@ assert.match(summaryDialog, /contractMode\(contract\.contractType \?\? 'e_biddin
 assert.match(summaryDialog, /มูลค่าสัญญา/, 'the contract popup must label the contract value')
 assert.match(summaryDialog, /formatBaht\(contractValue\)/, 'the contract popup must format the contract value as baht')
 assert.match(globalStyles, /\.contract-summary-dialog__fact--value/, 'the contract value must have a visible summary treatment')
-assert.match(contractQueries, /contract_usage \(amount\)/, 'lease gauges must read actual contract usage entries')
+assert.match(contractQueries, /contract_usage \(amount(?:, usage_month)?\)/, 'lease gauges must read actual contract usage entries')
 assert.match(contractQueries, /contract_item_allocations \(quantity, allocation_kind\)/, 'supply gauges must read the allocation ledger and distinguish opening-balance rows')
 assert.match(contractQueries, /contractRemainingPercent/, 'register balances must come from the shared contract-balance calculation')
 assert.match(table, /<th[^>]*>สถานะสัญญา<\/th>/, 'the register must name the contract status explicitly')

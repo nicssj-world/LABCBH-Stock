@@ -1,4 +1,16 @@
 const PURCHASE_REQUEST_ERROR_COPY: Record<string, string> = {
+  'purchase request not found':
+    'ไม่พบใบ PR ที่ต้องการลบ อาจถูกลบไปแล้วหรือข้อมูลไม่เป็นปัจจุบัน',
+  'only a pending purchase request can be hard-deleted':
+    'ลบถาวรได้เฉพาะใบ PR ที่ยังรอเจ้าหน้าที่คลังยืนยัน',
+  'purchase request is linked to a contract and cannot be hard-deleted':
+    'ไม่สามารถลบถาวรได้ เนื่องจากใบ PR เชื่อมโยงกับสัญญาแล้ว',
+  'purchase request has goods receipt history and cannot be hard-deleted':
+    'ไม่สามารถลบถาวรได้ เนื่องจากใบ PR มีประวัติรับเข้าแล้ว',
+  'purchase request has contract allocation history and cannot be hard-deleted':
+    'ไม่สามารถลบถาวรได้ เนื่องจากใบ PR มีประวัติการตัดยอดสัญญาแล้ว',
+  'purchase request has LINE notification history and cannot be hard-deleted':
+    'ไม่สามารถลบถาวรได้ เนื่องจากใบ PR มีประวัติแจ้งเตือนผ่าน LINE แล้ว',
   'allocation exceeds contracted quantity':
     'ยอดคงเหลือในสัญญาไม่พอสำหรับจำนวนที่ขอ อาจมี PR อื่นถูกยืนยันไปแล้ว',
   'purchase request quantity exceeds contract remaining after pending reservations':
@@ -43,8 +55,12 @@ export function isPurchaseRequestActionError(value: unknown): value is PurchaseR
 }
 
 export function formatPurchaseRequestMutationError(operation: string, message: string): string {
-  const copy = message.toLowerCase().includes('purchase_requests_po_number_key')
+  const normalizedMessage = message.toLowerCase()
+  const copy = normalizedMessage.includes('purchase_requests_po_number_key')
     ? 'เลขที่ใบสั่งซื้อ (PO) นี้ถูกใช้กับใบ PR อื่นแล้ว ไม่สามารถใช้เลขซ้ำได้ กรุณาตรวจสอบเลข PO'
+    : normalizedMessage.includes('hard_delete_purchase_request') &&
+        (normalizedMessage.includes('could not find the function') || normalizedMessage.includes('schema cache'))
+      ? 'ระบบยังไม่ได้อัปเดตส่วนลบถาวร กรุณาให้ผู้ดูแลระบบ apply migration ล่าสุดก่อนลองใหม่'
     : PURCHASE_REQUEST_ERROR_COPY[message] ?? message
   return `${operation} ไม่สำเร็จ: ${copy}`
 }

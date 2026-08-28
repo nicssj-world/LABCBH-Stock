@@ -28,13 +28,22 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   const statusValue = first(params.status)
   const status = GOODS_RECEIPT_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const issue = first(params.issue) === 'receiving-data-quality' ? 'receiving-data-quality' : undefined
+  const fiscalYearValue = first(params.fiscalYear)
+  const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
   const page = parsePage(first(params.page))
 
   let receipts: GoodsReceiptRecord[] = []
   let error: string | null = null
 
   try {
-    receipts = await listGoodsReceipts({ status, search, department: department || undefined })
+    receipts = await listGoodsReceipts({
+      status,
+      search,
+      department: department || undefined,
+      fiscalYear,
+      dataQualityOnly: Boolean(issue),
+    })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการรับเข้าไม่สำเร็จ'
   }
@@ -46,6 +55,8 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
     if (search) nextParams.set('search', search)
     if (status) nextParams.set('status', status)
     if (department) nextParams.set('department', department)
+    if (issue) nextParams.set('issue', issue)
+    if (fiscalYear) nextParams.set('fiscalYear', String(fiscalYear))
     if (nextPage > 1) nextParams.set('page', String(nextPage))
     const query = nextParams.toString()
     return query ? `/receipts?${query}` : '/receipts'
@@ -57,7 +68,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
         <div>
           <p className="section-kicker">GOODS RECEIVING</p>
           <h1>รับเข้าคลัง</h1>
-          <p>ล็อตและยอดคงเหลือจะเกิดขึ้นเมื่อบันทึกใบรับเข้าคลังเท่านั้น</p>
+          <p>{issue ? 'แสดงเฉพาะใบรับเข้าที่พบปัญหาข้อมูลจาก Dashboard ผู้บริหาร' : 'ล็อตและยอดคงเหลือจะเกิดขึ้นเมื่อบันทึกใบรับเข้าคลังเท่านั้น'}</p>
         </div>
         <div className="page-heading__cluster">
           <StatusChip tone={draftCount ? 'attention' : 'success'}>
@@ -104,6 +115,13 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
         ]}
       />
 
+      {issue && (
+        <p className="inline-alert inline-alert--info" role="status">
+          ตัวกรองจาก Dashboard ผู้บริหาร: รับเข้าต้องตรวจสอบ{fiscalYear ? ` · ปีงบประมาณ ${fiscalYear}` : ''} · พบ {receipts.length.toLocaleString('th-TH')} ใบ
+          {' '}<Link className="text-link" href="/receipts">แสดงรายการรับเข้าทั้งหมด</Link>
+        </p>
+      )}
+
       {error ? (
         <section className="error-state" role="alert">
           <h2>ไม่สามารถแสดงรายการรับเข้าได้</h2>
@@ -121,7 +139,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
           </div>
 
           {receipts.length === 0 ? (
-            <p className="empty-state">ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก</p>
+            <p className="empty-state">{issue ? 'ไม่พบใบรับเข้าที่ตรงกับประเด็นนี้' : 'ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก'}</p>
           ) : (
             <>
               <StickyScroll className="detail-items-table receipt-table--desktop" ariaLabel="ตารางใบรับเข้า เลื่อนในแนวนอนเพื่อดูคอลัมน์เพิ่มเติม">

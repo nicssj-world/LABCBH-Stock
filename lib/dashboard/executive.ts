@@ -5,12 +5,7 @@ import type {
   ContractStatus,
   ContractType,
 } from '@/lib/contracts/types'
-import {
-  budgetSnapshot,
-  isExpiring,
-  isLowBudget,
-  normalizeUsageMonth,
-} from '@/lib/contracts/budget'
+import { normalizeUsageMonth } from '@/lib/contracts/budget'
 import {
   CONTRACT_STATUS_LABELS,
   effectiveContractStatus,
@@ -32,7 +27,7 @@ import type {
   LeaseContractSummary,
   LeaseDurationSummary,
 } from './executive-types'
-import { executiveFollowUpHref } from './follow-up'
+import { contractMatchesExecutiveFollowUp, executiveFollowUpHref } from './follow-up'
 
 const numericSchema = z
   .union([z.number(), z.string()])
@@ -452,16 +447,9 @@ function buildAlerts(
     })
   }
 
-  const selectedLeases = contracts
-    .filter((contract) => contract.contractType === 'equipment_lease')
-    .filter((contract) => contractOverlapsFiscalYear(contract, fiscalYear))
-  const riskCount = selectedLeases.filter((contract) => {
-    const snapshot = budgetSnapshot({
-      total: contract.total,
-      entries: contract.usages.map((usage) => ({ amount: usage.amount })),
-    })
-    return isExpiring(contract.total, contract.endDate) || isLowBudget(contract.total, snapshot.used)
-  }).length
+  const riskCount = contracts.filter((contract) => (
+    contractMatchesExecutiveFollowUp(contract, 'lease-risk', fiscalYear)
+  )).length
   if (riskCount > 0) {
     alerts.push({
       key: 'lease-risk',
@@ -472,9 +460,9 @@ function buildAlerts(
     })
   }
 
-  const pendingCount = contracts.filter((contract) =>
-    contract.fiscalYear === fiscalYear && effectiveContractStatus(contract.status, contract.endDate) === 'pending',
-  ).length
+  const pendingCount = contracts.filter((contract) => (
+    contractMatchesExecutiveFollowUp(contract, 'pending-contracts', fiscalYear)
+  )).length
   if (pendingCount > 0) {
     alerts.push({
       key: 'pending-contracts',
