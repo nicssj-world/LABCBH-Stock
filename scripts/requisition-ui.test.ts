@@ -23,6 +23,7 @@ assert.match(listPage, /requisition-register-table__cell--center requisition-reg
 const globalStyles = read('app/globals.css')
 assert.match(globalStyles, /\.requisition-register-table\s*\{[\s\S]*table-layout:\s*fixed/, 'the register must keep columns stable while requester text varies')
 assert.match(globalStyles, /\.requisition-register-table__requester-cell\s*\{[\s\S]*overflow-wrap:\s*anywhere/, 'long requester details must not force the table wider')
+assert.match(globalStyles, /\.requisition-short-issue-reason\s*\{[\s\S]*text-align:\s*center/, 'partial-payment reasons must be centered within the detail row')
 
 const requisitionPresenter = read('lib/requisitions/presenter.ts')
 assert.match(requisitionPresenter, /REQUISITION_STATUS_LABELS/)
