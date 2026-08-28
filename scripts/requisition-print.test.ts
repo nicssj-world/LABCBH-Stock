@@ -68,6 +68,11 @@ assert.match(
   /\.print-signatures[\s\S]{0,200}break-inside:\s*avoid/i,
   'signature blocks must not be split across pages',
 )
+assert.match(printCss, /--print-signature-slot-height:\s*clamp\(/i, 'signature slots scale between form sizes')
+assert.match(printCss, /max-inline-size:\s*min\(100%,\s*var\(--print-signature-max-inline\)\)/i, 'signatures fit the available form width')
+assert.match(printCss, /max-block-size:\s*min\(100%,\s*var\(--print-signature-max-block\)\)/i, 'signatures fit the available form height')
+assert.match(printCss, /object-fit:\s*contain/i, 'signatures keep their aspect ratio')
+assert.match(printCss, /\.print-signature__mark[\s\S]{0,240}overflow:\s*hidden/i, 'signature ink cannot overflow its form slot')
 
 const print = read('lib/requisitions/print.ts')
 assert.match(print, /formatDocumentDate|toThaiPrintDate/)

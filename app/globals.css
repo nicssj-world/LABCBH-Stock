@@ -4411,6 +4411,11 @@ input[type="number"] {
 .print-note { margin: 12px 0 0; font-size: 11px; }
 
 .print-signatures {
+  /* Shared form tokens: each print form can override these without changing
+     the signature markup. Images stay proportional inside this slot. */
+  --print-signature-slot-height: clamp(56px, 5vw, 66px);
+  --print-signature-max-inline: 176px;
+  --print-signature-max-block: 48px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 40px;
@@ -4424,7 +4429,7 @@ input[type="number"] {
 .print-signatures p { margin: 0; font-size: 11px; }
 .print-signature {
   display: grid;
-  grid-template-rows: 66px auto auto auto;
+  grid-template-rows: var(--print-signature-slot-height) auto auto auto;
   align-content: start;
 }
 
@@ -4432,11 +4437,23 @@ input[type="number"] {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  min-height: 66px;
+  block-size: var(--print-signature-slot-height);
+  min-block-size: 0;
+  padding-inline: 8px;
+  overflow: hidden;
 }
 
 .print-signature__line { margin: 0 0 6px !important; }
-.print-signature__image { display: block; max-width: 100%; max-height: 60px; margin: 0 auto 6px; }
+.print-signature__image {
+  display: block;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: min(100%, var(--print-signature-max-inline));
+  max-block-size: min(100%, var(--print-signature-max-block));
+  object-fit: contain;
+  object-position: center bottom;
+  margin: 0 auto 6px;
+}
 .print-signature__missing { color: #666666; font-size: 9px; }
 .print-signature__role { font-weight: 700; }
 .print-signature__hint { color: #444444; }

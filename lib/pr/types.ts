@@ -189,6 +189,7 @@ export interface PurchaseRequestRecord {
   /** False for PRs created before procurement-plan line references were introduced. */
   annualPlanReferenceRequired: boolean
   acknowledgedBy: string | null
+  acknowledgedByEphisId: string | null
   acknowledgedByName: string | null
   acknowledgedAt: string | null
   outsideStockReceivedBy: string | null

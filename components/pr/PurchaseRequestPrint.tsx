@@ -95,7 +95,13 @@ function printDateOrPlaceholder(value: string | null): string {
 }
 
 /** A4 purchase-request document, intentionally sharing the requisition form's paper grammar. */
-export function PurchaseRequestPrint({ request }: { request: PurchaseRequestRecord }) {
+export function PurchaseRequestPrint({
+  request,
+  acknowledgedBySignature = null,
+}: {
+  request: PurchaseRequestRecord
+  acknowledgedBySignature?: string | null
+}) {
   const facts = methodReferenceFacts(request)
   const total = printTotal(request)
   const requesterName = request.requesterName?.trim() || request.headName.trim() || 'ไม่ระบุชื่อผู้ขอ'
@@ -238,13 +244,22 @@ export function PurchaseRequestPrint({ request }: { request: PurchaseRequestReco
         <div className="print-signature">
           <div className="print-signature__mark">
             {acknowledgedName ? (
-              <p className="print-signature__name">{acknowledgedName}</p>
+              acknowledgedBySignature ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a server-rendered Portal signature is an in-memory data URI
+                <img className="print-signature__image" src={acknowledgedBySignature} alt="ลายเซ็นต์เจ้าหน้าที่คลังผู้ยืนยันใบ PR" />
+              ) : (
+                <span className="print-signature__missing">ไม่พบลายเซ็นต์ใน Portal</span>
+              )
             ) : (
               <p className="print-signature__line">ลงชื่อ ..................................................</p>
             )}
           </div>
-          <p className="print-signature__role">(เจ้าหน้าที่คลัง)</p>
-          <p className="print-signature__hint">{acknowledgedName ? 'ผู้ยืนยันใบ PR' : 'ผู้ตรวจสอบและยืนยันใบ PR'}</p>
+          {acknowledgedName ? (
+            <p className="print-signature__role print-signature__name">{acknowledgedName}</p>
+          ) : (
+            <p className="print-signature__role">(เจ้าหน้าที่คลัง)</p>
+          )}
+          <p className="print-signature__hint">{acknowledgedName ? '(เจ้าหน้าที่คลัง) · ผู้ยืนยันใบ PR' : 'ผู้ตรวจสอบและยืนยันใบ PR'}</p>
           <p className="print-signature__date">วันที่ {printDateOrPlaceholder(request.acknowledgedAt)}</p>
         </div>
       </div>

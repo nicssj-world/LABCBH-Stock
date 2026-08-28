@@ -285,11 +285,11 @@ export async function generateExecutivePdf(data: ExecutiveOverview): Promise<Uin
   const finalPage = document.addPage([PAGE_WIDTH, PAGE_HEIGHT])
   top = drawTitle(finalPage, data, font)
   top = drawSectionTitle(finalPage, 'รายการที่ต้องติดตามและคุณภาพข้อมูล', top, font)
-  drawTable(finalPage, top, [
+  top = drawTable(finalPage, top, [
     { header: 'ประเภท', width: 120, align: 'left' },
     { header: 'รายการ', width: 230, align: 'left' },
     { header: 'รายละเอียด', width: TABLE_WIDTH - 350, align: 'left' },
-  ], data.alerts.map((alert) => [alert.tone === 'danger' ? 'เร่งด่วน' : alert.tone === 'attention' ? 'ติดตาม' : 'ข้อมูล', alert.label, alert.detail]), font, { rowMinHeight: 31 })
+  ], data.alerts.map((alert) => [alert.tone === 'danger' ? 'เร่งด่วน' : alert.tone === 'attention' ? 'ติดตาม' : 'ข้อมูล', alert.label, alert.detail]), font, { rowMinHeight: 31 }).top
   top -= 30
   const qualityNote = 'หมายเหตุ: รายการรับเข้าที่ไม่มี PR ราคา หรือสัญญาที่เชื่อมโยง จะไม่ถูกจัดหมวดโดยการคาดเดา และแสดงแยกไว้ใน Data Quality ของไฟล์ Excel'
   const qualityLines = wrapText(qualityNote, font, 10, TABLE_WIDTH, 3)
