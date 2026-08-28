@@ -21,6 +21,8 @@ assert.match(printComponent, /ผู้ขอเบิก/)
 // Line detail, including which lots actually went out.
 assert.match(printComponent, /จำนวนที่ขอ/)
 assert.match(printComponent, /จำนวนที่จ่าย/)
+assert.match(printComponent, /เหตุผลจ่ายไม่ครบ/)
+assert.match(printComponent, /shortIssueReason/)
 assert.match(printComponent, /เลขที่ล็อต/)
 assert.match(printComponent, /วันหมดอายุ/)
 assert.match(printComponent, /วันที่จ่าย/)

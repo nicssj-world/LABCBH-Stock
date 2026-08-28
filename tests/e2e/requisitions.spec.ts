@@ -36,8 +36,8 @@ test.describe('requisition FIFO fulfillment and A4 evidence', () => {
       stockB.locator('input[type="checkbox"]:not(:disabled)').first().check(),
     ])
     const results = await Promise.allSettled([
-      stockA.getByRole('button', { name: 'ยืนยันการจ่ายของ' }).click(),
-      stockB.getByRole('button', { name: 'ยืนยันการจ่ายของ' }).click(),
+      stockA.getByRole('button', { name: 'ยืนยันการจ่าย' }).click(),
+      stockB.getByRole('button', { name: 'ยืนยันการจ่าย' }).click(),
     ])
     expect(results).toHaveLength(2)
 

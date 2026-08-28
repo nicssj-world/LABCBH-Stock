@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { isoDateSchema } from '@/lib/validation/date'
 
-export const REQUISITION_STATUSES = ['waiting', 'fulfilled', 'cancelled'] as const
+export const REQUISITION_STATUSES = ['waiting', 'fulfilled', 'received', 'cancelled'] as const
 export type RequisitionStatus = (typeof REQUISITION_STATUSES)[number]
 
 export const requisitionLineInputSchema = z
@@ -39,6 +39,7 @@ export const lotAllocationInputSchema = z
     inventoryLotId: z.string().uuid(),
     quantity: z.number().finite().positive('จำนวนที่จ่ายต้องมากกว่า 0'),
     overrideReason: z.string().trim().max(500).nullable(),
+    shortIssueReason: z.string().trim().max(500).nullable().optional(),
   })
   .strict()
 
@@ -48,12 +49,11 @@ export const fulfillRequisitionInputSchema = z
   })
   .strict()
 
-export const signRequisitionInputSchema = z
+export const drawnSignatureInputSchema = z
   .object({
-    receivedByName: z.string().trim().min(1, 'กรุณาระบุชื่อผู้รับของ'),
     signature: z
       .string()
       .refine((value) => value.startsWith('data:image/png;base64,'), 'รูปแบบลายเซ็นต์ไม่ถูกต้อง')
-      .refine((value) => value.length <= 500_000, 'ไฟล์ลายเซ็นต์ใหญ่เกินไป'),
+      .refine((value) => value.length <= 2_800_000, 'ลายเซ็นต์มีขนาดใหญ่เกินไป'),
   })
   .strict()

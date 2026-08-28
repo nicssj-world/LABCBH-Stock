@@ -29,16 +29,22 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   const status = REQUISITION_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
   const page = parsePage(first(params.page))
+  const showCancelled = first(params.showCancelled) === '1'
 
-  let requisitions: RequisitionRecord[] = []
+  let loadedRequisitions: RequisitionRecord[] = []
   let error: string | null = null
 
   try {
-    requisitions = await listRequisitions({ status, search, department: department || undefined })
+    loadedRequisitions = await listRequisitions({ status, search, department: department || undefined })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการใบเบิกไม่สำเร็จ'
   }
 
+  const shouldShowCancelled = showCancelled || status === 'cancelled'
+  const cancelledCount = loadedRequisitions.filter((requisition) => requisition.status === 'cancelled').length
+  const requisitions = shouldShowCancelled
+    ? loadedRequisitions
+    : loadedRequisitions.filter((requisition) => requisition.status !== 'cancelled')
   const waitingCount = requisitions.filter((requisition) => requisition.status === 'waiting').length
   const paginatedRequisitions = paginate(requisitions, page, LIST_PAGE_SIZE)
   const buildPageHref = (nextPage: number) => {
@@ -46,10 +52,21 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
     if (search) nextParams.set('search', search)
     if (status) nextParams.set('status', status)
     if (department) nextParams.set('department', department)
+    if (showCancelled) nextParams.set('showCancelled', '1')
     if (nextPage > 1) nextParams.set('page', String(nextPage))
     const query = nextParams.toString()
     return query ? `/requisitions?${query}` : '/requisitions'
   }
+  const buildCancelledVisibilityHref = (nextShowCancelled: boolean) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status && !(status === 'cancelled' && !nextShowCancelled)) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (nextShowCancelled) nextParams.set('showCancelled', '1')
+    const query = nextParams.toString()
+    return query ? `/requisitions?${query}` : '/requisitions'
+  }
+  const showCancelledControl = cancelledCount > 0 || status === 'cancelled' || showCancelled
 
   return (
     <div className="route-stack">
@@ -117,7 +134,18 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
               <p className="section-kicker">ISSUE QUEUE</p>
               <h2 id="requisition-list-title">รายการใบเบิก</h2>
             </div>
-            <p>{requisitions.length} ใบ</p>
+            <div className="requisition-list__header-actions">
+              <p>{requisitions.length} ใบ</p>
+              {showCancelledControl && (
+                <Link
+                  className="lab-link-button lab-link-button--secondary"
+                  href={buildCancelledVisibilityHref(!shouldShowCancelled)}
+                  aria-pressed={shouldShowCancelled}
+                >
+                  {shouldShowCancelled ? 'ซ่อนใบยกเลิก' : 'แสดงใบยกเลิก'}
+                </Link>
+              )}
+            </div>
           </div>
 
           {requisitions.length === 0 ? (

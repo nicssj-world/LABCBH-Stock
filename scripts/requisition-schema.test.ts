@@ -114,4 +114,36 @@ for (const index of [
   assert.match(sql, new RegExp(`create index if not exists ${index}`, 'i'))
 }
 
+// The forward-only workflow migration adds receipt as a distinct terminal
+// state and keeps partial issue reasons on each requisition line.
+const workflowMigrationName = readdirSync(migrationsDir).find((name) =>
+  name.endsWith('_requisition_partial_issue_receipt.sql'),
+)
+assert.ok(workflowMigrationName, 'the requisition workflow migration must exist')
+const workflowSql = readFileSync(join(migrationsDir, workflowMigrationName), 'utf8')
+assert.match(workflowSql, /add column if not exists received_by uuid/i)
+assert.match(workflowSql, /add column if not exists short_issue_reason text/i)
+assert.match(workflowSql, /'received'/i)
+assert.match(workflowSql, /requisitions_receipt_check/i)
+assert.match(workflowSql, /fulfilled_quantity > 0/i)
+assert.match(workflowSql, /fulfilled_quantity <= requested_quantity/i)
+assert.match(workflowSql, /short_issue_reason/i)
+assert.match(workflowSql, /receive_requisition/i)
+assert.match(workflowSql, /save_profile_signature/i)
+assert.match(workflowSql, /requisition.receipt_signature_drawn/i)
+assert.match(workflowSql, /requisition.receipt_confirmed/i)
+
+for (const fn of ['receive_requisition', 'save_profile_signature']) {
+  for (const role of ['public', 'anon', 'authenticated']) {
+    assert.match(
+      workflowSql,
+      new RegExp(`revoke execute on function public\\.${fn}\\([^)]*\\) from ${role}`, 'i'),
+    )
+  }
+  assert.match(
+    workflowSql,
+    new RegExp(`grant execute on function public\\.${fn}\\([^)]*\\) to service_role`, 'i'),
+  )
+}
+
 console.log(`requisition schema: ok (${migrationNames[0]})`)

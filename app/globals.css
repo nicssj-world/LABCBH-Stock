@@ -4662,6 +4662,319 @@ frozen on screen with nothing to say the click was received.
   .print-signatures { break-inside: avoid; }
 }
 
+/* Requisition receipt workflow ------------------------------------------- */
+.requisition-list__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.requisition-list__header-actions > p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.requisition-short-issue-reason {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  color: var(--lab-muted);
+  font: 600 11px/1.45 var(--font-sans);
+  text-align: left;
+}
+
+.fulfillment-item__requested {
+  flex-wrap: wrap;
+}
+
+.fulfillment-item__requested small {
+  display: block;
+  width: 100%;
+  color: var(--lab-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.fulfillment-item__short-reason {
+  max-width: 520px;
+}
+
+.fulfillment-item__short-reason textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.list-summary-dialog__item-reason {
+  max-width: 34ch;
+  overflow-wrap: anywhere;
+  color: var(--lab-amber) !important;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.requisition-receipt-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.requisition-receipt-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.requisition-receipt-dialog__body {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.requisition-receipt-dialog__items,
+.requisition-receipt-dialog__signature {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.requisition-receipt-dialog__section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.requisition-receipt-dialog__section-heading h3 {
+  margin: 4px 0 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.requisition-receipt-dialog__section-heading > span {
+  flex: 0 0 auto;
+  color: var(--lab-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.requisition-receipt-dialog__ready {
+  color: var(--lab-green) !important;
+  font-weight: 700;
+}
+
+.requisition-receipt-dialog__item-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.requisition-receipt-dialog__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 16px;
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+
+.requisition-receipt-dialog__item > div:first-child {
+  min-width: 0;
+}
+
+.requisition-receipt-dialog__item strong,
+.requisition-receipt-dialog__item small {
+  display: block;
+}
+
+.requisition-receipt-dialog__item strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.requisition-receipt-dialog__item small {
+  margin-top: 3px;
+  color: var(--lab-muted);
+  font: 11px/1.4 var(--font-mono);
+}
+
+.requisition-receipt-dialog__reason {
+  margin: 8px 0 0;
+  color: var(--lab-amber);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.requisition-receipt-dialog__quantities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(80px, auto));
+  gap: 10px;
+  margin: 0;
+}
+
+.requisition-receipt-dialog__quantities > div {
+  min-width: 0;
+}
+
+.requisition-receipt-dialog__quantities dt {
+  color: var(--lab-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.requisition-receipt-dialog__quantities dd {
+  margin: 3px 0 0;
+  color: var(--lab-ink);
+  font: 700 13px/1.35 var(--font-mono);
+  white-space: nowrap;
+}
+
+.requisition-receipt-dialog__signature {
+  padding-top: 16px;
+  border-top: 1px solid var(--lab-border);
+}
+
+.requisition-receipt-dialog__signature-fallback {
+  display: grid;
+  gap: 12px;
+}
+
+.requisition-receipt-dialog__signature-notice {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--lab-amber-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border));
+  border-radius: var(--radius-control);
+}
+
+.requisition-receipt-dialog__signature-notice strong {
+  color: var(--lab-ink);
+  font-size: 13px;
+}
+
+.requisition-receipt-dialog__signature-notice p,
+.requisition-receipt-dialog__signature-preview p {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.requisition-receipt-dialog__signature-notice .text-link {
+  width: fit-content;
+  min-height: 44px;
+  padding-block: 10px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.requisition-receipt-dialog__signature-fallback > .lab-button {
+  justify-self: start;
+}
+
+.requisition-receipt-dialog__signature-preview {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--lab-green-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-green) 28%, var(--lab-border));
+  border-radius: var(--radius-control);
+}
+
+.requisition-receipt-dialog__signature-preview img {
+  display: block;
+  width: min(100%, 480px);
+  height: auto;
+  max-height: 140px;
+  object-fit: contain;
+  object-position: left center;
+  background: var(--lab-surface);
+  border: 1px solid var(--lab-border);
+  border-radius: 8px;
+}
+
+.requisition-receipt-dialog__receiver {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 14px;
+  color: var(--lab-muted);
+  background: var(--lab-surface-muted);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+}
+
+.requisition-receipt-dialog__receiver strong {
+  color: var(--lab-ink);
+}
+
+.requisition-receipt-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 24px max(18px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--lab-border);
+}
+
+.requisition-receipt-dialog__actions .lab-button {
+  min-width: 150px;
+}
+
+.signature-pad__canvas {
+  touch-action: none;
+}
+
+.print-line-reason {
+  display: block;
+  margin-top: 4px;
+  color: #444444;
+  font-size: 8px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+@media (max-width: 540px) {
+  .requisition-list__header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .requisition-receipt-dialog__body {
+    padding: 18px;
+  }
+
+  .requisition-receipt-dialog__item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .requisition-receipt-dialog__quantities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .requisition-receipt-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 10px 18px max(18px, env(safe-area-inset-bottom));
+  }
+
+  .requisition-receipt-dialog__actions .lab-button,
+  .requisition-receipt-dialog__signature-fallback > .lab-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 /*
  * LABCBH Stock visual refinement
  *

@@ -69,6 +69,19 @@ export const PURCHASE_REQUEST_STATUSES = [
 
 export type PurchaseRequestStatus = (typeof PURCHASE_REQUEST_STATUSES)[number]
 
+// `cancelled` covers both cancellation before confirmation and reversal after
+// confirmation in the user-facing PR register. Keep `reversed` as an internal
+// lifecycle state for audit and stock-allocation rules, but expose one filter.
+export const PURCHASE_REQUEST_FILTER_STATUSES = [
+  'draft',
+  'pending',
+  'completed',
+  'partially_received',
+  'received',
+  'closed_short',
+  'cancelled',
+] as const satisfies readonly PurchaseRequestStatus[]
+
 const contractDraftBaseSchema = z.object({
   fiscalYear: z.number().int().min(2500).max(3000),
   displayName: z.string().trim().min(1, 'กรุณาระบุชื่อสัญญา'),

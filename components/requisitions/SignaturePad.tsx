@@ -14,6 +14,7 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef(false)
   const lastPointRef = useRef<{ x: number; y: number } | null>(null)
+  const hasSignatureRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
 
   // Backing store scaled by devicePixelRatio so strokes stay crisp on
@@ -25,11 +26,13 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
     const resize = () => {
       const ratio = window.devicePixelRatio || 1
       const width = canvas.clientWidth
-      canvas.width = width * ratio
+      if (width <= 0 || hasSignatureRef.current) return
+
+      canvas.width = Math.floor(width * ratio)
       canvas.height = STROKE_HEIGHT_PX * ratio
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        ctx.scale(ratio, ratio)
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.lineWidth = 2.5
@@ -38,8 +41,15 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
     }
 
     resize()
+    const frame = window.requestAnimationFrame(resize)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+    observer?.observe(canvas)
     window.addEventListener('resize', resize)
-    return () => window.removeEventListener('resize', resize)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer?.disconnect()
+      window.removeEventListener('resize', resize)
+    }
   }, [])
 
   const pointFromEvent = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -67,7 +77,10 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
     ctx.lineTo(point.x, point.y)
     ctx.stroke()
     lastPointRef.current = point
-    if (!hasSignature) setHasSignature(true)
+    if (!hasSignatureRef.current) {
+      hasSignatureRef.current = true
+      setHasSignature(true)
+    }
   }
 
   const endStroke = () => {
@@ -75,13 +88,14 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
     drawingRef.current = false
     lastPointRef.current = null
     const canvas = canvasRef.current
-    onChange(canvas && hasSignature ? canvas.toDataURL('image/png') : null)
+    onChange(canvas && hasSignatureRef.current ? canvas.toDataURL('image/png') : null)
   }
 
   const clear = () => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+    hasSignatureRef.current = false
     setHasSignature(false)
     onChange(null)
   }
@@ -93,7 +107,6 @@ export function SignaturePad({ onChange, disabled = false }: SignaturePadProps) 
         className="signature-pad__canvas"
         role="img"
         aria-label={hasSignature ? 'ลายเซ็นต์ที่วาดไว้' : 'พื้นที่วาดลายเซ็นต์ ว่างเปล่า'}
-        style={{ touchAction: 'none' }}
         onPointerDown={startStroke}
         onPointerMove={continueStroke}
         onPointerUp={endStroke}

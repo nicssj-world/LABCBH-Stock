@@ -362,7 +362,8 @@ export async function listPurchaseRequests(
       .order('requested_date', { ascending: false })
       .order('sequence_number', { ascending: false })
 
-    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
+    else if (filters.status) query = query.eq('status', filters.status)
     if (filters.department) query = query.eq('department', filters.department)
 
     if (search) {
@@ -428,7 +429,8 @@ async function findRequestsByLine(
 
   const { data, error } = await readRequestQuery((select) => {
     let query = supabase.from('purchase_requests').select(select).in('id', requestIds)
-    if (status) query = query.eq('status', status)
+    if (status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
+    else if (status) query = query.eq('status', status)
     if (department) query = query.eq('department', department)
     return query
   })

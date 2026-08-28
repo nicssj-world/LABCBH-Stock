@@ -9,7 +9,7 @@ import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 import { PURCHASE_REQUEST_STATUS_LABELS } from '@/lib/pr/presenter'
 import { listPurchaseRequests } from '@/lib/pr/queries'
-import { PURCHASE_REQUEST_STATUSES } from '@/lib/pr/schema'
+import { PURCHASE_REQUEST_FILTER_STATUSES } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
@@ -19,14 +19,20 @@ interface PurchaseRequestsPageProps {
 }
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)
+const DEFAULT_HIDDEN_STATUS_VALUES = new Set(['received', 'cancelled', 'reversed'])
 
 export default async function PurchaseRequestsPage({ searchParams }: PurchaseRequestsPageProps) {
   const actor = await requireActor()
   const params = await searchParams
   const search = first(params.search)?.trim() ?? ''
   const statusValue = first(params.status)
-  const status = PURCHASE_REQUEST_STATUSES.find((value) => value === statusValue)
+  // Keep old `status=reversed` links usable while presenting both terminal
+  // cancellation paths as one user-facing filter.
+  const status = statusValue === 'reversed'
+    ? 'cancelled'
+    : PURCHASE_REQUEST_FILTER_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const showHiddenStatuses = first(params.showHiddenStatuses) === '1'
   const page = parsePage(first(params.page))
 
   let requests: PurchaseRequestRecord[] = []
@@ -38,21 +44,35 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
     error = caught instanceof Error ? caught.message : 'อ่านรายการใบ PR ไม่สำเร็จ'
   }
 
-  const pendingCount = requests.filter((request) => request.status === 'pending').length
-  const partialCount = requests.filter((request) => request.status === 'partially_received').length
-  const paginatedRequests = paginate(requests, page, LIST_PAGE_SIZE)
+  const hiddenRequestCount = requests.filter((request) => DEFAULT_HIDDEN_STATUS_VALUES.has(request.status)).length
+  // A specific hidden status is an intentional request to inspect it, so it
+  // takes precedence over the default list visibility.
+  const visibleRequests = showHiddenStatuses || status
+    ? requests
+    : requests.filter((request) => !DEFAULT_HIDDEN_STATUS_VALUES.has(request.status))
+  const showVisibilityToggle = !status && (showHiddenStatuses || hiddenRequestCount > 0)
+  const pendingCount = visibleRequests.filter((request) => request.status === 'pending').length
+  const partialCount = visibleRequests.filter((request) => request.status === 'partially_received').length
+  const paginatedRequests = paginate(visibleRequests, page, LIST_PAGE_SIZE)
+  const activeParams = new URLSearchParams()
+  if (search) activeParams.set('search', search)
+  if (status) activeParams.set('status', status)
+  if (department) activeParams.set('department', department)
+  if (showHiddenStatuses) activeParams.set('showHiddenStatuses', '1')
   const buildPageHref = (nextPage: number) => {
-    const nextParams = new URLSearchParams()
-    if (search) nextParams.set('search', search)
-    if (status) nextParams.set('status', status)
-    if (department) nextParams.set('department', department)
+    const nextParams = new URLSearchParams(activeParams)
     if (nextPage > 1) nextParams.set('page', String(nextPage))
     const query = nextParams.toString()
     return query ? `/purchase-requests?${query}` : '/purchase-requests'
   }
-  const partialFilterParams = new URLSearchParams()
-  if (search) partialFilterParams.set('search', search)
-  if (department) partialFilterParams.set('department', department)
+  const visibilityToggleParams = new URLSearchParams(activeParams)
+  if (showHiddenStatuses) visibilityToggleParams.delete('showHiddenStatuses')
+  else visibilityToggleParams.set('showHiddenStatuses', '1')
+  const visibilityToggleQuery = visibilityToggleParams.toString()
+  const visibilityToggleHref = visibilityToggleQuery
+    ? `/purchase-requests?${visibilityToggleQuery}`
+    : '/purchase-requests'
+  const partialFilterParams = new URLSearchParams(activeParams)
   partialFilterParams.set('status', 'partially_received')
   const partialFilterHref = `/purchase-requests?${partialFilterParams.toString()}`
 
@@ -75,6 +95,13 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
           >
             รับบางส่วน {partialCount} ใบ
           </Link>
+          {showVisibilityToggle && (
+            <Link className="lab-link-button lab-link-button--secondary" href={visibilityToggleHref}>
+              {showHiddenStatuses
+                ? 'ซ่อนรายการรับครบและยกเลิก'
+                : `แสดงรายการรับครบและยกเลิก (${hiddenRequestCount})`}
+            </Link>
+          )}
           {canRequestPurchase(actor) && (
             <Link className="lab-link-button lab-link-button--primary" href="/purchase-requests/new">
               สร้างใบ PR
@@ -100,7 +127,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
             value: status ?? '',
             options: [
               { value: '', label: 'ทุกสถานะ' },
-              ...PURCHASE_REQUEST_STATUSES.map((value) => ({ value, label: PURCHASE_REQUEST_STATUS_LABELS[value] })),
+              ...PURCHASE_REQUEST_FILTER_STATUSES.map((value) => ({ value, label: PURCHASE_REQUEST_STATUS_LABELS[value] })),
             ],
           },
           {
@@ -129,7 +156,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
               <p className="section-kicker">REQUEST QUEUE</p>
               <h2 id="pr-list-title">รายการใบ PR</h2>
             </div>
-            <p>{requests.length} ใบ</p>
+            <p>{visibleRequests.length} ใบ</p>
           </div>
           <PurchaseRequestTable
             requests={paginatedRequests.items}

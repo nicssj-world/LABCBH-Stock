@@ -13,6 +13,8 @@ assert.doesNotMatch(listPage, /แสดงผล/, 'requisition filters must no
 assert.match(listPage, /RequisitionSummaryDialog requisition=\{requisition\}/, 'the list row must open the mini summary popup, not a plain document-number cell')
 assert.match(listPage, /DetailIconLink/, 'the requisition detail action must use the shared icon link')
 assert.match(listPage, /REQUISITION_STATUS_LABELS|REQUISITION_STATUS_TONES/, 'the list page must use the shared requisitions presenter, not a local status map')
+assert.match(listPage, /showCancelled/, 'cancelled requisitions must have an explicit visibility toggle')
+assert.match(listPage, /แสดงใบยกเลิก|ซ่อนใบยกเลิก/)
 assert.match(listPage, /className="data-table requisition-register-table"/, 'the requisition register must use its deliberate column layout')
 assert.match(listPage, /<colgroup>[\s\S]*requisition-register-table__document[\s\S]*requisition-register-table__action/, 'the register must declare stable column widths')
 assert.match(listPage, /requisition-register-table__cell--center requisition-register-table__items-cell/, 'the item count column must be centered')
@@ -137,11 +139,11 @@ assert.doesNotMatch(queries, /fulfiller:profiles!requisitions_fulfilled_by_fkey/
 const detailPage = read('app/(protected)/requisitions/[id]/page.tsx')
 assert.match(detailPage, /listOnHand/, 'the detail page must read current on-hand stock for its lines')
 assert.match(detailPage, /คงเหลือในคลัง/)
-assert.match(detailPage, /รายการที่ต้องหยิบ|รายการที่จ่าย/, 'the detail header must show a useful line-count workload, not mixed-unit totals')
+assert.match(detailPage, /รายการที่ต้องหยิบ|รายการที่จ่าย|รายการที่รอตรวจรับ|รายการที่ตรวจรับแล้ว/, 'the detail header must show a useful line-count workload, not mixed-unit totals')
 assert.doesNotMatch(detailPage, /totalRequested|รวมที่ขอ/, 'the detail header must not show a mixed-unit sum')
 assert.match(
   detailPage,
-  /<th className="numeric-cell">ขอเบิก<\/th>[\s\S]*?<th className="numeric-cell">จ่ายแล้ว<\/th>[\s\S]*?<th className="numeric-cell" title="ยอดคงเหลือปัจจุบันของน้ำยา">คงเหลือในคลัง<\/th>/,
+  /<th className="numeric-cell">ขอเบิก<\/th>[\s\S]*?<th className="numeric-cell">จ่ายจริง<\/th>[\s\S]*?<th className="numeric-cell" title="ยอดคงเหลือปัจจุบันของน้ำยา">คงเหลือในคลัง<\/th>/,
   'request detail columns must show requested, fulfilled, then on-hand quantity',
 )
 assert.match(detailPage, /item\.fulfilledQuantity === item\.requestedQuantity/, 'a fully paid line must be identifiable')
@@ -153,39 +155,39 @@ const summaryDialogSource = read('components/requisitions/RequisitionSummaryDial
 const detailFulfillerDisplay = "requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'"
 assert.match(summaryDialogSource, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 assert.match(detailPage, new RegExp(detailFulfillerDisplay.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-assert.match(summaryDialogSource, /requisition\.status === 'fulfilled' && \(/, 'fulfilled requisitions must always show the payout row')
+assert.match(summaryDialogSource, /requisition\.status === 'fulfilled' \|\| requisition\.status === 'received'/, 'fulfilled and received requisitions must show the payout row')
 assert.doesNotMatch(summaryDialogSource, /requisition\.status === 'fulfilled' && requisition\.fulfilledAt/, 'a missing timestamp must not hide the payout row')
 
 const inventoryQueries = read('lib/inventory/queries.ts')
 assert.match(inventoryQueries, /export async function listOnHand/)
 
-// The signature step appears right after fulfillment, only while unsigned,
-// and a read-only proof-of-receipt block appears once it exists.
-assert.match(detailPage, /RequisitionSignaturePanel/)
-assert.match(
-  detailPage,
-  /canOperateStock\(actor\) && requisition\.status === 'fulfilled' && !requisition\.signedAt/,
-  'the signature step must only show for a fulfilled, not-yet-signed requisition',
-)
+// Receipt confirmation is available to the requester or stock/admin after
+// fulfillment. The signature is read from Portal and a missing one falls back
+// to the in-popup drawing flow.
+assert.match(detailPage, /RequisitionReceiptDialog/)
+assert.match(detailPage, /canReceiveRequisition\(actor, requisition\.requesterId\) && requisition\.status === 'fulfilled'/)
+assert.match(detailPage, /loadPortalSignatureDataUri/)
 assert.match(detailPage, /requisition\.signedAt &&/, 'a read-only proof-of-receipt block must show once signed')
 assert.match(detailPage, /หลักฐานการรับของ/)
 
-const signaturePanel = read('components/requisitions/RequisitionSignaturePanel.tsx')
-assert.match(signaturePanel, /^['"]use client['"]/m)
-assert.match(signaturePanel, /signRequisitionReceipt/)
-assert.match(signaturePanel, /SignaturePad/)
-assert.match(signaturePanel, /defaultReceiverName/, 'the receiver name must default from the requester')
-assert.match(
-  signaturePanel,
-  /disabled=\{isPending \|\| !receivedByName\.trim\(\) \|\| !signature\}/,
-  'submit must stay blocked until both a name and a drawn signature exist',
-)
+const receiptDialog = read('components/requisitions/RequisitionReceiptDialog.tsx')
+assert.match(receiptDialog, /^['"]use client['"]/m)
+assert.match(receiptDialog, /<dialog\b/)
+assert.match(receiptDialog, /useDeferredDialog/)
+assert.match(receiptDialog, /SignaturePad/)
+assert.match(receiptDialog, /saveDrawnSignature/)
+assert.match(receiptDialog, /receiveRequisition/)
+assert.match(receiptDialog, /ขอเบิก/)
+assert.match(receiptDialog, /จ่ายจริง/)
+assert.match(receiptDialog, /\/staff\/profile/)
+assert.doesNotMatch(receiptDialog, /type=["']file["']/i, 'the receipt popup must not offer a file input')
 
 const signaturePad = read('components/requisitions/SignaturePad.tsx')
 assert.match(signaturePad, /^['"]use client['"]/m)
 assert.match(signaturePad, /onPointerDown/, 'drawing must work for mouse, touch, and pen alike via Pointer Events')
 assert.match(signaturePad, /toDataURL\('image\/png'\)/)
 assert.match(signaturePad, /ล้างลายเซ็นต์/, 'the signer must be able to clear and redraw')
+assert.match(signaturePad, /hasSignatureRef/, 'canvas validation must not lose a fast first stroke')
 assert.doesNotMatch(signaturePad, /createBrowserClient|supabase\.from/, 'the browser must never talk to Supabase directly')
 
 const requisitionActions = read('lib/requisitions/actions.ts')
@@ -193,8 +195,10 @@ const actorSource = read('lib/auth/actor.ts')
 assert.match(actorSource, /name,dept,avatar_url/, 'the signed-in actor must carry profiles.dept')
 assert.match(requisitionActions, /assertCreateItemCatalog/, 'the server must validate selected items against the active catalog')
 assert.match(requisitionActions, /item\.is_active/, 'the server must reject inactive inventory items')
-assert.match(requisitionActions, /export async function signRequisitionReceipt/)
-assert.match(requisitionActions, /supabaseAdmin\.rpc\('sign_requisition_receipt'/)
+assert.match(requisitionActions, /export async function saveDrawnSignature/)
+assert.match(requisitionActions, /export async function receiveRequisition/)
+assert.match(requisitionActions, /supabaseAdmin\.rpc\('receive_requisition'/)
+assert.doesNotMatch(requisitionActions, /signRequisitionReceipt|sign_requisition_receipt/)
 assert.match(requisitionActions, /assertStockOperator/)
 
 console.log('requisition UI: ok')

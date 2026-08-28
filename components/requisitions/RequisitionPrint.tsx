@@ -56,7 +56,12 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
               <tr key={item.id}>
                 <td>{item.lineNumber}</td>
                 <td>{item.lsCode}</td>
-                <td>{item.name}</td>
+                <td>
+                  {item.name}
+                  {item.shortIssueReason && (
+                    <small className="print-line-reason">เหตุผลจ่ายไม่ครบ: {item.shortIssueReason}</small>
+                  )}
+                </td>
                 <td>—</td>
                 <td>—</td>
                 <td>{formatQuantity(item.requestedQuantity, item.unit)}</td>
@@ -69,7 +74,12 @@ export function RequisitionPrint({ requisition }: { requisition: RequisitionReco
                     <>
                       <td rowSpan={item.allocations.length}>{item.lineNumber}</td>
                       <td rowSpan={item.allocations.length}>{item.lsCode}</td>
-                      <td rowSpan={item.allocations.length}>{item.name}</td>
+                      <td rowSpan={item.allocations.length}>
+                        {item.name}
+                        {item.shortIssueReason && (
+                          <small className="print-line-reason">เหตุผลจ่ายไม่ครบ: {item.shortIssueReason}</small>
+                        )}
+                      </td>
                     </>
                   )}
                   <td>{allocation.lotNumber}</td>

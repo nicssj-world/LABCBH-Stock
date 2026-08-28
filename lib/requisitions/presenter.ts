@@ -2,13 +2,15 @@ import type { RequisitionStatus } from './schema'
 
 export const REQUISITION_STATUS_LABELS: Record<RequisitionStatus, string> = {
   waiting: 'รอจ่าย',
-  fulfilled: 'จ่ายสำเร็จ',
+  fulfilled: 'เบิกจ่ายสำเร็จ',
+  received: 'ตรวจรับแล้ว',
   cancelled: 'ยกเลิก',
 }
 
-export const REQUISITION_STATUS_TONES: Record<RequisitionStatus, 'attention' | 'success' | 'danger'> = {
+export const REQUISITION_STATUS_TONES: Record<RequisitionStatus, 'attention' | 'info' | 'success' | 'danger'> = {
   waiting: 'attention',
   fulfilled: 'success',
+  received: 'info',
   cancelled: 'danger',
 }
 

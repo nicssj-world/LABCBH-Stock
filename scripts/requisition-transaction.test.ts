@@ -23,7 +23,7 @@ const read = (suffix: string) => {
 }
 
 const ledgerSql = read('_lab_stock_inventory_ledger.sql')
-const requisitionSql = read('_lab_stock_requisitions.sql')
+const workflowSql = read('_requisition_partial_issue_receipt.sql')
 const fifoGuardSql = read('_requisition_fifo_guard.sql')
 const fulfillerNameSql = read('_requisition_fulfiller_name_snapshot.sql')
 const fulfillerAuditGuardSql = read('_requisition_fulfillment_audit_guard.sql')
@@ -41,7 +41,7 @@ assert.match(fulfillerAuditGuardSql, /requisitions_fulfilled_audit_check/i)
 assert.match(fulfillerAuditGuardSql, /fulfilled_at is not null[\s\S]*fulfilled_by is not null[\s\S]*fulfilled_by_name/i)
 assert.match(fulfillerAuditGuardSql, /before insert or update of fulfilled_by, fulfilled_by_name/i)
 
-const fulfil = requisitionSql.match(
+const fulfil = workflowSql.match(
   /create or replace function public\.fulfill_requisition[\s\S]*?\$function\$;/i,
 )?.[0]
 assert.ok(fulfil, 'fulfill_requisition must exist')
@@ -84,9 +84,15 @@ assert.match(
   /movement_type = 'requisition_issue'[\s\S]{0,120}quantity < 0/i,
 )
 
-// 5. Fulfilled totals must equal what was requested; a short issue is refused.
+// 5. Every line must receive a positive amount no larger than requested. A
+// short issue is allowed only with one shared line-level reason.
 assert.match(fulfil, /requested_quantity/i)
-assert.match(fulfil, /does not match requested quantity/i)
+assert.match(fulfil, /allocated_total <= 0/i)
+assert.match(fulfil, /allocated_total > row_line.requested_quantity/i)
+assert.match(fulfil, /a short issue requires a reason/i)
+assert.match(fulfil, /all allocations for one requisition item must use the same short-issue reason/i)
+assert.match(fulfil, /short_issue_reason = v_line_short_issue_reason/i)
+assert.doesNotMatch(fulfil, /does not match requested quantity/i)
 
 // 6. Expired lots are refused at the database boundary.
 assert.match(fulfil, /expired lot cannot be issued/i)

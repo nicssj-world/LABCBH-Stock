@@ -7,15 +7,24 @@ import { assertStockOperator } from '@/lib/inventory/authorization'
 import { assertPurchaseRequester } from '@/lib/pr/authorization'
 import {
   assertRequisitionManager,
+  assertRequisitionReceiver,
   RequisitionAuthorizationError,
 } from '@/lib/requisitions/authorization'
 import {
+  drawnSignatureInputSchema,
   fulfillRequisitionInputSchema,
   requisitionInputSchema,
-  signRequisitionInputSchema,
 } from '@/lib/requisitions/schema'
 import { getRequisition } from '@/lib/requisitions/queries'
-import type { FulfillRequisitionInput, RequisitionInput, SignRequisitionInput } from '@/lib/requisitions/types'
+import {
+  ensureSignatureBucket,
+  loadPortalSignatureDataUri,
+  normalizeDrawnSignature,
+  PORTAL_PROFILE_PATH,
+  profileSignaturePath,
+  SIGNATURE_BUCKET,
+} from '@/lib/requisitions/signature'
+import type { DrawnSignatureInput, FulfillRequisitionInput, RequisitionInput } from '@/lib/requisitions/types'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { omitNullishProperties } from '@/lib/validation/json'
 
@@ -114,7 +123,7 @@ export async function cancelRequisition(requisitionId: string) {
   const actor = await requireActor()
   const parsedId = requisitionIdSchema.parse(requisitionId)
   const existing = await getRequisition(parsedId)
-  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการลบ')
+  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการยกเลิก')
   assertRequisitionManager(actor, existing.requesterId)
 
   const result = await supabaseAdmin.rpc('cancel_requisition', {
@@ -122,7 +131,7 @@ export async function cancelRequisition(requisitionId: string) {
     p_actor_id: actor.id,
   })
 
-  const cancelled = unwrapMutation('ลบใบเบิก', result)
+  const cancelled = unwrapMutation('ยกเลิกใบเบิก', result)
   revalidateRequisition(parsedId)
   return cancelled
 }
@@ -136,8 +145,8 @@ export async function fulfillRequisition(
   const parsedId = requisitionIdSchema.parse(requisitionId)
   const parsed = fulfillRequisitionInputSchema.parse(input)
 
-  // The RPC locks the requisition and every chosen lot, refuses expired lots
-  // and short issues, and is the only place stock actually moves.
+  // The RPC locks the requisition and every chosen lot, refuses expired lots,
+  // validates any audited short issue, and is the only place stock moves.
   const result = await supabaseAdmin.rpc('fulfill_requisition', {
     p_requisition_id: parsedId,
     p_actor_id: actor.id,
@@ -149,26 +158,91 @@ export async function fulfillRequisition(
   return fulfilled
 }
 
-export async function signRequisitionReceipt(
+export async function saveDrawnSignature(
   requisitionId: string,
-  input: SignRequisitionInput,
+  input: DrawnSignatureInput,
 ) {
   const actor = await requireActor()
-  assertStockOperator(actor)
   const parsedId = requisitionIdSchema.parse(requisitionId)
-  const parsed = signRequisitionInputSchema.parse(input)
+  const parsed = drawnSignatureInputSchema.parse(input)
+  const existing = await getRequisition(parsedId)
+  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการบันทึกลายเซ็นต์')
+  if (existing.status !== 'fulfilled') {
+    throw new Error('บันทึกลายเซ็นต์ได้เมื่อคลังจ่ายของแล้วเท่านั้น')
+  }
+  assertRequisitionReceiver(actor, existing.requesterId)
 
-  // The RPC locks the requisition, confirms it was already dispensed, and
-  // refuses a second signature — one-time write, same as everything else in
-  // this domain that becomes part of the audit trail.
-  const result = await supabaseAdmin.rpc('sign_requisition_receipt', {
+  const normalized = await normalizeDrawnSignature(parsed.signature)
+  await ensureSignatureBucket()
+
+  const { data: currentProfile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('signature_url')
+    .eq('id', actor.id)
+    .maybeSingle()
+  if (profileError) throw new Error(`อ่านโปรไฟล์ลายเซ็นต์ไม่สำเร็จ: ${profileError.message}`)
+
+  const signaturePath = profileSignaturePath(actor.id)
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(SIGNATURE_BUCKET)
+    .upload(signaturePath, normalized.buffer, {
+      contentType: 'image/png',
+      upsert: true,
+    })
+  if (uploadError) throw new Error(`บันทึกลายเซ็นต์ลง Portal ไม่สำเร็จ: ${uploadError.message}`)
+
+  try {
+    const result = await supabaseAdmin.rpc('save_profile_signature', {
+      p_actor_id: actor.id,
+      p_signature_path: signaturePath,
+    })
+
+    const saved = unwrapMutation('บันทึกลายเซ็นต์ลง Portal', result)
+    const previousPath = typeof saved.previous_signature_path === 'string'
+      ? saved.previous_signature_path
+      : currentProfile?.signature_url
+    if (previousPath && previousPath !== signaturePath) {
+      await supabaseAdmin.storage.from(SIGNATURE_BUCKET).remove([previousPath])
+    }
+
+    revalidateRequisition(parsedId)
+    return { id: saved.id, signature: normalized.dataUri }
+  } catch (caught) {
+    // Do not remove an overwritten actor.id.png: the profile still points to
+    // that path and the new image is safer than leaving a broken signature.
+    if (currentProfile?.signature_url !== signaturePath) {
+      await supabaseAdmin.storage.from(SIGNATURE_BUCKET).remove([signaturePath])
+    }
+    throw caught
+  }
+}
+
+export async function receiveRequisition(requisitionId: string) {
+  const actor = await requireActor()
+  const parsedId = requisitionIdSchema.parse(requisitionId)
+  const existing = await getRequisition(parsedId)
+  if (!existing) throw new Error('ไม่พบใบเบิกที่ต้องการตรวจรับ')
+  if (existing.status !== 'fulfilled') {
+    throw new Error('ตรวจรับได้เมื่อคลังเปลี่ยนสถานะเป็นเบิกจ่ายสำเร็จแล้วเท่านั้น')
+  }
+  assertRequisitionReceiver(actor, existing.requesterId)
+
+  const receivedByName = actor.name?.trim()
+  if (!receivedByName) throw new Error('ไม่พบชื่อผู้ตรวจรับในโปรไฟล์ Portal')
+
+  const signature = await loadPortalSignatureDataUri(actor.id)
+  if (!signature) {
+    throw new Error(`ไม่พบลายเซ็นต์ใน Portal กรุณาวาดลายเซ็นต์ หรือเปิด ${PORTAL_PROFILE_PATH}`)
+  }
+
+  const result = await supabaseAdmin.rpc('receive_requisition', {
     p_requisition_id: parsedId,
     p_actor_id: actor.id,
-    p_received_by_name: parsed.receivedByName,
-    p_signature: parsed.signature,
+    p_received_by_name: receivedByName,
+    p_signature: signature,
   })
 
-  const signed = unwrapMutation('บันทึกลายเซ็นต์รับของ', result)
+  const received = unwrapMutation('บันทึกการตรวจรับของ', result)
   revalidateRequisition(parsedId)
-  return signed
+  return received
 }

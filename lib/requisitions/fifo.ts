@@ -90,7 +90,8 @@ export function defaultLotSelection(
 
 /**
  * Front-line validation so the officer sees a named problem instead of a
- * database error. The RPC re-checks all of this under row locks.
+ * database error. A positive short issue is valid here; the panel owns the
+ * companion reason field and the RPC re-checks both under row locks.
  */
 export function validateLotAllocations({
   requestedQuantity,
@@ -122,8 +123,10 @@ export function validateLotAllocations({
   const total = roundQuantity(
     allocations.reduce((sum, allocation) => sum + allocation.quantity, 0),
   )
-  if (total !== roundQuantity(requestedQuantity)) {
-    errors.push(`จำนวนที่จ่ายรวม ${total} ไม่ตรงกับจำนวนที่ขอเบิก ${requestedQuantity}`)
+  if (total <= 0) {
+    errors.push('ต้องจ่ายอย่างน้อย 1 หน่วยของรายการนี้')
+  } else if (total > roundQuantity(requestedQuantity)) {
+    errors.push(`จำนวนที่จ่ายรวม ${total} เกินจำนวนที่ขอเบิก ${requestedQuantity}`)
   }
 
   return errors

@@ -19,8 +19,19 @@ export function canManageRequisition(actor: Actor, requesterId: string | null): 
   return requesterId === actor.id || hasAppRole(actor, 'admin', 'stock_officer')
 }
 
+/** The same ownership boundary applies to physical receipt confirmation. */
+export function canReceiveRequisition(actor: Actor, requesterId: string | null): boolean {
+  return canManageRequisition(actor, requesterId)
+}
+
+export function assertRequisitionReceiver(actor: Actor, requesterId: string | null): void {
+  if (!canReceiveRequisition(actor, requesterId)) {
+    throw new RequisitionAuthorizationError('ไม่มีสิทธิ์ตรวจรับใบเบิกนี้')
+  }
+}
+
 export function assertRequisitionManager(actor: Actor, requesterId: string | null): void {
   if (!canManageRequisition(actor, requesterId)) {
-    throw new RequisitionAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือลบใบเบิกนี้')
+    throw new RequisitionAuthorizationError('ไม่มีสิทธิ์แก้ไขหรือยกเลิกใบเบิกนี้')
   }
 }

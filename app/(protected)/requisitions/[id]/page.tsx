@@ -2,15 +2,17 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FulfillmentPanel } from '@/components/requisitions/FulfillmentPanel'
 import { RequisitionLifecycleControls } from '@/components/requisitions/RequisitionLifecycleControls'
-import { RequisitionSignaturePanel } from '@/components/requisitions/RequisitionSignaturePanel'
+import { RequisitionReceiptDialog } from '@/components/requisitions/RequisitionReceiptDialog'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { canOperateStock } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { bangkokToday, listOnHand } from '@/lib/inventory/queries'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
-import { canManageRequisition } from '@/lib/requisitions/authorization'
+import { canManageRequisition, canReceiveRequisition } from '@/lib/requisitions/authorization'
 import { getRequisition, listSelectableLots } from '@/lib/requisitions/queries'
+import { REQUISITION_STATUS_LABELS, REQUISITION_STATUS_TONES } from '@/lib/requisitions/presenter'
+import { loadPortalSignatureDataUri } from '@/lib/requisitions/signature'
 import type { SelectableLot } from '@/lib/requisitions/types'
 
 interface RequisitionDetailPageProps {
@@ -19,17 +21,7 @@ interface RequisitionDetailPageProps {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-const STATUS_LABELS = {
-  waiting: 'รอจ่าย',
-  fulfilled: 'จ่ายสำเร็จ',
-  cancelled: 'ยกเลิก',
-} as const
-
-const STATUS_TONES = {
-  waiting: 'attention',
-  fulfilled: 'success',
-  cancelled: 'danger',
-} as const
+const PORTAL_PROFILE_URL = 'https://lab-management-cbh.vercel.app/staff/profile'
 
 export default async function RequisitionDetailPage({ params }: RequisitionDetailPageProps) {
   const actor = await requireActor()
@@ -40,6 +32,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
   if (!requisition) notFound()
 
   const canFulfil = canOperateStock(actor) && requisition.status === 'waiting'
+  const canReceive = canReceiveRequisition(actor, requisition.requesterId) && requisition.status === 'fulfilled'
   // Nothing has left the store while a requisition is waiting, so correcting or
   // withdrawing one moves no stock. Once it is dispensed the ledger is
   // append-only and the record closes.
@@ -53,19 +46,22 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
     canFulfil ? listSelectableLots(itemIds) : null,
     listOnHand(itemIds),
   ])
+  const signaturePreview = canReceive ? await loadPortalSignatureDataUri(actor.id) : null
 
   if (lots) {
     for (const [itemId, itemLots] of lots) lotsByItem[itemId] = itemLots
   }
 
   const workloadLabel = requisition.status === 'fulfilled'
-    ? 'รายการที่จ่าย'
-    : requisition.status === 'waiting'
-      ? 'รายการที่ต้องหยิบ'
-      : 'รายการในใบเบิก'
+    ? 'รายการที่รอตรวจรับ'
+    : requisition.status === 'received'
+      ? 'รายการที่ตรวจรับแล้ว'
+      : requisition.status === 'waiting'
+        ? 'รายการที่ต้องหยิบ'
+        : 'รายการในใบเบิก'
   const reservationLabel = requisition.status === 'waiting'
     ? 'สำรองยอดแล้ว รอจ่าย'
-    : requisition.status === 'fulfilled'
+    : requisition.status === 'fulfilled' || requisition.status === 'received'
       ? 'ตัดยอดคลังแล้ว'
       : 'คืนยอดแล้ว'
 
@@ -80,17 +76,26 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
             <span>ใบเบิกน้ำยา</span>
           </Link>
           <div className="contract-detail-heading__status">
-            <StatusChip tone={STATUS_TONES[requisition.status]}>
-              {STATUS_LABELS[requisition.status]}
+            <StatusChip tone={REQUISITION_STATUS_TONES[requisition.status]}>
+              {REQUISITION_STATUS_LABELS[requisition.status]}
             </StatusChip>
             <span>{requisition.department}</span>
+            {canReceive && (
+              <RequisitionReceiptDialog
+                requisitionId={requisition.id}
+                items={requisition.items}
+                actorName={actor.name}
+                signaturePreview={signaturePreview}
+                portalProfileHref={PORTAL_PROFILE_URL}
+              />
+            )}
             {canManage && (
               <RequisitionLifecycleControls
                 requisitionId={requisition.id}
                 documentNumber={requisition.documentNumber}
               />
             )}
-            {requisition.status === 'fulfilled' && (
+            {(requisition.status === 'fulfilled' || requisition.status === 'received') && (
               <Link className="lab-link-button lab-link-button--secondary" href={`/requisitions/${requisition.id}/print`}>
                 พิมพ์ใบเบิก
               </Link>
@@ -116,11 +121,17 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
           <div>
             <dt>การจ่ายของ</dt>
             <dd>
-              {requisition.status === 'fulfilled'
+              {requisition.status === 'fulfilled' || requisition.status === 'received'
                 ? `${formatThaiDateTime(requisition.fulfilledAt)} · ${requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'}`
                 : 'ยังไม่จ่าย'}
             </dd>
           </div>
+          {requisition.receivedByName && requisition.signedAt && (
+            <div>
+              <dt>การตรวจรับ</dt>
+              <dd>{`${formatThaiDateTime(requisition.signedAt)} · ${requisition.receivedByName}`}</dd>
+            </div>
+          )}
         </dl>
       </header>
 
@@ -139,7 +150,7 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                 <th>รหัสพัสดุ</th>
                 <th>ชื่อน้ำยา</th>
                 <th className="numeric-cell">ขอเบิก</th>
-                <th className="numeric-cell">จ่ายแล้ว</th>
+                <th className="numeric-cell">จ่ายจริง</th>
                 <th className="numeric-cell" title="ยอดคงเหลือปัจจุบันของน้ำยา">คงเหลือในคลัง</th>
                 <th>ล็อตที่จ่าย</th>
               </tr>
@@ -165,6 +176,11 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
                           </span>
                         )}
                       </span>
+                    )}
+                    {item.shortIssueReason && (
+                      <small className="requisition-short-issue-reason">
+                        เหตุผลจ่ายไม่ครบ: {item.shortIssueReason}
+                      </small>
                     )}
                   </td>
                   <td className="numeric-cell identifier">
@@ -217,19 +233,6 @@ export default async function RequisitionDetailPage({ params }: RequisitionDetai
           จ่ายของเมื่อ {formatThaiDateTime(requisition.fulfilledAt ?? null)} โดย{' '}
           {requisition.fulfilledByName ?? 'ไม่ระบุชื่อผู้จ่าย'} · บัญชีเคลื่อนไหวบันทึกแล้วและแก้ย้อนหลังไม่ได้
         </p>
-      )}
-
-      {canOperateStock(actor) && requisition.status === 'fulfilled' && !requisition.signedAt && (
-        <section className="bench-panel bench-panel--decision" aria-labelledby="signature-title">
-          <div className="bench-panel__header">
-            <div>
-              <p className="section-kicker">STOCK OFFICER</p>
-              <h2 id="signature-title">เซ็นต์รับของ</h2>
-            </div>
-            <p>ให้ผู้รับของเซ็นต์ยืนยันการรับของก่อนปิดใบเบิก</p>
-          </div>
-          <RequisitionSignaturePanel requisitionId={requisition.id} defaultReceiverName={requisition.requesterName} />
-        </section>
       )}
 
       {requisition.signedAt && (

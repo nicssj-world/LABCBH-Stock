@@ -1,89 +1,131 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { signRequisitionInputSchema } from '../lib/requisitions/schema'
+import { drawnSignatureInputSchema } from '../lib/requisitions/schema'
 
-// A fulfilled requisition can now be digitally signed for receipt: a typed
-// name, a canvas signature captured as a PNG data URI, and the timestamp.
-
+// The browser sends only a PNG data URI from the canvas. The server action
+// normalizes it before it reaches the shared private Portal bucket.
 const validSignature = `data:image/png;base64,${'A'.repeat(100)}`
 
+assert.equal(drawnSignatureInputSchema.safeParse({ signature: validSignature }).success, true)
 assert.equal(
-  signRequisitionInputSchema.safeParse({ receivedByName: 'สมชาย ใจดี', signature: validSignature }).success,
-  true,
-)
-assert.equal(
-  signRequisitionInputSchema.safeParse({ receivedByName: '', signature: validSignature }).success,
-  false,
-  'a blank receiver name is rejected',
-)
-assert.equal(
-  signRequisitionInputSchema.safeParse({ receivedByName: '   ', signature: validSignature }).success,
-  false,
-  'a whitespace-only receiver name is rejected',
-)
-assert.equal(
-  signRequisitionInputSchema.safeParse({ receivedByName: 'สมชาย ใจดี', signature: 'not-a-data-uri' }).success,
+  drawnSignatureInputSchema.safeParse({ signature: 'not-a-data-uri' }).success,
   false,
   'the signature must be a PNG data URI',
 )
 assert.equal(
-  signRequisitionInputSchema.safeParse({
-    receivedByName: 'สมชาย ใจดี',
-    signature: `data:image/png;base64,${'A'.repeat(600_000)}`,
-  }).success,
+  drawnSignatureInputSchema.safeParse({ signature: `data:image/png;base64,${'A'.repeat(2_800_001)}` }).success,
   false,
-  'an oversized signature is rejected',
+  'an oversized browser payload is rejected',
 )
 
-// The migration itself: new columns, the signed check constraint, and the RPC.
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations')
-const migrationNames = readdirSync(migrationsDir).filter((name) =>
-  name.endsWith('_requisition_signature.sql'),
+const migrationName = readdirSync(migrationsDir).find((name) =>
+  name.endsWith('_requisition_partial_issue_receipt.sql'),
 )
-assert.equal(migrationNames.length, 1, 'exactly one requisition signature migration must exist')
+assert.ok(migrationName, 'the requisition receipt migration must exist')
+const sql = readFileSync(join(migrationsDir, migrationName), 'utf8')
 
-const sql = readFileSync(join(migrationsDir, migrationNames[0]), 'utf8')
-
-for (const column of ['received_by_name', 'signature', 'signed_at']) {
-  assert.match(sql, new RegExp(`add column if not exists ${column}`, 'i'))
+for (const column of ['received_by', 'received_by_name', 'signature', 'signed_at']) {
+  assert.match(sql, new RegExp(`\\b${column}\\b`, 'i'))
 }
-assert.match(sql, /add constraint requisitions_signed_check/i)
-assert.match(
-  sql,
-  /\(signed_at is not null\) = \(signature is not null\)/i,
-)
-assert.match(
-  sql,
-  /\(signed_at is not null\) = \(received_by_name is not null\)/i,
-)
-
-const signFunction = sql.match(
-  /create or replace function public\.sign_requisition_receipt[\s\S]*?\$function\$;/i,
-)?.[0]
-assert.ok(signFunction, 'sign_requisition_receipt must exist')
-assert.match(signFunction, /security invoker/i)
-assert.match(signFunction, /set search_path = ''/i)
-assert.match(signFunction, /assert_stock_officer_actor/i)
-assert.match(signFunction, /for update/i)
-assert.match(signFunction, /status <> 'fulfilled'/i)
-assert.match(signFunction, /signed_at is not null/i)
-assert.match(signFunction, /already been signed for/i)
-assert.match(signFunction, /data:image\/png;base64,/i, 'the RPC must re-check the signature shape server-side too')
+assert.match(sql, /add column if not exists received_by uuid/i)
+for (const column of ['signature_url', 'signature_updated_at', 'signature_updated_by']) {
+  assert.match(sql, new RegExp(`add column if not exists ${column}`, 'i'), `shared profiles must store ${column}`)
+}
+assert.match(sql, /values \('signatures', 'signatures', false\)/i, 'the shared signatures bucket must remain private')
+assert.match(sql, /allowed_mime_types\s*=\s*array\['image\/png'\]/i, 'drawn signatures must be PNG-only in Storage')
+assert.match(sql, /status in \('waiting', 'fulfilled', 'received', 'cancelled'\)/i)
+assert.match(sql, /requisitions_receipt_check/i)
+assert.match(sql, /status = 'received'/i)
+assert.match(sql, /status = 'fulfilled'/i)
+assert.match(sql, /where requisition\.status = 'fulfilled'/i)
+assert.match(sql, /signed_at is not null/i)
+assert.match(sql, /signature is not null/i)
+assert.match(sql, /nullif\(btrim\(received_by_name\), ''\) is not null/i)
+assert.match(sql, /revoke execute on function public\.sign_requisition_receipt\(uuid, uuid, text, text\) from service_role/i)
 assert.ok(
-  signFunction.indexOf('for update') < signFunction.indexOf("status <> 'fulfilled'"),
-  'status must be re-read under the lock, not before it — a race would let two signatures both pass',
+  sql.indexOf('drop constraint if exists requisitions_fulfilled_audit_check')
+    < sql.indexOf('update public.requisitions as requisition'),
+  'the received-aware audit constraint must be installed before historical status backfill',
+)
+assert.ok(
+  sql.indexOf('add constraint requisitions_fulfilled_audit_check')
+    < sql.indexOf('update public.requisitions as requisition'),
+  'the received-aware audit constraint must be active before historical status backfill',
 )
 
-for (const role of ['public', 'anon', 'authenticated']) {
-  assert.match(
-    sql,
-    new RegExp(`revoke execute on function public\\.sign_requisition_receipt[\\s\\S]*?from ${role}`, 'i'),
-  )
+const saveFunction = sql.match(
+  /create or replace function public\.save_profile_signature[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(saveFunction, 'save_profile_signature must exist')
+assert.match(saveFunction, /security invoker/i)
+assert.match(saveFunction, /set search_path = ''/i)
+assert.match(saveFunction, /p_signature_path/i)
+assert.match(saveFunction, /profile\.signature_url/i)
+assert.match(saveFunction, /for update/i)
+assert.match(saveFunction, /requisition\.receipt_signature_drawn/i)
+assert.match(saveFunction, /signature_url = v_signature_path/i)
+
+const receiveFunction = sql.match(
+  /create or replace function public\.receive_requisition[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(receiveFunction, 'receive_requisition must exist')
+assert.match(receiveFunction, /security invoker/i)
+assert.match(receiveFunction, /set search_path = ''/i)
+assert.match(receiveFunction, /p_requisition_id/i)
+assert.match(receiveFunction, /p_actor_id/i)
+assert.match(receiveFunction, /p_received_by_name/i)
+assert.match(receiveFunction, /p_signature/i)
+assert.match(receiveFunction, /for update/i)
+assert.match(receiveFunction, /status <> 'fulfilled'/i)
+assert.match(receiveFunction, /already been received/i)
+assert.match(receiveFunction, /assert_requisition_manager/i)
+assert.match(receiveFunction, /status = 'received'/i)
+assert.match(receiveFunction, /received_by = p_actor_id/i)
+assert.match(receiveFunction, /requisition\.receipt_confirmed/i)
+assert.ok(
+  receiveFunction.indexOf('for update') < receiveFunction.indexOf("status <> 'fulfilled'"),
+  'receipt status must be re-read under the row lock',
+)
+
+for (const fn of ['save_profile_signature', 'receive_requisition']) {
+  for (const role of ['public', 'anon', 'authenticated']) {
+    assert.match(
+      sql,
+      new RegExp(`revoke execute on function public\\.${fn}[\\s\\S]*?from ${role}`, 'i'),
+    )
+  }
+  assert.match(sql, new RegExp(`grant execute on function public\\.${fn}[\\s\\S]*?to service_role`, 'i'))
 }
-assert.match(
-  sql,
-  /grant execute on function public\.sign_requisition_receipt[\s\S]*?to service_role/i,
-)
 
-console.log(`requisition signature: ok (${migrationNames[0]})`)
+const actions = readFileSync(join(process.cwd(), 'lib', 'requisitions', 'actions.ts'), 'utf8')
+assert.match(actions, /export async function saveDrawnSignature/)
+assert.match(actions, /export async function receiveRequisition/)
+assert.match(actions, /supabaseAdmin\.storage[\s\S]*?upload/)
+assert.match(actions, /supabaseAdmin\.rpc\('save_profile_signature'/)
+assert.match(actions, /supabaseAdmin\.rpc\('receive_requisition'/)
+assert.match(actions, /loadPortalSignatureDataUri/)
+assert.match(actions, /PORTAL_PROFILE_PATH/)
+assert.doesNotMatch(actions, /signRequisitionReceipt|sign_requisition_receipt/)
+
+const dialog = readFileSync(
+  join(process.cwd(), 'components', 'requisitions', 'RequisitionReceiptDialog.tsx'),
+  'utf8',
+)
+assert.match(dialog, /<dialog\b/)
+assert.match(dialog, /useDeferredDialog/)
+assert.match(dialog, /SignaturePad/)
+assert.match(dialog, /บันทึกลายเซ็นต์/)
+assert.match(dialog, /ยืนยันตรวจรับของ/)
+assert.match(dialog, /\/staff\/profile/)
+assert.doesNotMatch(dialog, /type=["']file["']/i, 'the receipt popup must not offer a file input')
+
+const pad = readFileSync(join(process.cwd(), 'components', 'requisitions', 'SignaturePad.tsx'), 'utf8')
+assert.match(pad, /onPointerDown/)
+assert.match(pad, /onPointerMove/)
+assert.match(pad, /onPointerUp/)
+assert.match(pad, /toDataURL\('image\/png'\)/)
+assert.match(pad, /hasSignatureRef/)
+
+console.log(`requisition signature: ok (${migrationName})`)

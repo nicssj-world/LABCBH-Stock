@@ -78,7 +78,9 @@ assert.equal(
 )
 assert.equal(requiresOverrideReason(lots, [], today), false)
 
-// Allocation totals must match the request exactly and stay inside each lot.
+// Allocation totals may be a positive short issue, but never exceed the request
+// or the selected lot balance. The companion short-issue reason is validated by
+// the fulfillment panel and the database RPC.
 const balances = new Map([['old', 5], ['new', 5]])
 assert.deepEqual(
   validateLotAllocations({
@@ -94,7 +96,7 @@ assert.deepEqual(
     allocations: [{ lotId: 'old', quantity: 5 }],
     lotBalances: balances,
   }),
-  ['จำนวนที่จ่ายรวม 5 ไม่ตรงกับจำนวนที่ขอเบิก 7'],
+  [],
 )
 assert.deepEqual(
   validateLotAllocations({

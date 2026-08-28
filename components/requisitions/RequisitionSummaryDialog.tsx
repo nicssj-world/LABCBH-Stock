@@ -86,12 +86,12 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                 <dd>
                   {requisition.status === 'waiting'
                     ? 'สำรองยอดแล้ว รอจ่าย'
-                    : requisition.status === 'fulfilled'
+                    : requisition.status === 'fulfilled' || requisition.status === 'received'
                       ? 'ตัดยอดคลังแล้ว'
                       : 'คืนยอดแล้ว'}
                 </dd>
               </div>
-              {requisition.status === 'fulfilled' && (
+              {(requisition.status === 'fulfilled' || requisition.status === 'received') && (
                 <div className="list-summary-dialog__fact--wide">
                   <dt>จ่ายของเมื่อ</dt>
                   <dd className="identifier">
@@ -123,12 +123,17 @@ export function RequisitionSummaryDialog({ requisition }: { requisition: Requisi
                         <small>{item.lsCode}</small>
                       </div>
                       <div className="list-summary-dialog__item-value">
-                        <strong>{formatQuantity(item.requestedQuantity, item.unit)}</strong>
+                        <strong>ขอ {formatQuantity(item.requestedQuantity, item.unit)}</strong>
                         <small>
                           {item.fulfilledQuantity === null
-                            ? 'จำนวนที่ขอ'
-                            : `จ่ายแล้ว ${formatQuantity(item.fulfilledQuantity, item.unit)}`}
+                            ? 'ยังไม่จ่ายจริง'
+                            : `จ่ายจริง ${formatQuantity(item.fulfilledQuantity, item.unit)}`}
                         </small>
+                        {item.shortIssueReason && (
+                          <small className="list-summary-dialog__item-reason">
+                            เหตุผลจ่ายไม่ครบ: {item.shortIssueReason}
+                          </small>
+                        )}
                       </div>
                     </li>
                   ))}

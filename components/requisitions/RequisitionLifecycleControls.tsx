@@ -40,7 +40,7 @@ export function RequisitionLifecycleControls({
         router.push('/requisitions')
         router.refresh()
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'ลบใบเบิกไม่สำเร็จ กรุณาลองใหม่')
+        setError(caught instanceof Error ? caught.message : 'ยกเลิกใบเบิกไม่สำเร็จ กรุณาลองใหม่')
       }
     })
   }
@@ -54,7 +54,7 @@ export function RequisitionLifecycleControls({
         แก้ไขใบเบิก
       </Link>
       <Button variant="danger" type="button" onClick={openDialog}>
-        ลบใบเบิก
+        ยกเลิกใบเบิก
       </Button>
 
       <dialog
@@ -67,12 +67,12 @@ export function RequisitionLifecycleControls({
       >
         <header className="app-dialog__header">
           <div>
-            <h2 id="cancel-requisition-dialog-title">ยืนยันการลบใบเบิก</h2>
+            <h2 id="cancel-requisition-dialog-title">ยืนยันการยกเลิกใบเบิก</h2>
             <p id="cancel-requisition-dialog-description">
               ใบ {documentNumber} จะถูกยกเลิกและเก็บประวัติไว้ ยอดคงคลังไม่เปลี่ยนแปลงเพราะยังไม่ได้จ่ายของ
             </p>
           </div>
-          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างลบใบเบิก" onClick={closeDialog}>
+          <button type="button" className="app-dialog__close" aria-label="ปิดหน้าต่างยกเลิกใบเบิก" onClick={closeDialog}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -89,7 +89,7 @@ export function RequisitionLifecycleControls({
               กลับไปตรวจสอบ
             </Button>
             <Button variant="danger" type="submit" disabled={isPending}>
-              {isPending ? 'กำลังลบ…' : 'ยืนยันลบใบเบิก'}
+              {isPending ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิกใบเบิก'}
             </Button>
           </div>
         </form>
