@@ -87,3 +87,14 @@ export function parseThaiDateInput(value: string): string | null {
   const gregorianYear = enteredYear >= 2400 ? enteredYear - BUDDHIST_ERA_OFFSET : enteredYear
   return isoFromParts(gregorianYear, month, day)
 }
+
+/** Formats an ISO date with a full Thai month name for readable summaries. */
+export function formatThaiDateLong(isoDate: string | null | undefined): string {
+  if (!isoDate) return 'ไม่ระบุ'
+  const match = isoDate.slice(0, 10).match(ISO_DATE_PATTERN)
+  if (!match) return 'ไม่ระบุ'
+
+  const [, year, month, day] = match
+  const monthName = THAI_MONTHS[Number(month) - 1]
+  return monthName ? `${pad(Number(day))} ${monthName} ${Number(year) + BUDDHIST_ERA_OFFSET}` : 'ไม่ระบุ'
+}

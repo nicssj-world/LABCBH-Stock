@@ -7490,36 +7490,38 @@ body {
 
 /* Service plan detail: the page leads with the financial state, then keeps
    records and infrequent actions in separate working surfaces. */
-.service-plan-detail-page { gap: 18px; }
-.service-plan-detail__heading { align-items: flex-end; }
-.service-plan-detail__heading-copy { display: grid; gap: 10px; min-width: 0; }
-.service-plan-detail__back { width: fit-content; }
+.service-plan-detail-page { gap: 20px; }
+.service-plan-detail__heading { align-items: flex-end; gap: 28px; }
+.service-plan-detail__heading-copy { display: grid; gap: 7px; min-width: 0; }
+.service-plan-detail__heading-copy h1 { max-width: 32ch; margin: 3px 0 0; font-size: clamp(26px, 2.8vw, 40px); line-height: 1.18; text-wrap: balance; }
+.service-plan-detail__back { width: fit-content; margin-bottom: 2px; }
 .service-plan-detail__heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; }
 .service-plan-detail__heading-row h1 { max-width: none; margin: 0 0 5px; text-wrap: balance; }
-.service-plan-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--lab-muted); }
+.service-plan-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--lab-muted); line-height: 1.55; }
 .service-plan-detail__status { align-self: center; }
-.service-plan-detail__actions { align-items: center; }
+.service-plan-detail__actions { align-items: center; gap: 8px; }
 .service-plan-detail__actions > * { white-space: nowrap; }
 .service-plan-header-action { gap: 7px; min-height: 44px; padding-inline: 13px; font-size: 12px; }
 .service-plan-header-action svg { flex: 0 0 auto; }
 
 .service-plan-overview { overflow: hidden; }
-.service-plan-overview__hero { display: grid; grid-template-columns: minmax(260px, .82fr) minmax(0, 1.35fr); gap: 28px; padding: 26px 28px; background: var(--lab-primary-soft); }
+.service-plan-overview__hero { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); gap: 24px; padding: 26px 28px; background: var(--lab-primary-soft); }
 .service-plan-overview__balance { display: grid; align-content: center; justify-items: start; gap: 5px; min-width: 0; }
 .service-plan-overview__balance h2 { margin: 0; color: var(--lab-navy-strong); font-size: 15px; }
-.service-plan-overview__balance > strong { margin-top: 3px; color: var(--lab-navy-strong); font: 600 clamp(30px, 4vw, 48px)/1.1 var(--font-mono); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.service-plan-overview__balance > strong { margin-top: 3px; color: var(--lab-navy-strong); font: 600 clamp(32px, 3.8vw, 44px)/1.1 var(--font-mono); letter-spacing: -.04em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .service-plan-overview__balance.is-danger > strong { color: var(--lab-red); }
-.service-plan-overview__status { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--lab-green); font-size: 12px; font-weight: 700; }
-.service-plan-overview__status i { width: 8px; height: 8px; background: currentColor; border-radius: 50%; }
+.service-plan-overview__status { display: inline-flex; align-items: center; gap: 7px; min-height: 24px; margin-top: 7px; color: var(--lab-green); font-size: 12px; font-weight: 700; }
+.service-plan-overview__status i { width: 7px; height: 7px; flex: 0 0 auto; background: currentColor; border-radius: 50%; }
 .service-plan-overview__status--attention { color: var(--lab-amber); }
 .service-plan-overview__status--danger { color: var(--lab-red); }
-.service-plan-overview__progress { display: grid; align-content: center; gap: 11px; min-width: 0; padding: 18px 20px; background: var(--lab-surface); border: 1px solid color-mix(in srgb, var(--lab-primary) 22%, var(--lab-border)); border-radius: 12px; }
+.service-plan-overview__status--closed { color: var(--lab-muted); }
+.service-plan-overview__progress { display: grid; align-content: center; gap: 12px; min-width: 0; padding: 20px 22px; background: var(--lab-surface); border: 1px solid color-mix(in srgb, var(--lab-primary) 22%, var(--lab-border)); border-radius: 14px; }
 .service-plan-overview__progress-heading,
 .service-plan-overview__progress-scale,
 .service-plan-overview__progress p { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0; }
 .service-plan-overview__progress-heading { color: var(--lab-muted); font-size: 12px; font-weight: 700; }
 .service-plan-overview__progress-heading strong { color: var(--lab-ink); font: 600 15px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; }
-.service-plan-overview__progress-track { height: 12px; overflow: hidden; background: var(--lab-surface-muted); border-radius: 999px; }
+.service-plan-overview__progress-track { height: 10px; overflow: hidden; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: 999px; }
 .service-plan-overview__progress-track > span { display: block; width: 100%; height: 100%; background: var(--lab-primary); border-radius: inherit; transform: scaleX(0); transform-origin: left center; transition: transform 320ms var(--ease-out); }
 .service-plan-overview__progress-scale { color: var(--lab-muted); font: 500 10px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; }
 .service-plan-overview__progress-scale strong { color: var(--lab-primary-strong); font: 700 11px/1.3 var(--font-sans); }
@@ -7529,12 +7531,20 @@ body {
 .service-plan-overview__legend-dot--spent { background: var(--lab-primary); }
 .service-plan-overview__legend-dot--reserved { background: var(--lab-teal); }
 .service-plan-overview__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--lab-border); }
-.service-plan-overview__stats > div { min-width: 0; padding: 15px 20px 17px; border-right: 1px solid var(--lab-border); }
+.service-plan-overview__stats > div { min-width: 0; padding: 16px 20px 18px; border-right: 1px solid var(--lab-border); }
 .service-plan-overview__stats > div:last-child { border-right: 0; }
+.service-plan-overview__stats > .service-plan-overview__stat--available { background: var(--lab-green-soft); }
 .service-plan-overview__stats dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
 .service-plan-overview__stats dd { margin: 5px 0 0; overflow-wrap: anywhere; color: var(--lab-ink); font: 600 14px/1.35 var(--font-mono); font-variant-numeric: tabular-nums; }
+.service-plan-overview__stats > .service-plan-overview__stat--available dd { color: var(--lab-green); }
 .service-plan-overview__stats dd small { color: var(--lab-muted); font: 500 11px/1.35 var(--font-sans); }
 
+.service-plan-detail-page > .bench-panel:not(.service-plan-overview) { overflow: hidden; }
+.service-plan-detail-page > .bench-panel:not(.service-plan-overview) .bench-panel__header { min-height: 72px; }
+.service-plan-detail-page > .bench-panel .service-ledger-table-wrap { padding: 0 20px 20px; }
+.service-plan-detail-page > .bench-panel .service-document-list { padding: 0 20px 20px; }
+.service-plan-detail-page > .bench-panel > .empty-state { margin: 0; }
+.service-plan-ledger-panel > .field-help { margin: 0; padding: 14px 20px 18px; border-top: 1px solid var(--lab-border); color: var(--lab-muted); font-size: 12px; line-height: 1.5; }
 .service-plan-detail-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); align-items: start; gap: 18px; }
 .service-plan-ledger-panel,
 .service-plan-people-panel,
@@ -7611,6 +7621,8 @@ body {
 }
 
 @media (max-width: 800px) {
+  .service-plan-detail__heading { align-items: stretch; flex-direction: column; gap: 14px; }
+  .service-plan-detail__actions { justify-content: flex-start; }
   .service-plan-detail__heading-row { align-items: flex-start; flex-direction: column; gap: 12px; }
   .service-plan-detail__status { align-self: flex-start; }
   .service-plan-overview__hero { padding: 22px 18px; }
@@ -7625,10 +7637,16 @@ body {
 @media (max-width: 540px) {
   .service-plan-detail-page { gap: 14px; }
   .service-plan-detail__actions { gap: 8px; }
-  .service-plan-detail__actions > * { width: 100%; }
+  .service-plan-detail__actions > * { width: auto; }
+  .service-plan-detail__actions > .lab-link-button { width: 100%; }
+  .service-plan-detail__heading-copy h1 { font-size: clamp(24px, 8vw, 32px); }
   .service-plan-overview__progress { padding: 15px; }
   .service-plan-overview__progress-scale { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .service-plan-overview__balance > strong { max-width: 100%; font-size: clamp(28px, 10vw, 38px); white-space: normal; overflow-wrap: anywhere; }
   .service-plan-overview__stats > div { padding-inline: 15px; }
+  .service-plan-detail-page > .bench-panel .service-ledger-table-wrap,
+  .service-plan-detail-page > .bench-panel .service-document-list { padding-inline: 16px; }
+  .service-plan-ledger-panel > .field-help { padding: 14px 16px 16px; }
   .service-plan-empty-state { align-items: flex-start; flex-direction: column; padding: 22px 18px; }
   .service-plan-action-grid { grid-template-columns: 1fr; padding: 14px 16px 16px; }
   .service-plan-action-grid--single { grid-template-columns: 1fr; }

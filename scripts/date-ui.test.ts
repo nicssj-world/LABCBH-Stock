@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { addIsoDays, bangkokIsoDate, formatThaiDateInput, parseThaiDateInput } from '../lib/date/thai'
+import { addIsoDays, bangkokIsoDate, formatThaiDateInput, formatThaiDateLong, parseThaiDateInput } from '../lib/date/thai'
 
 assert.equal(formatThaiDateInput('2026-08-02'), '02/08/2569')
+assert.equal(formatThaiDateLong('2025-10-01'), '01 ตุลาคม 2568')
 assert.equal(parseThaiDateInput('02/08/2569'), '2026-08-02')
 assert.equal(parseThaiDateInput('2-8-2569'), '2026-08-02')
 assert.equal(parseThaiDateInput('2026-08-02'), '2026-08-02', 'ISO paste remains supported')
