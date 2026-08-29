@@ -5,6 +5,8 @@ import { bangkokIsoDate, BUDDHIST_ERA_OFFSET, THAI_MONTHS, THAI_WEEKDAYS_SHORT }
 
 export interface CalendarPickerProps {
   value: string
+  min?: string
+  max?: string
   onSelect: (isoDate: string) => void
 }
 
@@ -19,7 +21,7 @@ function partsFromIso(isoDate: string): { year: number; month: number } | null {
 }
 
 /** A month grid for picking a date by click, alongside ThaiDateInput's typed entry. */
-export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
+export function CalendarPicker({ value, min, max, onSelect }: CalendarPickerProps) {
   const todayIso = bangkokIsoDate()
   const todayParts = partsFromIso(todayIso)!
   const initial = partsFromIso(value)
@@ -42,6 +44,8 @@ export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
       return { day, iso: `${viewYear}-${pad(viewMonth)}-${pad(day)}` }
     }),
   ]
+
+  const isOutsideRange = (isoDate: string) => Boolean((min && isoDate < min) || (max && isoDate > max))
 
   const yearOptions = Array.from({ length: 21 }, (_, index) => todayParts.year + 10 - index)
   if (!yearOptions.includes(viewYear)) yearOptions.push(viewYear)
@@ -81,6 +85,7 @@ export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
           <button
             type="button"
             key={cell.iso}
+            disabled={isOutsideRange(cell.iso)}
             className={[
               cell.iso === value ? 'calendar-picker__day--selected' : '',
               cell.iso === todayIso ? 'calendar-picker__day--today' : '',
@@ -92,7 +97,7 @@ export function CalendarPicker({ value, onSelect }: CalendarPickerProps) {
           </button>
         ) : <span key={`blank-${index}`} aria-hidden="true" />)}
       </div>
-      <button type="button" className="calendar-picker__today" onClick={() => onSelect(todayIso)}>
+      <button type="button" className="calendar-picker__today" disabled={isOutsideRange(todayIso)} onClick={() => onSelect(todayIso)}>
         วันนี้
       </button>
     </div>

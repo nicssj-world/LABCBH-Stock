@@ -31,10 +31,21 @@ import {
   serviceFilePath,
   validateServiceAttachment,
 } from './files'
+import { DUPLICATE_SERVICE_INVOICE_MESSAGE, isDuplicateServiceInvoiceError } from './invoice'
 import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
-function unwrap<T>(operation: string, result: { data: T | null; error: { message: string } | null }): T {
-  if (result.error) throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
+type ServiceActionError = {
+  code?: string | null
+  message: string
+  details?: string | null
+  hint?: string | null
+}
+
+function unwrap<T>(operation: string, result: { data: T | null; error: ServiceActionError | null }): T {
+  if (result.error) {
+    if (isDuplicateServiceInvoiceError(result.error)) throw new Error(DUPLICATE_SERVICE_INVOICE_MESSAGE)
+    throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
+  }
   if (result.data === null) throw new Error(`${operation}ไม่สำเร็จ: ไม่พบผลลัพธ์`)
   return result.data
 }
@@ -145,9 +156,10 @@ async function upsertPlanDocument(actorId: string, planId: string, kind: 'quotat
 export async function createServicePurchaseRequest(formData: FormData) {
   const actor = await requireActor(); assertServiceRequester(actor)
   const draft = readJsonField(formData, 'payload') as Record<string, unknown>
-  const committees = Array.isArray(draft.committees) ? draft.committees : []
+  const { committees: rawCommittees, ...draftWithoutCommittees } = draft
+  const committees = Array.isArray(rawCommittees) ? rawCommittees : []
   const parsed = servicePurchaseRequestInputSchema.parse({
-    ...draft,
+    ...draftWithoutCommittees,
     requesterName: actor.name?.trim() || (actor.ephisId ? `E-Phis ${actor.ephisId}` : actor.id),
     checklist: { attachments: [], committees },
   }) as ServicePurchaseRequestInput
@@ -177,6 +189,90 @@ export async function createServicePurchaseRequest(formData: FormData) {
   } catch (error) {
     const rollback = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([torUpload.path])
     if (rollback.error) await enqueueStorageCleanupJobBestEffort({ storageBackend: 'supabase_storage', bucketName: SERVICE_FILE_BUCKET, storageKey: torUpload.path, jobKind: 'storage_upload_rollback' })
+    throw error
+  }
+}
+
+export async function updateServicePurchaseRequest(requestId: string, formData: FormData) {
+  const actor = await requireActor(); assertServiceRequester(actor)
+  const parsedRequestId = z.string().uuid().parse(requestId)
+  const draft = readJsonField(formData, 'payload') as Record<string, unknown>
+  const { committees: rawCommittees, ...draftWithoutCommittees } = draft
+  const committees = Array.isArray(rawCommittees) ? rawCommittees : []
+  const parsed = servicePurchaseRequestInputSchema.parse({
+    ...draftWithoutCommittees,
+    requesterName: actor.name?.trim() || (actor.ephisId ? `E-Phis ${actor.ephisId}` : actor.id),
+    checklist: { attachments: [], committees },
+  }) as ServicePurchaseRequestInput
+
+  const previousAttachment = await supabaseAdmin
+    .from('service_purchase_request_attachments')
+    .select('storage_key')
+    .eq('purchase_request_id', parsedRequestId)
+    .eq('attachment_kind', 'tor')
+    .eq('slot', 1)
+    .maybeSingle()
+  if (previousAttachment.error) throw new Error(`อ่านไฟล์ TOR เดิมไม่สำเร็จ: ${previousAttachment.error.message}`)
+
+  const tor = readOptionalFile(formData, 'tor')
+  const torUpload = tor ? await uploadServiceFile(actor.id, 'checklist', tor, 'tor') : null
+  const attachment = torUpload
+    ? [{ kind: 'tor', slot: 1, storageKey: torUpload.path, fileName: torUpload.fileName, mimeType: torUpload.mimeType, sizeBytes: torUpload.sizeBytes }]
+    : []
+  const quotation = readOptionalFile(formData, 'quotation')
+  const contractPage = readOptionalFile(formData, 'contractPage')
+
+  try {
+    if (quotation) await upsertPlanDocument(actor.id, parsed.planId, 'quotation', quotation)
+    if (contractPage) await upsertPlanDocument(actor.id, parsed.planId, 'contract_page', contractPage)
+
+    const payload = {
+      ...parsed,
+      checklist: undefined,
+      attachments: attachment,
+      committees: parsed.checklist.committees,
+      documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
+    }
+    const result = await supabaseAdmin.rpc('update_service_purchase_request', {
+      p_actor_id: actor.id,
+      p_request_id: parsedRequestId,
+      p_payload: payload,
+    })
+    const request = unwrap('แก้ไขใบ PR งานจ้าง', result)
+
+    const oldStorageKey = previousAttachment.data?.storage_key
+    if (
+      torUpload && oldStorageKey &&
+      oldStorageKey.startsWith('service-procurement/checklist/') &&
+      !oldStorageKey.includes('..')
+    ) {
+      const removed = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([oldStorageKey])
+      if (removed.error) {
+        await enqueueStorageCleanupJobBestEffort({
+          storageBackend: 'supabase_storage',
+          bucketName: SERVICE_FILE_BUCKET,
+          storageKey: oldStorageKey,
+          jobKind: 'storage_upload_rollback',
+        })
+      }
+    }
+
+    revalidateRequest(request.id)
+    const updatedPlanId = (request as unknown as { plan_id?: string | null }).plan_id
+    if (updatedPlanId) revalidatePlan(updatedPlanId)
+    return request
+  } catch (error) {
+    if (torUpload) {
+      const rollback = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([torUpload.path])
+      if (rollback.error) {
+        await enqueueStorageCleanupJobBestEffort({
+          storageBackend: 'supabase_storage',
+          bucketName: SERVICE_FILE_BUCKET,
+          storageKey: torUpload.path,
+          jobKind: 'storage_upload_rollback',
+        })
+      }
+    }
     throw error
   }
 }

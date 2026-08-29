@@ -19,6 +19,15 @@ export function bangkokIsoDate(now: Date = new Date()): string {
   return `${values.year}-${values.month}-${values.day}`
 }
 
+/** Adds calendar days to an ISO date without allowing the host timezone to change the result. */
+export function addIsoDays(isoDate: string, days: number): string {
+  if (!isoDate || !Number.isFinite(days)) return isoDate
+  const date = new Date(`${isoDate.slice(0, 10)}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return isoDate
+  date.setUTCDate(date.getUTCDate() + Math.trunc(days))
+  return date.toISOString().slice(0, 10)
+}
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/
 const THAI_DIGITS = '๐๑๒๓๔๕๖๗๘๙'
 

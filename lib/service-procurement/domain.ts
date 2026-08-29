@@ -16,14 +16,27 @@ export interface ServicePlanMonthlySeriesEntry {
   amount: number
 }
 
-export type ServiceRequestDisplayStatus =
-  | 'pending_confirmation'
-  | 'awaiting_po'
-  | 'po_incomplete'
-  | 'ready_for_expense'
-  | 'recording_expense'
-  | 'closed'
-  | 'cancelled'
+export const SERVICE_REQUEST_DISPLAY_STATUSES = [
+  'pending_confirmation',
+  'awaiting_po',
+  'po_incomplete',
+  'ready_for_expense',
+  'recording_expense',
+  'closed',
+  'cancelled',
+] as const
+
+export type ServiceRequestDisplayStatus = (typeof SERVICE_REQUEST_DISPLAY_STATUSES)[number]
+
+/** The concise status groups shown in the register filter. */
+export const SERVICE_REQUEST_FILTER_STATUSES: readonly ServiceRequestDisplayStatus[] = [
+  'pending_confirmation',
+  'awaiting_po',
+  'ready_for_expense',
+  'recording_expense',
+  'closed',
+  'cancelled',
+]
 
 export interface ServiceRequestStatusInput {
   status: ServicePrStatus
@@ -55,13 +68,30 @@ export function serviceRequestDisplayStatus(request: Pick<ServicePurchaseRequest
   })
 }
 
+export function isServiceRequestDisplayStatus(value: string | undefined): value is ServiceRequestDisplayStatus {
+  return value !== undefined && (SERVICE_REQUEST_DISPLAY_STATUSES as readonly string[]).includes(value)
+}
+
+export function serviceRequestMatchesDisplayStatus(
+  request: Pick<ServicePurchaseRequestRecord, 'status' | 'poStatus' | 'poNumber' | 'poFileName' | 'usageEvents'>,
+  status: ServiceRequestDisplayStatus | undefined,
+): boolean {
+  if (status === undefined) return true
+  const displayStatus = serviceRequestDisplayStatus(request)
+  // A PO with only one piece of evidence is still waiting for PO data from
+  // the user's point of view. Keep the precise internal state for badges and
+  // audits, but group it with awaiting_po in the register filter.
+  if (status === 'awaiting_po') return displayStatus === 'awaiting_po' || displayStatus === 'po_incomplete'
+  return displayStatus === status
+}
+
 export function serviceExpenseFrequency(isRedCross: boolean): ServiceExpenseFrequency {
   return isRedCross ? 'daily' : 'monthly'
 }
 
 export function isDateRangeWithinFiscalYear(start: string, end: string, fiscalYear: number): boolean {
   const range = fiscalYearRange(fiscalYear)
-  return start <= end && start >= range.start && end <= range.end
+  return start < end && start >= range.start && end <= range.end
 }
 
 export function isExpenseDateWithinRequest(expenseDate: string, usageStartDate: string, usageEndDate: string): boolean {
@@ -170,6 +200,13 @@ export function formatServiceRequestNumber(fiscalYear: number, sequence: number)
 }
 
 export function calculateAnnualRequestTotal(
+  items: readonly { requestedQuantity: number; unitPrice: number }[],
+): number {
+  return calculateServiceRequestTotal(items)
+}
+
+/** Calculate the amount reserved by a service PR from its item quantities. */
+export function calculateServiceRequestTotal(
   items: readonly { requestedQuantity: number; unitPrice: number }[],
 ): number {
   return Math.round(items.reduce((sum, item) => sum + item.requestedQuantity * item.unitPrice, 0) * 100) / 100

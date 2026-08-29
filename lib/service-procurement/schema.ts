@@ -171,8 +171,8 @@ export const servicePurchaseRequestInputSchema = z
   .strict()
   .superRefine((value, ctx) => {
     if (value.method !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['method'], message: 'งานจ้างไม่รับวิธีจัดซื้อจาก client' })
-    if (value.usageStartDate > value.usageEndDate) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['usageEndDate'], message: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น' })
+    if (value.usageStartDate >= value.usageEndDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['usageEndDate'], message: 'วันที่สิ้นสุดต้องหลังวันที่เริ่มต้น' })
     }
   })
 

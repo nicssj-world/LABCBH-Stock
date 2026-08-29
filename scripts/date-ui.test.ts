@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bangkokIsoDate, formatThaiDateInput, parseThaiDateInput } from '../lib/date/thai'
+import { addIsoDays, bangkokIsoDate, formatThaiDateInput, parseThaiDateInput } from '../lib/date/thai'
 
 assert.equal(formatThaiDateInput('2026-08-02'), '02/08/2569')
 assert.equal(parseThaiDateInput('02/08/2569'), '2026-08-02')
@@ -9,6 +9,8 @@ assert.equal(parseThaiDateInput('2026-08-02'), '2026-08-02', 'ISO paste remains 
 assert.equal(parseThaiDateInput('๐๒/๐๘/๒๕๖๙'), '2026-08-02', 'Thai digits are accepted')
 assert.equal(parseThaiDateInput('31/02/2569'), null, 'invalid calendar dates are rejected')
 assert.equal(parseThaiDateInput(''), '')
+assert.equal(addIsoDays('2026-09-01', 1), '2026-09-02')
+assert.equal(addIsoDays('2026-09-30', 1), '2026-10-01')
 assert.equal(
   bangkokIsoDate(new Date('2026-08-10T18:00:00.000Z')),
   '2026-08-11',
@@ -19,10 +21,13 @@ const dateInput = readFileSync('components/ui/ThaiDateInput.tsx', 'utf8')
 assert.match(dateInput, /พ\.ศ\./, 'date fields explain the Buddhist Era input format')
 assert.match(dateInput, /parseThaiDateInput/, 'date fields emit parsed ISO values')
 assert.match(dateInput, /CalendarPicker/, 'date fields must also offer a clickable calendar, not typing alone')
+assert.match(dateInput, /minDate|props\.min/, 'date fields must pass their minimum date to the picker')
 assert.match(dateInput, /showModal\(\)/, 'the calendar opens through a dialog, matching the app-dialog convention')
 
 const calendarPicker = readFileSync('components/ui/CalendarPicker.tsx', 'utf8')
 assert.match(calendarPicker, /aria-pressed/, 'calendar days must expose their selected state accessibly')
+assert.match(calendarPicker, /min\?: string/, 'calendar picker must accept a minimum date')
+assert.match(calendarPicker, /disabled=\{/, 'calendar picker must disable dates outside the allowed range')
 
 for (const path of [
   'components/requisitions/RequisitionForm.tsx',

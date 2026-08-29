@@ -6,6 +6,9 @@ const rpc = readFileSync('supabase/migrations/20260826101000_service_procurement
 const cleanup = readFileSync('supabase/migrations/20260826102000_service_procurement_cleanup.sql', 'utf8')
 const expenseNote = readFileSync('supabase/migrations/20260827110000_service_plan_expense_note.sql', 'utf8')
 const productionRepair = readFileSync('supabase/migrations/20260827044504_purchase_request_service_line_ambiguity.sql', 'utf8')
+const serviceWorkflow = readFileSync('supabase/migrations/20260828170000_service_procurement_workflow.sql', 'utf8')
+const serviceDateRange = readFileSync('supabase/migrations/20260830000000_service_purchase_request_date_range.sql', 'utf8')
+const serviceActions = readFileSync('lib/service-procurement/actions.ts', 'utf8')
 
 for (const table of [
   'service_procurement_plans',
@@ -70,5 +73,10 @@ assert.doesNotMatch(cleanup, /or storage_key like 'out-lab\/%'/i)
 assert.match(expenseNote, /alter column reason drop not null/i, 'expense notes must be optional')
 assert.match(expenseNote, /requires a source reference/i, 'PR/PO reference must remain required')
 assert.doesNotMatch(expenseNote, /requires a reason and source reference/i, 'expense notes must not be required')
+assert.match(serviceWorkflow, /create unique index if not exists service_purchase_request_expenses_invoice_unique[\s\S]*lower\(btrim\(invoice_number\)\)[\s\S]*status = 'active'/i, 'active service expenses must enforce unique Invoice numbers per PR')
+assert.match(serviceDateRange, /usage_start_date\s*<\s*usage_end_date/i, 'service PO usage dates must be strictly ordered')
+assert.match(serviceDateRange, /not valid/i, 'strict service PO date validation must preserve historical equal-date rows')
+assert.match(serviceActions, /const \{ committees: rawCommittees, \.\.\.draftWithoutCommittees \} = draft/, 'service PR action must remove top-level committees before strict schema parsing')
+assert.match(serviceActions, /servicePurchaseRequestInputSchema\.parse\(\{[\s\S]*\.\.\.draftWithoutCommittees/, 'service PR schema parsing must use the payload without the transport-only committees key')
 
 console.log('service procurement schema: ok')

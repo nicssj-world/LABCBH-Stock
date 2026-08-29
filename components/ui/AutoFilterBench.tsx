@@ -95,7 +95,7 @@ export function AutoFilterBench({ fields, ariaLabel, className = '', showClear =
   }
 
   return (
-    <form className={`filter-bench ${className}`.trim()} onSubmit={handleSubmit} aria-label={ariaLabel}>
+    <form className={`filter-bench ${className}`.trim()} onSubmit={handleSubmit} aria-label={ariaLabel} aria-busy={isPending}>
       {fields.map((field) => {
         if (field.type === 'search') {
           return (
@@ -144,7 +144,7 @@ export function AutoFilterBench({ fields, ariaLabel, className = '', showClear =
           ล้างตัวกรอง
         </button>
       )}
-      {isPending && <p className="filter-bench__status" aria-live="polite">กำลังกรองรายการ…</p>}
+      {isPending && <span className="visually-hidden filter-bench__status" role="status" aria-live="polite">กำลังกรองรายการ…</span>}
     </form>
   )
 }

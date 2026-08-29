@@ -7,7 +7,11 @@ import {
 } from '@/lib/service-procurement/schema'
 import {
   calculateAnnualRequestTotal,
+  calculateServiceRequestTotal,
   deriveServiceFulfillment,
+  isDateRangeWithinFiscalYear,
+  serviceRequestMatchesDisplayStatus,
+  SERVICE_REQUEST_FILTER_STATUSES,
   fiscalYearFromDate,
   fiscalYearRange,
   formatServiceRequestNumber,
@@ -16,16 +20,64 @@ import {
   servicePlanExpenseMonthOptions,
   servicePlanMonthlySeries,
 } from '@/lib/service-procurement/domain'
+import {
+  DUPLICATE_SERVICE_INVOICE_MESSAGE,
+  hasDuplicateServiceInvoice,
+  isDuplicateServiceInvoiceError,
+  normalizeServiceInvoice,
+} from '@/lib/service-procurement/invoice'
 
 assert.equal(fiscalYearFromDate('2025-09-30'), 2568)
 assert.equal(fiscalYearFromDate('2025-10-01'), 2569)
 assert.deepEqual(fiscalYearRange(2569), { start: '2025-10-01', end: '2026-09-30' })
 assert.equal(formatServiceRequestNumber(2569, 7), 'SPR-2569-0007')
+assert.equal(isDateRangeWithinFiscalYear('2026-09-01', '2026-09-01', 2569), false)
+assert.equal(isDateRangeWithinFiscalYear('2026-09-01', '2026-09-02', 2569), true)
+assert.deepEqual(SERVICE_REQUEST_FILTER_STATUSES, [
+  'pending_confirmation',
+  'awaiting_po',
+  'ready_for_expense',
+  'recording_expense',
+  'closed',
+  'cancelled',
+])
+const incompletePoRequest = {
+  status: 'confirmed' as const,
+  poStatus: 'open' as const,
+  poNumber: 'PO-001',
+  poFileName: null,
+  usageEvents: [],
+}
+assert.equal(serviceRequestMatchesDisplayStatus(incompletePoRequest, 'awaiting_po'), true)
+assert.equal(serviceRequestMatchesDisplayStatus(incompletePoRequest, 'ready_for_expense'), false)
+
+assert.equal(normalizeServiceInvoice('  INV-001  '), 'inv-001')
+assert.equal(normalizeServiceInvoice('   '), null)
+const invoiceEvents = [
+  { id: 'active-1', kind: 'lab_expense' as const, status: 'active' as const, invoiceNumber: 'INV-001' },
+  { id: 'cancelled-1', kind: 'lab_expense' as const, status: 'cancelled' as const, invoiceNumber: 'INV-002' },
+  { id: 'usage-1', kind: 'annual_usage' as const, status: 'active' as const, invoiceNumber: 'INV-003' },
+]
+assert.equal(hasDuplicateServiceInvoice(invoiceEvents, ' inv-001 '), true)
+assert.equal(hasDuplicateServiceInvoice(invoiceEvents, 'INV-002'), false)
+assert.equal(hasDuplicateServiceInvoice(invoiceEvents, 'INV-003'), false)
+assert.equal(hasDuplicateServiceInvoice(invoiceEvents, 'INV-001', 'active-1'), false)
+assert.equal(hasDuplicateServiceInvoice(invoiceEvents, 'INV-004'), false)
+assert.equal(isDuplicateServiceInvoiceError({ code: '23505', message: 'duplicate key violates service_purchase_request_expenses_invoice_unique' }), true)
+assert.equal(isDuplicateServiceInvoiceError({ code: '23505', message: 'duplicate key violates another_constraint' }), false)
+assert.equal(DUPLICATE_SERVICE_INVOICE_MESSAGE, 'เลข Invoice นี้ถูกใช้แล้วในใบ PR นี้ กรุณาตรวจสอบเลข Invoice')
 
 assert.equal(calculateAnnualRequestTotal([
   { requestedQuantity: 2, unitPrice: 125.5 },
   { requestedQuantity: 3, unitPrice: 10 },
 ]), 281)
+assert.equal(calculateServiceRequestTotal([
+  { requestedQuantity: 20, unitPrice: 3000 },
+  { requestedQuantity: 20, unitPrice: 1500 },
+  { requestedQuantity: 20, unitPrice: 2000 },
+  { requestedQuantity: 20, unitPrice: 2000 },
+  { requestedQuantity: 20, unitPrice: 4000 },
+]), 250_000)
 
 assert.deepEqual(planBalance({ budget: 1000, spent: 250, reserved: 300 }), {
   budget: 1000,
@@ -58,11 +110,11 @@ const optionalNoteExpense = servicePlanHistoricalExpenseSchema.parse({
 assert.equal(optionalNoteExpense.reason, undefined)
 
 const underQuote = deriveServiceChecklist('annual_items', 49_999.99)
-assert.equal(underQuote.attachments.filter((entry) => entry.kind === 'quotation').length, 1)
+assert.equal(underQuote.attachments.filter((entry) => entry.kind === 'quotation').length, 0)
 assert.equal(underQuote.committees.find((entry) => entry.kind === 'specification')?.seats, 1)
 
 const thresholdQuote = deriveServiceChecklist('annual_items', 50_000)
-assert.equal(thresholdQuote.attachments.filter((entry) => entry.kind === 'quotation').length, 3)
+assert.equal(thresholdQuote.attachments.filter((entry) => entry.kind === 'quotation').length, 0)
 assert.equal(thresholdQuote.committees.find((entry) => entry.kind === 'inspection')?.seats, 1)
 
 const thresholdCommittee = deriveServiceChecklist('annual_items', 100_000)
@@ -83,13 +135,14 @@ const labRequest = servicePurchaseRequestInputSchema.parse({
   requesterName: 'ผู้ขอ',
   requestedDate: '2026-01-15',
   note: null,
-  planId: null,
-  method: 'laboratory_testing',
+  planId: '00000000-0000-0000-0000-000000000001',
   amount: 50_000,
-  requestedPoMonth: '2026-01',
+  usageStartDate: '2025-10-01',
+  usageEndDate: '2026-09-30',
   items: [],
   checklist: { attachments: [], committees: [] },
+  documentChoices: {},
 })
-assert.equal(labRequest.method, 'laboratory_testing')
+assert.equal(labRequest.method, undefined)
 
 console.log('service procurement domain: ok')

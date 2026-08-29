@@ -44,7 +44,7 @@ export function serviceRequestDisplayStatusLabel(status: ServiceRequestDisplaySt
     awaiting_po: 'รอข้อมูล PO',
     po_incomplete: 'ข้อมูล PO ยังไม่ครบ',
     ready_for_expense: 'พร้อมบันทึกค่าใช้จ่าย',
-    recording_expense: 'กำลังบันทึกค่าใช้จ่าย',
+    recording_expense: 'PO กำลังใช้งาน',
     closed: 'ปิด PO แล้ว',
     cancelled: 'ยกเลิก',
   })[status]

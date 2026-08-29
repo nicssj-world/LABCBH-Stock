@@ -12,7 +12,7 @@ import type {
   ServicePurchaseRequestRecord,
   ServiceUsageEventRecord,
 } from './types'
-import { planBalance } from './domain'
+import { isServiceRequestDisplayStatus, planBalance, serviceRequestMatchesDisplayStatus } from './domain'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
 const planRowSchema = z.object({
@@ -245,17 +245,61 @@ async function readRequestTestItemSnapshots(supabase: ReadClient, requestIds: st
   return (result.data ?? []) as Array<Record<string, unknown>>
 }
 
+async function findServicePurchaseRequestIdsBySearch(supabase: ReadClient, search: string): Promise<string[]> {
+  const [invoiceResult, snapshotItemResult, legacyItemResult] = await Promise.all([
+    supabase
+      .from('service_purchase_request_expenses')
+      .select('purchase_request_id')
+      .ilike('invoice_number', `%${search}%`),
+    supabase
+      .from('service_purchase_request_test_item_snapshots')
+      .select('purchase_request_id')
+      .or(`name.ilike.%${search}%,unit.ilike.%${search}%`),
+    supabase
+      .from('service_purchase_request_items')
+      .select('purchase_request_id')
+      .or(`name.ilike.%${search}%,unit.ilike.%${search}%`),
+  ])
+  for (const result of [invoiceResult, snapshotItemResult, legacyItemResult]) {
+    if (result.error) throw new Error(`ค้นหาข้อมูลใบ PR งานจ้างไม่สำเร็จ: ${result.error.message}`)
+  }
+  const rowSchema = z.object({ purchase_request_id: z.string().uuid() })
+  const rows = [
+    ...(invoiceResult.data ?? []),
+    ...(snapshotItemResult.data ?? []),
+    ...(legacyItemResult.data ?? []),
+  ].map((row) => rowSchema.parse(row))
+  return [...new Set(rows.map((row) => row.purchase_request_id))]
+}
+
 export async function listServicePurchaseRequests(filters: ServiceRequestFilters = {}): Promise<ServicePurchaseRequestRecord[]> {
   const supabase = await createClient()
+  const search = filters.search?.trim().replace(/[,%()]/g, ' ')
+  const searchRequestIds = search ? await findServicePurchaseRequestIdsBySearch(supabase, search) : []
+  const requestedStatus = filters.status?.trim()
+  const displayStatus = isServiceRequestDisplayStatus(requestedStatus) ? requestedStatus : undefined
   // The forward migration keeps historical unlinked Out Lab rows readable in
   // the database, but the new service register only exposes plan-backed PRs.
   let query = supabase.from('service_purchase_requests').select('*').not('plan_id', 'is', null).order('requested_date', { ascending: false }).order('created_at', { ascending: false })
   if (filters.fiscalYear) query = query.eq('fiscal_year', filters.fiscalYear)
   if (filters.department) query = query.eq('department', filters.department)
-  if (filters.status && ['pending', 'confirmed', 'closed', 'cancelled'].includes(filters.status)) query = query.eq('status', filters.status)
+  if (displayStatus === 'pending_confirmation') query = query.eq('status', 'pending')
+  else if (displayStatus === 'closed') query = query.eq('status', 'closed')
+  else if (displayStatus === 'cancelled') query = query.eq('status', 'cancelled')
+  else if (displayStatus) query = query.eq('status', 'confirmed')
+  else if (requestedStatus && ['pending', 'confirmed', 'closed', 'cancelled'].includes(requestedStatus)) query = query.eq('status', requestedStatus)
   if (filters.planId) query = query.eq('plan_id', filters.planId)
-  const search = filters.search?.trim().replace(/[,%()]/g, ' ')
-  if (search) query = query.or(`document_number.ilike.%${search}%,requester_name.ilike.%${search}%,department.ilike.%${search}%`)
+  if (search) {
+    const searchClauses = [
+      `document_number.ilike.%${search}%`,
+      `po_number.ilike.%${search}%`,
+      `ephis_pr_number.ilike.%${search}%`,
+      `requester_name.ilike.%${search}%`,
+      `department.ilike.%${search}%`,
+    ]
+    if (searchRequestIds.length) searchClauses.push(`id.in.(${searchRequestIds.join(',')})`)
+    query = query.or(searchClauses.join(','))
+  }
   const result = await query
   if (result.error) throw new Error(`อ่านใบ PR งานจ้างไม่สำเร็จ: ${result.error.message}`)
   const rows = parseRows(requestRowSchema, result.data, 'ใบ PR งานจ้าง')
@@ -265,7 +309,8 @@ export async function listServicePurchaseRequests(filters: ServiceRequestFilters
   const planMap = new Map((planRows.data ?? []).map((row) => [String(row.id), { name: String(row.name), isRedCross: Boolean(row.is_red_cross), requiresContract: Boolean(row.requires_contract) }]))
   const support = await readRequestSupport(supabase, rows.map((row) => row.id), planIds)
   const supportWithSnapshots = { ...support, snapshots: await readRequestTestItemSnapshots(supabase, rows.map((row) => row.id)) }
-  return rows.map((row) => mapRequest({ ...row, requested_po_month: row.requested_po_month ?? null }, supportWithSnapshots, planMap))
+  const requests = rows.map((row) => mapRequest({ ...row, requested_po_month: row.requested_po_month ?? null }, supportWithSnapshots, planMap))
+  return displayStatus ? requests.filter((request) => serviceRequestMatchesDisplayStatus(request, displayStatus)) : requests
 }
 
 export async function getServicePurchaseRequest(requestId: string): Promise<ServicePurchaseRequestRecord | null> {

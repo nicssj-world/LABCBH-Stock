@@ -1,18 +1,19 @@
 'use client'
 
-import { useMemo, useState, useTransition, type DragEvent, type FormEvent } from 'react'
+import { useState, useTransition, type DragEvent, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { CommitteeMemberCombobox } from '@/components/pr/PurchaseRequestChecklistFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { Button } from '@/components/ui/Button'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { QuantityInput } from '@/components/ui/QuantityInput'
-import { bangkokIsoDate } from '@/lib/date/thai'
-import { createServicePurchaseRequest } from '@/lib/service-procurement/actions'
-import { fiscalYearRange, isDateRangeWithinFiscalYear, isDateInFiscalYear } from '@/lib/service-procurement/domain'
+import { addIsoDays, bangkokIsoDate } from '@/lib/date/thai'
+import { createServicePurchaseRequest, updateServicePurchaseRequest } from '@/lib/service-procurement/actions'
+import { calculateServiceRequestTotal, fiscalYearRange, isDateRangeWithinFiscalYear, isDateInFiscalYear } from '@/lib/service-procurement/domain'
 import type { PurchaseRequestCommitteeCandidate } from '@/lib/pr/form-options'
 import type { ServicePlanRecord } from '@/lib/service-procurement/types'
 import { formatBaht } from '@/lib/service-procurement/presenter'
+import { formatQuantity } from '@/lib/inventory/presenter'
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024
 const DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
@@ -25,27 +26,50 @@ function fileError(file: File | undefined, required: boolean, label: string) {
   return null
 }
 
+type ServiceCommitteeSelection = { kind: 'specification' | 'inspection'; seat: number; profileId: string }
+
+export interface ServicePurchaseRequestFormInitialValues {
+  requestId: string
+  fiscalYear: number
+  requestedDate: string
+  note: string | null
+  planId: string
+  amount: number
+  usageStartDate: string
+  usageEndDate: string
+  items: Array<{ planItemId: string; requestedQuantity: number }>
+  committees: ServiceCommitteeSelection[]
+  existingTor: boolean
+}
+
 interface Props {
   department: string
   departments: readonly string[]
   requesterName: string
   plans: ServicePlanRecord[]
   candidates: PurchaseRequestCommitteeCandidate[]
+  mode?: 'create' | 'edit'
+  initialValues?: ServicePurchaseRequestFormInitialValues
 }
 
-export function ServicePurchaseRequestForm({ department, departments, requesterName, plans, candidates }: Props) {
+export function ServicePurchaseRequestForm({ department, departments, requesterName, plans, candidates, mode = 'create', initialValues }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const editingRequestId = mode === 'edit' ? initialValues?.requestId : undefined
+  const isEditMode = Boolean(editingRequestId)
+  const today = bangkokIsoDate()
   const [selectedDepartment, setSelectedDepartment] = useState(department)
-  const [requestedDate, setRequestedDate] = useState(bangkokIsoDate)
-  const [note, setNote] = useState('')
-  const [planId, setPlanId] = useState('')
-  const [amount, setAmount] = useState('')
-  const [usageStartDate, setUsageStartDate] = useState('')
-  const [usageEndDate, setUsageEndDate] = useState('')
-  const [quantities, setQuantities] = useState<Record<string, string>>({})
-  const [committees, setCommittees] = useState<Array<{ kind: 'specification' | 'inspection'; seat: number; profileId: string }>>([])
+  const [requestedDate, setRequestedDate] = useState(initialValues?.requestedDate ?? today)
+  const [note, setNote] = useState(initialValues?.note ?? '')
+  const [planId, setPlanId] = useState(initialValues?.planId ?? '')
+  const [amount, setAmount] = useState(initialValues ? String(initialValues.amount) : '')
+  const [usageStartDate, setUsageStartDate] = useState(initialValues?.usageStartDate ?? today)
+  const [usageEndDate, setUsageEndDate] = useState(initialValues?.usageEndDate ?? addIsoDays(today, 1))
+  const [quantities, setQuantities] = useState<Record<string, string>>(() => Object.fromEntries(
+    (initialValues?.items ?? []).map((item) => [item.planItemId, String(item.requestedQuantity)]),
+  ))
+  const [committees, setCommittees] = useState<ServiceCommitteeSelection[]>(initialValues?.committees ?? [])
   const [tor, setTor] = useState<File | undefined>()
   const [quotation, setQuotation] = useState<File | undefined>()
   const [contractPage, setContractPage] = useState<File | undefined>()
@@ -53,13 +77,25 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
 
   const plan = plans.find((row) => row.id === planId) ?? null
   const fiscalRange = plan ? fiscalYearRange(plan.fiscalYear) : null
-  const committeeSeats = Number(amount || 0) >= 100_000 ? 3 : 1
+  const availablePlans = plans.filter((row) => row.status === 'active' && (!isEditMode || row.fiscalYear === initialValues?.fiscalYear))
+  const torExisting = isEditMode && Boolean(initialValues?.existingTor)
   const quoteExisting = Boolean(plan?.documents.some((document) => document.kind === 'quotation'))
   const contractExisting = Boolean(plan?.documents.some((document) => document.kind === 'contract_page'))
-  const totalQuantity = useMemo(() => plan?.testItems.reduce((sum, item) => sum + Number(quantities[item.id] || 0), 0) ?? 0, [plan, quantities])
+  const totalQuantity = plan?.testItems.reduce((sum, item) => sum + Number(quantities[item.id] || 0), 0) ?? 0
+  const calculatedRequestAmount = plan?.isRedCross
+    ? calculateServiceRequestTotal(plan.testItems.map((item) => ({
+      unitPrice: item.unitPrice ?? 0,
+      requestedQuantity: Number(quantities[item.id] || 0),
+    })))
+    : 0
+  const amountIsCalculated = Boolean(plan?.isRedCross)
+  const numericAmount = amountIsCalculated ? calculatedRequestAmount : Number(amount || 0)
+  const amountInputValue = amountIsCalculated ? (calculatedRequestAmount > 0 ? calculatedRequestAmount : '') : amount
+  const committeeSeats = numericAmount >= 100_000 ? 3 : 1
 
   function choosePlan(nextId: string) {
     setPlanId(nextId)
+    setAmount('')
     // Plan-level documents belong to the selected plan. Do not carry a file
     // chosen for the previous plan into the next PR request.
     setQuotation(undefined)
@@ -67,11 +103,20 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
     const nextPlan = plans.find((row) => row.id === nextId)
     if (!nextPlan) { setUsageStartDate(''); setUsageEndDate(''); return }
     const range = fiscalYearRange(nextPlan.fiscalYear)
+    const defaultUsageDate = isDateInFiscalYear(today, nextPlan.fiscalYear) ? today : range.start
     const nextRequested = isDateInFiscalYear(requestedDate, nextPlan.fiscalYear) ? requestedDate : range.start
+    const defaultUsageEndDate = addIsoDays(defaultUsageDate, 1)
     setRequestedDate(nextRequested)
-    setUsageStartDate(range.start)
-    setUsageEndDate(range.end)
+    setUsageStartDate(defaultUsageDate)
+    setUsageEndDate(defaultUsageEndDate <= range.end ? defaultUsageEndDate : '')
     setQuantities(Object.fromEntries(nextPlan.testItems.map((item) => [item.id, ''])))
+  }
+
+  function changeUsageStartDate(nextDate: string) {
+    setUsageStartDate(nextDate)
+    if (!nextDate || usageEndDate > nextDate) return
+    const nextEndDate = addIsoDays(nextDate, 1)
+    setUsageEndDate(fiscalRange && nextEndDate <= fiscalRange.end ? nextEndDate : '')
   }
 
   function setCommittee(kind: 'specification' | 'inspection', seat: number, profileId: string | null) {
@@ -122,16 +167,15 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
     if (plan.isRedCross && plan.testItems.some((item) => item.unitPrice === null || item.unitPrice <= 0)) {
       return setError('แผนนี้ยังมีรายการส่งตรวจที่ไม่ระบุราคาต่อหน่วย กรุณาแก้ไขแผนก่อนสร้าง PR')
     }
-    const numericAmount = Number(amount)
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return setError('กรุณาระบุวงเงินที่มากกว่า 0 บาท')
-    if (numericAmount > plan.balance.available) return setError(`วงเงินแผนคงเหลือ ${formatBaht(plan.balance.available)} ไม่พอสำหรับคำขอ`)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return setError(amountIsCalculated ? 'กรุณาระบุจำนวนรายการส่งตรวจอย่างน้อย 1 รายการ' : 'กรุณาระบุวงเงินที่มากกว่า 0 บาท')
+    if (usageEndDate <= usageStartDate) return setError('ถึงวันที่ต้องเป็นวันถัดจากวันที่จะใช้ PO นี้')
     if (!isDateRangeWithinFiscalYear(usageStartDate, usageEndDate, plan.fiscalYear)) return setError('ช่วงวันที่ใช้ PO ต้องอยู่ในปีงบประมาณของแผนทั้งหมด')
     if (!isDateInFiscalYear(requestedDate, plan.fiscalYear)) return setError('วันที่ขอต้องอยู่ในปีงบประมาณของแผน')
     const activeCommittees = committees.filter((row) => row.seat <= committeeSeats)
     if (activeCommittees.length !== committeeSeats * 2) return setError(`กรุณาเลือกรายชื่อกรรมการให้ครบ ${committeeSeats} คนต่อชุด`)
     const duplicate = ['specification', 'inspection'].some((kind) => { const ids = activeCommittees.filter((row) => row.kind === kind).map((row) => row.profileId); return new Set(ids).size !== ids.length })
     if (duplicate) return setError('ห้ามใช้ชื่อกรรมการซ้ำกันภายในชุดเดียวกัน')
-    const torMessage = fileError(tor, true, ' TOR')
+    const torMessage = fileError(tor, !torExisting, ' TOR')
     if (torMessage) return setError(torMessage)
     const quoteMessage = fileError(quotation, !quoteExisting, 'ใบเสนอราคา')
     if (quoteMessage) return setError(quoteMessage)
@@ -148,7 +192,13 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
       committees: activeCommittees, documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
     }))
     startTransition(async () => {
-      try { const saved = await createServicePurchaseRequest(formData); router.push(`/service-procurement/purchase-requests/${saved.id}`); router.refresh() }
+      try {
+        const saved = editingRequestId
+          ? await updateServicePurchaseRequest(editingRequestId, formData)
+          : await createServicePurchaseRequest(formData)
+        router.push(`/service-procurement/purchase-requests/${saved.id}`)
+        router.refresh()
+      }
       catch (caught) { setError(caught instanceof Error ? caught.message : 'ส่งใบ PR งานจ้างไม่สำเร็จ') }
     })
   }
@@ -163,19 +213,18 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
       </div></section>
 
       <section className="bench-panel" aria-labelledby="service-plan-title"><div className="bench-panel__header"><div><p className="section-kicker">PLAN REFERENCE</p><h2 id="service-plan-title">อ้างอิงแผนงานจ้าง</h2></div><p>จ้างตรวจทางห้องปฏิบัติการ</p></div><div className="form-grid">
-        <label className="field-row form-grid__wide"><span>แผนงานจ้าง <span className="field-required" aria-hidden="true">*</span></span><select required value={planId} onChange={(event) => choosePlan(event.target.value)}><option value="">เลือกแผนที่อ้างอิง</option>{plans.filter((row) => row.status === 'active').map((row) => <option key={row.id} value={row.id}>ปีงบ {row.fiscalYear} · {row.name} · คงเหลือ {formatBaht(row.balance.available)}</option>)}</select></label>
-        <label className="field-row"><span>วงเงิน (บาท) <span className="field-required" aria-hidden="true">*</span></span><MoneyInput required min="0.01" step="0.01" max={plan?.balance.available} value={amount} onValueChange={setAmount} /><small className="field-help">ต้องไม่เกินวงเงินคงเหลือของแผน</small></label>
-        <label className="field-row"><span>ช่วงวันที่ที่จะใช้ PO นี้ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageStartDate} min={fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageStartDate} /></label>
-        <label className="field-row"><span>ถึงวันที่ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageEndDate} min={usageStartDate || fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageEndDate} /></label>
-      </div>{plan && <p className="service-budget-callout" role="status">แผน {plan.name}: วงเงินตั้งต้น {formatBaht(plan.budget)} · ใช้จริง {formatBaht(plan.balance.spent)} · สำรอง {formatBaht(plan.balance.reserved)} · คงเหลือ {formatBaht(plan.balance.available)}</p>}</section>
+        <label className="field-row form-grid__wide"><span>แผนงานจ้าง <span className="field-required" aria-hidden="true">*</span></span><select required value={planId} onChange={(event) => choosePlan(event.target.value)}><option value="">เลือกแผนที่อ้างอิง</option>{availablePlans.map((row) => <option key={row.id} value={row.id}>ปีงบ {row.fiscalYear} · {row.name} · คงเหลือ {formatBaht(row.balance.available)}</option>)}</select></label>
+        <label className="field-row"><span>{amountIsCalculated ? 'ยอดรวมรายการ (บาท)' : 'วงเงิน (บาท)'} <span className="field-required" aria-hidden="true">*</span></span><MoneyInput required min="0.01" step="0.01" readOnly={amountIsCalculated} value={amountInputValue} onValueChange={amountIsCalculated ? () => undefined : setAmount} aria-describedby="service-pr-amount-help" /><small id="service-pr-amount-help" className="field-help">{amountIsCalculated ? 'คำนวณอัตโนมัติจากราคาต่อหน่วย × จำนวน' : 'ระบบจะตรวจสอบวงเงินเมื่อบันทึก'}</small></label>
+        <div className="service-po-date-range form-grid__wide"><label className="field-row"><span>วันที่จะใช้ PO นี้ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageStartDate} min={fiscalRange?.start} max={fiscalRange ? addIsoDays(fiscalRange.end, -1) : undefined} onChange={changeUsageStartDate} /></label><label className="field-row"><span>ถึงวันที่ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageEndDate} min={usageStartDate ? addIsoDays(usageStartDate, 1) : fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageEndDate} /></label></div>
+      </div>{plan && <p className="service-budget-callout" role="status">แผน {plan.name}: วงเงินตั้งต้น {formatBaht(plan.budget)} · ใช้จริง {formatBaht(plan.balance.spent)} · สำรอง {formatBaht(plan.balance.reserved)} · คงเหลือ {formatBaht(plan.balance.available)}{amountIsCalculated && <> · ยอดรวมรายการ {formatBaht(numericAmount)}</>}</p>}</section>
 
-      {plan?.isRedCross && <section className="bench-panel" aria-labelledby="service-test-items-title"><div className="bench-panel__header"><div><p className="section-kicker">RED CROSS TEST ITEMS</p><h2 id="service-test-items-title">รายการส่งตรวจ</h2></div><p>{plan.testItems.length} รายการ · จำนวนรวม {totalQuantity}</p></div>{plan.testItems.length === 0 ? <p className="empty-state">แผนนี้ยังไม่มีรายการส่งตรวจ</p> : <div className="service-ledger-table-wrap"><table className="data-table service-pr-test-items-table"><thead><tr><th>รายการส่งตรวจ</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย (บาท)</th><th className="numeric-cell">จำนวน</th></tr></thead><tbody>{plan.testItems.map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.unit}</td><td className="numeric-cell identifier">{item.unitPrice === null ? 'ยังไม่ระบุ' : formatBaht(item.unitPrice)}</td><td><QuantityInput aria-label={`จำนวน ${item.name}`} min="0" step="0.001" placeholder="0" value={quantities[item.id] ?? ''} onValueChange={(value) => setQuantities((current) => ({ ...current, [item.id]: value }))} /></td></tr>)}</tbody></table></div>}</section>}
+      {plan?.isRedCross && <section className="bench-panel" aria-labelledby="service-test-items-title"><div className="bench-panel__header"><div><p className="section-kicker">RED CROSS TEST ITEMS</p><h2 id="service-test-items-title">รายการส่งตรวจ</h2></div><p>{plan.testItems.length} รายการ · จำนวนรวม {formatQuantity(totalQuantity)} · ยอดรวม {formatBaht(calculatedRequestAmount)}</p></div>{plan.testItems.length === 0 ? <p className="empty-state">แผนนี้ยังไม่มีรายการส่งตรวจ</p> : <div className="service-ledger-table-wrap"><table className="data-table service-pr-test-items-table"><thead><tr><th>รายการส่งตรวจ</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย (บาท)</th><th className="numeric-cell">จำนวน</th><th className="numeric-cell">รวม</th></tr></thead><tbody>{plan.testItems.map((item) => { const requestedQuantity = Number(quantities[item.id] || 0); const lineTotal = calculateServiceRequestTotal([{ requestedQuantity, unitPrice: item.unitPrice ?? 0 }]); return <tr key={item.id}><td>{item.name}</td><td>{item.unit}</td><td className="numeric-cell identifier">{item.unitPrice === null ? 'ยังไม่ระบุ' : formatBaht(item.unitPrice)}</td><td className="numeric-cell"><QuantityInput aria-label={`จำนวน ${item.name}`} min="0" step="0.001" placeholder="0" value={quantities[item.id] ?? ''} onValueChange={(value) => setQuantities((current) => ({ ...current, [item.id]: value }))} /></td><td className="numeric-cell identifier">{formatBaht(lineTotal)}</td></tr> })}</tbody><tfoot><tr><th colSpan={4} className="numeric-cell">ยอดรวมรายการ</th><td className="numeric-cell identifier">{formatBaht(calculatedRequestAmount)}</td></tr></tfoot></table></div>}</section>}
 
-      <section className="bench-panel" aria-labelledby="service-documents-title"><div className="bench-panel__header"><div><p className="section-kicker">DOCUMENTS</p><h2 id="service-documents-title">เอกสารประกอบ</h2></div><p>ไฟล์ระดับแผนจะใช้ซ้ำใน PR ครั้งถัดไป</p></div><div className="pr-checklist__file-grid pr-checklist__file-grid--primary">{documentCard('tor', 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', tor, false, true)}{documentCard('quotation', 'ใบเสนอราคา', quotation, quoteExisting, true)}{plan?.requiresContract && documentCard('contractPage', 'หน้าสัญญา', contractPage, contractExisting, true)}</div></section>
+      <section className="bench-panel" aria-labelledby="service-documents-title"><div className="bench-panel__header"><div><p className="section-kicker">DOCUMENTS</p><h2 id="service-documents-title">เอกสารประกอบ</h2></div><p>ไฟล์ระดับแผนจะใช้ซ้ำใน PR ครั้งถัดไป</p></div><div className="pr-checklist__file-grid pr-checklist__file-grid--primary">{documentCard('tor', 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', tor, torExisting, true)}{documentCard('quotation', 'ใบเสนอราคา', quotation, quoteExisting, true)}{plan?.requiresContract && documentCard('contractPage', 'หน้าสัญญา', contractPage, contractExisting, true)}</div></section>
 
       <section className="bench-panel" aria-labelledby="service-committee-title"><div className="bench-panel__header"><div><p className="section-kicker">CHECKLIST</p><h2 id="service-committee-title">รายชื่อคณะกรรมการ</h2></div><p>{committeeSeats} คนต่อชุด</p></div><div className="pr-checklist__committees"><fieldset><legend>คณะกรรมการกำหนดราคากลางและคุณลักษณะเฉพาะ · {committeeSeats} คน</legend><div className="pr-checklist__committee-grid">{Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => <CommitteeMemberCombobox key={seat} kind="specification" seat={seat} candidates={candidates} selectedProfileId={committees.find((row) => row.kind === 'specification' && row.seat === seat)?.profileId ?? null} disabledProfileIds={disabledCommitteeIds('specification', seat)} disabled={pending} onSelect={(id) => setCommittee('specification', seat, id)} />)}</div></fieldset><fieldset><legend>คณะกรรมการตรวจรับพัสดุ · {committeeSeats} คน</legend><div className="pr-checklist__committee-grid">{Array.from({ length: committeeSeats }, (_, index) => index + 1).map((seat) => <CommitteeMemberCombobox key={seat} kind="inspection" seat={seat} candidates={candidates} selectedProfileId={committees.find((row) => row.kind === 'inspection' && row.seat === seat)?.profileId ?? null} disabledProfileIds={disabledCommitteeIds('inspection', seat)} disabled={pending} onSelect={(id) => setCommittee('inspection', seat, id)} />)}</div></fieldset></div></section>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="form-action-bar"><p>{plan ? `ระบบจะสำรองวงเงิน ${formatBaht(Number(amount || 0))} เมื่อส่งใบ PR (ยังไม่ใช่ยอดใช้จริง)` : 'เลือกแผนเพื่อเริ่มสร้าง PR'}</p><div className="form-action-bar__buttons"><Button type="button" variant="secondary" onClick={() => router.push('/service-procurement/purchase-requests')} disabled={pending}>ยกเลิก</Button><Button type="submit" disabled={pending || !plan}>{pending ? 'กำลังส่ง…' : 'ส่งใบ PR งานจ้าง'}</Button></div></div>
+      <div className="form-action-bar"><p>{plan ? (isEditMode ? `ระบบจะปรับยอดสำรองเป็น ${formatBaht(numericAmount)} เมื่อบันทึกการแก้ไข` : `ระบบจะสำรองวงเงิน ${formatBaht(numericAmount)} เมื่อส่งใบ PR (ยังไม่ใช่ยอดใช้จริง)`) : 'เลือกแผนเพื่อเริ่มสร้าง PR'}</p><div className="form-action-bar__buttons"><Button type="button" variant="secondary" onClick={() => router.push(isEditMode && editingRequestId ? `/service-procurement/purchase-requests/${editingRequestId}` : '/service-procurement/purchase-requests')} disabled={pending}>ยกเลิก</Button><Button type="submit" disabled={pending || !plan}>{pending ? 'กำลังบันทึก…' : isEditMode ? 'บันทึกการแก้ไข' : 'ส่งใบ PR งานจ้าง'}</Button></div></div>
     </form>
   )
 }
