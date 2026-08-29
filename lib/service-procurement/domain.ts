@@ -28,6 +28,13 @@ export const SERVICE_REQUEST_DISPLAY_STATUSES = [
 
 export type ServiceRequestDisplayStatus = (typeof SERVICE_REQUEST_DISPLAY_STATUSES)[number]
 
+/** Terminal rows stay out of the default register view until the user asks for them. */
+export const SERVICE_REQUEST_TERMINAL_STATUSES: readonly ServiceRequestDisplayStatus[] = ['closed', 'cancelled']
+
+export function isServiceRequestTerminalStatus(value: ServiceRequestDisplayStatus): boolean {
+  return (SERVICE_REQUEST_TERMINAL_STATUSES as readonly string[]).includes(value)
+}
+
 /** The concise status groups shown in the register filter. */
 export const SERVICE_REQUEST_FILTER_STATUSES: readonly ServiceRequestDisplayStatus[] = [
   'pending_confirmation',

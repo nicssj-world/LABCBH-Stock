@@ -7149,6 +7149,25 @@ body {
   color: var(--lab-muted);
   font-size: 12px;
 }
+.service-register-list__header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.service-register-list__header-actions > p {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.service-register-visibility-toggle {
+  min-height: 40px;
+  padding-inline: 13px;
+  font-size: 12px;
+  white-space: nowrap;
+}
 .service-plan-table-wrap, .service-pr-table-wrap, .service-ledger-table-wrap { overflow-x: auto; }
 .service-plan-table, .service-pr-table { min-width: 880px; }
 .service-plan-table__number { text-align: right; white-space: nowrap; }
@@ -7438,6 +7457,7 @@ body {
 
 @media (max-width: 800px) {
   .service-register-toolbar, .service-po-upload { display: grid; align-items: stretch; }
+  .service-register-list__header-actions { width: 100%; justify-content: space-between; }
   .service-plan-table-wrap, .service-pr-table-wrap { display: none; }
   .service-plan-cards,
   .service-pr-cards { display: grid; gap: 12px; }
@@ -7454,6 +7474,8 @@ body {
 }
 
 @media (max-width: 540px) {
+  .service-register-list__header-actions { align-items: flex-start; flex-direction: column; }
+  .service-register-visibility-toggle { width: 100%; white-space: normal; }
   .service-plan-responsible-trigger { width: 100%; }
   .service-plan-responsible-dialog { width: calc(100vw - 16px); }
   .service-plan-responsible-dialog__body { max-height: calc(100dvh - 108px); padding: 16px; }
