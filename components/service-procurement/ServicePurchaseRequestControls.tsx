@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { formatThaiDateTime } from '@/lib/inventory/presenter'
+import { formatThaiDateTimeFull } from '@/lib/date/thai'
 import {
   cancelServicePo,
   cancelServicePurchaseRequest,
@@ -112,7 +112,7 @@ export function ServicePurchaseRequestControls({ request, canOperate, canEdit, c
           {error && <p className="form-error" role="alert">{error}</p>}
         </div>
 
-        {request.poEvents.length > 0 && <section className="bench-panel service-po-history" aria-label="ประวัติ PO"><div className="bench-panel__header"><div><p className="section-kicker">PO HISTORY</p><h2>ประวัติ PO</h2></div><p>{request.poEvents.length} รายการ</p></div><ul>{request.poEvents.map((event) => <li key={event.id}><strong>{event.kind === 'number_added' ? 'บันทึกเลข PO' : event.kind === 'file_added' ? 'แนบไฟล์ PO' : event.kind === 'closed' ? 'ปิด PO' : 'ยกเลิก PO'}</strong><span>{event.poNumber ?? 'ไม่มีเลข PO'} · {event.actorName ?? 'ไม่ระบุ'} · <time dateTime={event.createdAt}>{formatThaiDateTime(event.createdAt)}</time></span>{event.reason && <small>{event.reason}</small>}</li>)}</ul></section>}
+        {request.poEvents.length > 0 && <section className="bench-panel service-po-history" aria-label="ประวัติ PO"><div className="bench-panel__header"><div><p className="section-kicker">PO HISTORY</p><h2>ประวัติ PO</h2></div><p>{request.poEvents.length} รายการ</p></div><ul>{request.poEvents.map((event) => <li key={event.id}><strong>{event.kind === 'number_added' ? 'บันทึกเลข PO' : event.kind === 'file_added' ? 'แนบไฟล์ PO' : event.kind === 'closed' ? 'ปิด PO' : 'ยกเลิก PO'}</strong><span>{event.poNumber ?? 'ไม่มีเลข PO'} · {event.actorName ?? 'ไม่ระบุ'} · <time dateTime={event.createdAt}>{formatThaiDateTimeFull(event.createdAt)}</time></span>{event.reason && <small>{event.reason}</small>}</li>)}</ul></section>}
 
       </section>
     </>

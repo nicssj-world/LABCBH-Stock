@@ -88,13 +88,38 @@ export function parseThaiDateInput(value: string): string | null {
   return isoFromParts(gregorianYear, month, day)
 }
 
-/** Formats an ISO date with a full Thai month name for readable summaries. */
-export function formatThaiDateLong(isoDate: string | null | undefined): string {
+function formatThaiDateLongValue(isoDate: string | null | undefined, padDay: boolean): string {
   if (!isoDate) return 'ไม่ระบุ'
   const match = isoDate.slice(0, 10).match(ISO_DATE_PATTERN)
   if (!match) return 'ไม่ระบุ'
 
   const [, year, month, day] = match
   const monthName = THAI_MONTHS[Number(month) - 1]
-  return monthName ? `${pad(Number(day))} ${monthName} ${Number(year) + BUDDHIST_ERA_OFFSET}` : 'ไม่ระบุ'
+  const dayLabel = padDay ? pad(Number(day)) : String(Number(day))
+  return monthName ? `${dayLabel} ${monthName} ${Number(year) + BUDDHIST_ERA_OFFSET}` : 'ไม่ระบุ'
+}
+
+/** Formats an ISO date with a full Thai month name and a padded day. */
+export function formatThaiDateLong(isoDate: string | null | undefined): string {
+  return formatThaiDateLongValue(isoDate, true)
+}
+
+/** Formats an ISO date as the readable date shown in detail views. */
+export function formatThaiDateFull(isoDate: string | null | undefined): string {
+  return formatThaiDateLongValue(isoDate, false)
+}
+
+/** Formats an ISO timestamp with a full Thai date and Bangkok time. */
+export function formatThaiDateTimeFull(isoTimestamp: string | null | undefined): string {
+  if (!isoTimestamp) return 'ไม่ระบุ'
+  const date = new Date(isoTimestamp)
+  if (Number.isNaN(date.getTime())) return 'ไม่ระบุ'
+  return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Bangkok',
+  }).format(date)
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { requireActor } from '@/lib/auth/actor'
 import { canCancelServicePurchaseRequestPo, canCloseServicePurchaseRequest, canCreateServicePurchaseRequest, canOperateServicePurchaseRequest, canRecordServicePlanExpense } from '@/lib/service-procurement/authorization'
 import { getServicePurchaseRequest, getServicePlan } from '@/lib/service-procurement/queries'
+import { formatThaiDateFull } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { formatBaht, serviceMethodLabel, servicePoStatusLabel, serviceRequestDisplayStatus, serviceRequestDisplayStatusLabel, serviceRequestDisplayStatusTone } from '@/lib/service-procurement/presenter'
 import { ServicePurchaseRequestControls } from '@/components/service-procurement/ServicePurchaseRequestControls'
@@ -59,7 +60,7 @@ export default async function ServicePurchaseRequestDetailPage({ params }: { par
           <Link className="back-link service-pr-detail__back" href="/service-procurement/purchase-requests">← ใบ PR (งานจ้าง)</Link>
           <div className="service-pr-detail__document-meta"><span className="identifier">{request.documentNumber}</span><span aria-hidden="true">·</span><span>ปีงบประมาณ {request.fiscalYear}</span></div>
           <h1>{request.planName ?? 'ไม่พบแผน'}</h1>
-          <p className="service-pr-detail__subtitle">{request.department} · {serviceMethodLabel(request.purchaseMethod)} · ขอวันที่ {request.requestedDate}</p>
+          <p className="service-pr-detail__subtitle">{request.department} · {serviceMethodLabel(request.purchaseMethod)} · ขอวันที่ {formatThaiDateFull(request.requestedDate)}</p>
         </div>
         <div className="service-pr-detail__status-group" aria-label="สถานะใบ PR">
           {request.isRedCross && <ServicePurchaseRequestInvoiceExportLink request={request} />}
@@ -101,8 +102,8 @@ export default async function ServicePurchaseRequestDetailPage({ params }: { par
           <div><dt>หน่วยงานผู้ขอ</dt><dd>{request.department}</dd></div>
           <div><dt>ประเภทงาน</dt><dd>{serviceMethodLabel(request.purchaseMethod)}</dd></div>
           <div><dt>แผนที่อ้างอิง</dt><dd><Link className="text-link" href={`/service-procurement/plans/${request.planId}`}>{request.planName ?? 'ไม่พบแผน'}</Link></dd></div>
-          <div><dt>ช่วงวันที่ที่จะใช้ PO</dt><dd className="identifier">{request.usageStartDate} – {request.usageEndDate}</dd></div>
-          <div><dt>วันที่สร้างใบ PR</dt><dd className="identifier">{request.requestedDate}</dd></div>
+          <div><dt>ช่วงวันที่ที่จะใช้ PO</dt><dd className="identifier">{formatThaiDateFull(request.usageStartDate)} – {formatThaiDateFull(request.usageEndDate)}</dd></div>
+          <div><dt>วันที่สร้างใบ PR</dt><dd className="identifier">{formatThaiDateFull(request.requestedDate)}</dd></div>
           <div><dt>หมายเหตุ</dt><dd>{request.note ?? '—'}</dd></div>
         </dl>
       </section>
@@ -130,7 +131,7 @@ export default async function ServicePurchaseRequestDetailPage({ params }: { par
           <div><h2 id="service-pr-expenses-title">ประวัติค่าใช้จ่าย</h2><p>รายการที่บันทึกก่อนปิด PO ระบบจะตัดยอดแผนเมื่อปิด PO เท่านั้น</p></div>
           <div className="service-pr-detail__section-stat"><strong>{activeExpenses.length}</strong><span>รายการ active</span></div>
         </div>
-        {expenseEvents.length === 0 ? <div className="service-pr-detail__empty service-pr-detail__empty--large"><strong>ยังไม่มีการบันทึกค่าใช้จ่าย</strong><p>เมื่อมีการบันทึกค่าใช้จ่าย รายการจะแสดงในส่วนนี้</p></div> : <div className="service-pr-detail__table-wrap"><table className="data-table service-pr-detail__expenses-table"><caption className="sr-only">ประวัติค่าใช้จ่ายของใบ PR</caption><thead><tr><th>วันที่</th><th>Invoice</th><th className="numeric-cell">ยอด</th><th>สถานะ</th><th>หมายเหตุ</th><th>ผู้บันทึก</th></tr></thead><tbody>{expenseEvents.map((event) => <tr key={event.id}><td className="identifier">{event.expenseDate}</td><td>{event.invoiceNumber ?? '—'}</td><td className="numeric-cell identifier">{formatBaht(event.amount)}</td><td><span className={`status-chip status-chip--${event.status === 'active' ? 'success' : 'neutral'}`}>{event.status === 'active' ? 'active' : 'ยกเลิกแล้ว'}</span></td><td>{event.note ?? '—'}</td><td>{event.actorName ?? '—'}</td></tr>)}</tbody><tfoot><tr><th colSpan={2}>ยอด active</th><td className="numeric-cell identifier">{formatBaht(activeExpenseTotal)}</td><td colSpan={3}>จาก {formatBaht(request.requestedAmount)} ของวงเงิน PR</td></tr></tfoot></table></div>}
+        {expenseEvents.length === 0 ? <div className="service-pr-detail__empty service-pr-detail__empty--large"><strong>ยังไม่มีการบันทึกค่าใช้จ่าย</strong><p>เมื่อมีการบันทึกค่าใช้จ่าย รายการจะแสดงในส่วนนี้</p></div> : <div className="service-pr-detail__table-wrap"><table className="data-table service-pr-detail__expenses-table"><caption className="sr-only">ประวัติค่าใช้จ่ายของใบ PR</caption><thead><tr><th>วันที่</th><th>Invoice</th><th className="numeric-cell">ยอด</th><th>สถานะ</th><th>หมายเหตุ</th><th>ผู้บันทึก</th></tr></thead><tbody>{expenseEvents.map((event) => <tr key={event.id}><td className="identifier">{formatThaiDateFull(event.expenseDate)}</td><td>{event.invoiceNumber ?? '—'}</td><td className="numeric-cell identifier">{formatBaht(event.amount)}</td><td><span className={`status-chip status-chip--${event.status === 'active' ? 'success' : 'neutral'}`}>{event.status === 'active' ? 'active' : 'ยกเลิกแล้ว'}</span></td><td>{event.note ?? '—'}</td><td>{event.actorName ?? '—'}</td></tr>)}</tbody><tfoot><tr><th colSpan={2}>ยอด active</th><td className="numeric-cell identifier">{formatBaht(activeExpenseTotal)}</td><td colSpan={3}>จาก {formatBaht(request.requestedAmount)} ของวงเงิน PR</td></tr></tfoot></table></div>}
       </section>}
 
       <section className="bench-panel service-pr-detail__section service-pr-detail__evidence" aria-labelledby="service-pr-evidence-title">

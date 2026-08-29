@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CheckCircleIcon, EditIcon } from '@/components/inventory/InventoryDetailIcons'
 import { Button } from '@/components/ui/Button'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { formatThaiDateFull } from '@/lib/date/thai'
 import { cancelServiceLabExpense, updateServiceLabExpense } from '@/lib/service-procurement/actions'
 import { DUPLICATE_SERVICE_INVOICE_MESSAGE, hasDuplicateServiceInvoice } from '@/lib/service-procurement/invoice'
 import { formatBaht } from '@/lib/service-procurement/presenter'
@@ -141,7 +142,7 @@ export function ServicePurchaseRequestExpenseLog({ request, canRecord }: Props) 
                 </tr>
               ) : (
                 <tr key={event.id}>
-                  <td>{isDailyExpense ? event.expenseDate : event.expenseDate.slice(0, 7)}</td>
+                  <td>{formatThaiDateFull(event.expenseDate)}</td>
                   <td>{event.invoiceNumber ?? '—'}</td>
                   <td className="identifier">{formatBaht(event.amount)}</td>
                   <td>{event.note ?? '—'}</td>

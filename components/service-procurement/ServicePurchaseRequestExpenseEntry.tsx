@@ -33,6 +33,7 @@ export function ServicePurchaseRequestExpenseEntry({ request, canRecord }: Props
   const amountExceedsRequestLimit = Number.isFinite(enteredExpenseAmount) && enteredExpenseAmount > remainingExpenseAmount
   const amountErrorId = 'service-pr-usage-amount-error'
   const isDailyExpense = request.expenseFrequency === 'daily'
+  const autoCloseAfterExpense = request.requiresContract || !request.isRedCross
 
   function expenseDateForMonth(month: string): string {
     if (!month) return ''
@@ -134,7 +135,7 @@ export function ServicePurchaseRequestExpenseEntry({ request, canRecord }: Props
       </div>
       <Button type="button" disabled={pending || !expenseAmount || amountExceedsRequestLimit} onClick={submitExpense}>บันทึกค่าใช้จ่าย</Button>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <p className="field-help">ระบบยังไม่ตัดยอดแผนจนกว่าจะกด “ปิดใบ PO”</p>
+      <p className="field-help">{autoCloseAfterExpense ? 'เมื่อบันทึกค่าใช้จ่าย ระบบจะปิด PO และตัดยอดแผนอัตโนมัติ' : 'ระบบจะตัดยอดแผนเมื่อปิดใบ PO'}</p>
     </section>
   )
 }

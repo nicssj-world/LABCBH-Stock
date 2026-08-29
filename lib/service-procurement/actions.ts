@@ -329,7 +329,12 @@ export async function cancelServicePo(requestId: string, reason: string) {
 export async function recordServiceLabExpense(input: unknown) {
   const actor = await requireActor(); const parsed = serviceLabExpenseInputSchema.parse(input)
   const result = await supabaseAdmin.rpc('record_service_purchase_request_expense', { p_actor_id: actor.id, p_request_id: parsed.requestId, p_expense_date: parsed.expenseDate, p_amount: parsed.amount, p_invoice_number: parsed.invoiceNumber, p_note: parsed.note })
-  const expense = unwrap('บันทึกค่าใช้จ่ายงานจ้าง', result); revalidateRequest(parsed.requestId); return expense
+  const expense = unwrap('บันทึกค่าใช้จ่ายงานจ้าง', result)
+  revalidateRequest(parsed.requestId)
+  // Contract-backed PRs close the PO and post the plan ledger inside the RPC.
+  // Invalidate the plan list as well so its available balance is fresh.
+  revalidatePlan()
+  return expense
 }
 export async function updateServiceLabExpense(input: unknown) {
   const actor = await requireActor(); const parsed = serviceLabExpenseUpdateSchema.parse(input)

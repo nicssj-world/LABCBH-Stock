@@ -48,6 +48,7 @@ export function ServicePurchaseRequestExpenseDialog({ request, onOpen, className
   const enteredExpenseAmount = Number(expenseAmount)
   const amountExceedsRequestLimit = Number.isFinite(enteredExpenseAmount) && enteredExpenseAmount > remainingExpenseAmount
   const amountErrorId = `${dialogId}-amount-error`
+  const autoCloseAfterExpense = request.requiresContract || !request.isRedCross
 
   function expenseDateForMonth(month: string): string {
     if (!month) return ''
@@ -172,6 +173,7 @@ export function ServicePurchaseRequestExpenseDialog({ request, onOpen, className
               <div><span>ใช้แล้วก่อนปิด PO</span><strong className="identifier">{formatBaht(activeTotal)}</strong></div>
               <div><span>วงเงิน PR</span><strong className="identifier">{formatBaht(request.requestedAmount)}</strong></div>
             </div>
+            <p className="field-help service-expense-dialog__workflow-note">{autoCloseAfterExpense ? 'เมื่อบันทึกค่าใช้จ่าย ระบบจะปิด PO และตัดยอดแผนอัตโนมัติ' : 'ระบบจะตัดยอดแผนเมื่อปิดใบ PO'}</p>
 
             <form className="service-expense-dialog__form" onSubmit={submitExpense}>
               <div className="form-grid">
