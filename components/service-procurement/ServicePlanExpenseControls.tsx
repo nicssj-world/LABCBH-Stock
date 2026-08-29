@@ -3,6 +3,7 @@
 import { useId, useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { reviseServicePlanBudget } from '@/lib/service-procurement/actions'
 import type { ServicePlanRecord } from '@/lib/service-procurement/types'
 import { formatBaht } from '@/lib/service-procurement/presenter'
@@ -107,7 +108,7 @@ export function ServicePlanExpenseControls({ plan, canManage }: ServicePlanExpen
           <div className="service-plan-financial-dialog__fields">
             <label className="field-row" htmlFor={budgetId}>
               <span>วงเงินใหม่ <span className="field-required" aria-hidden="true">*</span></span>
-              <input id={budgetId} type="number" inputMode="decimal" min="0.01" step="0.01" value={budget} onChange={(event) => setBudget(event.target.value)} required />
+              <MoneyInput id={budgetId} min="0.01" step="0.01" value={budget} onValueChange={setBudget} required />
             </label>
             <label className="field-row" htmlFor={reasonId}>
               <span>เหตุผล <span className="field-required" aria-hidden="true">*</span></span>

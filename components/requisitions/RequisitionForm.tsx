@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { formatQuantity } from '@/lib/inventory/presenter'
@@ -345,17 +346,13 @@ export function RequisitionForm({
                     <div className="requisition-line__fields">
                       <label className="field-row">
                         <span>จำนวนที่ขอ ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
-                        <input
-                          type="number"
+                        <QuantityInput
                           min="0.001"
                           max={line.availableToRequest}
                           step="0.001"
                           required
                           value={line.requestedQuantity}
-                          onChange={(event) => {
-                            const value = event.target.value
-                            changeLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
-                          }}
+                          onValueChange={(value) => changeLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })}
                         />
                       </label>
                       <label className="field-row">

@@ -2,6 +2,8 @@
 
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
+import { MoneyInput } from '@/components/ui/MoneyInput'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import type { ContractFormItemInput } from '@/lib/contracts/types'
 
 export interface ContractCatalogChoice {
@@ -113,17 +115,12 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             </label>
             <label>
               <span>จำนวนในสัญญา <span className="field-required" aria-hidden="true">*</span></span>
-              <input
-                type="number"
+              <QuantityInput
                 min="0.001"
                 step="0.001"
-                inputMode="decimal"
                 required
                 value={item.quantity}
-                onChange={(event) => {
-                  const value = event.target.value
-                  update(index, 'quantity', value === '' ? '' : Number(value))
-                }}
+                onValueChange={(value) => update(index, 'quantity', value === '' ? '' : Number(value))}
                 aria-invalid={Boolean(errors[`items.${index}.quantity`])}
               />
               {errors[`items.${index}.quantity`] && <small className="field-error">{errors[`items.${index}.quantity`]}</small>}
@@ -135,17 +132,12 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             </label>
             <label>
               <span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span>
-              <input
-                type="number"
+              <MoneyInput
                 min="0.01"
                 step="0.01"
-                inputMode="decimal"
                 required
                 value={item.unitPrice}
-                onChange={(event) => {
-                  const value = event.target.value
-                  update(index, 'unitPrice', value === '' ? '' : Number(value))
-                }}
+                onValueChange={(value) => update(index, 'unitPrice', value === '' ? '' : Number(value))}
                 aria-invalid={Boolean(errors[`items.${index}.unitPrice`])}
               />
               {errors[`items.${index}.unitPrice`] && <small className="field-error">{errors[`items.${index}.unitPrice`]}</small>}
@@ -153,14 +145,12 @@ export function ContractItemsEditor({ items, onChange, errors = {}, disabled, ca
             {showOpeningBalance && (
               <label>
                 ใช้ไปแล้วก่อนเข้าระบบ
-                <input
-                  type="number"
+                <QuantityInput
                   min="0"
                   max={item.quantity === '' ? undefined : item.quantity}
                   step="0.001"
-                  inputMode="decimal"
                   value={item.openingUsedQuantity ?? ''}
-                  onChange={(event) => update(index, 'openingUsedQuantity', event.target.value === '' ? null : Number(event.target.value))}
+                  onValueChange={(value) => update(index, 'openingUsedQuantity', value === '' ? null : Number(value))}
                   aria-invalid={Boolean(errors[`items.${index}.openingUsedQuantity`])}
                 />
                 <small>คงเหลือจะเป็น {Math.max(numericValue(item.quantity) - (item.openingUsedQuantity ?? 0), 0)} {item.unit}</small>

@@ -4,6 +4,7 @@ import { formatQuantity } from '@/lib/inventory/presenter'
 import { Button } from '@/components/ui/Button'
 import { CatalogItemCombobox } from '@/components/ui/CatalogItemCombobox'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { detectDuplicateLots, findOverRequestedItems } from '@/lib/receipts/schema'
 
 export interface ReceiptDraftLine {
@@ -138,17 +139,13 @@ export function ReceiptLinesEditor({
                   </label>
                   <label className="field-row">
                     <span>จำนวน ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
-                    <input
-                      type="number"
+                    <QuantityInput
                       min="0.001"
                       step="0.001"
                       required
                       aria-invalid={isOverRequested(line)}
                       value={line.quantity}
-                      onChange={(event) => {
-                        const value = event.target.value
-                        onChange(line.key, { quantity: value === '' ? '' : Number(value) })
-                      }}
+                      onValueChange={(value) => onChange(line.key, { quantity: value === '' ? '' : Number(value) })}
                     />
                     {isUnrequested(line) ? (
                       <small className="field-error">

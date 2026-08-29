@@ -11,6 +11,8 @@ import {
   type ContractOption,
 } from '@/components/pr/PurchaseMethodFields'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { MoneyInput } from '@/components/ui/MoneyInput'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { fiscalYearOfIsoDate } from '@/lib/annual-plans/fiscal'
@@ -996,18 +998,15 @@ export function PurchaseRequestForm({
                       />
                     </td>
                     <td className="pr-line-cell--center">
-                      <input
-                        type="number"
+                      <QuantityInput
                         min="0"
                         step="1"
+                        maxFractionDigits={0}
                         required={!isContractPurchase}
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
-                        }}
+                        onValueChange={(value) => updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })}
                       />
                       {overLimit && (
                         <small className="field-error">
@@ -1027,8 +1026,7 @@ export function PurchaseRequestForm({
                       ) : line.unit}
                     </td>
                     <td className="pr-line-cell--center">
-                      <input
-                        type="number"
+                      <MoneyInput
                         min={method?.kind === 'specific_contract' || method?.kind === 'e_bidding' ? '0.01' : '0'}
                         step="0.01"
                         required
@@ -1037,10 +1035,7 @@ export function PurchaseRequestForm({
                         aria-label={`ราคาต่อหน่วยของ ${line.name}`}
                         title={line.contractItemId !== null ? 'ราคากำหนดตามสัญญา แก้ไขไม่ได้' : undefined}
                         value={line.unitPrice}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })
-                        }}
+                        onValueChange={(value) => updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })}
                       />
                     </td>
                     <td className="pr-line-cell--center identifier">
@@ -1119,18 +1114,15 @@ export function PurchaseRequestForm({
                   <div className="pr-form-line-card__fields">
                     <label className="field-row">
                       <span>จำนวนที่ขอ ({line.unit}) <span className="field-required" aria-hidden="true">*</span></span>
-                      <input
-                        type="number"
+                      <QuantityInput
                         min="0"
                         step="1"
+                        maxFractionDigits={0}
                         required={!isContractPurchase}
                         aria-invalid={overLimit}
                         aria-label={`จำนวนที่ขอของ ${line.name}`}
                         value={line.requestedQuantity}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })
-                        }}
+                        onValueChange={(value) => updateLine(line.key, { requestedQuantity: value === '' ? '' : Number(value) })}
                       />
                       {overLimit && (
                         <small className="field-error">
@@ -1154,8 +1146,7 @@ export function PurchaseRequestForm({
                     </div>
                     <label className="field-row">
                       <span>ราคาต่อหน่วย <span className="field-required" aria-hidden="true">*</span></span>
-                      <input
-                        type="number"
+                      <MoneyInput
                         min={method?.kind === 'specific_contract' || method?.kind === 'e_bidding' ? '0.01' : '0'}
                         step="0.01"
                         required
@@ -1164,10 +1155,7 @@ export function PurchaseRequestForm({
                         aria-label={`ราคาต่อหน่วยของ ${line.name}`}
                         title={line.contractItemId !== null ? 'ราคากำหนดตามสัญญา แก้ไขไม่ได้' : undefined}
                         value={line.unitPrice}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })
-                        }}
+                        onValueChange={(value) => updateLine(line.key, { unitPrice: value === '' ? '' : Number(value) })}
                       />
                     </label>
                   </div>

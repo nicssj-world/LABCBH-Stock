@@ -17,6 +17,8 @@
     "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/design-refresh.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts",
     "test:dashboard": "tsx scripts/dashboard-watchlist.test.ts && tsx scripts/dashboard-executive.test.ts",
     "test:sticky-scroll-ui": "tsx scripts/sticky-scroll-ui.test.ts",
+    "test:money-input": "tsx scripts/money-input.test.ts",
+    "test:quantity-input": "tsx scripts/quantity-input.test.ts",
     "test:pdf-preview": "tsx scripts/pdf-preview-ui.test.ts",
     "test:notifications": "tsx scripts/notifications.test.ts && npm run test:line-notifications",
     "test:line-notifications": "tsx scripts/line-po-notifications.test.ts && tsx scripts/line-po-notifications.runtime.test.ts",
@@ -44,7 +46,7 @@
     "e2e:staging-seed-receipt": "node scripts/staging-seed-receipt-draft.mjs",
     "e2e:staging-seed-lease": "node scripts/staging-seed-lease-contract.mjs",
     "preflight:lots": "node scripts/lot-normalization-preflight.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:sql-safety && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:dashboard && npm run test:sticky-scroll-ui && npm run test:pdf-preview && npm run test:notifications && npm run test:contracts && npm run test:contract-budget && npm run test:service-procurement && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:required-field-markers && npm run test:pagination && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:backup && npm run test:annual-plans && npm run test:storage-cleanup && npm run test:e2e && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:sql-safety && npm run test:rpc-boundaries && npm run test:app-shell && npm run test:dashboard && npm run test:sticky-scroll-ui && npm run test:money-input && npm run test:quantity-input && npm run test:pdf-preview && npm run test:notifications && npm run test:contracts && npm run test:contract-budget && npm run test:service-procurement && npm run test:inventory && npm run test:pr && npm run test:receiving && npm run test:requisitions && npm run test:dates && npm run test:required-field-markers && npm run test:pagination && npm run test:access && npm run test:import && npm run test:security && npm run test:deployment && npm run test:backup && npm run test:annual-plans && npm run test:storage-cleanup && npm run test:e2e && npm run build"
   },
   "engines": {
     "node": ">=22"

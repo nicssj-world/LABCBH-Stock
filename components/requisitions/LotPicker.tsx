@@ -1,6 +1,7 @@
 'use client'
 
 import { StatusChip } from '@/components/ui/StatusChip'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
 import type { SelectableLot } from '@/lib/requisitions/types'
 
@@ -63,17 +64,13 @@ export function LotPicker({ lots, selections, onToggle, onQuantityChange }: LotP
             ) : (
               <label className="field-row lot-picker__quantity">
                 จ่ายจากล็อตนี้
-                <input
-                  type="number"
+                <QuantityInput
                   min="0.001"
                   max={lot.balance}
                   step="0.001"
                   disabled={!selection}
                   value={selection?.quantity ?? ''}
-                  onChange={(event) => {
-                    const value = event.target.value
-                    onQuantityChange(lot.id, value === '' ? '' : Number(value))
-                  }}
+                  onValueChange={(value) => onQuantityChange(lot.id, value === '' ? '' : Number(value))}
                 />
               </label>
             )}

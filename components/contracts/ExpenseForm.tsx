@@ -3,6 +3,7 @@
 import { useId, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { recordContractExpense } from '@/lib/contracts/budget-actions'
@@ -123,14 +124,12 @@ export function ExpenseForm({ contractId, startDate, endDate, remaining }: Expen
         </label>
         <label>
           <span>จำนวนเงิน (บาท) <span className="field-required" aria-hidden="true">*</span></span>
-          <input
-            type="number"
-            inputMode="decimal"
+          <MoneyInput
             min="0.01"
             step="0.01"
             required
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onValueChange={setAmount}
             placeholder="เช่น 111463.20"
             aria-invalid={overRemaining}
             aria-describedby={overRemaining ? 'expense-budget-alert' : remaining !== null ? 'expense-remaining-hint' : undefined}

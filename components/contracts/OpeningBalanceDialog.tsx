@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { StickyScroll } from '@/components/ui/StickyScroll'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { setContractOpeningBalances } from '@/lib/contracts/actions'
 import type { ContractItemRecord } from '@/lib/contracts/types'
 import { bangkokIsoDate } from '@/lib/date/thai'
@@ -104,20 +105,15 @@ export function OpeningBalanceDialog({ contractId, items }: { contractId: number
                     <td>{item.name}</td>
                     <td className="numeric-cell identifier">{quantity.format(item.quantity)} {item.unit}</td>
                     <td className="numeric-cell">
-                      <input
-                        type="number"
+                      <QuantityInput
                         min="0"
                         max={item.quantity}
                         step="0.001"
-                        inputMode="decimal"
                         value={values[item.id] ?? ''}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setValues((current) => ({
-                            ...current,
-                            [item.id]: value === '' ? '' : Number(value),
-                          }))
-                        }}
+                        onValueChange={(value) => setValues((current) => ({
+                          ...current,
+                          [item.id]: value === '' ? '' : Number(value),
+                        }))}
                       />
                     </td>
                   </tr>

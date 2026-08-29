@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { getInventoryItemSummary, setStockBalance } from '@/lib/inventory/actions'
@@ -288,14 +289,12 @@ export function StockAdjustmentDialog({
 
                 <label className="field-row">
                   ยอดที่ตรวจนับได้จริง ({unit})
-                  <input
-                    type="number"
-                    inputMode="decimal"
+                  <QuantityInput
                     min="0"
                     step="0.001"
                     required
                     value={targetQuantity}
-                    onChange={(event) => setTargetQuantity(event.target.value)}
+                    onValueChange={setTargetQuantity}
                     disabled={isPending}
                     autoFocus
                   />

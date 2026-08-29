@@ -11,6 +11,7 @@ FORM: Established Laboratory Control Bench, Operate mode, dense single-page edit
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { ContractItemsEditor, type ContractCatalogChoice } from '@/components/contracts/ContractItemsEditor'
@@ -350,14 +351,12 @@ export function ContractForm({ mode, contract, catalog, isAdmin, onCancel, onSav
           <div className="form-grid">
             <label className="form-grid__wide">
               <span>มูลค่าสัญญา {requiresTotal && <span className="field-required" aria-hidden="true">*</span>}</span>
-              <input
-                type="number"
+              <MoneyInput
                 min="0.01"
                 step="0.01"
-                inputMode="decimal"
                 required={requiresTotal}
                 value={state.total ?? ''}
-                onChange={(event) => patchState('total', event.target.value === '' ? null : Number(event.target.value))}
+                onValueChange={(value) => patchState('total', value === '' ? null : Number(value))}
                 aria-invalid={Boolean(errors.total)}
               />
               {!requiresTotal && (

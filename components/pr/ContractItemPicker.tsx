@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { MINIMUM_STOCK_WARNING, formatBaht } from '@/lib/pr/presenter'
 
@@ -237,14 +238,12 @@ export function ContractItemPicker({
             {manualUnitPrice && (
               <label>
                 <span>ราคาต่อหน่วย</span>
-                <input
-                  type="number"
+                <MoneyInput
                   min="0"
                   step="0.01"
                   value={manualItem.unitPrice ?? ''}
-                  onChange={(event) => setManualItem((current) => ({ ...current, unitPrice: event.target.value }))}
+                  onValueChange={(value) => setManualItem((current) => ({ ...current, unitPrice: value }))}
                   placeholder="0.00"
-                  inputMode="decimal"
                 />
               </label>
             )}

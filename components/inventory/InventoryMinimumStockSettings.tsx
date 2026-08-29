@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { QuantityInput } from '@/components/ui/QuantityInput'
 import { setInventoryMinimumStockMonths } from '@/lib/inventory/actions'
 
 export interface InventoryMinimumStockSettingsProps {
@@ -71,15 +72,14 @@ export function InventoryMinimumStockSettings({ minimumStockMonths }: InventoryM
         <form className="app-dialog__body minimum-stock-settings" onSubmit={submit}>
           <label className="field-row">
             จำนวนเดือนสำรอง (ทุกรายการ)
-            <input
-              type="number"
-              inputMode="decimal"
+            <QuantityInput
               min="0.5"
               max="60"
               step="0.5"
+              maxFractionDigits={1}
               required
               value={months}
-              onChange={(event) => setMonths(event.target.value)}
+              onValueChange={setMonths}
             />
           </label>
           <small>คำนวณค่าขั้นต่ำที่ระบบแนะนำ = ค่าเฉลี่ยการเบิก 3 เดือนล่าสุด × จำนวนเดือนสำรองนี้</small>

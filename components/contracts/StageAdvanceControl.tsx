@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { ThaiDateInput } from '@/components/ui/ThaiDateInput'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { advanceContractStage } from '@/lib/contracts/actions'
@@ -90,14 +91,12 @@ export function StageAdvanceControl({
           {asksForTotal && (
             <label>
               มูลค่าสัญญา
-              <input
-                type="number"
+              <MoneyInput
                 min="0.01"
                 step="0.01"
-                inputMode="decimal"
                 required
                 value={leaseTotal}
-                onChange={(event) => setLeaseTotal(event.target.value)}
+                onValueChange={setLeaseTotal}
                 placeholder="ระบุมูลค่าตามสัญญาที่ตกลงได้"
               />
             </label>

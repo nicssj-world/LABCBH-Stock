@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { createInventoryItem, updateInventoryItem } from '@/lib/inventory/actions'
 import type { InventoryItemDetail } from '@/lib/inventory/types'
 
@@ -186,13 +187,11 @@ export function InventoryItemForm({
 
           <label>
             ราคาต่อหน่วย (บาท)
-            <input
-              type="number"
+            <MoneyInput
               min="0"
               step="0.01"
-              inputMode="decimal"
               value={state.defaultUnitPrice}
-              onChange={(event) => update('defaultUnitPrice', event.target.value)}
+              onValueChange={(value) => update('defaultUnitPrice', value)}
               placeholder="ไม่บังคับ"
             />
           </label>
