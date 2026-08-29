@@ -47,6 +47,7 @@ export interface ServicePlanTestItemRecord {
   lineNumber: number
   name: string
   unit: string
+  unitPrice: number | null
 }
 
 export interface ServicePlanDocumentRecord {
@@ -103,8 +104,8 @@ export interface ServicePurchaseRequestItemRecord {
   name: string
   unit: string
   requestedQuantity: number
-  unitPrice: number
-  lineTotal: number
+  unitPrice: number | null
+  lineTotal: number | null
   usedQuantity: number
   remainingQuantity: number
 }

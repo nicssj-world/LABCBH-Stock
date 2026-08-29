@@ -57,6 +57,7 @@ const responsibleIdsSchema = z.array(z.string().uuid()).max(20).refine((ids) => 
 const planTestItemSchema = z.object({
   name: z.string().trim().min(1, 'กรุณาระบุชื่อรายการส่งตรวจ').max(240),
   unit: z.string().trim().min(1, 'กรุณาระบุหน่วย').max(100),
+  unitPrice: moneySchema.refine((value) => value > 0, 'ราคาต่อหน่วยต้องมากกว่า 0'),
 }).strict()
 
 const servicePlanFields = z.object({
@@ -129,6 +130,7 @@ const serviceLineSchema = z.object({
   planItemId: z.string().uuid(),
   name: z.string().trim().min(1, 'กรุณาระบุชื่อรายการ').max(240),
   unit: z.string().trim().min(1, 'กรุณาระบุหน่วย').max(100),
+  unitPrice: moneySchema.refine((value) => value > 0, 'ราคาต่อหน่วยต้องมากกว่า 0'),
   requestedQuantity: z.number().finite().nonnegative('จำนวนต้องไม่ติดลบ'),
 }).strict()
 

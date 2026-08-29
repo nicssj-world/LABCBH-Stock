@@ -35,8 +35,9 @@ export async function buildServicePlanWorkbook(planId: string): Promise<Uint8Arr
     { header: 'ลำดับ', key: 'line', width: 12 },
     { header: 'ชื่อรายการ', key: 'name', width: 44 },
     { header: 'หน่วย', key: 'unit', width: 20 },
+    { header: 'ราคาต่อหน่วย (บาท)', key: 'unitPrice', width: 20 },
   ]
-  plan.testItems.forEach((item) => testItems.addRow({ line: item.lineNumber, name: item.name, unit: item.unit }))
+  plan.testItems.forEach((item) => testItems.addRow({ line: item.lineNumber, name: item.name, unit: item.unit, unitPrice: item.unitPrice ?? '' }))
 
   const requestSheet = workbook.addWorksheet('PR PO ที่อ้างแผน')
   requestSheet.columns = [

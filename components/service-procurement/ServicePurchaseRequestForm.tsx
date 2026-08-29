@@ -117,6 +117,9 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(null)
     if (!plan) return setError('กรุณาเลือกแผนงานจ้าง')
+    if (plan.isRedCross && plan.testItems.some((item) => item.unitPrice === null || item.unitPrice <= 0)) {
+      return setError('แผนนี้ยังมีรายการส่งตรวจที่ไม่ระบุราคาต่อหน่วย กรุณาแก้ไขแผนก่อนสร้าง PR')
+    }
     const numericAmount = Number(amount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return setError('กรุณาระบุวงเงินที่มากกว่า 0 บาท')
     if (numericAmount > plan.balance.available) return setError(`วงเงินแผนคงเหลือ ${formatBaht(plan.balance.available)} ไม่พอสำหรับคำขอ`)
@@ -139,7 +142,7 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
     formData.set('payload', JSON.stringify({
       department: selectedDepartment, requesterName, requestedDate, note: note || null, planId,
       amount: numericAmount, usageStartDate, usageEndDate,
-      items: plan.testItems.map((item) => ({ planItemId: item.id, name: item.name, unit: item.unit, requestedQuantity: Number(quantities[item.id] || 0) })),
+      items: plan.testItems.map((item) => ({ planItemId: item.id, name: item.name, unit: item.unit, unitPrice: item.unitPrice ?? 0, requestedQuantity: Number(quantities[item.id] || 0) })),
       committees: activeCommittees, documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
     }))
     startTransition(async () => {
@@ -164,7 +167,7 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
         <label className="field-row"><span>ถึงวันที่ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageEndDate} min={usageStartDate || fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageEndDate} /></label>
       </div>{plan && <p className="service-budget-callout" role="status">แผน {plan.name}: วงเงินตั้งต้น {formatBaht(plan.budget)} · ใช้จริง {formatBaht(plan.balance.spent)} · สำรอง {formatBaht(plan.balance.reserved)} · คงเหลือ {formatBaht(plan.balance.available)}</p>}</section>
 
-      {plan?.isRedCross && <section className="bench-panel" aria-labelledby="service-test-items-title"><div className="bench-panel__header"><div><p className="section-kicker">RED CROSS TEST ITEMS</p><h2 id="service-test-items-title">รายการส่งตรวจ</h2></div><p>{plan.testItems.length} รายการ · จำนวนรวม {totalQuantity}</p></div>{plan.testItems.length === 0 ? <p className="empty-state">แผนนี้ยังไม่มีรายการส่งตรวจ</p> : <div className="service-ledger-table-wrap"><table className="data-table"><thead><tr><th>รายการส่งตรวจ</th><th>หน่วย</th><th>จำนวน</th></tr></thead><tbody>{plan.testItems.map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.unit}</td><td><input aria-label={`จำนวน ${item.name}`} type="number" min="0" step="0.001" placeholder="0" value={quantities[item.id] ?? ''} onChange={(event) => setQuantities((current) => ({ ...current, [item.id]: event.target.value }))} /></td></tr>)}</tbody></table></div>}</section>}
+      {plan?.isRedCross && <section className="bench-panel" aria-labelledby="service-test-items-title"><div className="bench-panel__header"><div><p className="section-kicker">RED CROSS TEST ITEMS</p><h2 id="service-test-items-title">รายการส่งตรวจ</h2></div><p>{plan.testItems.length} รายการ · จำนวนรวม {totalQuantity}</p></div>{plan.testItems.length === 0 ? <p className="empty-state">แผนนี้ยังไม่มีรายการส่งตรวจ</p> : <div className="service-ledger-table-wrap"><table className="data-table service-pr-test-items-table"><thead><tr><th>รายการส่งตรวจ</th><th>หน่วย</th><th className="numeric-cell">ราคาต่อหน่วย (บาท)</th><th className="numeric-cell">จำนวน</th></tr></thead><tbody>{plan.testItems.map((item) => <tr key={item.id}><td>{item.name}</td><td>{item.unit}</td><td className="numeric-cell identifier">{item.unitPrice === null ? 'ยังไม่ระบุ' : formatBaht(item.unitPrice)}</td><td><input aria-label={`จำนวน ${item.name}`} type="number" min="0" step="0.001" placeholder="0" value={quantities[item.id] ?? ''} onChange={(event) => setQuantities((current) => ({ ...current, [item.id]: event.target.value }))} /></td></tr>)}</tbody></table></div>}</section>}
 
       <section className="bench-panel" aria-labelledby="service-documents-title"><div className="bench-panel__header"><div><p className="section-kicker">DOCUMENTS</p><h2 id="service-documents-title">เอกสารประกอบ</h2></div><p>ไฟล์ระดับแผนจะใช้ซ้ำใน PR ครั้งถัดไป</p></div><div className="pr-checklist__file-grid pr-checklist__file-grid--primary">{documentCard('tor', 'รายละเอียดคุณลักษณะเฉพาะ (TOR)', tor, false, true)}{documentCard('quotation', 'ใบเสนอราคา', quotation, quoteExisting, true)}{plan?.requiresContract && documentCard('contractPage', 'หน้าสัญญา', contractPage, contractExisting, true)}</div></section>
 

@@ -81,7 +81,7 @@ async function readPlanSupport(supabase: ReadClient, planIds: string[]) {
   const [responsiblesResult, ledgerResult, itemsResult, documentsResult] = await Promise.all([
     supabase.from('service_plan_responsibles').select('plan_id,profile_id,assigned_at,profiles:profiles!service_plan_responsibles_profile_id_fkey(name,dept)').in('plan_id', planIds),
     supabase.from('service_plan_ledger').select('id,plan_id,entry_kind,amount,event_date,purchase_request_id,usage_event_id,reference_ledger_id,reason,source_reference,created_at,profiles:actor_id(name)').in('plan_id', planIds).order('created_at', { ascending: false }),
-    supabase.from('service_plan_test_items').select('id,plan_id,line_number,name,unit').in('plan_id', planIds).order('line_number'),
+    supabase.from('service_plan_test_items').select('id,plan_id,line_number,name,unit,unit_price').in('plan_id', planIds).order('line_number'),
     supabase.from('service_plan_documents').select('id,plan_id,document_kind,file_name,mime_type,size_bytes,storage_key,checksum,uploaded_at').in('plan_id', planIds),
   ])
   for (const result of [responsiblesResult, ledgerResult, itemsResult, documentsResult]) {
@@ -107,7 +107,10 @@ function mapLedger(row: Record<string, unknown>, planId: string): ServicePlanLed
 }
 
 function mapPlanItem(row: Record<string, unknown>): ServicePlanTestItemRecord {
-  return { id: String(row.id), lineNumber: Number(row.line_number), name: String(row.name), unit: String(row.unit) }
+  return {
+    id: String(row.id), lineNumber: Number(row.line_number), name: String(row.name), unit: String(row.unit),
+    unitPrice: row.unit_price === null || row.unit_price === undefined ? null : toNumber(row.unit_price),
+  }
 }
 
 function mapPlanDocument(row: Record<string, unknown>): ServicePlanDocumentRecord {
@@ -194,7 +197,11 @@ function mapRequest(row: z.infer<typeof requestRowSchema>, support: ServiceReque
   const snapshotItems = (support.snapshots ?? []).filter((entry) => entry.purchase_request_id === row.id).map((entry) => ({
     id: String(entry.id), lineNumber: Number(entry.line_number), planItemId: (entry.plan_item_id as string | null) ?? '', inventoryItemId: null,
     lsCode: null, name: String(entry.name), unit: String(entry.unit), requestedQuantity: toNumber(entry.requested_quantity),
-    unitPrice: 0, lineTotal: 0, usedQuantity: 0, remainingQuantity: toNumber(entry.requested_quantity),
+    unitPrice: entry.unit_price === null || entry.unit_price === undefined ? null : toNumber(entry.unit_price),
+    lineTotal: entry.unit_price === null || entry.unit_price === undefined
+      ? null
+      : Math.round(toNumber(entry.requested_quantity) * toNumber(entry.unit_price) * 100) / 100,
+    usedQuantity: 0, remainingQuantity: toNumber(entry.requested_quantity),
   }))
   const items = snapshotItems.length > 0 ? snapshotItems : legacyItems
   const oldEvents: ServiceUsageEventRecord[] = support.events.filter((entry) => entry.purchase_request_id === row.id).map((entry) => ({
@@ -231,7 +238,7 @@ async function readRequestTestItemSnapshots(supabase: ReadClient, requestIds: st
   if (!requestIds.length) return [] as Array<Record<string, unknown>>
   const result = await supabase
     .from('service_purchase_request_test_item_snapshots')
-    .select('id,purchase_request_id,plan_item_id,line_number,name,unit,requested_quantity,created_at')
+    .select('id,purchase_request_id,plan_item_id,line_number,name,unit,unit_price,requested_quantity,created_at')
     .in('purchase_request_id', requestIds)
     .order('line_number')
   if (result.error) throw new Error(`à¸­à¹ˆà¸²à¸™ snapshot à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸•à¸£à¸§à¸ˆ PR à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ${result.error.message}`)
