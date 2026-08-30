@@ -31,6 +31,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   const issue = first(params.issue) === 'receiving-data-quality' ? 'receiving-data-quality' : undefined
   const fiscalYearValue = first(params.fiscalYear)
   const fiscalYear = fiscalYearValue && /^\d{4}$/.test(fiscalYearValue) ? Number(fiscalYearValue) : undefined
+  const showCancelled = first(params.showCancelled) === '1'
   const page = parsePage(first(params.page))
 
   let receipts: GoodsReceiptRecord[] = []
@@ -48,8 +49,13 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
     error = caught instanceof Error ? caught.message : 'อ่านรายการรับเข้าไม่สำเร็จ'
   }
 
-  const draftCount = receipts.filter((receipt) => receipt.status === 'draft').length
-  const paginatedReceipts = paginate(receipts, page, LIST_PAGE_SIZE)
+  const shouldShowCancelled = showCancelled || status === 'cancelled'
+  const cancelledCount = receipts.filter((receipt) => receipt.status === 'cancelled').length
+  const visibleReceipts = shouldShowCancelled
+    ? receipts
+    : receipts.filter((receipt) => receipt.status !== 'cancelled')
+  const draftCount = visibleReceipts.filter((receipt) => receipt.status === 'draft').length
+  const paginatedReceipts = paginate(visibleReceipts, page, LIST_PAGE_SIZE)
   const buildPageHref = (nextPage: number) => {
     const nextParams = new URLSearchParams()
     if (search) nextParams.set('search', search)
@@ -57,10 +63,23 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
     if (department) nextParams.set('department', department)
     if (issue) nextParams.set('issue', issue)
     if (fiscalYear) nextParams.set('fiscalYear', String(fiscalYear))
+    if (showCancelled) nextParams.set('showCancelled', '1')
     if (nextPage > 1) nextParams.set('page', String(nextPage))
     const query = nextParams.toString()
     return query ? `/receipts?${query}` : '/receipts'
   }
+  const buildCancelledVisibilityHref = (nextShowCancelled: boolean) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status && !(status === 'cancelled' && !nextShowCancelled)) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (issue) nextParams.set('issue', issue)
+    if (fiscalYear) nextParams.set('fiscalYear', String(fiscalYear))
+    if (nextShowCancelled) nextParams.set('showCancelled', '1')
+    const query = nextParams.toString()
+    return query ? `/receipts?${query}` : '/receipts'
+  }
+  const showCancelledControl = cancelledCount > 0 || status === 'cancelled' || showCancelled
 
   return (
     <div className="route-stack">
@@ -117,7 +136,7 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
 
       {issue && (
         <p className="inline-alert inline-alert--info" role="status">
-          ตัวกรองจาก Dashboard ผู้บริหาร: รับเข้าต้องตรวจสอบ{fiscalYear ? ` · ปีงบประมาณ ${fiscalYear}` : ''} · พบ {receipts.length.toLocaleString('th-TH')} ใบ
+          ตัวกรองจาก Dashboard ผู้บริหาร: รับเข้าต้องตรวจสอบ{fiscalYear ? ` · ปีงบประมาณ ${fiscalYear}` : ''} · พบ {visibleReceipts.length.toLocaleString('th-TH')} ใบ
           {' '}<Link className="text-link" href="/receipts">แสดงรายการรับเข้าทั้งหมด</Link>
         </p>
       )}
@@ -135,10 +154,21 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
               <p className="section-kicker">RECEIVING QUEUE</p>
               <h2 id="receipt-list-title">รายการใบรับเข้า</h2>
             </div>
-            <p>{receipts.length} ใบ</p>
+            <div className="receipt-list__header-actions">
+              <p>{visibleReceipts.length} ใบ</p>
+              {showCancelledControl && (
+                <Link
+                  className="lab-link-button lab-link-button--secondary"
+                  href={buildCancelledVisibilityHref(!shouldShowCancelled)}
+                  aria-pressed={shouldShowCancelled}
+                >
+                  {shouldShowCancelled ? 'ซ่อนรายการยกเลิก' : 'แสดงรายการยกเลิก'}
+                </Link>
+              )}
+            </div>
           </div>
 
-          {receipts.length === 0 ? (
+          {visibleReceipts.length === 0 ? (
             <p className="empty-state">{issue ? 'ไม่พบใบรับเข้าที่ตรงกับประเด็นนี้' : 'ไม่พบใบรับเข้าตามเงื่อนไขที่เลือก'}</p>
           ) : (
             <>

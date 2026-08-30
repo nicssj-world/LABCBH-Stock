@@ -33,6 +33,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   const department = first(params.department)?.trim() ?? ''
   const page = parsePage(first(params.page))
   const showCancelled = first(params.showCancelled) === '1'
+  const showReceived = first(params.showReceived) === '1'
 
   let loadedRequisitions: RequisitionRecord[] = []
   let error: string | null = null
@@ -44,10 +45,14 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
   }
 
   const shouldShowCancelled = showCancelled || status === 'cancelled'
+  const shouldShowReceived = showReceived || status === 'received'
   const cancelledCount = loadedRequisitions.filter((requisition) => requisition.status === 'cancelled').length
-  const requisitions = shouldShowCancelled
-    ? loadedRequisitions
-    : loadedRequisitions.filter((requisition) => requisition.status !== 'cancelled')
+  const receivedCount = loadedRequisitions.filter((requisition) => requisition.status === 'received').length
+  const requisitions = loadedRequisitions.filter(
+    (requisition) =>
+      (shouldShowCancelled || requisition.status !== 'cancelled') &&
+      (shouldShowReceived || requisition.status !== 'received'),
+  )
   const waitingCount = requisitions.filter((requisition) => requisition.status === 'waiting').length
   const paginatedRequisitions = paginate(requisitions, page, LIST_PAGE_SIZE)
   const buildPageHref = (nextPage: number) => {
@@ -56,6 +61,7 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
     if (status) nextParams.set('status', status)
     if (department) nextParams.set('department', department)
     if (showCancelled) nextParams.set('showCancelled', '1')
+    if (showReceived) nextParams.set('showReceived', '1')
     if (nextPage > 1) nextParams.set('page', String(nextPage))
     const query = nextParams.toString()
     return query ? `/requisitions?${query}` : '/requisitions'
@@ -66,10 +72,22 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
     if (status && !(status === 'cancelled' && !nextShowCancelled)) nextParams.set('status', status)
     if (department) nextParams.set('department', department)
     if (nextShowCancelled) nextParams.set('showCancelled', '1')
+    if (showReceived) nextParams.set('showReceived', '1')
+    const query = nextParams.toString()
+    return query ? `/requisitions?${query}` : '/requisitions'
+  }
+  const buildReceivedVisibilityHref = (nextShowReceived: boolean) => {
+    const nextParams = new URLSearchParams()
+    if (search) nextParams.set('search', search)
+    if (status && !(status === 'received' && !nextShowReceived)) nextParams.set('status', status)
+    if (department) nextParams.set('department', department)
+    if (showCancelled) nextParams.set('showCancelled', '1')
+    if (nextShowReceived) nextParams.set('showReceived', '1')
     const query = nextParams.toString()
     return query ? `/requisitions?${query}` : '/requisitions'
   }
   const showCancelledControl = cancelledCount > 0 || status === 'cancelled' || showCancelled
+  const showReceivedControl = receivedCount > 0 || status === 'received' || showReceived
   const hasReceivableRequisition = paginatedRequisitions.items.some(
     (requisition) => requisition.status === 'fulfilled' && canReceiveRequisition(actor, requisition.requesterId),
   )
@@ -162,6 +180,15 @@ export default async function RequisitionsPage({ searchParams }: RequisitionsPag
                   aria-pressed={shouldShowCancelled}
                 >
                   {shouldShowCancelled ? 'ซ่อนใบยกเลิก' : 'แสดงใบยกเลิก'}
+                </Link>
+              )}
+              {showReceivedControl && (
+                <Link
+                  className="lab-link-button lab-link-button--secondary"
+                  href={buildReceivedVisibilityHref(!shouldShowReceived)}
+                  aria-pressed={shouldShowReceived}
+                >
+                  {shouldShowReceived ? 'ซ่อนใบตรวจรับแล้ว' : 'แสดงใบตรวจรับแล้ว'}
                 </Link>
               )}
             </div>

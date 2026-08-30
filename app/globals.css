@@ -5601,6 +5601,19 @@ frozen on screen with nothing to say the click was received.
   white-space: nowrap;
 }
 
+.receipt-list__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.receipt-list__header-actions > p {
+  margin: 0;
+  white-space: nowrap;
+}
+
 .requisition-short-issue-reason {
   display: block;
   width: 100%;
