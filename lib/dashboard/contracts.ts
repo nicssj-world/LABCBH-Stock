@@ -22,6 +22,9 @@ import type {
   ExecutiveDashboard,
 } from '@/lib/dashboard/types'
 import { createClient } from '@/lib/supabase/server'
+import { bangkokIsoDate } from '@/lib/date/thai'
+import { fiscalYearFromDate } from '@/lib/service-procurement/domain'
+import { getServiceProcurementDashboardSummary } from '@/lib/service-procurement/queries'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).pipe(z.number().finite())
 
@@ -56,7 +59,8 @@ export async function getExecutiveDashboard({
   watchlistLimit?: number
 } = {}): Promise<ExecutiveDashboard> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const currentFiscalYear = fiscalYearFromDate(bangkokIsoDate())
+  const [{ data, error }, serviceProcurement] = await Promise.all([supabase
     .from('contracts')
     .select(`
       id,
@@ -80,7 +84,7 @@ export async function getExecutiveDashboard({
         contract_item_allocations (quantity)
       )
     `)
-    .or('is_archived.eq.false,is_archived.is.null')
+    .or('is_archived.eq.false,is_archived.is.null'), getServiceProcurementDashboardSummary(currentFiscalYear)])
 
   if (error) throw new Error(`อ่านข้อมูล Dashboard ไม่สำเร็จ: ${error.message}`)
   const rows = dashboardRowSchema.array().parse(data ?? [])
@@ -218,6 +222,7 @@ export async function getExecutiveDashboard({
     // Soonest to expire first; a contract with no end date sorts last.
     leaseWatchlist: leaseWatchlist.sort((left, right) => left.monthsLeft - right.monthsLeft),
     contractCount: rows.length,
+    serviceProcurement,
   }
 }
 

@@ -5,6 +5,7 @@ import type {
   ServiceFulfillmentStatus,
   ServicePlanDocumentKind,
   ServicePlanInput,
+  ServicePlanRolloverInput,
   ServicePlanStatus,
   ServicePlanType,
   ServicePoStatus,
@@ -26,6 +27,7 @@ export type {
   ServiceFulfillmentStatus,
 }
 export type ServicePlanInputRecord = ServicePlanInput
+export type ServicePlanRolloverInputRecord = ServicePlanRolloverInput
 export type ServicePurchaseRequestInputRecord = ServicePurchaseRequestInput
 
 export interface ServicePlanBalance {
@@ -93,6 +95,49 @@ export interface ServicePlanRecord {
   responsibles: ServiceResponsibleRecord[]
   createdAt: string
   updatedAt: string
+}
+
+export interface ServicePlanRolloverItem {
+  sourcePlanId: string
+  targetPlanId: string | null
+  name: string
+  department: string
+  type: ServicePlanType
+  budget: number
+  isRedCross: boolean
+  requiresContract: boolean
+  testItemCount: number
+  responsibleCount: number
+  responsibleProfileIds: string[]
+  sourceUpdatedAt: string
+  alreadyRolledOver: boolean
+}
+
+export interface ServicePlanRolloverReview {
+  sourceFiscalYear: number
+  targetFiscalYear: number
+  reviewed: boolean
+  reviewedAt: string | null
+  items: ServicePlanRolloverItem[]
+}
+
+export interface ServicePlanRolloverResult {
+  runId: string
+  sourceFiscalYear: number
+  targetFiscalYear: number
+  createdPlanIds: string[]
+  selectedCount: number
+  excludedCount: number
+}
+
+export interface ServiceProcurementDashboardSummary {
+  fiscalYear: number
+  activePlanCount: number
+  pendingRequestCount: number
+  openPoCount: number
+  rolloverReviewed: boolean
+  rolloverReviewedAt: string | null
+  previousYearPlanCount: number
 }
 
 export interface ServicePurchaseRequestItemRecord {

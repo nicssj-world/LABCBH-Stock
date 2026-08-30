@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { DownloadIcon } from '@/components/dashboard/DashboardIcons'
 import { ExecutiveLeaseTable } from '@/components/dashboard/ExecutiveLeaseTable'
@@ -40,12 +41,14 @@ function KpiCard({
   value,
   hint,
   comparison,
+  actions,
 }: {
   className: string
   label: string
   value: number
   hint: string
   comparison?: ExecutiveComparison
+  actions?: ReactNode
 }) {
   return (
     <article className={`executive-kpi-card ${className}`}>
@@ -53,6 +56,7 @@ function KpiCard({
       <strong>{money.format(value)}</strong>
       {comparison && <ComparisonNote comparison={comparison} />}
       <small>{hint}</small>
+      {actions && <div className="executive-kpi-card__actions">{actions}</div>}
     </article>
   )
 }
@@ -127,11 +131,23 @@ function CategoryBreakdown({ data }: { data: ExecutiveOverview }) {
       <div className="executive-category-list">
         {data.categories.map((category) => (
           <div className={`executive-category-row executive-category-row--${category.key}`} key={category.key}>
-            <div><strong>{category.label}</strong><small>{category.note}</small></div>
+            <div><strong>{category.label}</strong><small>{category.note}</small>{category.key === 'hiring' && <span className="executive-category-row__links"><Link href={`/service-procurement/plans?fiscalYear=${data.fiscalYear}`}>เปิดแผนงานจ้างระบบ</Link><Link href={`/service-procurement/purchase-requests?fiscalYear=${data.fiscalYear}`}>เปิด PR/PO งานจ้าง</Link></span>}</div>
             <div className="executive-category-row__amount"><strong>{money.format(category.amount)}</strong><small>{category.share === null ? 'ไม่มีสัดส่วน' : `${category.share.toLocaleString('th-TH', { maximumFractionDigits: 1 })}% ของยอดรวม`}</small></div>
           </div>
         ))}
       </div>
+    </section>
+  )
+}
+
+function ServiceSpendDetails({ data }: { data: ExecutiveOverview }) {
+  return (
+    <section className="bench-panel executive-panel executive-service-source-panel" aria-labelledby="executive-service-source-title">
+      <div className="bench-panel__header">
+        <div><h2 id="executive-service-source-title">รายละเอียดงานจ้างระบบ</h2><p className="executive-panel__description">ยอดใช้จริงจาก PO ที่ปิดแล้วในปีงบประมาณ {data.fiscalYear} ไม่รวมวงเงินของแผนที่คัดลอกมา</p></div>
+        <StatusChip tone="neutral">{data.serviceSourceRows.length.toLocaleString('th-TH')} รายการ</StatusChip>
+      </div>
+      {data.serviceSourceRows.length === 0 ? <div className="empty-state"><strong>ยังไม่มียอดใช้จริงของงานจ้างในปีนี้</strong><p>แผนที่สร้างจากการตรวจทานจะยังไม่เพิ่มยอด จนกว่าจะมีการปิด PO และลง ledger</p></div> : <div className="executive-table-wrap"><table className="executive-data-table executive-service-source-table"><caption className="sr-only">รายการยอดใช้จริงงานจ้างระบบปี {data.fiscalYear}</caption><thead><tr><th scope="col">วันที่</th><th scope="col">แผนงานจ้าง</th><th scope="col">หน่วยงาน</th><th scope="col">อ้างอิง PR</th><th scope="col">ยอดใช้จริง</th></tr></thead><tbody>{data.serviceSourceRows.map((row) => <tr key={`${row.planId}:${row.eventDate}:${row.sourceReference ?? row.purchaseRequestId ?? row.amount}`}><td>{formatThaiDate(row.eventDate)}</td><td><Link className="text-link" href={`/service-procurement/plans/${row.planId}?fiscalYear=${data.fiscalYear}`}>{row.planName}</Link></td><td>{row.department}</td><td>{row.purchaseRequestId ? <Link className="text-link identifier" href={`/service-procurement/purchase-requests/${row.purchaseRequestId}?fiscalYear=${data.fiscalYear}`}>{row.sourceReference ?? 'เปิด PR'}</Link> : row.sourceReference ?? '—'}</td><td className="numeric-cell identifier">{money.format(row.amount)}</td></tr>)}</tbody></table></div>}
     </section>
   )
 }
@@ -198,7 +214,7 @@ export function ExecutiveDashboardView({ data }: { data: ExecutiveOverview }) {
       <section className="executive-kpi-grid" aria-label="ตัวเลขสำคัญรายปี">
         <KpiCard className="executive-kpi-card--total" label="ยอดรวมตามหมวด" value={data.spend.total} hint="งานซื้อ + งานจ้างทั้งหมด" comparison={comparison} />
         <KpiCard className="executive-kpi-card--purchase" label="งานซื้อ" value={data.spend.purchase} hint="ยอดจากรายการรับเข้าคลังที่บันทึกเรียบร้อยแล้ว · ไม่รวมเช่าเครื่อง" />
-        <KpiCard className="executive-kpi-card--hiring" label="งานจ้างทั้งหมด" value={data.spend.hiringTotal} hint={serviceHint} />
+        <KpiCard className="executive-kpi-card--hiring" label="งานจ้างทั้งหมด" value={data.spend.hiringTotal} hint={serviceHint} actions={<><Link href={`/service-procurement/plans?fiscalYear=${data.fiscalYear}`}>แผนงานจ้างระบบ</Link><Link href={`/service-procurement/purchase-requests?fiscalYear=${data.fiscalYear}`}>PR/PO งานจ้าง</Link></>} />
         <KpiCard className="executive-kpi-card--lease" label="เช่าเครื่อง" value={data.spend.lease} hint="รายละเอียดภายในงานจ้าง · ไม่บวกซ้ำ" />
       </section>
 
@@ -213,6 +229,8 @@ export function ExecutiveDashboardView({ data }: { data: ExecutiveOverview }) {
         <div className="bench-panel__header"><div><p className="section-kicker">FISCAL YEAR TREND</p><h2 id="executive-monthly-title">ยอดตามเดือนงบประมาณ</h2></div><span className="executive-panel__note">รวม {money.format(data.spend.total)}</span></div>
         <MonthlySpendChart rows={data.monthly} />
       </section>
+
+      <ServiceSpendDetails data={data} />
 
       <LeaseDurationSummary data={data} />
 

@@ -3,16 +3,20 @@ import 'server-only'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { bangkokIsoDate } from '@/lib/date/thai'
 import { SERVICE_PLAN_STATUSES, SERVICE_PLAN_TYPES, SERVICE_PURCHASE_METHODS } from './schema'
 import type {
   ServicePlanDocumentRecord,
   ServicePlanLedgerRecord,
   ServicePlanRecord,
+  ServicePlanRolloverReview,
+  ServiceProcurementDashboardSummary,
   ServicePlanTestItemRecord,
   ServicePurchaseRequestRecord,
   ServiceUsageEventRecord,
 } from './types'
 import { isServiceRequestDisplayStatus, planBalance, serviceRequestMatchesDisplayStatus } from './domain'
+import { fiscalYearFromDate } from './domain'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
 const planRowSchema = z.object({
@@ -243,6 +247,123 @@ async function readRequestTestItemSnapshots(supabase: ReadClient, requestIds: st
     .order('line_number')
   if (result.error) throw new Error(`à¸­à¹ˆà¸²à¸™ snapshot à¸£à¸²à¸¢à¸à¸²à¸£à¸ªà¹ˆà¸‡à¸•à¸£à¸§à¸ˆ PR à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ: ${result.error.message}`)
   return (result.data ?? []) as Array<Record<string, unknown>>
+}
+
+export async function listCurrentActiveServicePlansForPr(): Promise<ServicePlanRecord[]> {
+  const currentFiscalYear = fiscalYearFromDate(bangkokIsoDate())
+  const plans = await listServicePlans({ fiscalYear: currentFiscalYear })
+  return plans.filter((plan) => plan.status === 'active' && plan.fiscalYear === currentFiscalYear)
+}
+
+const rolloverPlanRowSchema = z.object({
+  id: z.string().uuid(),
+  fiscal_year: z.number().int(),
+  name: z.string(),
+  department: z.string(),
+  plan_type: z.enum(SERVICE_PLAN_TYPES),
+  budget: numeric,
+  is_red_cross: z.boolean(),
+  requires_contract: z.boolean(),
+  updated_at: z.string(),
+  rollover_source_plan_id: z.string().uuid().nullable().optional(),
+})
+
+export async function getServicePlanRolloverReview(targetFiscalYear: number): Promise<ServicePlanRolloverReview> {
+  const sourceFiscalYear = targetFiscalYear - 1
+  const [sourceResult, targetResult, runResult] = await Promise.all([
+    supabaseAdmin
+      .from('service_procurement_plans')
+      .select('id,fiscal_year,name,department,plan_type,budget,is_red_cross,requires_contract,updated_at,rollover_source_plan_id')
+      .eq('fiscal_year', sourceFiscalYear)
+      .order('department')
+      .order('name'),
+    supabaseAdmin
+      .from('service_procurement_plans')
+      .select('id,fiscal_year,name,department,plan_type,budget,is_red_cross,requires_contract,updated_at,rollover_source_plan_id')
+      .eq('fiscal_year', targetFiscalYear)
+      .not('rollover_source_plan_id', 'is', null),
+    supabaseAdmin
+      .from('service_plan_rollover_runs')
+      .select('created_at')
+      .eq('target_fiscal_year', targetFiscalYear)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (sourceResult.error) throw new Error(`อ่านแผนต้นทางสำหรับตรวจทานไม่สำเร็จ: ${sourceResult.error.message}`)
+  if (targetResult.error) throw new Error(`อ่านแผนที่คัดลอกแล้วไม่สำเร็จ: ${targetResult.error.message}`)
+  if (runResult.error) throw new Error(`อ่านสถานะการตรวจทานแผนไม่สำเร็จ: ${runResult.error.message}`)
+
+  const sourceRows = parseRows(rolloverPlanRowSchema, sourceResult.data, 'แผนต้นทางสำหรับตรวจทาน')
+  const targetRows = parseRows(rolloverPlanRowSchema, targetResult.data, 'แผนที่คัดลอกแล้ว')
+  const sourceIds = sourceRows.map((row) => row.id)
+  const [testItemsResult, responsiblesResult] = sourceIds.length
+    ? await Promise.all([
+      supabaseAdmin.from('service_plan_test_items').select('plan_id').in('plan_id', sourceIds),
+      supabaseAdmin.from('service_plan_responsibles').select('plan_id,profile_id').in('plan_id', sourceIds),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }]
+  if (testItemsResult.error) throw new Error(`อ่านรายการส่งตรวจสำหรับคัดลอกไม่สำเร็จ: ${testItemsResult.error.message}`)
+  if (responsiblesResult.error) throw new Error(`อ่านผู้รับผิดชอบสำหรับคัดลอกไม่สำเร็จ: ${responsiblesResult.error.message}`)
+
+  const responsibleProfileIds = [...new Set((responsiblesResult.data ?? []).map((row) => String(row.profile_id)))]
+  const activeProfilesResult = responsibleProfileIds.length
+    ? await supabaseAdmin.from('profiles').select('id').in('id', responsibleProfileIds).eq('status', 'active').is('deleted_at', null)
+    : { data: [], error: null }
+  if (activeProfilesResult.error) throw new Error(`ตรวจสถานะผู้รับผิดชอบไม่สำเร็จ: ${activeProfilesResult.error.message}`)
+  const activeProfileIds = new Set((activeProfilesResult.data ?? []).map((row) => String(row.id)))
+  const targetBySource = new Map(targetRows.map((row) => [row.rollover_source_plan_id, row.id]))
+
+  return {
+    sourceFiscalYear,
+    targetFiscalYear,
+    reviewed: Boolean(runResult.data),
+    reviewedAt: runResult.data?.created_at ? String(runResult.data.created_at) : null,
+    items: sourceRows.map((row) => {
+      const targetPlanId = targetBySource.get(row.id) ?? null
+      const responsibleProfileIds = (responsiblesResult.data ?? [])
+        .filter((item) => item.plan_id === row.id && activeProfileIds.has(String(item.profile_id)))
+        .map((item) => String(item.profile_id))
+        .sort()
+      return {
+        sourcePlanId: row.id,
+        targetPlanId,
+        name: row.name,
+        department: row.department,
+        type: row.plan_type,
+        budget: toNumber(row.budget),
+        isRedCross: row.is_red_cross,
+        requiresContract: row.requires_contract,
+        testItemCount: (testItemsResult.data ?? []).filter((item) => item.plan_id === row.id).length,
+        responsibleCount: responsibleProfileIds.length,
+        responsibleProfileIds,
+        sourceUpdatedAt: row.updated_at,
+        alreadyRolledOver: targetPlanId !== null,
+      }
+    }),
+  }
+}
+
+export async function getServiceProcurementDashboardSummary(fiscalYear: number): Promise<ServiceProcurementDashboardSummary> {
+  const [plansResult, pendingResult, openPoResult, rolloverResult, previousPlansResult] = await Promise.all([
+    supabaseAdmin.from('service_procurement_plans').select('id', { count: 'exact', head: true }).eq('fiscal_year', fiscalYear).eq('status', 'active'),
+    supabaseAdmin.from('service_purchase_requests').select('id', { count: 'exact', head: true }).eq('fiscal_year', fiscalYear).eq('status', 'pending'),
+    supabaseAdmin.from('service_purchase_requests').select('id', { count: 'exact', head: true }).eq('fiscal_year', fiscalYear).eq('status', 'confirmed').in('po_status', ['not_issued', 'open']),
+    supabaseAdmin.from('service_plan_rollover_runs').select('created_at').eq('target_fiscal_year', fiscalYear).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabaseAdmin.from('service_procurement_plans').select('id', { count: 'exact', head: true }).eq('fiscal_year', fiscalYear - 1),
+  ])
+  for (const result of [plansResult, pendingResult, openPoResult, rolloverResult, previousPlansResult]) {
+    if (result.error) throw new Error(`อ่านสรุปงานจ้างสำหรับ Dashboard ไม่สำเร็จ: ${result.error.message}`)
+  }
+  return {
+    fiscalYear,
+    activePlanCount: plansResult.count ?? 0,
+    pendingRequestCount: pendingResult.count ?? 0,
+    openPoCount: openPoResult.count ?? 0,
+    rolloverReviewed: Boolean(rolloverResult.data),
+    rolloverReviewedAt: rolloverResult.data?.created_at ? String(rolloverResult.data.created_at) : null,
+    previousYearPlanCount: previousPlansResult.count ?? 0,
+  }
 }
 
 async function findServicePurchaseRequestIdsBySearch(supabase: ReadClient, search: string): Promise<string[]> {

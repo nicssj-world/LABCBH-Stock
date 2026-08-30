@@ -104,6 +104,30 @@ export const servicePlanBudgetRevisionSchema = z
   })
   .strict()
 
+const servicePlanRolloverItemSchema = z.object({
+  sourcePlanId: z.string().uuid(),
+  budget: moneySchema.refine((value) => value > 0, 'วงเงินต้องมากกว่า 0'),
+  expectedUpdatedAt: z.string().datetime(),
+  responsibleProfileIds: z.array(z.string().uuid()).max(200),
+}).strict()
+
+export const servicePlanRolloverInputSchema = z.object({
+  sourceFiscalYear: z.number().int().min(2500).max(3000),
+  targetFiscalYear: z.number().int().min(2500).max(3000),
+  items: z.array(servicePlanRolloverItemSchema).max(500),
+}).strict().superRefine((value, ctx) => {
+  if (value.targetFiscalYear !== value.sourceFiscalYear + 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetFiscalYear'], message: 'ปีปลายทางต้องเป็นปีถัดจากปีต้นทาง' })
+  }
+  const sourceIds = new Set<string>()
+  value.items.forEach((item, index) => {
+    if (sourceIds.has(item.sourcePlanId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'sourcePlanId'], message: 'เลือกแผนต้นทางซ้ำกัน' })
+    }
+    sourceIds.add(item.sourcePlanId)
+  })
+})
+
 /** Retained only for compatibility with old service data; the new UI never writes it. */
 export const servicePlanHistoricalExpenseSchema = z
   .object({
@@ -229,6 +253,7 @@ export const serviceClosePoSchema = z.object({
 }).strict()
 
 export type ServicePlanInput = z.infer<typeof servicePlanInputSchema>
+export type ServicePlanRolloverInput = z.infer<typeof servicePlanRolloverInputSchema>
 export type ServicePurchaseRequestInput = z.infer<typeof servicePurchaseRequestInputSchema>
 export type ServiceLabExpenseInput = z.infer<typeof serviceLabExpenseInputSchema>
 

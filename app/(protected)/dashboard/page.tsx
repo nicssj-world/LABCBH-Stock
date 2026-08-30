@@ -16,6 +16,8 @@ import type { ExecutiveOverview } from '@/lib/dashboard/executive-types'
 import type { ExecutiveDashboard } from '@/lib/dashboard/types'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { fiscalYearFromDate } from '@/lib/service-procurement/domain'
+import { requireActor } from '@/lib/auth/actor'
+import { canCreateServicePurchaseRequest, canManageServicePlans } from '@/lib/service-procurement/authorization'
 
 const money = new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -58,7 +60,7 @@ function buildMixRows(typeMix: ExecutiveDashboard['typeMix']): MixRow[] {
   return [...top, { key: 'other', label: 'อื่นๆ', ...other, color: 'var(--lab-muted)' }]
 }
 
-function DashboardContent({ data }: { data: ExecutiveDashboard }) {
+function DashboardContent({ data, canManagePlans, canCreateRequest }: { data: ExecutiveDashboard; canManagePlans: boolean; canCreateRequest: boolean }) {
   const maximumPipeline = Math.max(...data.pipeline.map((stage) => stage.count), 1)
   const mixRows = buildMixRows(data.typeMix)
   const maxMixCount = Math.max(...mixRows.map((row) => row.count), 1)
@@ -87,6 +89,36 @@ function DashboardContent({ data }: { data: ExecutiveDashboard }) {
           lease={data.leaseContractValue}
           supply={data.supplyContractValue}
         />
+      </section>
+
+      <section className="bench-panel dashboard-service-panel" aria-labelledby="dashboard-service-title">
+        <div className="bench-panel__header">
+          <div>
+            <h2 id="dashboard-service-title">งานจ้างปีงบประมาณปัจจุบัน</h2>
+            <p>ปีงบประมาณ {data.serviceProcurement.fiscalYear} · แยกจากประวัติของปีก่อนอย่างชัดเจน</p>
+          </div>
+          <StatusChip tone={data.serviceProcurement.rolloverReviewed || data.serviceProcurement.previousYearPlanCount === 0 ? 'success' : 'attention'}>
+            {data.serviceProcurement.rolloverReviewed ? 'ตรวจทานแผนแล้ว' : data.serviceProcurement.previousYearPlanCount === 0 ? 'ไม่มีแผนปีก่อน' : 'รอตรวจทานแผน'}
+          </StatusChip>
+        </div>
+        <div className="dashboard-service-panel__body">
+          <dl className="dashboard-service-metrics">
+            <div><dt>แผนที่ใช้งานอยู่</dt><dd>{data.serviceProcurement.activePlanCount.toLocaleString('th-TH')}</dd></div>
+            <div><dt>PR รอยืนยัน</dt><dd>{data.serviceProcurement.pendingRequestCount.toLocaleString('th-TH')}</dd></div>
+            <div><dt>PO ยังไม่ปิด</dt><dd>{data.serviceProcurement.openPoCount.toLocaleString('th-TH')}</dd></div>
+          </dl>
+          {canManagePlans && !data.serviceProcurement.rolloverReviewed && data.serviceProcurement.previousYearPlanCount > 0 && (
+            <div className="dashboard-service-rollover" role="status">
+              <div><strong>ตรวจทานแผนงานจ้างปี {data.serviceProcurement.fiscalYear}</strong><p>เลือกใช้ต่อหรือไม่นำไปปีใหม่ พร้อมแก้วงเงินก่อนเปิดใช้งาน</p></div>
+              <Link className="lab-link-button lab-link-button--primary" href={`/service-procurement/plans?fiscalYear=${data.serviceProcurement.fiscalYear}&rollover=1`}>ตรวจทานแผน</Link>
+            </div>
+          )}
+          <nav className="dashboard-service-actions" aria-label="ทางลัดงานจ้าง">
+            <Link className="lab-link-button lab-link-button--secondary" href={`/service-procurement/plans?fiscalYear=${data.serviceProcurement.fiscalYear}`}>แผนงานจ้างปี {data.serviceProcurement.fiscalYear}</Link>
+            {canCreateRequest && <Link className="lab-link-button lab-link-button--primary" href="/service-procurement/purchase-requests/new">สร้าง PR งานจ้าง</Link>}
+            <Link className="text-link" href={`/service-procurement/purchase-requests?fiscalYear=${data.serviceProcurement.fiscalYear}`}>ดู PR/PO งานจ้างปีนี้</Link>
+          </nav>
+        </div>
       </section>
 
       <div className="dashboard-operations">
@@ -244,6 +276,7 @@ function ExecutiveFiscalYearFilter({ fiscalYear }: { fiscalYear: number }) {
 }
 
 export default async function DashboardPage({ searchParams }: { searchParams: DashboardSearchParams }) {
+  const actor = await requireActor()
   const params = await searchParams
   const view = firstParam(params.view) === 'executive' ? 'executive' : 'operations'
   const requestedFiscalYear = Number(firstParam(params.fiscalYear))
@@ -297,7 +330,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Da
           <p>{error}</p>
           <Link className="text-link" href={view === 'executive' ? `/dashboard?view=executive&fiscalYear=${fiscalYear}` : '/dashboard'}>ลองโหลดข้อมูลอีกครั้ง</Link>
         </section>
-      ) : view === 'executive' && executiveData ? <ExecutiveDashboardView data={executiveData} /> : operationsData ? <DashboardContent data={operationsData} /> : null}
+      ) : view === 'executive' && executiveData ? <ExecutiveDashboardView data={executiveData} /> : operationsData ? <DashboardContent data={operationsData} canManagePlans={canManageServicePlans(actor)} canCreateRequest={canCreateServicePurchaseRequest(actor)} /> : null}
     </div>
   )
 }

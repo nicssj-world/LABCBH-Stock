@@ -43,6 +43,7 @@ export interface ServicePurchaseRequestFormInitialValues {
 }
 
 interface Props {
+  fiscalYear?: number
   department: string
   departments: readonly string[]
   requesterName: string
@@ -52,7 +53,7 @@ interface Props {
   initialValues?: ServicePurchaseRequestFormInitialValues
 }
 
-export function ServicePurchaseRequestForm({ department, departments, requesterName, plans, candidates, mode = 'create', initialValues }: Props) {
+export function ServicePurchaseRequestForm({ fiscalYear, department, departments, requesterName, plans, candidates, mode = 'create', initialValues }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -212,7 +213,7 @@ export function ServicePurchaseRequestForm({ department, departments, requesterN
         <label className="field-row"><span>หมายเหตุ</span><textarea rows={3} maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} /></label>
       </div></section>
 
-      <section className="bench-panel" aria-labelledby="service-plan-title"><div className="bench-panel__header"><div><p className="section-kicker">PLAN REFERENCE</p><h2 id="service-plan-title">อ้างอิงแผนงานจ้าง</h2></div><p>จ้างตรวจทางห้องปฏิบัติการ</p></div><div className="form-grid">
+      <section className="bench-panel" aria-labelledby="service-plan-title"><div className="bench-panel__header"><div><p className="section-kicker">PLAN REFERENCE</p><h2 id="service-plan-title">อ้างอิงแผนงานจ้าง</h2></div><p>ปีงบประมาณ {initialValues?.fiscalYear ?? fiscalYear ?? 'ปัจจุบัน'}</p></div><div className="form-grid">
         <label className="field-row form-grid__wide"><span>แผนงานจ้าง <span className="field-required" aria-hidden="true">*</span></span><select required value={planId} onChange={(event) => choosePlan(event.target.value)}><option value="">เลือกแผนที่อ้างอิง</option>{availablePlans.map((row) => <option key={row.id} value={row.id}>ปีงบ {row.fiscalYear} · {row.name} · คงเหลือ {formatBaht(row.balance.available)}</option>)}</select></label>
         <label className="field-row"><span>{amountIsCalculated ? 'ยอดรวมรายการ (บาท)' : 'วงเงิน (บาท)'} <span className="field-required" aria-hidden="true">*</span></span><MoneyInput required min="0.01" step="0.01" readOnly={amountIsCalculated} value={amountInputValue} onValueChange={amountIsCalculated ? () => undefined : setAmount} aria-describedby="service-pr-amount-help" /><small id="service-pr-amount-help" className="field-help">{amountIsCalculated ? 'คำนวณอัตโนมัติจากราคาต่อหน่วย × จำนวน' : 'ระบบจะตรวจสอบวงเงินเมื่อบันทึก'}</small></label>
         <div className="service-po-date-range form-grid__wide"><label className="field-row"><span>วันที่จะใช้ PO นี้ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageStartDate} min={fiscalRange?.start} max={fiscalRange ? addIsoDays(fiscalRange.end, -1) : undefined} onChange={changeUsageStartDate} /></label><label className="field-row"><span>ถึงวันที่ <span className="field-required" aria-hidden="true">*</span></span><ThaiDateInput required value={usageEndDate} min={usageStartDate ? addIsoDays(usageStartDate, 1) : fiscalRange?.start} max={fiscalRange?.end} onChange={setUsageEndDate} /></label></div>

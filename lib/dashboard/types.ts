@@ -1,5 +1,6 @@
 import type { ProcurementStage } from '@/lib/contracts/stages'
 import type { ContractType } from '@/lib/contracts/types'
+import type { ServiceProcurementDashboardSummary } from '@/lib/service-procurement/types'
 
 export interface DashboardWatchItem {
   contractId: number
@@ -61,4 +62,5 @@ export interface ExecutiveDashboard {
   watchlistNextOffset: number | null
   leaseWatchlist: DashboardLeaseWatchItem[]
   contractCount: number
+  serviceProcurement: ServiceProcurementDashboardSummary
 }

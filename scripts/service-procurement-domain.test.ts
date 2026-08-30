@@ -29,6 +29,8 @@ import {
 
 assert.equal(fiscalYearFromDate('2025-09-30'), 2568)
 assert.equal(fiscalYearFromDate('2025-10-01'), 2569)
+assert.equal(fiscalYearFromDate('2026-09-30'), 2569)
+assert.equal(fiscalYearFromDate('2026-10-01'), 2570)
 assert.deepEqual(fiscalYearRange(2569), { start: '2025-10-01', end: '2026-09-30' })
 assert.equal(formatServiceRequestNumber(2569, 7), 'SPR-2569-0007')
 assert.equal(isDateRangeWithinFiscalYear('2026-09-01', '2026-09-01', 2569), false)

@@ -30,6 +30,7 @@ assert.match(route, /X-Service-Invoice-Summary-Number/, 'the route must return t
 assert.match(invoiceSummary, /invoiceSummaryNumber: string/, 'the PDF model must receive the assigned summary number')
 assert.match(invoiceSummary, /model\.invoiceSummaryNumber/, 'the assigned summary number must render in the top-right corner')
 assert.equal(normalizeInvoiceSummaryNumber('1/2569', 2569), '01/2569')
+assert.equal(normalizeInvoiceSummaryNumber('1/2570', 2570), '01/2570')
 assert.equal(normalizeInvoiceSummaryNumber('01/2568', 2569), null)
 assert.equal(normalizeInvoiceSummaryNumber('00/2569', 2569), null)
 

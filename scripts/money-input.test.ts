@@ -22,7 +22,9 @@ const priceInputFiles = [
   'components/pr/PurchaseRequestForm.tsx',
   'components/service-procurement/ServicePlanExpenseControls.tsx',
   'components/service-procurement/ServicePlanForm.tsx',
-  'components/service-procurement/ServicePurchaseRequestControls.tsx',
+  'components/service-procurement/ServicePurchaseRequestExpenseDialog.tsx',
+  'components/service-procurement/ServicePurchaseRequestExpenseEntry.tsx',
+  'components/service-procurement/ServicePurchaseRequestExpenseLog.tsx',
   'components/service-procurement/ServicePurchaseRequestForm.tsx',
 ]
 

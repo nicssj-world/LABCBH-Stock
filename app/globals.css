@@ -7636,6 +7636,76 @@ body {
 .service-plan-financial-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; border-top: 1px solid var(--lab-border); }
 .service-plan-financial-dialog__actions .lab-button { min-width: 112px; }
 
+/* Fiscal-year rollover keeps the review in one protected focus surface while
+   preserving the register's dense desktop scan and task-first mobile cards. */
+.service-plan-rollover-dialog { width: min(1180px, calc(100vw - 32px)); max-height: min(92dvh, 900px); padding: 0; overflow: hidden; }
+.service-plan-rollover-form { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: min(92dvh, 900px); }
+.service-plan-rollover-dialog__header { position: relative; z-index: 2; background: var(--lab-surface); }
+.service-plan-rollover-dialog__body { display: grid; gap: 16px; min-height: 0; padding: 18px 22px; overflow-y: auto; overscroll-behavior: contain; }
+.service-plan-rollover-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; overflow: hidden; background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-panel); }
+.service-plan-rollover-summary > div { min-width: 0; padding: 13px 15px; border-right: 1px solid var(--lab-border); }
+.service-plan-rollover-summary > div:last-child { border-right: 0; }
+.service-plan-rollover-summary dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.service-plan-rollover-summary dd { margin: 5px 0 0; overflow-wrap: anywhere; color: var(--lab-navy-strong); font: 600 15px/1.35 var(--font-mono); font-variant-numeric: tabular-nums; }
+.service-plan-rollover-summary dd.is-increase { color: var(--lab-amber); }
+.service-plan-rollover-summary dd.is-decrease { color: var(--lab-green); }
+.service-plan-rollover-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.service-plan-rollover-toolbar > p { max-width: 70ch; margin: 0; color: var(--lab-muted); font-size: 12px; line-height: 1.5; }
+.service-plan-rollover-toolbar > div { display: flex; flex: 0 0 auto; gap: 6px; }
+.service-plan-rollover-table-wrap { overflow-x: auto; border: 1px solid var(--lab-border); border-radius: var(--radius-panel); }
+.service-plan-rollover-table { min-width: 940px; }
+.service-plan-rollover-table td { vertical-align: top; }
+.service-plan-rollover-table tbody tr.is-selected { background: color-mix(in srgb, var(--lab-primary) 4%, var(--lab-surface)); }
+.service-plan-rollover-table td > strong,
+.service-plan-rollover-table td > small { display: block; }
+.service-plan-rollover-table td > small { max-width: 50ch; margin-top: 4px; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }
+.service-plan-rollover-table .money-input { min-width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
+.service-plan-rollover-table .form-error { max-width: 190px; margin: 5px 0 0; text-align: left; white-space: normal; }
+.service-plan-rollover-check { display: grid; place-items: center; width: 44px; height: 44px; cursor: pointer; }
+.service-plan-rollover-check input,
+.service-plan-rollover-card__select input { width: 20px; height: 20px; accent-color: var(--lab-primary); }
+.service-plan-rollover-cards { display: none; margin: 0; padding: 0; list-style: none; }
+.service-plan-rollover-card { display: grid; gap: 14px; padding: 16px; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: var(--radius-panel); }
+.service-plan-rollover-card.is-selected { border-color: var(--lab-primary); background: color-mix(in srgb, var(--lab-primary) 4%, var(--lab-surface)); }
+.service-plan-rollover-card__select { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; font-weight: 700; }
+.service-plan-rollover-card > div > strong,
+.service-plan-rollover-card > div > small { display: block; }
+.service-plan-rollover-card > div > small { margin-top: 4px; color: var(--lab-muted); font-size: 11px; line-height: 1.5; }
+.service-plan-rollover-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; overflow: hidden; border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.service-plan-rollover-card dl > div { min-width: 0; padding: 11px 12px; border-right: 1px solid var(--lab-border); }
+.service-plan-rollover-card dl > div:last-child { border-right: 0; }
+.service-plan-rollover-card dt { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
+.service-plan-rollover-card dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.service-plan-rollover-error { margin: 0; padding: 11px 13px; color: var(--lab-red); background: var(--lab-red-soft); border: 1px solid color-mix(in srgb, var(--lab-red) 25%, var(--lab-border)); border-radius: var(--radius-control); font-size: 12px; line-height: 1.5; }
+.service-plan-rollover-dialog__footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 22px 18px; background: var(--lab-surface); border-top: 1px solid var(--lab-border); }
+.service-plan-rollover-dialog__footer > p { margin: 0; color: var(--lab-muted); font-size: 12px; }
+.service-plan-rollover-dialog__footer > div { display: flex; flex: 0 0 auto; gap: 10px; }
+.service-plan-rollover-dialog__footer .lab-button { min-width: 124px; }
+
+.dashboard-service-panel { overflow: hidden; }
+.dashboard-service-panel__body { display: grid; gap: 16px; padding: 18px 20px 20px; }
+.dashboard-service-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; overflow: hidden; border: 1px solid var(--lab-border); border-radius: var(--radius-panel); }
+.dashboard-service-metrics > div { min-width: 0; padding: 14px 16px; border-right: 1px solid var(--lab-border); }
+.dashboard-service-metrics > div:last-child { border-right: 0; }
+.dashboard-service-metrics dt { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.dashboard-service-metrics dd { margin: 5px 0 0; color: var(--lab-navy-strong); font: 600 24px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.dashboard-service-rollover { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 16px; background: var(--lab-amber-soft); border: 1px solid color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border)); border-radius: var(--radius-panel); }
+.dashboard-service-rollover strong { color: var(--lab-ink); font-size: 13px; }
+.dashboard-service-rollover p { margin: 3px 0 0; color: var(--lab-muted); font-size: 11px; line-height: 1.45; }
+.dashboard-service-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dashboard-service-actions .text-link { margin-left: auto; }
+.executive-kpi-card__actions,
+.executive-category-row__links { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.executive-kpi-card__actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.executive-kpi-card__actions a,
+.executive-category-row__links a { color: inherit; font-size: 11px; font-weight: 700; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.executive-category-row__links { margin-top: 7px; color: var(--lab-primary); }
+.executive-service-source-panel { overflow: hidden; }
+.executive-service-source-panel .executive-table-wrap { max-height: 420px; overflow: auto; }
+.executive-service-source-table { min-width: 780px; }
+.executive-service-source-table th,
+.executive-service-source-table td { vertical-align: top; }
+
 @media (max-width: 980px) {
   .service-plan-overview__hero { grid-template-columns: 1fr; }
   .service-plan-detail-grid { grid-template-columns: 1fr; }
@@ -7652,6 +7722,27 @@ body {
   .service-plan-overview__stats > div:nth-child(2) { border-right: 0; }
   .service-plan-overview__stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--lab-border); }
   .service-plan-action-grid { padding-inline: 16px; }
+  .service-plan-rollover-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .service-plan-rollover-form { max-height: calc(100dvh - 16px); }
+  .service-plan-rollover-dialog__body { padding: 16px; }
+  .service-plan-rollover-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-plan-rollover-summary > div:nth-child(2) { border-right: 0; }
+  .service-plan-rollover-summary > div:nth-child(-n+2) { border-bottom: 1px solid var(--lab-border); }
+  .service-plan-rollover-toolbar { align-items: stretch; flex-direction: column; }
+  .service-plan-rollover-toolbar > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-plan-rollover-table-wrap { display: none; }
+  .service-plan-rollover-cards { display: grid; gap: 12px; }
+  .service-plan-rollover-dialog__footer { align-items: stretch; flex-direction: column; padding: 12px 16px 16px; }
+  .service-plan-rollover-dialog__footer > div { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+  .service-plan-rollover-dialog__footer .lab-button { width: 100%; min-width: 0; }
+  .dashboard-service-metrics { grid-template-columns: 1fr; }
+  .dashboard-service-metrics > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .dashboard-service-metrics > div:last-child { border-bottom: 0; }
+  .dashboard-service-rollover { align-items: stretch; flex-direction: column; }
+  .dashboard-service-rollover .lab-link-button { width: 100%; }
+  .dashboard-service-actions { display: grid; grid-template-columns: 1fr; }
+  .dashboard-service-actions .lab-link-button { width: 100%; }
+  .dashboard-service-actions .text-link { margin-left: 0; padding: 10px 0; }
   .service-plan-actions-panel .service-plan-danger-zone { margin-inline: 16px; }
   .service-plan-danger-panel .service-plan-danger-zone { margin-inline: 16px; }
 }
@@ -7672,6 +7763,13 @@ body {
   .service-plan-empty-state { align-items: flex-start; flex-direction: column; padding: 22px 18px; }
   .service-plan-action-grid { grid-template-columns: 1fr; padding: 14px 16px 16px; }
   .service-plan-action-grid--single { grid-template-columns: 1fr; }
+  .service-plan-rollover-summary { grid-template-columns: 1fr; }
+  .service-plan-rollover-summary > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .service-plan-rollover-summary > div:last-child { border-bottom: 0; }
+  .service-plan-rollover-card dl { grid-template-columns: 1fr; }
+  .service-plan-rollover-card dl > div { border-right: 0; border-bottom: 1px solid var(--lab-border); }
+  .service-plan-rollover-card dl > div:last-child { border-bottom: 0; }
+  .service-plan-rollover-dialog__footer > div { grid-template-columns: 1fr; }
   .service-plan-actions-panel .service-plan-danger-zone { align-items: stretch; flex-direction: column; margin-inline: 16px; }
   .service-plan-danger-panel .service-plan-danger-zone { align-items: stretch; flex-direction: column; margin-inline: 16px; }
   .service-plan-danger-zone .lab-button { width: 100%; }

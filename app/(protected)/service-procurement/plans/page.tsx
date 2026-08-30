@@ -4,10 +4,11 @@ import { DEPARTMENTS } from '@/lib/organization/departments'
 import { bangkokIsoDate } from '@/lib/date/thai'
 import { fiscalYearFromDate } from '@/lib/service-procurement/domain'
 import { SERVICE_PLAN_TYPES, SERVICE_PLAN_TYPE_LABELS } from '@/lib/service-procurement/schema'
-import { listServicePlans } from '@/lib/service-procurement/queries'
+import { getServicePlanRolloverReview, listServicePlans } from '@/lib/service-procurement/queries'
 import { canManageServicePlans } from '@/lib/service-procurement/authorization'
 import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { ServicePlanTable } from '@/components/service-procurement/ServicePlanTable'
+import { ServicePlanRolloverDialog } from '@/components/service-procurement/ServicePlanRolloverDialog'
 
 interface Props { searchParams: Promise<Record<string, string | string[] | undefined>> }
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value
@@ -22,7 +23,15 @@ export default async function ServicePlansPage({ searchParams }: Props) {
   const department = first(params.department) ?? ''
   const type = SERVICE_PLAN_TYPES.find((value) => value === first(params.type))
   const legacyNotice = first(params.notice) === 'legacy-out-lab'
-  const plans = await listServicePlans({ fiscalYear, department: department || undefined, type, search })
+  const rolloverSuccess = first(params.notice) === 'rollover-success'
+  const createdCount = Math.max(0, Number(first(params.created)) || 0)
+  const mayManagePlans = canManageServicePlans(actor)
+  const [plans, rolloverReview] = await Promise.all([
+    listServicePlans({ fiscalYear, department: department || undefined, type, search }),
+    mayManagePlans && fiscalYear === currentFiscalYear
+      ? getServicePlanRolloverReview(currentFiscalYear)
+      : Promise.resolve(null),
+  ])
   const showingHistory = fiscalYear !== currentFiscalYear
 
   return (
@@ -30,10 +39,12 @@ export default async function ServicePlansPage({ searchParams }: Props) {
       <header className="page-heading page-heading--actions">
         <div><p className="section-kicker">SERVICE PROCUREMENT · PLANS</p><h1>แผนงานจ้าง</h1><p>แสดงวงเงิน รายการส่งตรวจ และ PR/PO ที่อ้างอิง ยอดใช้จริงจะเกิดเมื่อปิด PO</p></div>
         <div className="page-heading__actions">
-          {canManageServicePlans(actor) && <Link className="lab-link-button lab-link-button--primary" href="/service-procurement/plans/new">เพิ่มแผนงานจ้าง</Link>}
+          {rolloverReview && <ServicePlanRolloverDialog review={rolloverReview} autoOpen={first(params.rollover) === '1'} />}
+          {mayManagePlans && <Link className={`lab-link-button ${rolloverReview ? 'lab-link-button--secondary' : 'lab-link-button--primary'}`} href="/service-procurement/plans/new">เพิ่มแผนงานจ้าง</Link>}
         </div>
       </header>
       {legacyNotice && <p className="service-budget-callout" role="status">โมดูลเดิมถูกแทนที่แล้ว ข้อมูล Out Lab เดิมไม่ถูกใช้งาน โปรดดำเนินการต่อใน “งานจ้าง”</p>}
+      {rolloverSuccess && <p className="service-budget-callout" role="status">ตรวจทานแผนปี {currentFiscalYear} เรียบร้อยแล้ว{createdCount > 0 ? ` สร้างใหม่ ${createdCount.toLocaleString('th-TH')} แผน` : ' โดยยืนยันว่าไม่มีแผนที่จะคัดลอกในรอบนี้'}</p>}
       <section className="bench-panel service-register-toolbar">
         <AutoFilterBench
           ariaLabel="ตัวกรองแผนงานจ้าง"

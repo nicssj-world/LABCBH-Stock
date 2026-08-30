@@ -15,6 +15,7 @@ import {
   servicePlanExpenseAdjustmentSchema,
   servicePlanHistoricalExpenseSchema,
   servicePlanInputSchema,
+  servicePlanRolloverInputSchema,
   servicePlanUpdateSchema,
   servicePurchaseRequestInputSchema,
   servicePurchaseRequestHeaderSchema,
@@ -52,10 +53,12 @@ function unwrap<T>(operation: string, result: { data: T | null; error: ServiceAc
 
 function revalidatePlan(planId?: string | null) {
   revalidatePath('/service-procurement/plans')
+  revalidatePath('/dashboard')
   if (planId) revalidatePath(`/service-procurement/plans/${planId}`)
 }
 function revalidateRequest(requestId?: string | null) {
   revalidatePath('/service-procurement/purchase-requests')
+  revalidatePath('/dashboard')
   if (requestId) revalidatePath(`/service-procurement/purchase-requests/${requestId}`)
 }
 
@@ -191,6 +194,21 @@ export async function createServicePurchaseRequest(formData: FormData) {
     if (rollback.error) await enqueueStorageCleanupJobBestEffort({ storageBackend: 'supabase_storage', bucketName: SERVICE_FILE_BUCKET, storageKey: torUpload.path, jobKind: 'storage_upload_rollback' })
     throw error
   }
+}
+
+export async function rolloverServicePlans(input: unknown) {
+  const actor = await requireActor(); assertServicePlanManager(actor)
+  const parsed = servicePlanRolloverInputSchema.parse(input)
+  const result = await supabaseAdmin.rpc('rollover_service_procurement_plans', {
+    p_actor_id: actor.id,
+    p_source_fiscal_year: parsed.sourceFiscalYear,
+    p_target_fiscal_year: parsed.targetFiscalYear,
+    p_items: parsed.items,
+  })
+  const rollover = unwrap('คัดลอกแผนงานจ้างไปปีงบประมาณใหม่', result)
+  revalidatePlan()
+  revalidateRequest()
+  return rollover
 }
 
 export async function updateServicePurchaseRequest(requestId: string, formData: FormData) {
