@@ -32,7 +32,16 @@ import {
   serviceFilePath,
   validateServiceAttachment,
 } from './files'
-import { DUPLICATE_SERVICE_INVOICE_MESSAGE, isDuplicateServiceInvoiceError } from './invoice'
+import {
+  CREDIT_NOTE_AMOUNT_EXCEEDS_SOURCE_MESSAGE,
+  CREDIT_NOTE_NUMBER_REQUIRED_MESSAGE,
+  CREDIT_NOTE_ONLY_RED_CROSS_MESSAGE,
+  CREDIT_NOTE_SOURCE_INVALID_MESSAGE,
+  DUPLICATE_SERVICE_INVOICE_MESSAGE,
+  INVOICE_BELOW_ACTIVE_CREDITS_MESSAGE,
+  INVOICE_HAS_ACTIVE_CREDIT_NOTES_MESSAGE,
+  isDuplicateServiceInvoiceError,
+} from './invoice'
 import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 
 type ServiceActionError = {
@@ -45,6 +54,13 @@ type ServiceActionError = {
 function unwrap<T>(operation: string, result: { data: T | null; error: ServiceActionError | null }): T {
   if (result.error) {
     if (isDuplicateServiceInvoiceError(result.error)) throw new Error(DUPLICATE_SERVICE_INVOICE_MESSAGE)
+    const message = result.error.message ?? ''
+    if (message.includes('credit note number is required')) throw new Error(CREDIT_NOTE_NUMBER_REQUIRED_MESSAGE)
+    if (message.includes('credit note source invoice not found or inactive')) throw new Error(CREDIT_NOTE_SOURCE_INVALID_MESSAGE)
+    if (message.includes('credit note exceeds remaining source invoice amount')) throw new Error(CREDIT_NOTE_AMOUNT_EXCEEDS_SOURCE_MESSAGE)
+    if (message.includes('credit notes are only available for Red Cross service plans')) throw new Error(CREDIT_NOTE_ONLY_RED_CROSS_MESSAGE)
+    if (message.includes('invoice cannot be reduced below active credit notes')) throw new Error(INVOICE_BELOW_ACTIVE_CREDITS_MESSAGE)
+    if (message.includes('invoice with active credit notes cannot be cancelled')) throw new Error(INVOICE_HAS_ACTIVE_CREDIT_NOTES_MESSAGE)
     throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
   }
   if (result.data === null) throw new Error(`${operation}ไม่สำเร็จ: ไม่พบผลลัพธ์`)
@@ -346,7 +362,7 @@ export async function cancelServicePo(requestId: string, reason: string) {
 
 export async function recordServiceLabExpense(input: unknown) {
   const actor = await requireActor(); const parsed = serviceLabExpenseInputSchema.parse(input)
-  const result = await supabaseAdmin.rpc('record_service_purchase_request_expense', { p_actor_id: actor.id, p_request_id: parsed.requestId, p_expense_date: parsed.expenseDate, p_amount: parsed.amount, p_invoice_number: parsed.invoiceNumber, p_note: parsed.note })
+  const result = await supabaseAdmin.rpc('record_service_purchase_request_expense', { p_actor_id: actor.id, p_request_id: parsed.requestId, p_expense_date: parsed.expenseDate, p_amount: parsed.amount, p_invoice_number: parsed.invoiceNumber, p_note: parsed.note, p_document_kind: parsed.documentType, p_source_expense_id: parsed.sourceExpenseId })
   const expense = unwrap('บันทึกค่าใช้จ่ายงานจ้าง', result)
   revalidateRequest(parsed.requestId)
   // Contract-backed PRs close the PO and post the plan ledger inside the RPC.

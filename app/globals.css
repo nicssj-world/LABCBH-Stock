@@ -2144,6 +2144,14 @@ textarea {
   height: 18px;
   flex: 0 0 auto;
 }
+.service-expense-cancel-hint {
+  display: block;
+  max-width: 150px;
+  margin-top: 5px;
+  color: var(--lab-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
 
 .service-expense-actions__edit {
   color: var(--lab-navy);
@@ -7468,6 +7476,204 @@ body {
 .service-expense-dialog__history-amount > strong { color: var(--lab-navy-strong); font: 600 15px/1.35 var(--font-mono); white-space: nowrap; }
 .service-expense-dialog__history-empty { margin: 0; padding: 18px 16px; color: var(--lab-muted); font-size: 12px; }
 
+/* Expense documents share one input path in both the detail form and the
+ * quick-entry dialog. The toggle progressively reveals the source invoice,
+ * while the number field remains friendly to keyboard-wedge scanners. */
+.service-expense-document-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 14px;
+  padding: 11px 13px;
+  color: var(--lab-navy-strong);
+  background: var(--lab-primary-soft);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--radius-control);
+}
+.form-grid .service-expense-document-toggle__control {
+  display: inline-flex;
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  width: fit-content;
+  color: var(--lab-navy-strong);
+  font-weight: 800;
+}
+.service-expense-document-toggle__control input {
+  width: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--lab-primary);
+}
+.service-expense-document-toggle > small,
+.service-expense-document-source > small,
+.service-expense-document-number > small {
+  color: var(--lab-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.service-expense-document-source > .field-error,
+.service-expense-document-number > .field-error {
+  color: var(--lab-red);
+  font-weight: 600;
+}
+.service-expense-document-source,
+.service-expense-document-number {
+  min-width: 0;
+}
+.service-expense-document-number__control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.service-expense-document-number__control > input {
+  min-width: 0;
+}
+.service-expense-document-number__scan {
+  width: 52px;
+  min-width: 52px;
+  min-height: 46px;
+  padding: 8px;
+}
+.service-expense-document-number__scan svg {
+  width: 20px;
+  height: 20px;
+}
+.service-expense-document-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 7px;
+  color: var(--lab-navy-strong);
+  background: var(--lab-primary-soft);
+  border: 1px solid var(--lab-border-strong);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.service-expense-document-badge--credit {
+  color: var(--lab-red);
+  background: var(--lab-red-soft);
+  border-color: color-mix(in srgb, var(--lab-red) 32%, var(--lab-border));
+}
+.service-expense-dialog__history-item--credit,
+.service-expense-row--credit td {
+  background: color-mix(in srgb, var(--lab-red-soft) 55%, var(--lab-surface));
+}
+.service-expense-dialog__history-item--child {
+  margin-inline-start: 16px;
+  border-inline-start: 2px solid color-mix(in srgb, var(--lab-red) 36%, var(--lab-border));
+}
+.service-expense-dialog__history-item--child .service-expense-dialog__history-main {
+  padding-inline-start: 8px;
+}
+.service-expense-row--child td:first-child {
+  position: relative;
+  padding-inline-start: 30px;
+}
+.service-expense-row--child td:first-child::before {
+  position: absolute;
+  inset-inline-start: 16px;
+  top: 0;
+  width: 9px;
+  height: 20px;
+  border-inline-start: 1px solid color-mix(in srgb, var(--lab-red) 42%, var(--lab-border));
+  border-block-end: 1px solid color-mix(in srgb, var(--lab-red) 42%, var(--lab-border));
+  border-end-start-radius: 6px;
+  content: '';
+}
+.service-expense-row--child td:nth-child(2) {
+  padding-inline-start: 22px;
+}
+.service-expense-dialog__history-item--credit .service-expense-dialog__history-value--credit,
+.service-expense-value--credit {
+  color: var(--lab-red) !important;
+}
+.service-expense-dialog__history-reference,
+.service-expense-source-reference {
+  display: block;
+  margin-top: 4px;
+  color: var(--lab-red);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.service-expense-document-number-display,
+.service-expense-edit-document-type {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.service-expense-edit-document-type {
+  color: var(--lab-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.service-barcode-scanner {
+  width: min(560px, calc(100vw - 32px));
+}
+.service-barcode-scanner__body {
+  display: grid;
+  gap: 14px;
+  max-height: calc(min(86dvh, 760px) - 92px);
+}
+.service-barcode-scanner__viewport {
+  position: relative;
+  display: grid;
+  min-height: 280px;
+  overflow: hidden;
+  place-items: center;
+  background: #101820;
+  border: 1px solid var(--lab-border-strong);
+  border-radius: 12px;
+}
+.service-barcode-scanner__viewport video {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  object-fit: cover;
+}
+.service-barcode-scanner__target {
+  position: absolute;
+  width: min(78%, 360px);
+  height: 110px;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgb(5 11 18 / 32%);
+}
+.service-barcode-scanner__target::before,
+.service-barcode-scanner__target::after {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  content: '';
+  border-color: var(--lab-blue);
+  border-style: solid;
+}
+.service-barcode-scanner__target::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 7px 0 0; }
+.service-barcode-scanner__target::after { right: -2px; bottom: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 7px; }
+.service-barcode-scanner__hint {
+  margin: 0;
+  color: var(--lab-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.service-barcode-scanner__retry {
+  justify-self: start;
+}
+.service-barcode-scanner__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--lab-border);
+}
+
 @media (max-width: 800px) {
   .service-register-toolbar, .service-po-upload { display: grid; align-items: stretch; }
   .service-register-list__header-actions { width: 100%; justify-content: space-between; }
@@ -7506,6 +7712,10 @@ body {
   .service-expense-dialog__history-item { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding-inline: 14px; }
   .service-expense-dialog__history-amount { min-width: 104px; }
   .service-expense-dialog__history-amount > strong { font-size: 13px; }
+  .service-expense-document-toggle { grid-template-columns: 1fr; gap: 5px; }
+  .service-expense-document-number__scan { width: 50px; min-width: 50px; }
+  .service-barcode-scanner__viewport,
+  .service-barcode-scanner__viewport video { min-height: 240px; }
   .service-expense-dialog__actions { display: grid; grid-template-columns: 1fr; }
   .service-expense-dialog__actions .lab-button { width: 100%; }
   .service-invoice-number-dialog__actions { display: grid; grid-template-columns: 1fr; }

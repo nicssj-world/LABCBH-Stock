@@ -18,10 +18,11 @@ const redCrossRequest: ServiceInvoiceSummaryInput = {
   usageEndDate: '2026-06-15',
   items: [{ unit: 'ราย', unitPrice: 310 }],
   usageEvents: [
-    { kind: 'lab_expense', status: 'active', expenseDate: '2026-06-02', amount: 310, invoiceNumber: 'I-002', createdAt: '2026-06-02T10:00:00+07:00' },
-    { kind: 'lab_expense', status: 'cancelled', expenseDate: '2026-06-03', amount: 620, invoiceNumber: 'I-CANCELLED', createdAt: '2026-06-03T10:00:00+07:00' },
-    { kind: 'annual_usage', status: 'active', expenseDate: '2026-06-04', amount: 999, invoiceNumber: null, createdAt: '2026-06-04T10:00:00+07:00' },
-    { kind: 'lab_expense', status: 'active', expenseDate: '2026-06-01', amount: 20150, invoiceNumber: 'I-001', createdAt: '2026-06-01T10:00:00+07:00' },
+    { id: 'expense-2', kind: 'lab_expense', status: 'active', expenseDate: '2026-06-02', amount: 310, invoiceNumber: 'I-002', documentType: 'invoice', sourceExpenseId: null, createdAt: '2026-06-02T10:00:00+07:00' },
+    { id: 'expense-cancelled', kind: 'lab_expense', status: 'cancelled', expenseDate: '2026-06-03', amount: 620, invoiceNumber: 'I-CANCELLED', documentType: 'invoice', sourceExpenseId: null, createdAt: '2026-06-03T10:00:00+07:00' },
+    { id: 'annual-1', kind: 'annual_usage', status: 'active', expenseDate: '2026-06-04', amount: 999, invoiceNumber: null, documentType: 'invoice', sourceExpenseId: null, createdAt: '2026-06-04T10:00:00+07:00' },
+    { id: 'expense-1', kind: 'lab_expense', status: 'active', expenseDate: '2026-06-01', amount: 20150, invoiceNumber: 'I-001', documentType: 'invoice', sourceExpenseId: null, createdAt: '2026-06-01T10:00:00+07:00' },
+    { id: 'credit-1', kind: 'lab_expense', status: 'active', expenseDate: '2026-06-10', amount: 310, invoiceNumber: 'CN-001', documentType: 'credit_note', sourceExpenseId: 'expense-1', createdAt: '2026-06-10T11:00:00+07:00' },
   ],
 }
 
@@ -37,19 +38,22 @@ assert.deepEqual(model.rows.map((row) => ({
   people: row.people,
 })), [
   { sequence: 1, invoiceNumber: 'I-001', amount: 20150, people: 65 },
+  { sequence: null, invoiceNumber: 'CN-001', amount: -310, people: -1 },
   { sequence: 2, invoiceNumber: 'I-002', amount: 310, people: 1 },
 ])
-assert.equal(model.totalAmount, 20460)
-assert.equal(model.totalPeople, 66)
+assert.equal(model.totalAmount, 20150)
+assert.equal(model.totalPeople, 65)
 assert.equal(model.rows[0]?.poNumber, 'จ.1335/2569')
 assert.equal(model.rows[1]?.poNumber, null)
+assert.equal(model.rows[1]?.sourceInvoiceNumber, 'I-001')
+assert.equal(model.rows[1]?.documentType, 'credit_note')
 
 const noPeopleUnit = buildServiceInvoiceSummaryModel({
   ...redCrossRequest,
   items: [{ unit: 'ชุด', unitPrice: 310 }],
 })
 assert.equal(noPeopleUnit.peopleUnitPrice, null)
-assert.deepEqual(noPeopleUnit.rows.map((row) => row.people), [null, null])
+assert.deepEqual(noPeopleUnit.rows.map((row) => row.people), [null, null, null])
 assert.throws(
   () => buildServiceInvoiceSummaryModel({ ...redCrossRequest, isRedCross: false }),
   /เฉพาะ PR งานจ้างที่ติด tag สภากาชาดไทย/,
@@ -58,11 +62,14 @@ assert.throws(
 const thirtyFiveRowRequest: ServiceInvoiceSummaryInput = {
   ...redCrossRequest,
   usageEvents: Array.from({ length: 35 }, (_, index) => ({
+    id: `expense-30-${index + 1}`,
     kind: 'lab_expense' as const,
     status: 'active' as const,
     expenseDate: '2026-06-01',
     amount: 100 + index,
     invoiceNumber: `I-30-${String(index + 1).padStart(2, '0')}`,
+    documentType: 'invoice' as const,
+    sourceExpenseId: null,
     createdAt: `2026-06-01T${String(index % 24).padStart(2, '0')}:00:00+07:00`,
   })),
 }

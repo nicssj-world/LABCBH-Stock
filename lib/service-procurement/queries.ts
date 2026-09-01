@@ -15,7 +15,7 @@ import type {
   ServicePurchaseRequestRecord,
   ServiceUsageEventRecord,
 } from './types'
-import { isServiceRequestDisplayStatus, planBalance, serviceRequestMatchesDisplayStatus } from './domain'
+import { isServiceRequestDisplayStatus, planBalance, serviceRequestMatchesDisplayStatus, serviceUsageNetTotal } from './domain'
 import { fiscalYearFromDate } from './domain'
 
 const numeric = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
@@ -179,7 +179,7 @@ async function readRequestSupport(supabase: ReadClient, requestIds: string[], pl
   const [items, events, expenses, attachments, committees, poEvents, documents] = await Promise.all([
     supabase.from('service_purchase_request_items').select('*').in('purchase_request_id', requestIds).order('line_number'),
     supabase.from('service_purchase_request_usage_events').select('id,purchase_request_id,event_kind,expense_date,amount,note,created_at,profiles:actor_id(name)').in('purchase_request_id', requestIds).order('expense_date', { ascending: false }),
-    supabase.from('service_purchase_request_expenses').select('id,purchase_request_id,expense_date,amount,invoice_number,note,status,created_at,profiles:created_by(name)').in('purchase_request_id', requestIds).order('expense_date', { ascending: false }),
+    supabase.from('service_purchase_request_expenses').select('id,purchase_request_id,expense_date,amount,invoice_number,note,status,document_kind,source_expense_id,created_at,profiles:created_by(name)').in('purchase_request_id', requestIds).order('expense_date', { ascending: false }),
     supabase.from('service_purchase_request_attachments').select('id,purchase_request_id,attachment_kind,slot,file_name,mime_type,size_bytes,storage_key,uploaded_at').in('purchase_request_id', requestIds).order('slot'),
     supabase.from('service_purchase_request_committees').select('id,purchase_request_id,committee_kind,seat,profile_id,name_snapshot,position_snapshot').in('purchase_request_id', requestIds).order('committee_kind').order('seat'),
     supabase.from('service_purchase_request_po_events').select('id,purchase_request_id,event_kind,po_number,po_file_path,reason,created_at,profiles:actor_id(name)').in('purchase_request_id', requestIds).order('created_at', { ascending: false }),
@@ -209,16 +209,17 @@ function mapRequest(row: z.infer<typeof requestRowSchema>, support: ServiceReque
   }))
   const items = snapshotItems.length > 0 ? snapshotItems : legacyItems
   const oldEvents: ServiceUsageEventRecord[] = support.events.filter((entry) => entry.purchase_request_id === row.id).map((entry) => ({
-    id: String(entry.id), kind: entry.event_kind as ServiceUsageEventRecord['kind'], expenseDate: String(entry.expense_date), amount: toNumber(entry.amount), invoiceNumber: null,
+    id: String(entry.id), kind: entry.event_kind as ServiceUsageEventRecord['kind'], expenseDate: String(entry.expense_date), amount: toNumber(entry.amount), invoiceNumber: null, documentType: 'invoice', sourceExpenseId: null,
     note: (entry.note as string | null) ?? null, status: 'active', referenceEventId: null, actorName: (entry.profiles as { name?: string | null } | null)?.name ?? null, createdAt: String(entry.created_at),
   }))
   const expenseEvents: ServiceUsageEventRecord[] = (support.expenses ?? []).filter((entry) => entry.purchase_request_id === row.id).map((entry) => ({
     id: String(entry.id), kind: 'lab_expense', expenseDate: String(entry.expense_date), amount: toNumber(entry.amount), invoiceNumber: (entry.invoice_number as string | null) ?? null,
+    documentType: entry.document_kind === 'credit_note' ? 'credit_note' : 'invoice', sourceExpenseId: (entry.source_expense_id as string | null) ?? null,
     note: (entry.note as string | null) ?? null, status: (entry.status as 'active' | 'cancelled') ?? 'active', referenceEventId: null,
     actorName: (entry.profiles as { name?: string | null } | null)?.name ?? null, createdAt: String(entry.created_at),
   }))
   const events = [...expenseEvents, ...oldEvents]
-  const actualAmount = events.filter((entry) => entry.status === 'active' && ['annual_usage', 'lab_expense', 'expense_adjustment', 'expense_reversal'].includes(entry.kind)).reduce((sum, entry) => sum + entry.amount, 0)
+  const actualAmount = serviceUsageNetTotal(events)
   const usedQuantity = items.reduce((sum, entry) => sum + entry.usedQuantity, 0)
   const requestedQuantity = items.reduce((sum, entry) => sum + entry.requestedQuantity, 0)
   const fulfillment = items.length === 0 ? (expenseEvents.some((entry) => entry.status === 'active') ? 'complete' : 'not_started') : usedQuantity <= 0 ? 'not_started' : usedQuantity >= requestedQuantity ? 'complete' : 'partial'

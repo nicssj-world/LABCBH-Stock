@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {
   deriveServiceChecklist,
+  serviceLabExpenseInputSchema,
   servicePlanHistoricalExpenseSchema,
   servicePurchaseRequestInputSchema,
   servicePlanInputSchema,
@@ -19,6 +20,10 @@ import {
   servicePlanAverageMonthly,
   servicePlanExpenseMonthOptions,
   servicePlanMonthlySeries,
+  serviceCreditNoteSourceOptions,
+  serviceExpenseEventsForDisplay,
+  serviceExpenseNetTotal,
+  serviceUsageNetTotal,
 } from '@/lib/service-procurement/domain'
 import {
   DUPLICATE_SERVICE_INVOICE_MESSAGE,
@@ -68,6 +73,41 @@ assert.equal(hasDuplicateServiceInvoice(invoiceEvents, 'INV-004'), false)
 assert.equal(isDuplicateServiceInvoiceError({ code: '23505', message: 'duplicate key violates service_purchase_request_expenses_invoice_unique' }), true)
 assert.equal(isDuplicateServiceInvoiceError({ code: '23505', message: 'duplicate key violates another_constraint' }), false)
 assert.equal(DUPLICATE_SERVICE_INVOICE_MESSAGE, 'เลข Invoice นี้ถูกใช้แล้วในใบ PR นี้ กรุณาตรวจสอบเลข Invoice')
+
+const expenseLedgerEvents = [
+  { id: 'invoice-1', kind: 'lab_expense' as const, status: 'active' as const, amount: 1000, invoiceNumber: 'INV-001', documentType: 'invoice' as const, sourceExpenseId: null },
+  { id: 'credit-1', kind: 'lab_expense' as const, status: 'active' as const, amount: 250, invoiceNumber: 'CN-001', documentType: 'credit_note' as const, sourceExpenseId: 'invoice-1' },
+  { id: 'credit-cancelled', kind: 'lab_expense' as const, status: 'cancelled' as const, amount: 100, invoiceNumber: 'CN-CANCELLED', documentType: 'credit_note' as const, sourceExpenseId: 'invoice-1' },
+  { id: 'invoice-2', kind: 'lab_expense' as const, status: 'active' as const, amount: 200, invoiceNumber: 'INV-002', documentType: 'invoice' as const, sourceExpenseId: null },
+]
+assert.equal(serviceExpenseNetTotal(expenseLedgerEvents), 950)
+assert.equal(serviceUsageNetTotal([
+  ...expenseLedgerEvents.map(({ kind, status, amount, documentType }) => ({ kind, status, amount, documentType })),
+  { kind: 'annual_usage' as const, status: 'active' as const, amount: 50, documentType: 'invoice' as const },
+]), 1000)
+assert.deepEqual(serviceCreditNoteSourceOptions(expenseLedgerEvents), [{
+  id: 'invoice-1', invoiceNumber: 'INV-001', originalAmount: 1000, creditedAmount: 250, remainingAmount: 750,
+}, { id: 'invoice-2', invoiceNumber: 'INV-002', originalAmount: 200, creditedAmount: 0, remainingAmount: 200 }])
+const displayOrderEvents = [
+  { id: 'invoice-old', kind: 'lab_expense' as const, status: 'active' as const, expenseDate: '2026-09-01', createdAt: '2026-09-01T09:00:00+07:00', documentType: 'invoice' as const, sourceExpenseId: null },
+  { id: 'credit-later', kind: 'lab_expense' as const, status: 'active' as const, expenseDate: '2026-09-10', createdAt: '2026-09-10T09:00:00+07:00', documentType: 'credit_note' as const, sourceExpenseId: 'invoice-old' },
+  { id: 'invoice-new', kind: 'lab_expense' as const, status: 'active' as const, expenseDate: '2026-09-08', createdAt: '2026-09-08T09:00:00+07:00', documentType: 'invoice' as const, sourceExpenseId: null },
+]
+assert.deepEqual(serviceExpenseEventsForDisplay(displayOrderEvents).map((event) => event.id), ['invoice-new', 'invoice-old', 'credit-later'])
+assert.deepEqual(serviceExpenseEventsForDisplay(displayOrderEvents, 'asc').map((event) => event.id), ['invoice-old', 'credit-later', 'invoice-new'])
+
+const creditNoteInput = serviceLabExpenseInputSchema.parse({
+  requestId: '00000000-0000-0000-0000-000000000001',
+  expenseDate: '2026-01-01',
+  amount: 100,
+  invoiceNumber: 'CN-001',
+  note: null,
+  documentType: 'credit_note',
+  sourceExpenseId: '00000000-0000-0000-0000-000000000002',
+})
+assert.equal(creditNoteInput.documentType, 'credit_note')
+assert.throws(() => serviceLabExpenseInputSchema.parse({ ...creditNoteInput, sourceExpenseId: null }), /Invoice ต้นทาง/)
+assert.throws(() => serviceLabExpenseInputSchema.parse({ ...creditNoteInput, documentType: 'invoice', sourceExpenseId: '00000000-0000-0000-0000-000000000002' }), /ไม่ต้องมี Invoice ต้นทาง/)
 
 assert.equal(calculateAnnualRequestTotal([
   { requestedQuantity: 2, unitPrice: 125.5 },

@@ -36,6 +36,9 @@ export type ServicePlanStatus = (typeof SERVICE_PLAN_STATUSES)[number]
 export const SERVICE_EXPENSE_FREQUENCIES = ['monthly', 'daily'] as const
 export type ServiceExpenseFrequency = (typeof SERVICE_EXPENSE_FREQUENCIES)[number]
 
+export const SERVICE_EXPENSE_DOCUMENT_TYPES = ['invoice', 'credit_note'] as const
+export type ServiceExpenseDocumentType = (typeof SERVICE_EXPENSE_DOCUMENT_TYPES)[number]
+
 export const SERVICE_FULFILLMENT_STATUSES = ['not_started', 'partial', 'complete'] as const
 export type ServiceFulfillmentStatus = (typeof SERVICE_FULFILLMENT_STATUSES)[number]
 
@@ -206,18 +209,31 @@ export const servicePurchaseRequestHeaderSchema = z.object({
   note: z.string().trim().max(1000).nullable(),
 }).strict()
 
-export const serviceLabExpenseInputSchema = z.object({
+const serviceLabExpenseFieldsSchema = z.object({
   requestId: z.string().uuid(),
   expenseDate: isoDateSchema,
   amount: moneySchema.refine((value) => value > 0, 'ยอดค่าใช้จ่ายต้องมากกว่า 0'),
   invoiceNumber: z.string().trim().max(240).nullable(),
   note: z.string().trim().max(1000).nullable(),
+  documentType: z.enum(SERVICE_EXPENSE_DOCUMENT_TYPES).default('invoice'),
+  sourceExpenseId: z.string().uuid().nullable().default(null),
 }).strict()
 
-export const serviceLabExpenseUpdateSchema = serviceLabExpenseInputSchema.extend({
+function refineServiceLabExpenseDocument(value: z.infer<typeof serviceLabExpenseFieldsSchema>, ctx: z.RefinementCtx) {
+  if (value.documentType === 'credit_note') {
+    if (!value.sourceExpenseId) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['sourceExpenseId'], message: 'กรุณาเลือก Invoice ต้นทางของใบลดหนี้' })
+    if (!value.invoiceNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['invoiceNumber'], message: 'กรุณาระบุเลขที่ใบลดหนี้' })
+  } else if (value.sourceExpenseId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['sourceExpenseId'], message: 'Invoice ปกติไม่ต้องมี Invoice ต้นทาง' })
+  }
+}
+
+export const serviceLabExpenseInputSchema = serviceLabExpenseFieldsSchema.superRefine(refineServiceLabExpenseDocument)
+
+export const serviceLabExpenseUpdateSchema = serviceLabExpenseFieldsSchema.extend({
   expenseId: z.string().uuid(),
   reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลการแก้ไข').max(1000),
-}).strict()
+}).strict().superRefine(refineServiceLabExpenseDocument)
 
 export const serviceLabExpenseCancelSchema = z.object({
   requestId: z.string().uuid(),

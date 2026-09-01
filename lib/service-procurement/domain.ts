@@ -1,6 +1,6 @@
 import { bangkokIsoDate } from '@/lib/date/thai'
 import type { ServiceFulfillmentStatus, ServiceExpenseFrequency, ServicePrStatus, ServicePoStatus } from './schema'
-import type { ServicePurchaseRequestRecord } from './types'
+import type { ServicePurchaseRequestRecord, ServiceUsageEventRecord } from './types'
 
 export const SERVICE_PLAN_EXPENSE_ENTRY_KINDS = [
   'expense',
@@ -94,6 +94,89 @@ export function serviceRequestMatchesDisplayStatus(
 
 export function serviceExpenseFrequency(isRedCross: boolean): ServiceExpenseFrequency {
   return isRedCross ? 'daily' : 'monthly'
+}
+
+export function serviceUsageEventSignedAmount(event: Pick<ServiceUsageEventRecord, 'kind' | 'status' | 'amount' | 'documentType'>): number {
+  if (event.status !== 'active') return 0
+  if (event.kind === 'lab_expense' && event.documentType === 'credit_note') return -event.amount
+  return event.amount
+}
+
+export function serviceExpenseNetTotal(events: ReadonlyArray<Pick<ServiceUsageEventRecord, 'kind' | 'status' | 'amount' | 'documentType'>>): number {
+  return Math.round(events
+    .filter((event) => event.kind === 'lab_expense')
+    .reduce((sum, event) => sum + serviceUsageEventSignedAmount(event), 0) * 100) / 100
+}
+
+export function serviceUsageNetTotal(events: ReadonlyArray<Pick<ServiceUsageEventRecord, 'kind' | 'status' | 'amount' | 'documentType'>>): number {
+  return Math.round(events.reduce((sum, event) => sum + serviceUsageEventSignedAmount(event), 0) * 100) / 100
+}
+
+type ServiceExpenseDisplayEvent = Pick<ServiceUsageEventRecord, 'id' | 'kind' | 'expenseDate' | 'createdAt' | 'documentType' | 'sourceExpenseId'>
+
+/**
+ * Keeps every credit note directly below the invoice it references while
+ * retaining the surrounding list's chronological direction.
+ */
+export function serviceExpenseEventsForDisplay<T extends ServiceExpenseDisplayEvent>(events: readonly T[], direction: 'asc' | 'desc' = 'desc'): T[] {
+  const compareByDate = (left: T, right: T) => {
+    const dateOrder = left.expenseDate.localeCompare(right.expenseDate)
+    if (dateOrder !== 0) return direction === 'asc' ? dateOrder : -dateOrder
+    const createdOrder = left.createdAt.localeCompare(right.createdAt)
+    if (createdOrder !== 0) return direction === 'asc' ? createdOrder : -createdOrder
+    const idOrder = left.id.localeCompare(right.id)
+    return direction === 'asc' ? idOrder : -idOrder
+  }
+  const expenseEvents = events.filter((event) => event.kind === 'lab_expense')
+  const invoices = expenseEvents.filter((event) => event.documentType === 'invoice').slice().sort(compareByDate)
+  const creditNotesBySource = new Map<string, T[]>()
+  const unlinkedCreditNotes: T[] = []
+
+  for (const event of expenseEvents.filter((entry) => entry.documentType === 'credit_note')) {
+    if (!event.sourceExpenseId) {
+      unlinkedCreditNotes.push(event)
+      continue
+    }
+    const rows = creditNotesBySource.get(event.sourceExpenseId) ?? []
+    rows.push(event)
+    creditNotesBySource.set(event.sourceExpenseId, rows)
+  }
+
+  return invoices.flatMap((invoice) => [
+    invoice,
+    ...(creditNotesBySource.get(invoice.id) ?? []).slice().sort(compareByDate),
+  ]).concat(unlinkedCreditNotes.slice().sort(compareByDate))
+}
+
+export interface ServiceCreditNoteSourceOption {
+  id: string
+  invoiceNumber: string | null
+  originalAmount: number
+  creditedAmount: number
+  remainingAmount: number
+}
+
+export function serviceCreditNoteSourceOptions(events: ReadonlyArray<Pick<ServiceUsageEventRecord, 'id' | 'kind' | 'status' | 'amount' | 'invoiceNumber' | 'documentType' | 'sourceExpenseId'>>): ServiceCreditNoteSourceOption[] {
+  const creditedBySource = new Map<string, number>()
+  for (const event of events) {
+    if (event.kind !== 'lab_expense' || event.documentType !== 'credit_note' || event.status !== 'active' || !event.sourceExpenseId) continue
+    creditedBySource.set(event.sourceExpenseId, (creditedBySource.get(event.sourceExpenseId) ?? 0) + event.amount)
+  }
+
+  return events
+    .filter((event) => event.kind === 'lab_expense' && event.documentType === 'invoice' && event.status === 'active')
+    .map((event) => {
+      const originalAmount = Math.round(event.amount * 100) / 100
+      const creditedAmount = Math.round((creditedBySource.get(event.id) ?? 0) * 100) / 100
+      return {
+        id: event.id,
+        invoiceNumber: event.invoiceNumber,
+        originalAmount,
+        creditedAmount,
+        remainingAmount: Math.max(0, Math.round((originalAmount - creditedAmount) * 100) / 100),
+      }
+    })
+    .filter((option) => option.remainingAmount > 0)
 }
 
 export function isDateRangeWithinFiscalYear(start: string, end: string, fiscalYear: number): boolean {

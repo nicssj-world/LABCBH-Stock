@@ -13,6 +13,7 @@ import {
   setServicePoNumber,
   uploadServicePoFile,
 } from '@/lib/service-procurement/actions'
+import { serviceExpenseNetTotal } from '@/lib/service-procurement/domain'
 import { serviceRequestDisplayStatus, serviceRequestDisplayStatusLabel, serviceRequestDisplayStatusTone } from '@/lib/service-procurement/presenter'
 import type { ServicePurchaseRequestRecord } from '@/lib/service-procurement/types'
 import { formatBaht } from '@/lib/service-procurement/presenter'
@@ -35,8 +36,7 @@ export function ServicePurchaseRequestControls({ request, canOperate, canEdit, c
   const [isEditingPoNumber, setIsEditingPoNumber] = useState(!request.poNumber?.trim())
   const displayStatus = serviceRequestDisplayStatus(request)
   const hasEvidence = Boolean(request.poNumber?.trim() && request.poFileName?.trim())
-  const activeExpenses = request.usageEvents.filter((event) => event.kind === 'lab_expense' && event.status === 'active')
-  const activeTotal = activeExpenses.reduce((sum, event) => sum + event.amount, 0)
+  const activeTotal = serviceExpenseNetTotal(request.usageEvents)
 
   function run(operation: () => Promise<unknown>) {
     setError(null)
@@ -84,7 +84,7 @@ export function ServicePurchaseRequestControls({ request, canOperate, canEdit, c
   }
 
   function closePo() {
-    if (!window.confirm(`ยืนยันปิดใบ PO ${request.poNumber ?? ''} และตัดยอดค่าใช้จ่าย ${formatBaht(activeTotal)} จากแผนหรือไม่`)) return
+    if (!window.confirm(`ยืนยันปิดใบ PO ${request.poNumber ?? ''} และตัดยอดค่าใช้จ่ายสุทธิ ${formatBaht(activeTotal)} จากแผนหรือไม่`)) return
     run(() => closeServicePo(request.id, null))
   }
 

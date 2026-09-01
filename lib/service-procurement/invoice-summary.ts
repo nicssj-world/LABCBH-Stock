@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import fontkit from '@pdf-lib/fontkit'
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib'
+import { serviceExpenseEventsForDisplay } from './domain'
 import type { ServicePurchaseRequestItemRecord, ServiceUsageEventRecord } from './types'
 
 const PAGE_WIDTH = 595.28
@@ -14,6 +15,8 @@ const CELL_PADDING_X = 5
 const CELL_PADDING_Y = 2
 const BODY_FONT_SIZE = 9
 const BODY_LINE_HEIGHT = 9
+const CREDIT_REFERENCE_FONT_SIZE = 7
+const CREDIT_REFERENCE_LINE_GAP = 4
 const HEADER_FONT_SIZE = 9
 const HEADER_TITLE_FONT_SIZE = 14
 const HEADER_TITLE_MIN_FONT_SIZE = 10
@@ -24,6 +27,8 @@ const NAVY = rgb(0.08, 0.3, 0.56)
 const NAVY_DARK = rgb(0.06, 0.22, 0.42)
 const HEADER_TEXT = rgb(1, 1, 1)
 const SOFT_SURFACE = rgb(0.96, 0.98, 1)
+const CREDIT_NOTE_SURFACE = rgb(1, 0.95, 0.95)
+const CREDIT_NOTE_TEXT = rgb(0.62, 0.12, 0.14)
 
 const moneyNumber = new Intl.NumberFormat('th-TH', {
   minimumFractionDigits: 2,
@@ -42,13 +47,15 @@ export interface ServiceInvoiceSummaryInput {
   usageStartDate: string
   usageEndDate: string
   items: readonly Pick<ServicePurchaseRequestItemRecord, 'unit' | 'unitPrice'>[]
-  usageEvents: readonly Pick<ServiceUsageEventRecord, 'kind' | 'status' | 'expenseDate' | 'amount' | 'invoiceNumber' | 'createdAt'>[]
+  usageEvents: readonly Pick<ServiceUsageEventRecord, 'id' | 'kind' | 'status' | 'expenseDate' | 'amount' | 'invoiceNumber' | 'documentType' | 'sourceExpenseId' | 'createdAt'>[]
 }
 
 export interface ServiceInvoiceSummaryRow {
   poNumber: string | null
-  sequence: number
+  sequence: number | null
   invoiceNumber: string | null
+  documentType: 'invoice' | 'credit_note'
+  sourceInvoiceNumber: string | null
   invoiceDate: string
   amount: number
   people: number | null
@@ -111,19 +118,26 @@ export function buildServiceInvoiceSummaryModel(input: ServiceInvoiceSummaryInpu
   if (!input.isRedCross) throw new Error('สร้างสรุปใบแจ้งหนี้ได้เฉพาะ PR งานจ้างที่ติด tag สภากาชาดไทย')
 
   const unitPrice = peopleUnitPrice(input.items)
-  const expenseEvents = input.usageEvents
-    .filter((event) => event.kind === 'lab_expense' && event.status === 'active')
-    .slice()
-    .sort((left, right) => left.expenseDate.localeCompare(right.expenseDate) || left.createdAt.localeCompare(right.createdAt))
+  const expenseEvents = serviceExpenseEventsForDisplay(input.usageEvents.filter((event) => event.status === 'active'), 'asc')
 
-  const rows = expenseEvents.map((event, index) => ({
-    poNumber: index === 0 ? input.poNumber?.trim() || null : null,
-    sequence: index + 1,
-    invoiceNumber: event.invoiceNumber?.trim() || null,
-    invoiceDate: event.expenseDate,
-    amount: roundCurrency(event.amount),
-    people: unitPrice === null ? null : roundPeople(event.amount / unitPrice),
-  }))
+  const invoiceEvents = expenseEvents.filter((event) => (event.documentType ?? 'invoice') === 'invoice')
+  const invoiceById = new Map(invoiceEvents.map((event) => [event.id, event]))
+
+  let invoiceSequence = 0
+  const rows = expenseEvents.map((event, index) => {
+    const isCreditNote = (event.documentType ?? 'invoice') === 'credit_note'
+    if (!isCreditNote) invoiceSequence += 1
+    return {
+      poNumber: index === 0 ? input.poNumber?.trim() || null : null,
+      sequence: isCreditNote ? null : invoiceSequence,
+      invoiceNumber: event.invoiceNumber?.trim() || null,
+      documentType: (event.documentType ?? 'invoice') as 'invoice' | 'credit_note',
+      sourceInvoiceNumber: event.sourceExpenseId ? invoiceById.get(event.sourceExpenseId)?.invoiceNumber?.trim() || null : null,
+      invoiceDate: event.expenseDate,
+      amount: roundCurrency(isCreditNote ? -event.amount : event.amount),
+      people: unitPrice === null ? null : roundPeople((isCreditNote ? -event.amount : event.amount) / unitPrice),
+    }
+  })
 
   return {
     documentNumber: input.documentNumber,
@@ -228,19 +242,24 @@ function drawCellText(
   color: ReturnType<typeof rgb>,
   align: TextAlign,
   maxLines = 2,
+  lineSizes?: readonly number[],
+  lineAdvance = BODY_LINE_HEIGHT,
 ) {
   const maxWidth = Math.max(1, width - CELL_PADDING_X * 2)
-  const lines = wrapText(text, font, size, maxWidth, maxLines)
-  const textBlockHeight = lines.length * BODY_LINE_HEIGHT
-  const firstBaseline = top - Math.max(CELL_PADDING_Y, (height - textBlockHeight) / 2) - size
+  const lines = cellLines(text, font, size, maxWidth, maxLines, lineSizes)
+  if (lines.length === 0) return
+  const firstLineSize = lineSizes?.[0] ?? size
+  const textBlockHeight = firstLineSize + (lines.length - 1) * lineAdvance
+  const firstBaseline = top - Math.max(CELL_PADDING_Y, (height - textBlockHeight) / 2) - firstLineSize
   lines.forEach((line, index) => {
-    const measured = font.widthOfTextAtSize(line, size)
+    const lineSize = lineSizes?.[index] ?? size
+    const measured = font.widthOfTextAtSize(line, lineSize)
     const textX = align === 'right'
       ? x + width - CELL_PADDING_X - measured
       : align === 'center'
         ? x + (width - measured) / 2
         : x + CELL_PADDING_X
-    page.drawText(line, { x: textX, y: firstBaseline - index * BODY_LINE_HEIGHT, font, size, color })
+    page.drawText(line, { x: textX, y: firstBaseline - index * lineAdvance, font, size: lineSize, color })
   })
 }
 
@@ -305,8 +324,10 @@ function drawTableHeader(page: PDFPage, top: number, font: PDFFont): number {
 function rowValue(row: ServiceInvoiceSummaryRow, index: number): string {
   switch (index) {
     case 0: return row.poNumber ?? '—'
-    case 1: return String(row.sequence)
-    case 2: return row.invoiceNumber ?? '—'
+    case 1: return row.sequence === null ? '' : String(row.sequence)
+    case 2: return row.documentType === 'credit_note'
+      ? `${row.invoiceNumber ?? '—'}\nอ้างอิง ${row.sourceInvoiceNumber ?? '—'}`
+      : row.invoiceNumber ?? '—'
     case 3: return formatThaiNumericDate(row.invoiceDate)
     case 4: return moneyNumber.format(row.amount)
     case 5: return row.people === null ? '—' : peopleNumber.format(row.people)
@@ -314,19 +335,52 @@ function rowValue(row: ServiceInvoiceSummaryRow, index: number): string {
   }
 }
 
+function cellLines(text: string, font: PDFFont, size: number, maxWidth: number, maxLines: number, lineSizes?: readonly number[]): string[] {
+  if (!text.trim()) return []
+  if (!text.includes('\n')) return wrapText(text, font, size, maxWidth, maxLines)
+
+  return text
+    .split(/\r?\n/)
+    .slice(0, maxLines)
+    .map((line, index) => wrapText(line, font, lineSizes?.[index] ?? size, maxWidth, 1)[0] ?? '')
+}
+
+function rowCellTextHeight(row: ServiceInvoiceSummaryRow, index: number, font: PDFFont): number {
+  const isCreditReference = row.documentType === 'credit_note' && index === 2
+  const lineSizes = isCreditReference ? [BODY_FONT_SIZE, CREDIT_REFERENCE_FONT_SIZE] : undefined
+  const lines = cellLines(rowValue(row, index), font, BODY_FONT_SIZE, COLUMNS[index].width - CELL_PADDING_X * 2, index === 2 ? 2 : 1, lineSizes)
+  if (lines.length === 0) return 0
+  const lineAdvance = isCreditReference ? BODY_LINE_HEIGHT + CREDIT_REFERENCE_LINE_GAP : BODY_LINE_HEIGHT
+  return (lineSizes?.[0] ?? BODY_FONT_SIZE) + (lines.length - 1) * lineAdvance + CELL_PADDING_Y * 2
+}
+
 function rowHeight(row: ServiceInvoiceSummaryRow, font: PDFFont): number {
-  const maxLines = Math.max(...COLUMNS.map((column, index) => wrapText(rowValue(row, index), font, BODY_FONT_SIZE, column.width - CELL_PADDING_X * 2, 1).length))
-  return Math.max(17, maxLines * BODY_LINE_HEIGHT + CELL_PADDING_Y * 2)
+  return Math.max(17, ...COLUMNS.map((_, index) => rowCellTextHeight(row, index, font)))
 }
 
 function drawTableRow(page: PDFPage, row: ServiceInvoiceSummaryRow, top: number, font: PDFFont): number {
   const height = rowHeight(row, font)
   const bottom = top - height
-  page.drawRectangle({ x: MARGIN_X, y: bottom, width: TABLE_WIDTH, height, color: rgb(1, 1, 1) })
+  page.drawRectangle({ x: MARGIN_X, y: bottom, width: TABLE_WIDTH, height, color: row.documentType === 'credit_note' ? CREDIT_NOTE_SURFACE : rgb(1, 1, 1) })
   drawTableGrid(page, top, bottom)
   let x = MARGIN_X
   COLUMNS.forEach((column, index) => {
-    drawCellText(page, rowValue(row, index), x, top, column.width, height, font, BODY_FONT_SIZE, INK, column.align, 1)
+    const isCreditReference = row.documentType === 'credit_note' && index === 2
+    drawCellText(
+      page,
+      rowValue(row, index),
+      x,
+      top,
+      column.width,
+      height,
+      font,
+      BODY_FONT_SIZE,
+      row.documentType === 'credit_note' ? CREDIT_NOTE_TEXT : INK,
+      column.align,
+      index === 2 ? 2 : 1,
+      isCreditReference ? [BODY_FONT_SIZE, CREDIT_REFERENCE_FONT_SIZE] : undefined,
+      isCreditReference ? BODY_LINE_HEIGHT + CREDIT_REFERENCE_LINE_GAP : BODY_LINE_HEIGHT,
+    )
     x += column.width
   })
   return bottom

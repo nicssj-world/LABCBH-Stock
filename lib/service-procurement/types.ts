@@ -2,6 +2,7 @@ import type {
   ServiceAttachmentKind,
   ServiceCommitteeKind,
   ServiceExpenseFrequency,
+  ServiceExpenseDocumentType,
   ServiceFulfillmentStatus,
   ServicePlanDocumentKind,
   ServicePlanInput,
@@ -18,6 +19,7 @@ export type {
   ServiceAttachmentKind,
   ServiceCommitteeKind,
   ServiceExpenseFrequency,
+  ServiceExpenseDocumentType,
   ServicePlanDocumentKind,
   ServicePlanStatus,
   ServicePlanType,
@@ -161,6 +163,8 @@ export interface ServiceUsageEventRecord {
   expenseDate: string
   amount: number
   invoiceNumber: string | null
+  documentType: ServiceExpenseDocumentType
+  sourceExpenseId: string | null
   note: string | null
   status: 'active' | 'cancelled'
   referenceEventId: string | null

@@ -7,6 +7,7 @@ import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { useDeferredDialog } from '@/components/ui/useDeferredDialog'
 import { formatQuantity, formatThaiDate } from '@/lib/inventory/presenter'
+import { serviceExpenseNetTotal } from '@/lib/service-procurement/domain'
 import {
   formatBaht,
   serviceMethodLabel,
@@ -30,9 +31,7 @@ export function ServicePurchaseRequestSummaryDialog({ request, variant = 'table'
   const requestedItems = request.items.filter((item) => item.requestedQuantity > 0)
   const hasPoEvidence = Boolean(request.poNumber?.trim() || request.poFileName?.trim())
   const displayStatus = serviceRequestDisplayStatus(request)
-  const activeExpenseTotal = request.usageEvents
-    .filter((event) => event.kind === 'lab_expense' && event.status === 'active')
-    .reduce((sum, event) => sum + event.amount, 0)
+  const activeExpenseTotal = serviceExpenseNetTotal(request.usageEvents)
 
   return (
     <>
@@ -116,7 +115,7 @@ export function ServicePurchaseRequestSummaryDialog({ request, variant = 'table'
                 <dd className="identifier">{formatBaht(request.requestedAmount)}</dd>
               </div>
               <div>
-                <dt>ใช้จ่ายก่อนปิด PO</dt>
+                <dt>ใช้จ่ายสุทธิก่อนปิด PO</dt>
                 <dd className="identifier">{formatBaht(activeExpenseTotal)}</dd>
               </div>
               <div className="list-summary-dialog__fact--wide">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { formatThaiDateFull } from '@/lib/date/thai'
 import { cancelServiceLabExpense, updateServiceLabExpense } from '@/lib/service-procurement/actions'
+import { serviceExpenseEventsForDisplay, serviceExpenseNetTotal } from '@/lib/service-procurement/domain'
 import { DUPLICATE_SERVICE_INVOICE_MESSAGE, hasDuplicateServiceInvoice } from '@/lib/service-procurement/invoice'
 import { formatBaht } from '@/lib/service-procurement/presenter'
 import type { ServicePurchaseRequestRecord } from '@/lib/service-procurement/types'
@@ -35,7 +36,7 @@ export function ServicePurchaseRequestExpenseLog({ request, canRecord }: Props) 
   const [editInvoice, setEditInvoice] = useState('')
   const [editNote, setEditNote] = useState('')
   const hasAnyEvidence = Boolean(request.poNumber?.trim() || request.poFileName?.trim())
-  const activeExpenses = request.usageEvents.filter((event) => event.kind === 'lab_expense' && event.status === 'active')
+  const activeExpenses = serviceExpenseEventsForDisplay(request.usageEvents).filter((event) => event.status === 'active')
   const isDailyExpense = request.expenseFrequency === 'daily'
 
   function expenseDateForMonth(month: string): string {
@@ -99,12 +100,17 @@ export function ServicePurchaseRequestExpenseLog({ request, canRecord }: Props) 
     if (reason?.trim()) run(() => cancelServiceLabExpense({ requestId: request.id, expenseId, reason }))
   }
 
+  function hasActiveCreditNotes(expenseId: string): boolean {
+    return activeExpenses.some((event) => event.documentType === 'credit_note' && event.sourceExpenseId === expenseId)
+  }
+
   if (request.status !== 'confirmed' || !hasAnyEvidence) return null
 
   return (
     <section className="bench-panel service-pr-detail__section service-pr-detail__expense-log" aria-labelledby="service-expense-list-title">
       <div className="bench-panel__header service-pr-detail__section-header">
         <div><p className="section-kicker">EXPENSE LOG</p><h2 id="service-expense-list-title">รายการค่าใช้จ่ายก่อนปิด PO</h2></div>
+        <p>ยอดสุทธิ {formatBaht(serviceExpenseNetTotal(request.usageEvents))}</p>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {activeExpenses.length === 0 ? (
@@ -113,13 +119,15 @@ export function ServicePurchaseRequestExpenseLog({ request, canRecord }: Props) 
         <div className="service-ledger-table-wrap">
           <table className="data-table">
             <thead>
-              <tr><th>{isDailyExpense ? 'วันที่' : 'เดือน'}</th><th>Invoice</th><th>ยอด</th><th>หมายเหตุ</th><th>การทำงาน</th></tr>
+              <tr><th>{isDailyExpense ? 'วันที่' : 'เดือน'}</th><th>เอกสาร</th><th>ยอด</th><th>หมายเหตุ</th><th>การทำงาน</th></tr>
             </thead>
             <tbody>
               {activeExpenses.map((event) => editingId === event.id ? (
-                <tr key={event.id}>
+                <tr key={event.id} className={event.documentType === 'credit_note' ? `service-expense-row--credit${event.sourceExpenseId ? ' service-expense-row--child' : ''}` : undefined}>
                   <td><input type={isDailyExpense ? 'date' : 'month'} min={isDailyExpense ? request.usageStartDate : request.usageStartDate.slice(0, 7)} max={isDailyExpense ? request.usageEndDate : request.usageEndDate.slice(0, 7)} value={isDailyExpense ? editDate : editDate.slice(0, 7)} onChange={(e) => setEditDate(isDailyExpense ? e.target.value : expenseDateForMonth(e.target.value))} /></td>
                   <td>
+                    <span className="service-expense-edit-document-type">{event.documentType === 'credit_note' ? 'เลขที่ใบลดหนี้' : 'Invoice'}</span>
+                    {event.documentType === 'credit_note' && <small className="service-expense-source-reference">อ้างอิง {request.usageEvents.find((source) => source.id === event.sourceExpenseId)?.invoiceNumber ?? 'Invoice ต้นทาง'}</small>}
                     <input
                       value={editInvoice}
                       aria-invalid={Boolean(invoiceError)}
@@ -141,16 +149,23 @@ export function ServicePurchaseRequestExpenseLog({ request, canRecord }: Props) 
                   </td>
                 </tr>
               ) : (
-                <tr key={event.id}>
+                <tr key={event.id} className={event.documentType === 'credit_note' ? `service-expense-row--credit${event.sourceExpenseId ? ' service-expense-row--child' : ''}` : undefined}>
                   <td>{formatThaiDateFull(event.expenseDate)}</td>
-                  <td>{event.invoiceNumber ?? '—'}</td>
-                  <td className="identifier">{formatBaht(event.amount)}</td>
+                  <td>
+                    <span className={`service-expense-document-badge${event.documentType === 'credit_note' ? ' service-expense-document-badge--credit' : ''}`}>
+                      {event.documentType === 'credit_note' ? 'ใบลดหนี้' : 'Invoice'}
+                    </span>
+                    <span className="service-expense-document-number-display">{event.invoiceNumber ?? '—'}</span>
+                    {event.documentType === 'credit_note' && <small className="service-expense-source-reference">อ้างอิง {request.usageEvents.find((source) => source.id === event.sourceExpenseId)?.invoiceNumber ?? 'Invoice ต้นทาง'}</small>}
+                  </td>
+                  <td className={`identifier${event.documentType === 'credit_note' ? ' service-expense-value--credit' : ''}`}>{formatBaht(event.documentType === 'credit_note' ? -event.amount : event.amount)}</td>
                   <td>{event.note ?? '—'}</td>
                   <td className="service-expense-actions">
                     {canRecord && <div className="service-expense-actions__group" aria-label="การทำงานกับรายการค่าใช้จ่าย">
                       <Button type="button" className="service-expense-actions__edit" variant="secondary" onClick={() => startEdit(event)} aria-label="แก้ไขรายการค่าใช้จ่าย" title="แก้ไขรายการค่าใช้จ่าย"><EditIcon /><span className="visually-hidden">แก้ไข</span></Button>
-                      <Button type="button" className="service-expense-actions__cancel" variant="danger" onClick={() => removeExpense(event.id)} aria-label="ยกเลิกรายการค่าใช้จ่าย" title="ยกเลิกรายการค่าใช้จ่าย"><CancelIcon /><span className="visually-hidden">ยกเลิก</span></Button>
+                      <Button type="button" className="service-expense-actions__cancel" variant="danger" disabled={pending || (event.documentType === 'invoice' && hasActiveCreditNotes(event.id))} onClick={() => removeExpense(event.id)} aria-label="ยกเลิกรายการค่าใช้จ่าย" title="ยกเลิกรายการค่าใช้จ่าย"><CancelIcon /><span className="visually-hidden">ยกเลิก</span></Button>
                     </div>}
+                    {event.documentType === 'invoice' && hasActiveCreditNotes(event.id) && <small className="service-expense-cancel-hint">ยกเลิกใบลดหนี้ที่อ้างอิงก่อน</small>}
                   </td>
                 </tr>
               ))}

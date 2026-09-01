@@ -1,6 +1,13 @@
 import type { ServiceUsageEventRecord } from './types'
 
 export const DUPLICATE_SERVICE_INVOICE_MESSAGE = 'เลข Invoice นี้ถูกใช้แล้วในใบ PR นี้ กรุณาตรวจสอบเลข Invoice'
+export const CREDIT_NOTE_SOURCE_REQUIRED_MESSAGE = 'กรุณาเลือก Invoice ต้นทางของใบลดหนี้'
+export const CREDIT_NOTE_NUMBER_REQUIRED_MESSAGE = 'กรุณาระบุเลขที่ใบลดหนี้'
+export const CREDIT_NOTE_AMOUNT_EXCEEDS_SOURCE_MESSAGE = 'ยอดใบลดหนี้เกินยอดคงเหลือของ Invoice ต้นทาง'
+export const CREDIT_NOTE_SOURCE_INVALID_MESSAGE = 'ไม่พบ Invoice ต้นทาง หรือ Invoice ต้นทางถูกยกเลิกแล้ว'
+export const CREDIT_NOTE_ONLY_RED_CROSS_MESSAGE = 'ใบลดหนี้ใช้ได้เฉพาะ PR ที่ติด tag สภากาชาดไทย'
+export const INVOICE_HAS_ACTIVE_CREDIT_NOTES_MESSAGE = 'Invoice นี้มีใบลดหนี้ที่ยังใช้งานอยู่ จึงยังยกเลิกไม่ได้'
+export const INVOICE_BELOW_ACTIVE_CREDITS_MESSAGE = 'ยอด Invoice ใหม่ต้องไม่น้อยกว่ายอดใบลดหนี้ที่ใช้งานอยู่'
 
 export interface ServiceInvoiceRpcError {
   code?: string | null
@@ -29,6 +36,15 @@ export function hasDuplicateServiceInvoice(
     && event.id !== excludeExpenseId
     && normalizeServiceInvoice(event.invoiceNumber) === normalized
   ))
+}
+
+export function isCreditNoteError(error: ServiceInvoiceRpcError | null | undefined): boolean {
+  return [error?.message, error?.details, error?.hint]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => (
+      value.includes('credit note')
+      || value.includes('invoice with active credit notes')
+    ))
 }
 
 export function isDuplicateServiceInvoiceError(error: ServiceInvoiceRpcError | null | undefined): boolean {
