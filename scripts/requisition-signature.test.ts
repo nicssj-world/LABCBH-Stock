@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { canReceiveRequisition } from '../lib/requisitions/authorization'
 import { drawnSignatureInputSchema } from '../lib/requisitions/schema'
+import type { Actor, LabStockRole } from '../lib/auth/actor'
 
 // The browser sends only a PNG data URI from the canvas. The server action
 // normalizes it before it reaches the shared private Portal bucket.
@@ -30,6 +32,11 @@ const liveMigrationName = readdirSync(migrationsDir).find((name) =>
 )
 assert.ok(liveMigrationName, 'the live receipt signature migration must exist')
 const liveSql = readFileSync(join(migrationsDir, liveMigrationName), 'utf8')
+const allUsersMigrationName = readdirSync(migrationsDir).find((name) =>
+  name.endsWith('_requisition_receipt_all_users.sql'),
+)
+assert.ok(allUsersMigrationName, 'the all-users receipt migration must exist')
+const allUsersSql = readFileSync(join(migrationsDir, allUsersMigrationName), 'utf8')
 
 for (const column of ['received_by', 'received_by_name', 'signature', 'signed_at']) {
   assert.match(sql, new RegExp(`\\b${column}\\b`, 'i'))
@@ -95,6 +102,41 @@ assert.match(receiveFunction, /requisition\.receipt_confirmed/i)
 assert.ok(
   receiveFunction.indexOf('for update') < receiveFunction.indexOf("status <> 'fulfilled'"),
   'receipt status must be re-read under the row lock',
+)
+
+const allUsersReceiveFunction = allUsersSql.match(
+  /create or replace function public\.receive_requisition[\s\S]*?\$function\$;/i,
+)?.[0]
+assert.ok(allUsersReceiveFunction, 'the latest receive_requisition definition must exist')
+assert.match(allUsersSql, /create or replace function public\.assert_requisition_receiver\(p_actor_id uuid\)/i)
+assert.match(allUsersSql, /profile\.role = 'Manager'/i)
+assert.match(allUsersSql, /membership\.active/i)
+assert.match(allUsersReceiveFunction, /assert_requisition_receiver\(p_actor_id\)/i)
+assert.doesNotMatch(
+  allUsersReceiveFunction,
+  /assert_requisition_manager/i,
+  'receipt confirmation must not keep the requisition ownership restriction',
+)
+
+const receiverActor = (appRoles: LabStockRole[]): Actor => ({
+  id: 'receiver-id',
+  ephisId: null,
+  name: 'ผู้ตรวจรับ',
+  department: null,
+  profileRole: null,
+  appRoles,
+})
+for (const role of ['admin', 'head', 'stock_officer', 'viewer'] as const) {
+  assert.equal(
+    canReceiveRequisition(receiverActor([role]), 'another-requester-id'),
+    true,
+    `${role} users must be able to see and use receipt confirmation`,
+  )
+}
+assert.equal(
+  canReceiveRequisition(receiverActor([]), 'another-requester-id'),
+  false,
+  'users without LAB Stock access must not receive requisitions',
 )
 
 for (const [fn, functionSql] of [

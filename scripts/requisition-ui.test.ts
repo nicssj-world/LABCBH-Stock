@@ -169,7 +169,7 @@ assert.doesNotMatch(summaryDialogSource, /requisition\.status === 'fulfilled' &&
 const inventoryQueries = read('lib/inventory/queries.ts')
 assert.match(inventoryQueries, /export async function listOnHand/)
 
-// Receipt confirmation is available to the requester or stock/admin after
+// Receipt confirmation is available to every active LAB Stock user after
 // fulfillment. The signature is read from Portal and a missing one falls back
 // to the in-popup drawing flow.
 assert.match(detailPage, /RequisitionReceiptDialog/)

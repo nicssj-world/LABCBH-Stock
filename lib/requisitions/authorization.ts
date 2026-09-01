@@ -19,9 +19,15 @@ export function canManageRequisition(actor: Actor, requesterId: string | null): 
   return requesterId === actor.id || hasAppRole(actor, 'admin', 'stock_officer')
 }
 
-/** The same ownership boundary applies to physical receipt confirmation. */
+/**
+ * Every active LAB Stock user may confirm physical receipt after fulfilment.
+ * `requireActor` has already verified that the actor has an active app role;
+ * keep the requester argument for the existing call sites, but receipt
+ * confirmation is intentionally not tied to requisition ownership.
+ */
 export function canReceiveRequisition(actor: Actor, requesterId: string | null): boolean {
-  return canManageRequisition(actor, requesterId)
+  void requesterId
+  return actor.appRoles.length > 0
 }
 
 export function assertRequisitionReceiver(actor: Actor, requesterId: string | null): void {
