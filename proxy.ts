@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = new Set(['/login', '/access-denied', '/auth/confirm'])
+const PUBLIC_PATHS = new Set(['/login', '/access-denied', '/auth/confirm', '/manifest.webmanifest'])
 const AUTH_BYPASS_PATHS = new Set(['/api/internal/storage-cleanup'])
 
 function copyResponseState(source: NextResponse, target: NextResponse) {
