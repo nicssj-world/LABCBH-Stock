@@ -11,6 +11,7 @@ export const PURCHASE_METHOD_LABELS: Record<PurchaseMethodKind, string> = {
   contract: 'ซื้อในสัญญา',
   awaiting_contract: 'ซื้อเจาะจงระหว่างรอสัญญา',
   off_plan: 'ซื้อนอกแผน',
+  red_cross: 'สภากาชาดไทย',
   specific_contract: 'ทำสัญญาเจาะจง',
   e_bidding: 'E-Bidding',
   equipment_lease: 'เช่าเครื่อง',

@@ -11,9 +11,13 @@ import {
   formatBaht,
   summarizePurchaseRequestReceiving,
 } from '@/lib/pr/presenter'
-import { canReceivePurchaseRequestOutsideStock } from '@/lib/pr/authorization'
+import { canManagePurchaseRequest, canReceivePurchaseRequestOutsideStock } from '@/lib/pr/authorization'
+import { canRecordPurchaseRequestExpense } from '@/lib/pr/expense'
 import { isPurchaseRequestOutsideStockEligible, purchaseMethodPurpose } from '@/lib/pr/schema'
-import type { PurchaseRequestRecord } from '@/lib/pr/types'
+import type {
+  PurchaseRequestExpenseInputRecord,
+  PurchaseRequestRecord,
+} from '@/lib/pr/types'
 
 /** A lease PR carries zero items, so request.total (summed from items) is
  *  always 0 — the ceiling entered on the contract draft is the real figure. */
@@ -28,6 +32,7 @@ interface PurchaseRequestTableProps {
   actor: Actor
   receiveOutsideStockAction: (purchaseRequestId: string) => Promise<unknown>
   retryOutsideStockCleanupAction: (purchaseRequestId: string) => Promise<void>
+  recordExpenseAction?: (input: PurchaseRequestExpenseInputRecord) => Promise<unknown>
 }
 
 export function PurchaseRequestTable({
@@ -35,6 +40,7 @@ export function PurchaseRequestTable({
   actor,
   receiveOutsideStockAction,
   retryOutsideStockCleanupAction,
+  recordExpenseAction,
 }: PurchaseRequestTableProps) {
   if (requests.length === 0) {
     return <p className="empty-state">ไม่พบใบ PR ตามเงื่อนไขที่เลือก</p>
@@ -73,14 +79,24 @@ export function PurchaseRequestTable({
               const receiving = summarizePurchaseRequestReceiving(request.items)
               const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
               const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
+              const canRecordExpense = canManagePurchaseRequest(actor, request.requesterId) && canRecordPurchaseRequestExpense({
+                status: request.status,
+                purchaseMethod: request.purchaseMethod,
+                poNumber: request.poNumber,
+                poFileName: request.poFile.fileName,
+              })
               const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
+              const canReceiveOutsideStock = canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)
+              const canRetryOutsideStockCleanup = canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt
               return (
               <tr key={request.id}>
                 <td>
                   <PurchaseRequestSummaryDialog
                     request={request}
-                    canReceiveOutsideStock={canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)}
-                    canRetryOutsideStockCleanup={canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt}
+                    canReceiveOutsideStock={canReceiveOutsideStock}
+                    canRetryOutsideStockCleanup={canRetryOutsideStockCleanup}
+                    canRecordExpense={canRecordExpense}
+                    recordExpenseAction={recordExpenseAction}
                     receiveOutsideStockAction={receiveOutsideStockAction}
                     retryOutsideStockCleanupAction={retryOutsideStockCleanupAction}
                   />
@@ -140,7 +156,15 @@ export function PurchaseRequestTable({
           const receiving = summarizePurchaseRequestReceiving(request.items)
           const showsReceiving = purchaseMethodPurpose(request.purchaseMethod) === 'purchase_order'
           const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
+          const canRecordExpense = canManagePurchaseRequest(actor, request.requesterId) && canRecordPurchaseRequestExpense({
+            status: request.status,
+            purchaseMethod: request.purchaseMethod,
+            poNumber: request.poNumber,
+            poFileName: request.poFile.fileName,
+          })
           const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
+          const canReceiveOutsideStock = canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)
+          const canRetryOutsideStockCleanup = canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt
           return (
           <li key={request.id}>
             <div className="task-card__topline">
@@ -155,8 +179,10 @@ export function PurchaseRequestTable({
               <PurchaseRequestSummaryDialog
                 request={request}
                 variant="card"
-                canReceiveOutsideStock={canActOutsideStock && isPurchaseRequestOutsideStockEligible(request.status, request.purchaseMethod)}
-                canRetryOutsideStockCleanup={canActOutsideStock && isOutsideStockReceived && Boolean(request.poFile.path) && !request.poFile.deletedAt}
+                canReceiveOutsideStock={canReceiveOutsideStock}
+                canRetryOutsideStockCleanup={canRetryOutsideStockCleanup}
+                canRecordExpense={canRecordExpense}
+                recordExpenseAction={recordExpenseAction}
                 receiveOutsideStockAction={receiveOutsideStockAction}
                 retryOutsideStockCleanupAction={retryOutsideStockCleanupAction}
               />

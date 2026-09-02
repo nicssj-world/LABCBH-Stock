@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
 import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
+import { PurchaseRequestExpenseDialog } from '@/components/pr/PurchaseRequestExpenseDialog'
+import { PurchaseRequestInvoiceSummaryLink } from '@/components/pr/PurchaseRequestInvoiceSummaryLink'
 import { Button } from '@/components/ui/Button'
 import { DetailIconLink } from '@/components/ui/DetailIconLink'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -14,7 +16,7 @@ import {
   PURCHASE_REQUEST_STATUS_TONES,
   formatBaht,
 } from '@/lib/pr/presenter'
-import type { PurchaseRequestRecord } from '@/lib/pr/types'
+import type { PurchaseRequestExpenseInputRecord, PurchaseRequestRecord } from '@/lib/pr/types'
 
 /** A lease PR carries zero items, so request.total (summed from items) is
  *  always 0 — the ceiling entered on the contract draft is the real figure. */
@@ -29,6 +31,8 @@ export interface PurchaseRequestSummaryDialogProps {
   variant?: 'table' | 'card'
   canReceiveOutsideStock?: boolean
   canRetryOutsideStockCleanup?: boolean
+  canRecordExpense?: boolean
+  recordExpenseAction?: (input: PurchaseRequestExpenseInputRecord) => Promise<unknown>
   receiveOutsideStockAction: (purchaseRequestId: string) => Promise<unknown>
   retryOutsideStockCleanupAction: (purchaseRequestId: string) => Promise<void>
 }
@@ -38,6 +42,8 @@ export function PurchaseRequestSummaryDialog({
   variant = 'table',
   canReceiveOutsideStock = false,
   canRetryOutsideStockCleanup = false,
+  canRecordExpense = false,
+  recordExpenseAction,
   receiveOutsideStockAction,
   retryOutsideStockCleanupAction,
 }: PurchaseRequestSummaryDialogProps) {
@@ -201,6 +207,15 @@ export function PurchaseRequestSummaryDialog({
           </div>
 
           <footer className="list-summary-dialog__footer">
+            {request.purchaseMethod === 'red_cross' && <PurchaseRequestInvoiceSummaryLink request={request} />}
+            {canRecordExpense && (
+              <PurchaseRequestExpenseDialog
+                request={request}
+                canRecord={canRecordExpense}
+                recordAction={recordExpenseAction}
+                className="purchase-expense-summary-trigger"
+              />
+            )}
             <PurchaseRequestOutsideStockReceiveControl
               requestId={request.id}
               documentNumber={request.documentNumber}

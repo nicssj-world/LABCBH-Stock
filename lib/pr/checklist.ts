@@ -46,7 +46,7 @@ export interface CommitteeAssignmentInput {
  */
 export function annualPlanTypeForPurchaseMethod(method: PurchaseMethodKind): PurchaseRequestPlanType | null {
   if (method === 'equipment_lease') return 'hiring'
-  if (method === 'annual_plan' || method === 'specific_contract' || method === 'e_bidding') return 'procurement'
+  if (method === 'annual_plan' || method === 'specific_contract' || method === 'e_bidding' || method === 'red_cross') return 'procurement'
   return null
 }
 
@@ -165,7 +165,7 @@ export function derivePurchaseRequestChecklist(
     ...attachments('quotation', quoteCount, PDF_OR_IMAGE_TYPES),
   ]
 
-  if (method === 'annual_plan') {
+  if (method === 'annual_plan' || method === 'red_cross') {
     requiredAttachments.push(...attachments('plan_page', 1, PDF_OR_IMAGE_TYPES))
   }
 

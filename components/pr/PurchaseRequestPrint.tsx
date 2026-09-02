@@ -70,6 +70,7 @@ function methodReferenceFacts(request: PurchaseRequestRecord): PrintFact[] {
       break
     }
     case 'off_plan':
+    case 'red_cross':
       break
   }
 

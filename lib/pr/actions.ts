@@ -23,6 +23,21 @@ import {
   assertPurchaseRequestManager,
   assertPurchaseRequester,
 } from '@/lib/pr/authorization'
+import { canRecordPurchaseRequestExpense } from '@/lib/pr/expense'
+import {
+  DUPLICATE_PURCHASE_REQUEST_INVOICE_MESSAGE,
+  PURCHASE_CREDIT_NOTE_AMOUNT_EXCEEDS_SOURCE_MESSAGE,
+  PURCHASE_CREDIT_NOTE_NUMBER_REQUIRED_MESSAGE,
+  PURCHASE_CREDIT_NOTE_SOURCE_INVALID_MESSAGE,
+  PURCHASE_EXPENSE_CEILING_MESSAGE,
+  PURCHASE_EXPENSE_REQUIRES_PO_MESSAGE,
+  PURCHASE_INVOICE_BELOW_ACTIVE_CREDITS_MESSAGE,
+  PURCHASE_INVOICE_HAS_ACTIVE_CREDIT_NOTES_MESSAGE,
+  isPurchaseRequestExpenseDuplicateError,
+  purchaseRequestExpenseCancelSchema,
+  purchaseRequestExpenseInputSchema,
+  purchaseRequestExpenseUpdateSchema,
+} from '@/lib/pr/expense'
 import {
   ephisPrNumberSchema,
   purchaseOrderNumberSchema,
@@ -152,6 +167,25 @@ function unwrapMutation(
   result: { data: unknown; error: { message: string } | null },
 ) {
   if (result.error) throw new Error(formatPurchaseRequestMutationError(operation, result.error.message))
+  return z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
+}
+
+function unwrapPurchaseRequestExpenseMutation(
+  operation: string,
+  result: { data: unknown; error: { code?: string | null; message: string; details?: string | null; hint?: string | null } | null },
+) {
+  if (result.error) {
+    if (isPurchaseRequestExpenseDuplicateError(result.error)) throw new Error(DUPLICATE_PURCHASE_REQUEST_INVOICE_MESSAGE)
+    const message = result.error.message ?? ''
+    if (message.includes('credit note number is required')) throw new Error(PURCHASE_CREDIT_NOTE_NUMBER_REQUIRED_MESSAGE)
+    if (message.includes('credit note source invoice not found or inactive')) throw new Error(PURCHASE_CREDIT_NOTE_SOURCE_INVALID_MESSAGE)
+    if (message.includes('credit note exceeds remaining source invoice amount')) throw new Error(PURCHASE_CREDIT_NOTE_AMOUNT_EXCEEDS_SOURCE_MESSAGE)
+    if (message.includes('active expenses exceed PR ceiling')) throw new Error(PURCHASE_EXPENSE_CEILING_MESSAGE)
+    if (message.includes('purchase PR must be confirmed and have PO evidence')) throw new Error(PURCHASE_EXPENSE_REQUIRES_PO_MESSAGE)
+    if (message.includes('invoice cannot be reduced below active credit notes')) throw new Error(PURCHASE_INVOICE_BELOW_ACTIVE_CREDITS_MESSAGE)
+    if (message.includes('invoice with active credit notes cannot be cancelled')) throw new Error(PURCHASE_INVOICE_HAS_ACTIVE_CREDIT_NOTES_MESSAGE)
+    throw new Error(`${operation}ไม่สำเร็จ: ${result.error.message}`)
+  }
   return z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
 }
 
@@ -579,4 +613,95 @@ export async function setEphisPrNumber(
   const updated = unwrapMutation('บันทึกเลข PR จาก E-Phis', result)
   revalidatePurchaseRequest(parsedId)
   return updated
+}
+
+export async function recordPurchaseRequestExpense(input: unknown) {
+  const actor = await requireActor()
+  const parsed = purchaseRequestExpenseInputSchema.parse(input)
+  const request = await getPurchaseRequest(parsed.requestId)
+  if (!request) throw new Error('ไม่พบใบ PR ที่ต้องการบันทึกค่าใช้จ่าย')
+  assertPurchaseRequestManager(actor, request.requesterId)
+  if (!canRecordPurchaseRequestExpense({
+    status: request.status,
+    purchaseMethod: request.purchaseMethod,
+    poNumber: request.poNumber,
+    poFileName: request.poFile.fileName,
+  })) {
+    throw new Error(PURCHASE_EXPENSE_REQUIRES_PO_MESSAGE)
+  }
+
+  const result = await supabaseAdmin.rpc('record_purchase_request_expense', {
+    p_actor_id: actor.id,
+    p_request_id: parsed.requestId,
+    p_expense_date: parsed.expenseDate,
+    p_amount: parsed.amount,
+    p_invoice_number: parsed.invoiceNumber,
+    p_note: parsed.note,
+    p_document_kind: parsed.documentType,
+    p_source_expense_id: parsed.sourceExpenseId,
+  })
+  const expense = unwrapPurchaseRequestExpenseMutation('บันทึกค่าใช้จ่าย PR จัดซื้อ', result)
+  revalidatePurchaseRequest(parsed.requestId)
+  return expense
+}
+
+export async function updatePurchaseRequestExpense(input: unknown) {
+  const actor = await requireActor()
+  const parsed = purchaseRequestExpenseUpdateSchema.parse(input)
+  const request = await getPurchaseRequest(parsed.requestId)
+  if (!request) throw new Error('ไม่พบใบ PR ที่ต้องการแก้ไขค่าใช้จ่าย')
+  assertPurchaseRequestManager(actor, request.requesterId)
+  if (!canRecordPurchaseRequestExpense({
+    status: request.status,
+    purchaseMethod: request.purchaseMethod,
+    poNumber: request.poNumber,
+    poFileName: request.poFile.fileName,
+  })) {
+    throw new Error(PURCHASE_EXPENSE_REQUIRES_PO_MESSAGE)
+  }
+  const existing = request.expenseEvents.find((event) => event.id === parsed.expenseId)
+  if (!existing) throw new Error('ไม่พบรายการค่าใช้จ่ายที่ต้องการแก้ไข')
+  if (existing.documentType !== parsed.documentType || existing.sourceExpenseId !== parsed.sourceExpenseId) {
+    throw new Error('ประเภทเอกสารและ Invoice ต้นทางแก้ไขไม่ได้')
+  }
+
+  const result = await supabaseAdmin.rpc('update_purchase_request_expense', {
+    p_actor_id: actor.id,
+    p_request_id: parsed.requestId,
+    p_expense_id: parsed.expenseId,
+    p_expense_date: parsed.expenseDate,
+    p_amount: parsed.amount,
+    p_invoice_number: parsed.invoiceNumber,
+    p_note: parsed.note,
+    p_reason: parsed.reason,
+  })
+  const expense = unwrapPurchaseRequestExpenseMutation('แก้ไขค่าใช้จ่าย PR จัดซื้อ', result)
+  revalidatePurchaseRequest(parsed.requestId)
+  return expense
+}
+
+export async function cancelPurchaseRequestExpense(input: unknown) {
+  const actor = await requireActor()
+  const parsed = purchaseRequestExpenseCancelSchema.parse(input)
+  const request = await getPurchaseRequest(parsed.requestId)
+  if (!request) throw new Error('ไม่พบใบ PR ที่ต้องการยกเลิกค่าใช้จ่าย')
+  assertPurchaseRequestManager(actor, request.requesterId)
+  if (!canRecordPurchaseRequestExpense({
+    status: request.status,
+    purchaseMethod: request.purchaseMethod,
+    poNumber: request.poNumber,
+    poFileName: request.poFile.fileName,
+  })) {
+    throw new Error(PURCHASE_EXPENSE_REQUIRES_PO_MESSAGE)
+  }
+
+  const result = await supabaseAdmin.rpc('cancel_purchase_request_expense', {
+    p_actor_id: actor.id,
+    p_request_id: parsed.requestId,
+    p_expense_id: parsed.expenseId,
+    p_reason: parsed.reason,
+  })
+  const expense = unwrapPurchaseRequestExpenseMutation('ยกเลิกค่าใช้จ่าย PR จัดซื้อ', result)
+  revalidatePurchaseRequest(parsed.requestId)
+  return expense
 }

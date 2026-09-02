@@ -124,7 +124,7 @@ const contractDraft = {
 // Exactly one purchase method, each with its own conditional fields.
 assert.deepEqual(
   [...PURCHASE_METHODS],
-  ['annual_plan', 'contract', 'awaiting_contract', 'off_plan', 'specific_contract', 'e_bidding', 'equipment_lease'],
+  ['annual_plan', 'contract', 'awaiting_contract', 'off_plan', 'red_cross', 'specific_contract', 'e_bidding', 'equipment_lease'],
 )
 
 // Purpose is a grouping over the same six methods, not a stored value: every
@@ -138,6 +138,7 @@ assert.equal(purchaseMethodPurpose('annual_plan'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('contract'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('awaiting_contract'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('off_plan'), 'purchase_order')
+assert.equal(purchaseMethodPurpose('red_cross'), 'purchase_order')
 assert.equal(purchaseMethodPurpose('specific_contract'), 'new_contract')
 assert.equal(purchaseMethodPurpose('e_bidding'), 'new_contract')
 assert.equal(purchaseMethodPurpose('equipment_lease'), 'new_contract')

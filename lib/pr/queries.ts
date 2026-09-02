@@ -10,6 +10,7 @@ import type {
   PurchaseRequestItemRecord,
   PurchaseRequestReceiptItemRecord,
   PurchaseRequestReceiptRecord,
+  PurchaseRequestExpenseRecord,
 } from './types'
 
 const numericSchema = z.union([z.number(), z.string()]).transform(Number).refine(Number.isFinite)
@@ -36,6 +37,22 @@ const itemRowSchema = z.object({
       contract_item_allocations: z.array(z.object({ quantity: numericSchema })).nullable().default([]),
     })
     .nullable(),
+})
+
+const expenseRowSchema = z.object({
+  id: z.string().uuid(),
+  purchase_request_id: z.string().uuid(),
+  expense_date: z.string(),
+  amount: numericSchema,
+  invoice_number: z.string().nullable(),
+  note: z.string().nullable(),
+  document_kind: z.enum(['invoice', 'credit_note']),
+  source_expense_id: z.string().uuid().nullable(),
+  status: z.enum(['active', 'cancelled']),
+  created_at: z.string(),
+  updated_at: z.string().nullable().optional().default(null),
+  cancelled_at: z.string().nullable().optional().default(null),
+  actor: z.object({ name: z.string().nullable() }).nullable().optional().default(null),
 })
 
 const requestRowSchema = z.object({
@@ -97,6 +114,7 @@ const requestRowSchema = z.object({
   po_deleter: z.object({ name: z.string().nullable() }).nullable(),
   po_number_releaser: z.object({ name: z.string().nullable() }).nullable(),
   purchase_request_items: z.array(itemRowSchema).nullable().default([]),
+  purchase_request_expenses: z.array(expenseRowSchema).nullable().default([]),
 })
 
 const receiptHistoryItemSchema = z.object({
@@ -197,10 +215,30 @@ const REQUEST_SELECT = `
       contracts (display_name, product),
       contract_item_allocations (quantity)
     )
+  ),
+  purchase_request_expenses (
+    id,
+    purchase_request_id,
+    expense_date,
+    amount,
+    invoice_number,
+    note,
+    document_kind,
+    source_expense_id,
+    status,
+    created_at,
+    updated_at,
+    cancelled_at,
+    actor:profiles!purchase_request_expenses_created_by_fkey (name)
   )
 `
 
-const REQUEST_SELECT_LEGACY = REQUEST_SELECT.replace(
+const REQUEST_SELECT_WITHOUT_EXPENSES = REQUEST_SELECT.replace(
+  /\s*purchase_request_expenses \([\s\S]*?\n  \)\s*$/,
+  '\n',
+)
+
+const REQUEST_SELECT_LEGACY = REQUEST_SELECT_WITHOUT_EXPENSES.replace(
   /\s*annual_plan_reference_required,\s*/,
   '\n',
 )
@@ -218,6 +256,20 @@ function isMissingAnnualPlanReferenceColumn(error: RequestReadResult['error']): 
   )
 }
 
+function isMissingPurchaseRequestExpensesRelation(error: RequestReadResult['error']): boolean {
+  const message = error?.message.toLowerCase() ?? ''
+  return (
+    message.includes('purchase_request_expenses')
+    && (
+      error?.code === 'PGRST200'
+      || error?.code === 'PGRST205'
+      || message.includes('does not exist')
+      || message.includes('schema cache')
+      || message.includes('relationship')
+    )
+  )
+}
+
 /**
  * Keep read-only screens usable while an older environment catches up with
  * the reviewed annual-plan migration. Writes still require the real column
@@ -227,7 +279,14 @@ async function readRequestQuery(
   build: (select: string) => PromiseLike<RequestReadResult>,
 ): Promise<RequestReadResult> {
   const result = await build(REQUEST_SELECT)
-  if (!isMissingAnnualPlanReferenceColumn(result.error)) return result
+  const missingExpenses = isMissingPurchaseRequestExpensesRelation(result.error)
+  const missingAnnualPlanReference = isMissingAnnualPlanReferenceColumn(result.error)
+  if (!missingExpenses && !missingAnnualPlanReference) return result
+
+  const firstFallback = missingExpenses ? REQUEST_SELECT_WITHOUT_EXPENSES : REQUEST_SELECT_LEGACY
+  const fallback = await build(firstFallback)
+  if (!isMissingAnnualPlanReferenceColumn(fallback.error)) return fallback
+  if (firstFallback === REQUEST_SELECT_LEGACY) return fallback
   return build(REQUEST_SELECT_LEGACY)
 }
 
@@ -266,10 +325,31 @@ function mapItem(row: z.infer<typeof itemRowSchema>): PurchaseRequestItemRecord 
   }
 }
 
+function mapExpense(row: z.infer<typeof expenseRowSchema>): PurchaseRequestExpenseRecord {
+  return {
+    id: row.id,
+    purchaseRequestId: row.purchase_request_id,
+    expenseDate: row.expense_date,
+    amount: row.amount,
+    invoiceNumber: row.invoice_number?.trim() || null,
+    note: row.note?.trim() || null,
+    documentType: row.document_kind,
+    sourceExpenseId: row.source_expense_id,
+    status: row.status,
+    actorName: row.actor?.name?.trim() || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? null,
+    cancelledAt: row.cancelled_at ?? null,
+  }
+}
+
 function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecord {
   const items = (row.purchase_request_items ?? [])
     .sort((left, right) => left.line_number - right.line_number)
     .map(mapItem)
+  const expenseEvents = (row.purchase_request_expenses ?? [])
+    .sort((left, right) => right.expense_date.localeCompare(left.expense_date) || right.created_at.localeCompare(left.created_at))
+    .map(mapExpense)
 
   return {
     id: row.id,
@@ -335,6 +415,7 @@ function mapRequest(row: z.infer<typeof requestRowSchema>): PurchaseRequestRecor
     updatedAt: row.updated_at,
     items,
     receiptHistory: [],
+    expenseEvents,
     total: items.reduce((sum, item) => sum + item.lineTotal, 0),
   }
 }
@@ -387,9 +468,13 @@ export async function listPurchaseRequests(
   const headerMatches = requestRowSchema.array().parse(data ?? []).map(mapRequest)
   if (!search) return headerMatches
 
-  const lineMatches = await findRequestsByLine(search, filters.status, filters.department)
+  const [lineMatches, expenseMatches] = await Promise.all([
+    findRequestsByLine(search, filters.status, filters.department),
+    findRequestsByExpense(search, filters.status, filters.department),
+  ])
   const byId = new Map(headerMatches.map((request) => [request.id, request]))
   for (const request of lineMatches) byId.set(request.id, request)
+  for (const request of expenseMatches) byId.set(request.id, request)
 
   return [...byId.values()].sort(
     (left, right) =>
@@ -442,6 +527,35 @@ async function findRequestsByLine(
   })
   if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
 
+  return requestRowSchema.array().parse(data ?? []).map(mapRequest)
+}
+
+async function findRequestsByExpense(
+  search: string,
+  status?: (typeof PURCHASE_REQUEST_STATUSES)[number],
+  department?: string,
+): Promise<PurchaseRequestRecord[]> {
+  const supabase = await createClient()
+  const result = await supabase
+    .from('purchase_request_expenses')
+    .select('purchase_request_id')
+    .ilike('invoice_number', `%${search}%`)
+
+  if (isMissingPurchaseRequestExpensesRelation(result.error)) return []
+  if (result.error) throw new Error(`ค้นหาเลขที่เอกสารค่าใช้จ่ายไม่สำเร็จ: ${result.error.message}`)
+  const requestIds = [...new Set(
+    z.object({ purchase_request_id: z.string().uuid() }).array().parse(result.data ?? []).map((row) => row.purchase_request_id),
+  )]
+  if (requestIds.length === 0) return []
+
+  const { data, error } = await readRequestQuery((select) => {
+    let query = supabase.from('purchase_requests').select(select).in('id', requestIds)
+    if (status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
+    else if (status) query = query.eq('status', status)
+    if (department) query = query.eq('department', department)
+    return query
+  })
+  if (error) throw new Error(`อ่านใบ PR จากเลขที่เอกสารค่าใช้จ่ายไม่สำเร็จ: ${error.message}`)
   return requestRowSchema.array().parse(data ?? []).map(mapRequest)
 }
 

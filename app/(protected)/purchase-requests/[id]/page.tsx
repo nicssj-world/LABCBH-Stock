@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PurchaseRequestLifecycleControls } from '@/components/pr/PurchaseRequestLifecycleControls'
 import { PurchaseRequestOutsideStockReceiveControl } from '@/components/pr/PurchaseRequestOutsideStockReceiveControl'
+import { PurchaseRequestExpensePanel } from '@/components/pr/PurchaseRequestExpensePanel'
+import { PurchaseRequestInvoiceSummaryLink } from '@/components/pr/PurchaseRequestInvoiceSummaryLink'
 import { PrReviewPanel } from '@/components/pr/PrReviewPanel'
 import { PurchaseRequestPoFileOpenButton } from '@/components/pr/PurchaseRequestPoFileOpenButton'
 import {
@@ -15,7 +17,12 @@ import { canOperateStock, hasAppRole, isAdministrator } from '@/lib/auth/access'
 import { requireActor } from '@/lib/auth/actor'
 import { formatQuantity, formatThaiDate, formatThaiDateTime } from '@/lib/inventory/presenter'
 import { getLineNotificationConfig } from '@/lib/line/config'
-import { receivePurchaseRequestOutsideStock } from '@/lib/pr/actions'
+import {
+  cancelPurchaseRequestExpense,
+  receivePurchaseRequestOutsideStock,
+  recordPurchaseRequestExpense,
+  updatePurchaseRequestExpense,
+} from '@/lib/pr/actions'
 import {
   GOODS_RECEIPT_STATUS_LABELS,
   GOODS_RECEIPT_STATUS_TONES,
@@ -31,6 +38,7 @@ import {
   canReceivePurchaseRequestOutsideStock,
 } from '@/lib/pr/authorization'
 import { getPurchaseRequest } from '@/lib/pr/queries'
+import { canRecordPurchaseRequestExpense } from '@/lib/pr/expense'
 import { getLatestPurchaseRequestLineNotification } from '@/lib/pr/line-notification-queries'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { isPurchaseRequestOutsideStockEligible, purchaseMethodPurpose } from '@/lib/pr/schema'
@@ -83,6 +91,12 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
   ])
   const lineNotificationConfigured = canReview && Boolean(getLineNotificationConfig())
   const canEdit = canManagePurchaseRequest(actor, request.requesterId) && request.status === 'pending'
+  const canRecordExpense = canManagePurchaseRequest(actor, request.requesterId) && canRecordPurchaseRequestExpense({
+    status: request.status,
+    purchaseMethod: request.purchaseMethod,
+    poNumber: request.poNumber,
+    poFileName: request.poFile.fileName,
+  })
   const canActOutsideStock = canReceivePurchaseRequestOutsideStock(actor, request.requesterId)
   const isOutsideStockReceived = Boolean(request.outsideStockReceivedAt)
   const canReceiveOutsideStock =
@@ -121,6 +135,7 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
             <Link className="lab-link-button lab-link-button--secondary" href={`/purchase-requests/${request.id}/print`}>
               พิมพ์ใบ PR
             </Link>
+            <PurchaseRequestInvoiceSummaryLink request={request} />
             {canEdit && (
               <PurchaseRequestLifecycleControls
                 requestId={request.id}
@@ -377,6 +392,14 @@ export default async function PurchaseRequestDetailPage({ params }: PurchaseRequ
           </StickyScroll>
         )}
       </section>
+
+      <PurchaseRequestExpensePanel
+        request={request}
+        canRecord={canRecordExpense}
+        recordAction={recordPurchaseRequestExpense}
+        updateAction={updatePurchaseRequestExpense}
+        cancelAction={cancelPurchaseRequestExpense}
+      />
 
       {annualPlanReference && (
         <section className="bench-panel annual-plan-reference-detail" aria-labelledby="pr-annual-plan-reference-title">

@@ -2144,6 +2144,116 @@ textarea {
   height: 18px;
   flex: 0 0 auto;
 }
+
+/* Red Cross purchase expenses — isolated from the service-procurement ledger. */
+.purchase-invoice-summary-link,
+.purchase-expense-trigger,
+.purchase-expense-summary-trigger { min-height: 44px; }
+.purchase-expense-summary-trigger { margin-right: auto; min-width: 170px; }
+.purchase-expense-panel { overflow: hidden; }
+.purchase-expense-panel__header { align-items: flex-start; }
+.purchase-expense-panel__header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.purchase-expense-panel__header-actions > p { margin: 5px 0 0; color: var(--lab-muted); font-size: 12px; text-align: right; }
+.purchase-expense-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 22px 18px; }
+.purchase-expense-summary > div { display: grid; gap: 5px; min-width: 0; padding: 13px 16px; background: var(--lab-primary-soft); border: 1px solid var(--lab-border); border-radius: 12px; }
+.purchase-expense-summary span { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.purchase-expense-summary strong { color: var(--lab-navy-strong); font: 600 15px/1.35 var(--font-mono); }
+.purchase-expense-panel__notice,
+.purchase-expense-panel__error,
+.purchase-expense-panel__success { margin: 0 22px 18px; }
+.purchase-expense-panel__notice { padding: 11px 13px; color: var(--lab-muted); background: var(--lab-surface-muted); border: 1px solid var(--lab-border); border-radius: var(--radius-control); font-size: 12px; line-height: 1.5; }
+.purchase-expense-panel__empty { margin: 0 22px 22px; }
+.purchase-expense-panel__table-wrap { padding: 0 22px 22px; overflow-x: auto; }
+.purchase-expense-panel__table { min-width: 980px; }
+.purchase-expense-panel__table td:nth-child(2) { min-width: 170px; overflow-wrap: anywhere; }
+.purchase-expense-panel__table td:nth-child(4) { min-width: 150px; overflow-wrap: anywhere; }
+.purchase-expense-panel__table td:nth-child(5) small { display: block; margin-top: 4px; color: var(--lab-muted); font-size: 11px; }
+.purchase-expense-panel__table tfoot th,
+.purchase-expense-panel__table tfoot td { border-top: 2px solid var(--lab-border-strong); border-bottom: 0; font-weight: 700; }
+.purchase-expense-panel__edit-lock { color: var(--lab-muted); font-size: 11px; }
+.purchase-expense-row--credit td { background: color-mix(in srgb, var(--lab-red-soft) 55%, var(--lab-surface)); }
+.purchase-expense-row--cancelled td { color: var(--lab-muted); }
+.purchase-expense-row--cancelled .purchase-expense-document-badge { opacity: .72; }
+.purchase-expense-value--credit { color: var(--lab-red) !important; }
+.purchase-expense-document-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px 14px; padding: 11px 13px; color: var(--lab-navy-strong); background: var(--lab-primary-soft); border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
+.form-grid .purchase-expense-document-toggle__control { display: inline-flex; grid-auto-flow: column; align-items: center; justify-content: flex-start; gap: 9px; width: fit-content; color: var(--lab-navy-strong); font-weight: 800; }
+.purchase-expense-document-toggle__control input { width: 18px; min-height: 18px; margin: 0; padding: 0; accent-color: var(--lab-primary); }
+.purchase-expense-document-toggle > small,
+.purchase-expense-document-source > small,
+.purchase-expense-document-number > small { color: var(--lab-muted); font-size: 11px; font-weight: 500; line-height: 1.45; }
+.purchase-expense-document-source,
+.purchase-expense-document-number { min-width: 0; }
+.purchase-expense-document-source > .field-error,
+.purchase-expense-document-number > .field-error { color: var(--lab-red); font-weight: 600; }
+.purchase-expense-document-number__control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.purchase-expense-document-number__control > input { min-width: 0; }
+.purchase-expense-document-number__scan { width: 52px; min-width: 52px; min-height: 46px; padding: 8px; }
+.purchase-expense-document-number__scan svg { width: 20px; height: 20px; }
+.purchase-expense-document-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 7px; color: var(--lab-navy-strong); background: var(--lab-primary-soft); border: 1px solid var(--lab-border-strong); border-radius: 999px; font-size: 10px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+.purchase-expense-document-badge--credit { color: var(--lab-red); background: var(--lab-red-soft); border-color: color-mix(in srgb, var(--lab-red) 32%, var(--lab-border)); }
+.purchase-expense-document-number-display { display: block; margin-top: 6px; overflow-wrap: anywhere; }
+.purchase-expense-source-reference { display: block; margin-top: 4px; color: var(--lab-red); font-size: 10px; line-height: 1.4; }
+.purchase-expense-cancel-hint { display: block; margin-top: 5px; color: var(--lab-muted); font-size: 10px; line-height: 1.35; }
+.purchase-expense-actions { min-width: 124px; vertical-align: middle; }
+.purchase-expense-actions__group { display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: nowrap; }
+.purchase-expense-actions__group .lab-button { min-width: 44px; min-height: 44px; padding: 8px; }
+.purchase-expense-actions__group svg { width: 18px; height: 18px; }
+.purchase-expense-dialog { width: min(780px, calc(100vw - 32px)); text-align: left; }
+.purchase-expense-dialog__body { display: grid; gap: 18px; max-height: calc(min(86dvh, 800px) - 92px); text-align: left; }
+.purchase-expense-dialog__summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.purchase-expense-dialog__summary > div { display: grid; gap: 5px; min-width: 0; padding: 13px 16px; background: var(--lab-primary-soft); border: 1px solid var(--lab-border); border-radius: 12px; }
+.purchase-expense-dialog__summary span { color: var(--lab-muted); font-size: 11px; font-weight: 700; }
+.purchase-expense-dialog__summary strong { color: var(--lab-navy-strong); font: 600 15px/1.35 var(--font-mono); }
+.purchase-expense-dialog__workflow-note { margin: 0; }
+.purchase-expense-dialog__form { display: grid; gap: 16px; }
+.purchase-expense-dialog__form .form-grid { margin: 0; }
+.purchase-expense-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--lab-border); }
+.purchase-expense-dialog__actions .lab-button { min-width: 126px; }
+.purchase-expense-dialog__history { overflow: hidden; background: var(--lab-surface); border: 1px solid var(--lab-border); border-radius: 12px; }
+.purchase-expense-dialog__history-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--lab-border); }
+.purchase-expense-dialog__history-heading h3 { margin: 0; color: var(--lab-ink); font-size: 13px; }
+.purchase-expense-dialog__history-heading > span { color: var(--lab-muted); font-size: 11px; font-weight: 700; text-align: right; }
+.purchase-expense-dialog__history-list { max-height: min(36dvh, 320px); margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; scrollbar-color: var(--lab-border-strong) transparent; scrollbar-gutter: stable; }
+.purchase-expense-dialog__history-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, auto); gap: 20px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--lab-border); }
+.purchase-expense-dialog__history-item:last-child { border-bottom: 0; }
+.purchase-expense-dialog__history-item--credit { background: color-mix(in srgb, var(--lab-red-soft) 55%, var(--lab-surface)); }
+.purchase-expense-dialog__history-item--child { padding-left: 28px; }
+.purchase-expense-dialog__history-main { min-width: 0; }
+.purchase-expense-dialog__history-topline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.purchase-expense-dialog__history-topline > strong { color: var(--lab-navy-strong); font-size: 13px; }
+.purchase-expense-dialog__history-invoice { display: block; margin-top: 5px; overflow-wrap: anywhere; color: var(--lab-ink); font-size: 12px; line-height: 1.45; }
+.purchase-expense-dialog__history-main > small { display: block; margin-top: 3px; color: var(--lab-muted); font-size: 10px; line-height: 1.4; }
+.purchase-expense-dialog__history-amount { display: grid; justify-items: end; gap: 3px; min-width: 120px; text-align: right; }
+.purchase-expense-dialog__history-amount > span { color: var(--lab-muted); font-size: 10px; font-weight: 700; }
+.purchase-expense-dialog__history-amount > strong { color: var(--lab-navy-strong); font: 600 15px/1.35 var(--font-mono); white-space: nowrap; }
+.purchase-expense-dialog__history-empty { margin: 0; padding: 18px 16px; color: var(--lab-muted); font-size: 12px; }
+
+@media (max-width: 800px) {
+  .purchase-expense-panel__header-actions { justify-content: flex-start; }
+  .purchase-expense-panel__header-actions > p { text-align: left; }
+  .purchase-expense-summary { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 540px) {
+  .purchase-expense-panel__header-actions { display: grid; justify-content: stretch; }
+  .purchase-expense-panel__header-actions > p { margin-top: 0; }
+  .purchase-expense-panel__header-actions .purchase-expense-trigger { width: 100%; }
+  .purchase-expense-summary { padding-inline: 16px; }
+  .purchase-expense-panel__notice,
+  .purchase-expense-panel__error,
+  .purchase-expense-panel__success,
+  .purchase-expense-panel__empty { margin-inline: 16px; }
+  .purchase-expense-panel__table-wrap { padding-inline: 16px; }
+  .purchase-expense-document-toggle { grid-template-columns: 1fr; gap: 5px; }
+  .purchase-expense-document-number__scan { width: 50px; min-width: 50px; }
+  .purchase-expense-dialog__summary { grid-template-columns: 1fr; }
+  .purchase-expense-dialog__history-heading { display: grid; gap: 8px; }
+  .purchase-expense-dialog__history-heading > span { text-align: left; }
+  .purchase-expense-dialog__history-item { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding-inline: 14px; }
+  .purchase-expense-dialog__history-amount { min-width: 104px; }
+  .purchase-expense-dialog__actions { display: grid; grid-template-columns: 1fr; }
+  .purchase-expense-dialog__actions .lab-button { width: 100%; }
+}
 .service-expense-cancel-hint {
   display: block;
   max-width: 150px;

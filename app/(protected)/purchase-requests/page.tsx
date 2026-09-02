@@ -4,7 +4,7 @@ import { AutoFilterBench } from '@/components/ui/AutoFilterBench'
 import { ListPagination } from '@/components/ui/ListPagination'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { requireActor } from '@/lib/auth/actor'
-import { receivePurchaseRequestOutsideStock } from '@/lib/pr/actions'
+import { receivePurchaseRequestOutsideStock, recordPurchaseRequestExpense } from '@/lib/pr/actions'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { canRequestPurchase } from '@/lib/pr/authorization'
 import { PURCHASE_REQUEST_STATUS_LABELS } from '@/lib/pr/presenter'
@@ -163,6 +163,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
             actor={actor}
             receiveOutsideStockAction={receivePurchaseRequestOutsideStock}
             retryOutsideStockCleanupAction={retryPurchaseRequestPoFileCleanup}
+            recordExpenseAction={recordPurchaseRequestExpense}
           />
           <ListPagination
             currentPage={paginatedRequests.currentPage}

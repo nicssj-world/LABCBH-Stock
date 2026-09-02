@@ -12,6 +12,12 @@ import type {
   purchaseRequestShortCloseSchema,
 } from './schema'
 import type {
+  PurchaseRequestExpenseCancelInput,
+  PurchaseRequestExpenseDocumentType,
+  PurchaseRequestExpenseInput,
+  PurchaseRequestExpenseUpdateInput,
+} from './expense'
+import type {
   PurchaseRequestAttachmentKind,
   PurchaseRequestCommitteeKind,
 } from './checklist'
@@ -23,6 +29,9 @@ export type PurchaseOrderNumberReleaseInput = z.infer<typeof purchaseOrderNumber
 export type EphisPrNumberInput = z.infer<typeof ephisPrNumberSchema>
 export type PurchaseRequestReversalInput = z.infer<typeof purchaseRequestReversalSchema>
 export type PurchaseRequestShortCloseInput = z.infer<typeof purchaseRequestShortCloseSchema>
+export type PurchaseRequestExpenseInputRecord = PurchaseRequestExpenseInput
+export type PurchaseRequestExpenseUpdateInputRecord = PurchaseRequestExpenseUpdateInput
+export type PurchaseRequestExpenseCancelInputRecord = PurchaseRequestExpenseCancelInput
 
 export interface PurchaseRequestChecklistAttachmentRecord {
   id: string
@@ -162,6 +171,22 @@ export interface PurchaseRequestReceiptItemRecord {
   unit: string
 }
 
+export interface PurchaseRequestExpenseRecord {
+  id: string
+  purchaseRequestId: string
+  expenseDate: string
+  amount: number
+  invoiceNumber: string | null
+  note: string | null
+  documentType: PurchaseRequestExpenseDocumentType
+  sourceExpenseId: string | null
+  status: 'active' | 'cancelled'
+  actorName: string | null
+  createdAt: string
+  updatedAt: string | null
+  cancelledAt: string | null
+}
+
 export interface PurchaseRequestRecord {
   id: string
   fiscalYear: number
@@ -211,6 +236,7 @@ export interface PurchaseRequestRecord {
   updatedAt: string | null
   items: PurchaseRequestItemRecord[]
   receiptHistory: PurchaseRequestReceiptRecord[]
+  expenseEvents: PurchaseRequestExpenseRecord[]
   total: number
   /** Loaded separately for the STOCK OFFICER LINE notification workbench. */
   lineNotification?: PurchaseRequestLineNotificationSummary | null

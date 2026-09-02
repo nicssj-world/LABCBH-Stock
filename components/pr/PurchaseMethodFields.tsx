@@ -80,6 +80,8 @@ export function emptyMethod(
       return { kind, contractId: awaitingContracts[0]?.id ?? 0 }
     case 'off_plan':
       return { kind }
+    case 'red_cross':
+      return { kind }
     case 'specific_contract':
     case 'e_bidding':
     case 'equipment_lease':
@@ -255,6 +257,12 @@ export function PurchaseMethodFields({
                   </select>
                 </label>
               )
+            )}
+
+            {method.kind === 'red_cross' && (
+              <p className="field-help method-detail-note">
+                ใช้รายการซื้อและการรับเข้าคลังตามงานซื้อปกติ พร้อม checklist ตามยอดซื้อแบบซื้อในแผนทั้งปี และไม่สร้างสัญญาใหม่
+              </p>
             )}
 
             {(method.kind === 'specific_contract' || method.kind === 'e_bidding' || method.kind === 'equipment_lease') && (

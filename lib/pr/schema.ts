@@ -9,6 +9,7 @@ export const PURCHASE_METHODS = [
   'contract',
   'awaiting_contract',
   'off_plan',
+  'red_cross',
   'specific_contract',
   'e_bidding',
   'equipment_lease',
@@ -19,14 +20,14 @@ export type PurchaseMethodKind = (typeof PURCHASE_METHODS)[number]
 /**
  * Every method belongs to exactly one purpose: ordering against an existing
  * arrangement (to issue a PO), or originating a brand-new contract. This is
- * purely a UI grouping over the same six methods — nothing new is stored.
+ * purely a UI grouping over the same purchase-method field — nothing new is stored.
  */
 export const PURCHASE_PURPOSES = ['purchase_order', 'new_contract'] as const
 
 export type PurchasePurpose = (typeof PURCHASE_PURPOSES)[number]
 
 export const PURCHASE_METHODS_BY_PURPOSE = {
-  purchase_order: ['annual_plan', 'contract', 'awaiting_contract', 'off_plan'],
+  purchase_order: ['annual_plan', 'contract', 'awaiting_contract', 'off_plan', 'red_cross'],
   new_contract: ['specific_contract', 'e_bidding', 'equipment_lease'],
 } as const satisfies Record<PurchasePurpose, readonly PurchaseMethodKind[]>
 
@@ -139,6 +140,7 @@ export const purchaseMethodSchema = z.discriminatedUnion('kind', [
     contractId: z.number().int().positive(),
   }),
   z.object({ kind: z.literal('off_plan') }),
+  z.object({ kind: z.literal('red_cross') }),
   z.object({
     kind: z.literal('specific_contract'),
     contractDraft: contractDraftSchema,

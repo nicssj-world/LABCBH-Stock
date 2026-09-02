@@ -21,6 +21,7 @@ const accessRowSchema = z.object({
     'contract',
     'awaiting_contract',
     'off_plan',
+    'red_cross',
     'specific_contract',
     'e_bidding',
     'equipment_lease',

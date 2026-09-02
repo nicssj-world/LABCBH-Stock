@@ -105,6 +105,29 @@ function countAttachments(
     [['specification', 3], ['inspection', 3]],
   )
 
+  const redCross = derivePurchaseRequestChecklist('red_cross', 1_000_000)
+  assert.equal(countAttachments(redCross, 'tor'), 1)
+  assert.equal(countAttachments(redCross, 'quotation'), 3)
+  assert.equal(countAttachments(redCross, 'plan_page'), 1)
+  assert.deepEqual(
+    redCross.committees.map(({ kind, seats }) => [kind, seats]),
+    [['specification', 3], ['inspection', 3]],
+  )
+
+  const redCrossBelowThreshold = derivePurchaseRequestChecklist('red_cross', 49_999.99)
+  assert.equal(countAttachments(redCrossBelowThreshold, 'quotation'), 1)
+  assert.deepEqual(
+    redCrossBelowThreshold.committees.map(({ kind, seats }) => [kind, seats]),
+    [['specification', 1], ['inspection', 1]],
+  )
+
+  const redCrossAtQuoteThreshold = derivePurchaseRequestChecklist('red_cross', 50_000)
+  assert.equal(countAttachments(redCrossAtQuoteThreshold, 'quotation'), 3)
+  assert.deepEqual(
+    redCrossAtQuoteThreshold.committees.map(({ kind, seats }) => [kind, seats]),
+    [['specification', 1], ['inspection', 1]],
+  )
+
   for (const method of ['e_bidding', 'equipment_lease'] as const) {
     const policy = derivePurchaseRequestChecklist(method, method === 'equipment_lease' ? null : 1_000_000)
     assert.equal(countAttachments(policy, 'quotation'), 3)
@@ -116,7 +139,7 @@ function countAttachments(
   }
 }
 
-for (const method of ['annual_plan', 'specific_contract', 'e_bidding'] as const) {
+for (const method of ['annual_plan', 'specific_contract', 'e_bidding', 'red_cross'] as const) {
   assert.equal(methodRequiresProcurementPlanReference(method), true)
   assert.equal(methodRequiresAnnualPlanReference(method), true)
   assert.equal(annualPlanTypeForPurchaseMethod(method), 'procurement')
