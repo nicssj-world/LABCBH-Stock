@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const read = (path: string) => readFileSync(path, 'utf8')
+const guard = read('components/ui/IdleSessionGuard.tsx')
+const shell = read('components/ui/AppShell.tsx')
+const styles = read('app/globals.css')
+
+assert.match(guard, /createIdleTimeoutController/)
+assert.match(guard, /IDLE_TIMEOUT_MS/)
+assert.match(guard, /'pointerdown'/)
+assert.match(guard, /'keydown'/)
+assert.match(guard, /'touchstart'/)
+assert.match(guard, /'wheel'/)
+assert.match(guard, /'scroll'/)
+assert.match(guard, /auth\.onAuthStateChange/)
+assert.match(guard, /signOut\(\{ scope: 'local' \}\)/)
+assert.match(guard, /router\.replace\('\/login'\)/)
+assert.match(guard, /router\.refresh\(\)/)
+assert.match(guard, /role="dialog"/)
+assert.match(guard, /aria-modal="true"/)
+assert.match(guard, /event\.preventDefault\(\)/)
+assert.match(guard, /ใช้งานต่อ/)
+assert.match(guard, /role="alert"/)
+assert.match(guard, /ลองออกจากระบบอีกครั้ง/)
+assert.match(shell, /<IdleSessionGuard \/>/)
+assert.match(styles, /\.idle-session-dialog\s*\{/)
+assert.match(styles, /\.idle-session-dialog__countdown\s*\{/)
+
+console.log('idle session guard contract: ok')

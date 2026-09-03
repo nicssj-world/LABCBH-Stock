@@ -11,6 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { startTransition, useEffect, useState, type ReactNode } from 'react'
+import { IdleSessionGuard } from '@/components/ui/IdleSessionGuard'
 import { LogoutButton } from '@/components/ui/LogoutButton'
 import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 import { RouteProgress } from '@/components/ui/RouteProgress'
@@ -201,6 +202,7 @@ export function AppShell({ actor, children, notificationSnapshot = EMPTY_NOTIFIC
 
   return (
     <RouteProgress>
+      <IdleSessionGuard />
       <div className="app-shell">
         <a className="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
         <button

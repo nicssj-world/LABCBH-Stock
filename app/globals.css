@@ -2998,6 +2998,78 @@ input:read-only:focus { border-color: var(--lab-border) !important; box-shadow: 
 .app-dialog__close { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--lab-muted); background: transparent; border: 1px solid transparent; border-radius: var(--radius-control); }
 .app-dialog__close:hover { color: var(--lab-ink); background: var(--lab-surface-muted); }
 .app-dialog__body { padding: 20px 24px 24px; overflow-y: auto; }
+.idle-session-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.idle-session-dialog__body {
+  display: grid;
+  gap: 16px;
+}
+
+.idle-session-dialog__message {
+  margin: 0;
+  color: var(--lab-ink);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.idle-session-dialog__countdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  color: var(--lab-ink);
+  background: color-mix(in srgb, var(--lab-amber-soft) 54%, var(--lab-surface));
+  border: 1px solid color-mix(in srgb, var(--lab-amber) 30%, var(--lab-border-strong));
+  border-radius: 12px;
+}
+
+.idle-session-dialog__countdown span {
+  color: var(--lab-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.idle-session-dialog__countdown strong {
+  color: var(--lab-navy-strong);
+  font: 600 20px/1.2 var(--font-mono);
+}
+
+.idle-session-dialog__error {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--lab-red);
+  background: var(--lab-red-soft);
+  border: 1px solid color-mix(in srgb, var(--lab-red) 28%, var(--lab-border));
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.idle-session-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--lab-border);
+}
+
+.idle-session-dialog__actions .lab-button {
+  min-width: 148px;
+}
+
+@media (max-width: 600px) {
+  .idle-session-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .idle-session-dialog__actions .lab-button {
+    width: 100%;
+  }
+}
 .pr-cancel-dialog { width: min(560px, calc(100vw - 32px)); }
 .pr-cancel-dialog__body { display: grid; gap: 16px; max-height: calc(min(84dvh, 760px) - 92px); }
 .pr-cancel-dialog__body .decision-panel { gap: 8px; padding: 16px; }
