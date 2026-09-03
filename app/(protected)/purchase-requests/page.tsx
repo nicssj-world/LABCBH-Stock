@@ -7,9 +7,9 @@ import { requireActor } from '@/lib/auth/actor'
 import { receivePurchaseRequestOutsideStock, recordPurchaseRequestExpense } from '@/lib/pr/actions'
 import { retryPurchaseRequestPoFileCleanup } from '@/lib/pr/po-file-actions'
 import { canRequestPurchase } from '@/lib/pr/authorization'
-import { PURCHASE_REQUEST_STATUS_LABELS } from '@/lib/pr/presenter'
+import { PURCHASE_METHOD_LABELS, PURCHASE_REQUEST_STATUS_LABELS } from '@/lib/pr/presenter'
 import { listPurchaseRequests } from '@/lib/pr/queries'
-import { PURCHASE_REQUEST_FILTER_STATUSES } from '@/lib/pr/schema'
+import { PURCHASE_METHODS, PURCHASE_REQUEST_FILTER_STATUSES } from '@/lib/pr/schema'
 import type { PurchaseRequestRecord } from '@/lib/pr/types'
 import { DEPARTMENTS } from '@/lib/organization/departments'
 import { LIST_PAGE_SIZE, paginate, parsePage } from '@/lib/pagination'
@@ -32,6 +32,8 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
     ? 'cancelled'
     : PURCHASE_REQUEST_FILTER_STATUSES.find((value) => value === statusValue)
   const department = first(params.department)?.trim() ?? ''
+  const purchaseMethodValue = first(params.purchaseMethod)
+  const purchaseMethod = PURCHASE_METHODS.find((value) => value === purchaseMethodValue)
   const showHiddenStatuses = first(params.showHiddenStatuses) === '1'
   const page = parsePage(first(params.page))
 
@@ -39,7 +41,12 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   let error: string | null = null
 
   try {
-    requests = await listPurchaseRequests({ status, search, department: department || undefined })
+    requests = await listPurchaseRequests({
+      status,
+      search,
+      department: department || undefined,
+      purchaseMethod,
+    })
   } catch (caught) {
     error = caught instanceof Error ? caught.message : 'อ่านรายการใบ PR ไม่สำเร็จ'
   }
@@ -58,6 +65,7 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
   if (search) activeParams.set('search', search)
   if (status) activeParams.set('status', status)
   if (department) activeParams.set('department', department)
+  if (purchaseMethod) activeParams.set('purchaseMethod', purchaseMethod)
   if (showHiddenStatuses) activeParams.set('showHiddenStatuses', '1')
   const buildPageHref = (nextPage: number) => {
     const nextParams = new URLSearchParams(activeParams)
@@ -140,7 +148,18 @@ export default async function PurchaseRequestsPage({ searchParams }: PurchaseReq
               ...DEPARTMENTS.map((value) => ({ value, label: value })),
             ],
           },
+          {
+            type: 'select',
+            name: 'purchaseMethod',
+            label: 'วิธีจัดซื้อ',
+            value: purchaseMethod ?? '',
+            options: [
+              { value: '', label: 'ทุกวิธีจัดซื้อ' },
+              ...PURCHASE_METHODS.map((value) => ({ value, label: PURCHASE_METHOD_LABELS[value] })),
+            ],
+          },
         ]}
+        showClear={false}
       />
 
       {error ? (

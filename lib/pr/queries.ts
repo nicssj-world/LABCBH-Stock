@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { roundQuantity } from '@/lib/inventory/balance'
 import { GOODS_RECEIPT_STATUSES } from '@/lib/receipts/schema'
 import { createClient } from '@/lib/supabase/server'
-import { PURCHASE_METHODS, PURCHASE_REQUEST_STATUSES } from './schema'
+import { PURCHASE_METHODS, PURCHASE_REQUEST_STATUSES, type PurchaseMethodKind } from './schema'
 import type {
   PurchaseRequestRecord,
   PurchaseRequestItemRecord,
@@ -294,6 +294,7 @@ export interface PurchaseRequestFilters {
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number]
   search?: string
   department?: string
+  purchaseMethod?: PurchaseMethodKind
 }
 
 function mapItem(row: z.infer<typeof itemRowSchema>): PurchaseRequestItemRecord {
@@ -452,6 +453,7 @@ export async function listPurchaseRequests(
     if (filters.status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
     else if (filters.status) query = query.eq('status', filters.status)
     if (filters.department) query = query.eq('department', filters.department)
+    if (filters.purchaseMethod) query = query.eq('purchase_method', filters.purchaseMethod)
 
     if (search) {
       // Officers search by PO, PR, LS code, or reagent name. The first two live on
@@ -469,8 +471,8 @@ export async function listPurchaseRequests(
   if (!search) return headerMatches
 
   const [lineMatches, expenseMatches] = await Promise.all([
-    findRequestsByLine(search, filters.status, filters.department),
-    findRequestsByExpense(search, filters.status, filters.department),
+    findRequestsByLine(search, filters.status, filters.department, filters.purchaseMethod),
+    findRequestsByExpense(search, filters.status, filters.department, filters.purchaseMethod),
   ])
   const byId = new Map(headerMatches.map((request) => [request.id, request]))
   for (const request of lineMatches) byId.set(request.id, request)
@@ -487,6 +489,7 @@ async function findRequestsByLine(
   search: string,
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number],
   department?: string,
+  purchaseMethod?: PurchaseMethodKind,
 ): Promise<PurchaseRequestRecord[]> {
   const supabase = await createClient()
 
@@ -523,6 +526,7 @@ async function findRequestsByLine(
     if (status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
     else if (status) query = query.eq('status', status)
     if (department) query = query.eq('department', department)
+    if (purchaseMethod) query = query.eq('purchase_method', purchaseMethod)
     return query
   })
   if (error) throw new Error(`อ่านรายการใบ PR ไม่สำเร็จ: ${error.message}`)
@@ -534,6 +538,7 @@ async function findRequestsByExpense(
   search: string,
   status?: (typeof PURCHASE_REQUEST_STATUSES)[number],
   department?: string,
+  purchaseMethod?: PurchaseMethodKind,
 ): Promise<PurchaseRequestRecord[]> {
   const supabase = await createClient()
   const result = await supabase
@@ -553,6 +558,7 @@ async function findRequestsByExpense(
     if (status === 'cancelled') query = query.in('status', ['cancelled', 'reversed'])
     else if (status) query = query.eq('status', status)
     if (department) query = query.eq('department', department)
+    if (purchaseMethod) query = query.eq('purchase_method', purchaseMethod)
     return query
   })
   if (error) throw new Error(`อ่านใบ PR จากเลขที่เอกสารค่าใช้จ่ายไม่สำเร็จ: ${error.message}`)
