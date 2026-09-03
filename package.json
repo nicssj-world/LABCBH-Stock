@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test:sql-safety": "tsx scripts/plpgsql-ambiguity-regression.test.ts",
     "test:rpc-boundaries": "tsx scripts/rpc-payload-nullability.test.ts",
-    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/design-refresh.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts",
+    "test:app-shell": "tsx scripts/app-shell-contract.test.ts && tsx scripts/design-refresh.test.ts && tsx scripts/auth-contract.test.ts && tsx scripts/auth-access-behavior.test.ts && tsx scripts/actor-resolution.test.ts && tsx scripts/login-behavior.test.ts && tsx scripts/idle-timeout.test.ts && tsx scripts/idle-session-guard-contract.test.ts",
     "test:dashboard": "tsx scripts/dashboard-watchlist.test.ts && tsx scripts/dashboard-executive.test.ts",
     "test:sticky-scroll-ui": "tsx scripts/sticky-scroll-ui.test.ts",
     "test:money-input": "tsx scripts/money-input.test.ts",
