@@ -102,6 +102,21 @@ export interface GeneratedAnnualPlanEvidence {
   planFiscalYear: number
 }
 
+export type AnnualPlanEvidenceActionError = {
+  ok: false
+  message: string
+}
+
+export type AnnualPlanEvidenceActionResult =
+  | (GeneratedAnnualPlanEvidence & { ok: true })
+  | AnnualPlanEvidenceActionError
+
+export function isAnnualPlanEvidenceActionError(value: unknown): value is AnnualPlanEvidenceActionError {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Record<string, unknown>
+  return candidate.ok === false && typeof candidate.message === 'string'
+}
+
 export function normalizePlanText(value: string) {
   return value
     .normalize('NFKC')
@@ -156,10 +171,10 @@ function editDistance(left: string, right: string) {
 }
 
 /**
- * A manually confirmed row is an explicit human choice used for OCR/layout
- * differences. It still needs to be recognisably related to the typed name;
- * the small fuzzy allowance covers common OCR substitutions without allowing
- * an unrelated row to pass silently.
+ * This helper is used by automatic/server-side text checks when the source PDF
+ * contains OCR/layout artefacts. A manually confirmed row is handled as an
+ * explicit human choice by the reference validators and does not call this
+ * helper as a veto.
  */
 export function annualPlanTextIsRelated(
   expectedName: string,

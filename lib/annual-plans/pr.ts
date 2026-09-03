@@ -7,7 +7,6 @@ import { currentFiscalYear } from './fiscal'
 import { ANNUAL_PLAN_BUCKET } from './files'
 import {
   annualPlanReferenceSchema,
-  annualPlanTextIsRelated,
   matchAnnualPlanContractName,
   matchAnnualPlanLine,
   normalizePlanText,
@@ -334,15 +333,9 @@ export function validateAnnualPlanReferenceForLines(
     ) {
       throw new Error(`รหัส LS ของรายการลำดับที่ ${index + 1} ไม่ตรงกับแผนจัดซื้อ`)
     }
-    if (line.matchMethod === 'manual_confirmed') {
-      const codeMatches = Boolean(row.lsCode && normalizeLsCode(row.lsCode) === normalizeLsCode(itemLsCode))
-      // Manual confirmation is allowed for OCR/layout differences, but the
-      // selected row still has to be recognisably related to the item name (or
-      // be confirmed by its LS code).
-      if (!annualPlanTextIsRelated(itemName, row) && !codeMatches) {
-        throw new Error(`รายการลำดับที่ ${index + 1} ไม่สัมพันธ์กับแถวที่เลือกในแผนจัดซื้อ`)
-      }
-    }
+    // `manual_confirmed` is an explicit human choice. The row identity,
+    // line number, and current plan version still protect the reference;
+    // OCR text cannot veto that choice.
   }
   return { reference, selectedRows: reference.lines.map((line) => rowsById.get(line.planRowId)!) }
 }
@@ -384,7 +377,11 @@ export function validateAnnualPlanReferenceForContract(
   }
   const nameMatch = matchAnnualPlanContractName(contractName, [row])
   const manuallyConfirmed = reference.contract.line.matchMethod === 'manual_confirmed'
-  if ((!manuallyConfirmed && !nameMatch.selected) || (manuallyConfirmed && !annualPlanTextIsRelated(contractName, row))) {
+  // A manually selected hiring-plan row is the requester's explicit
+  // confirmation. Keep the current-version/line checks above, but do not
+  // reject a valid row merely because the source PDF's OCR text is incomplete
+  // or materially different from the final contract wording.
+  if (!manuallyConfirmed && !nameMatch.selected) {
     throw new Error('ชื่อสัญญาไม่สัมพันธ์กับแถวที่เลือกในแผนจัดจ้าง')
   }
   return { reference, selectedRows: [row] }

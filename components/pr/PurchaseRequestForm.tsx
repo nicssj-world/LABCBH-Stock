@@ -19,6 +19,7 @@ import { fiscalYearOfIsoDate } from '@/lib/annual-plans/fiscal'
 import { generateAnnualPlanEvidence } from '@/lib/annual-plans/actions'
 import {
   annualPlanReferenceFingerprint,
+  isAnnualPlanEvidenceActionError,
   matchAnnualPlanContractName,
   matchAnnualPlanLine,
   type AnnualPlanForPurchaseRequest,
@@ -748,6 +749,7 @@ export function PurchaseRequestForm({
               reference: annualPlanReference,
               items: input.items.map((item) => ({ name: item.name, lsCode: item.lsCode })),
             })
+            if (isAnnualPlanEvidenceActionError(generated)) throw new Error(generated.message)
             const generatedUpload: UploadedChecklistFile = {
               source: 'r2',
               uploadId: generated.uploadId,

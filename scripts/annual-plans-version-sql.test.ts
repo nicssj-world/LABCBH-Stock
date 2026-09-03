@@ -7,6 +7,8 @@ const referenceIdHotfixSql = readFileSync('supabase/migrations/20260826151619_fi
 const normalizedReferenceIdHotfix = referenceIdHotfixSql.toLowerCase()
 const ocrMatchingSql = readFileSync('supabase/migrations/20260903100000_fix_annual_plan_ocr_matching.sql', 'utf8')
 const normalizedOcrMatchingSql = ocrMatchingSql.toLowerCase()
+const manualConfirmationSql = readFileSync('supabase/migrations/20260903110000_allow_manual_annual_plan_confirmation.sql', 'utf8')
+const normalizedManualConfirmationSql = manualConfirmationSql.toLowerCase()
 
 assert.match(normalized, /create table public\.lab_stock_annual_plan_versions/)
 assert.match(normalized, /create table public\.lab_stock_annual_plan_rows/)
@@ -52,5 +54,8 @@ assert.match(normalizedOcrMatchingSql, /chr\(3659\)/, 'Thai sara-am OCR decompos
 assert.match(normalizedOcrMatchingSql, /extensions\.levenshtein/, 'manual confirmations must tolerate small OCR substitutions')
 assert.match(normalizedOcrMatchingSql, /not public\.annual_plan_text_is_related\(contract_name, plan_row\.item_name, plan_row\.raw_text\)/)
 assert.match(normalizedOcrMatchingSql, /not public\.annual_plan_text_is_related\(actual_item_name, plan_row\.item_name, plan_row\.raw_text\)/)
+assert.match(normalizedManualConfirmationSql, /pg_get_functiondef\(/)
+assert.match(normalizedManualConfirmationSql, /contract_match_method = 'name_exact'/)
+assert.match(normalizedManualConfirmationSql, /manual confirmation is the requester's explicit row selection/)
 
 console.log('annual plan version and PR-reference SQL contract: ok')

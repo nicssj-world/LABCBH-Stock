@@ -172,6 +172,7 @@ assert.match(form, /methodRequiresAnnualPlanReference/, 'every checklist method 
 assert.match(form, /generateAnnualPlanEvidence/, 'the plan-page attachment is generated from the stored plan, not uploaded again by the requester')
 assert.match(form, /hiringPlan/, 'equipment leases must receive the current hiring plan as a separate source')
 assert.match(form, /matchAnnualPlanContractName/, 'equipment leases must match their plan row from contract name only')
+assert.match(form, /isAnnualPlanEvidenceActionError\(generated\)/, 'plan evidence errors must return to the form instead of rendering a production Server Components error')
 assert.match(form, /isPurchaseRequestActionError\(saved\)/, 'PR submission errors must return to the form instead of rendering a production Server Components error')
 
 const planReferenceFields = read('components/pr/AnnualPlanReferenceFields.tsx')

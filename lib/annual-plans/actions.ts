@@ -22,7 +22,10 @@ import {
   validateAnnualPlanFile,
 } from './files'
 import { ANNUAL_PLAN_TYPES, annualPlanInputSchema, type AnnualPlanType } from './schema'
-import { annualPlanReferenceSchema } from './pr-reference'
+import {
+  annualPlanReferenceSchema,
+  type AnnualPlanEvidenceActionResult,
+} from './pr-reference'
 import { createHighlightedAnnualPlanPdf } from './pdf-index'
 import {
   getCurrentAnnualPlanForPurchaseRequest,
@@ -375,7 +378,7 @@ async function removeGeneratedEvidenceOrQueue(storageKey: string) {
  * only the selected row ids; it never uploads a second copy of the annual
  * plan or controls which fiscal-year source is opened.
  */
-export async function generateAnnualPlanEvidence(input: unknown) {
+async function generateAnnualPlanEvidenceInternal(input: unknown) {
   const actor = await requireActor()
   if (!canUploadPurchaseRequestChecklist(actor)) {
     throw new Error('ไม่มีสิทธิ์สร้างเอกสารแผนประกอบใบ PR')
@@ -428,6 +431,7 @@ export async function generateAnnualPlanEvidence(input: unknown) {
       Array.isArray(ticketResult.data) ? ticketResult.data[0] : ticketResult.data,
     )
     return {
+      ok: true as const,
       uploadId: ticket.id,
       fileName,
       planVersionId: parsed.reference.planVersionId,
@@ -436,5 +440,32 @@ export async function generateAnnualPlanEvidence(input: unknown) {
   } catch (error) {
     await removeGeneratedEvidenceOrQueue(storageKey)
     throw new Error(`สร้างไฟล์แผนที่ไฮไลท์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * A plan reference is user-controlled input. Return expected validation and
+ * storage failures to the form so a rejected reference cannot become a
+ * production Server Components error page.
+ */
+export async function generateAnnualPlanEvidence(input: unknown): Promise<AnnualPlanEvidenceActionResult> {
+  const actionRequestId = crypto.randomUUID()
+  try {
+    return await generateAnnualPlanEvidenceInternal(input)
+  } catch (error) {
+    console.error('Annual plan evidence generation failed', {
+      actionRequestId,
+      error: error instanceof Error
+        ? { name: error.name, message: error.message, stack: error.stack }
+        : error,
+    })
+    return {
+      ok: false,
+      message: error instanceof z.ZodError
+        ? 'สร้างไฟล์แผนที่ไฮไลท์ไม่สำเร็จ กรุณาตรวจสอบข้อมูลแล้วลองใหม่'
+        : error instanceof Error && error.message.trim()
+          ? error.message
+          : 'สร้างไฟล์แผนที่ไฮไลท์ไม่สำเร็จ กรุณาลองใหม่',
+    }
   }
 }
