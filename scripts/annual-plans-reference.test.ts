@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { fiscalYearOfDate, fiscalYearOfIsoDate } from '../lib/annual-plans/fiscal'
 import {
   annualPlanReferenceSchema,
+  annualPlanTextIsRelated,
   matchAnnualPlanContractName,
   matchAnnualPlanLine,
   type AnnualPlanRow,
@@ -112,6 +113,40 @@ assert.equal(
   'hiring plan matching must use the contract name even without an LS code',
 )
 assert.equal(matchAnnualPlanContractName('ชื่อสัญญาที่ไม่มีในแผน', [hiringContract]).selected, null)
+
+// The live hiring-plan PDF contains OCR/layout artefacts such as inserted
+// spaces and substitutions ("น ้ายา" / "น้ำยา", "สาหรับ" / "สำหรับ"). A
+// requester who manually confirms the correct row must not be rejected by the
+// server for those harmless differences.
+const ocrHiringContract = row({
+  id: '00000000-0000-0000-0000-000000000009',
+  itemName: 'เช่าเครื่องอัตโนมัติสาหรับเพาะเชื้อพร้อมน ้ายาตรวจวิเคราะห์ 1,768,746.00',
+  rawText: '24 เช่าเครื่องอัตโนมัติสาหรับเพาะเชื้อพร้อมน ้ายาตรวจวิเคราะห์ 1,768,746.00',
+  lsCode: null,
+  planSequence: '24',
+  lineNumber: 24,
+})
+const typedHiringContractName = 'เช่าเครื่องอัตโนมัติสาหรับเพาะเชื้อพร้อมน้ำยาตรวจวิเคราะห์'
+assert.equal(
+  matchAnnualPlanContractName(typedHiringContractName, [ocrHiringContract]).selected?.id,
+  ocrHiringContract.id,
+  'layout-only OCR whitespace must not prevent automatic hiring-plan matching',
+)
+assert.equal(
+  annualPlanTextIsRelated(typedHiringContractName, ocrHiringContract),
+  true,
+  'manual hiring-plan confirmation must allow harmless OCR substitutions',
+)
+assert.equal(
+  annualPlanTextIsRelated('เช่าเครื่องอัตโนมัติสำหรับเพาะเชื้อพร้อมน้ำยาตรวจวิเคราะห์', ocrHiringContract),
+  true,
+  'manual hiring-plan confirmation must allow common Thai OCR substitutions',
+)
+assert.equal(
+  annualPlanTextIsRelated('เช่าเครื่องตรวจวิเคราะห์คนละรายการ', ocrHiringContract),
+  false,
+  'manual hiring-plan confirmation must still reject an unrelated row',
+)
 assert.throws(() => annualPlanReferenceSchema.parse({
   planVersionId: '00000000-0000-0000-0000-000000000001',
   planFiscalYear: 2569,

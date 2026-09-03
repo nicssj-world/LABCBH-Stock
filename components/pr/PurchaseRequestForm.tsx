@@ -28,6 +28,7 @@ import {
 import { normalizeLsCode } from '@/lib/inventory/ls-code'
 import { formatQuantity } from '@/lib/inventory/presenter'
 import { createPurchaseRequest, updatePurchaseRequest } from '@/lib/pr/actions'
+import { isPurchaseRequestActionError } from '@/lib/pr/errors'
 import { LOW_CONTRACT_BALANCE_THRESHOLD_PERCENT, LOW_CONTRACT_BALANCE_WARNING, formatBaht } from '@/lib/pr/presenter'
 import { calculateLineTotal, type PurchaseMethod, type PurchasePurpose } from '@/lib/pr/schema'
 import {
@@ -720,6 +721,10 @@ export function PurchaseRequestForm({
         }
         if (legacyChecklistExempt && isEditMode && initialValues) {
           const saved = await updatePurchaseRequest(initialValues.requestId, input)
+          if (isPurchaseRequestActionError(saved)) {
+            setError(saved.message)
+            return
+          }
           router.push(`/purchase-requests/${saved.id}`)
           router.refresh()
           return
@@ -816,6 +821,11 @@ export function PurchaseRequestForm({
         const saved = isEditMode && initialValues
           ? await updatePurchaseRequest(initialValues.requestId, input, checklist, annualPlanReference)
           : await createPurchaseRequest(input, checklist, annualPlanReference)
+        if (isPurchaseRequestActionError(saved)) {
+          setOverallProgress(null)
+          setError(saved.message)
+          return
+        }
         router.push(`/purchase-requests/${saved.id}`)
         router.refresh()
       } catch (caught) {

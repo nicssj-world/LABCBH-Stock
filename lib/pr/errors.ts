@@ -58,6 +58,16 @@ export function formatPurchaseRequestMutationError(operation: string, message: s
   const normalizedMessage = message.toLowerCase()
   const copy = normalizedMessage.includes('purchase_requests_po_number_key')
     ? 'เลขที่ใบสั่งซื้อ (PO) นี้ถูกใช้กับใบ PR อื่นแล้ว ไม่สามารถใช้เลขซ้ำได้ กรุณาตรวจสอบเลข PO'
+    : normalizedMessage.includes('hiring plan row is not related to the contract name')
+      ? 'ชื่อสัญญาไม่สัมพันธ์กับแถวที่เลือกในแผนจัดจ้าง กรุณาตรวจสอบชื่อสัญญาและเลือกแถวใหม่'
+    : normalizedMessage.includes('hiring plan contract name does not match the PR')
+      ? 'ชื่อสัญญาในข้อมูลอ้างอิงไม่ตรงกับชื่อสัญญาใน PR กรุณาตรวจสอบแล้วจับคู่ใหม่'
+    : normalizedMessage.includes('annual plan file changed; rematch')
+      ? 'ไฟล์แผนถูกเปลี่ยนระหว่างกรอก PR กรุณาโหลดข้อมูลใหม่แล้วจับคู่รายการอีกครั้ง'
+    : normalizedMessage.includes('annual plan index is not ready')
+      ? 'ระบบกำลังเตรียมดัชนีแผนจัดซื้อ/จัดจ้าง กรุณารอสักครู่แล้วลองใหม่'
+    : normalizedMessage.includes('annual plan highlight evidence is required')
+      ? 'ระบบยังสร้างไฟล์ไฮไลท์แผนไม่เสร็จ กรุณาลองส่งใบ PR ใหม่อีกครั้ง'
     : normalizedMessage.includes('hard_delete_purchase_request') &&
         (normalizedMessage.includes('could not find the function') || normalizedMessage.includes('schema cache'))
       ? 'ระบบยังไม่ได้อัปเดตส่วนลบถาวร กรุณาให้ผู้ดูแลระบบ apply migration ล่าสุดก่อนลองใหม่'

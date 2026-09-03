@@ -7,6 +7,7 @@ import { currentFiscalYear } from './fiscal'
 import { ANNUAL_PLAN_BUCKET } from './files'
 import {
   annualPlanReferenceSchema,
+  annualPlanTextIsRelated,
   matchAnnualPlanContractName,
   matchAnnualPlanLine,
   normalizePlanText,
@@ -334,15 +335,12 @@ export function validateAnnualPlanReferenceForLines(
       throw new Error(`รหัส LS ของรายการลำดับที่ ${index + 1} ไม่ตรงกับแผนจัดซื้อ`)
     }
     if (line.matchMethod === 'manual_confirmed') {
-      const rowText = normalizePlanText(`${row.itemName} ${row.rawText}`)
-      const nameText = normalizePlanText(itemName)
       const codeMatches = Boolean(row.lsCode && normalizeLsCode(row.lsCode) === normalizeLsCode(itemLsCode))
-      if (!rowText.includes(nameText) && !nameText.includes(normalizePlanText(row.itemName)) && !codeMatches) {
-        // Manual confirmation is allowed for OCR/layout differences, but not
-        // for a completely unrelated row.
-        if (!rowText.split(' ').some((token) => token.length > 2 && nameText.includes(token))) {
-          throw new Error(`รายการลำดับที่ ${index + 1} ไม่สัมพันธ์กับแถวที่เลือกในแผนจัดซื้อ`)
-        }
+      // Manual confirmation is allowed for OCR/layout differences, but the
+      // selected row still has to be recognisably related to the item name (or
+      // be confirmed by its LS code).
+      if (!annualPlanTextIsRelated(itemName, row) && !codeMatches) {
+        throw new Error(`รายการลำดับที่ ${index + 1} ไม่สัมพันธ์กับแถวที่เลือกในแผนจัดซื้อ`)
       }
     }
   }
@@ -385,7 +383,8 @@ export function validateAnnualPlanReferenceForContract(
     throw new Error('แผนจัดจ้างต้องจับคู่ด้วยชื่อสัญญาเท่านั้น')
   }
   const nameMatch = matchAnnualPlanContractName(contractName, [row])
-  if (!nameMatch.selected) {
+  const manuallyConfirmed = reference.contract.line.matchMethod === 'manual_confirmed'
+  if ((!manuallyConfirmed && !nameMatch.selected) || (manuallyConfirmed && !annualPlanTextIsRelated(contractName, row))) {
     throw new Error('ชื่อสัญญาไม่สัมพันธ์กับแถวที่เลือกในแผนจัดจ้าง')
   }
   return { reference, selectedRows: [row] }

@@ -172,6 +172,7 @@ assert.match(form, /methodRequiresAnnualPlanReference/, 'every checklist method 
 assert.match(form, /generateAnnualPlanEvidence/, 'the plan-page attachment is generated from the stored plan, not uploaded again by the requester')
 assert.match(form, /hiringPlan/, 'equipment leases must receive the current hiring plan as a separate source')
 assert.match(form, /matchAnnualPlanContractName/, 'equipment leases must match their plan row from contract name only')
+assert.match(form, /isPurchaseRequestActionError\(saved\)/, 'PR submission errors must return to the form instead of rendering a production Server Components error')
 
 const planReferenceFields = read('components/pr/AnnualPlanReferenceFields.tsx')
 assert.match(planReferenceFields, /PROCUREMENT PLAN MATCHING/)
@@ -373,6 +374,9 @@ assert.match(presenter, /ต่ำกว่าขั้นต่ำ|ควรท
 
 const actions = read('lib/pr/actions.ts')
 assert.match(actions, /^['"]use server['"]/m)
+assert.match(actions, /actionRequestId/, 'PR mutations need a correlation id in server diagnostics')
+assert.match(actions, /Purchase request RPC mutation failed/, 'Supabase mutation errors must retain code/details/hint in server logs')
+assert.match(actions, /purchaseRequestActionError/, 'expected PR validation failures must be returned as action errors')
 assert.match(actions, /supabaseAdmin\.rpc\('create_purchase_request_with_checklist'/)
 assert.match(actions, /supabaseAdmin\.rpc\('update_purchase_request'/)
 assert.match(actions, /supabaseAdmin\.rpc\('cancel_purchase_request'/)

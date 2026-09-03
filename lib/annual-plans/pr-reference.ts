@@ -107,15 +107,88 @@ export function normalizePlanText(value: string) {
     .normalize('NFKC')
     .toLocaleLowerCase('th')
     .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+    // NFKC decomposes Thai sara am (ำ) into sara aa + nikhahit. Some PDF OCR
+    // output drops the nikhahit, so remove that mark in comparisons only.
+    .replace(/\u0e4d/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
+/**
+ * OCR in the uploaded plan can insert spaces around Thai marks and punctuation
+ * (for example, "น ้ายา"). Keep the display text unchanged, but compare a
+ * compact form so those layout artefacts do not turn a valid match into a
+ * server error.
+ */
+function compactPlanText(value: string) {
+  return normalizePlanText(value).replace(/[\s\p{P}\p{S}]+/gu, '')
+}
+
+function planTextContains(expected: string, candidate: string) {
+  const expectedText = compactPlanText(expected)
+  const candidateText = compactPlanText(candidate)
+  if (!expectedText || !candidateText) return false
+  return candidateText.includes(expectedText) || expectedText.includes(candidateText)
+}
+
+function withoutTrailingPlanAmount(value: string) {
+  return value.replace(/[\s(]*[0-9๐-๙][0-9๐-๙,\s]*(?:\.[0-9๐-๙]{1,2})?[\s)]*$/u, '').trim()
+}
+
+function editDistance(left: string, right: string) {
+  const leftChars = [...left]
+  const rightChars = [...right]
+  if (leftChars.length > rightChars.length) return editDistance(right, left)
+
+  let previous = Array.from({ length: leftChars.length + 1 }, (_, index) => index)
+  for (let rightIndex = 1; rightIndex <= rightChars.length; rightIndex += 1) {
+    const current = [rightIndex]
+    for (let leftIndex = 1; leftIndex <= leftChars.length; leftIndex += 1) {
+      current[leftIndex] = Math.min(
+        current[leftIndex - 1] + 1,
+        previous[leftIndex] + 1,
+        previous[leftIndex - 1] + (leftChars[leftIndex - 1] === rightChars[rightIndex - 1] ? 0 : 1),
+      )
+    }
+    previous = current
+  }
+  return previous[leftChars.length]
+}
+
+/**
+ * A manually confirmed row is an explicit human choice used for OCR/layout
+ * differences. It still needs to be recognisably related to the typed name;
+ * the small fuzzy allowance covers common OCR substitutions without allowing
+ * an unrelated row to pass silently.
+ */
+export function annualPlanTextIsRelated(
+  expectedName: string,
+  row: Pick<AnnualPlanRow, 'itemName' | 'rawText'>,
+) {
+  const expectedVariants = [expectedName, withoutTrailingPlanAmount(expectedName)]
+  const rowVariants = [
+    row.itemName,
+    row.rawText,
+    withoutTrailingPlanAmount(row.itemName),
+    withoutTrailingPlanAmount(row.rawText),
+  ]
+
+  if (expectedVariants.some((expected) => rowVariants.some((candidate) => planTextContains(expected, candidate)))) {
+    return true
+  }
+
+  const expectedTexts = expectedVariants.map(compactPlanText).filter(Boolean)
+  const rowTexts = rowVariants.map(compactPlanText).filter(Boolean)
+  return expectedTexts.some((expected) => rowTexts.some((candidate) => {
+    const shorterLength = Math.min([...expected].length, [...candidate].length)
+    if (shorterLength < 12) return false
+    const allowedDistance = Math.max(2, Math.ceil(shorterLength * 0.2))
+    return editDistance(expected, candidate) <= allowedDistance
+  }))
+}
+
 function nameMatches(row: AnnualPlanRow, name: string) {
-  const needle = normalizePlanText(name)
-  if (!needle) return false
-  const rowText = normalizePlanText(`${row.itemName} ${row.rawText}`)
-  return rowText.includes(needle) || needle.includes(normalizePlanText(row.itemName))
+  return planTextContains(name, row.itemName) || planTextContains(name, row.rawText)
 }
 
 function codeMatches(row: AnnualPlanRow, lsCode: string) {

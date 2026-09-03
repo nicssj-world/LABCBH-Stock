@@ -66,7 +66,7 @@ import { getR2BucketName, getR2Client } from '@/lib/r2/client'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enqueueStorageCleanupJobBestEffort } from '@/lib/storage/cleanup-jobs'
 import { omitNullishProperties } from '@/lib/validation/json'
-import { formatPurchaseRequestMutationError } from './errors'
+import { formatPurchaseRequestMutationError, type PurchaseRequestActionError } from './errors'
 import { cleanupPurchaseRequestChecklistObjects } from './checklist-cleanup'
 
 const purchaseRequestIdSchema = z.string().uuid()
@@ -164,10 +164,74 @@ async function removeHardDeletedPurchaseRequestFiles({
 
 function unwrapMutation(
   operation: string,
-  result: { data: unknown; error: { message: string } | null },
+  result: {
+    data: unknown
+    error: { code?: string | null; message: string; details?: string | null; hint?: string | null } | null
+  },
+  context: { actionRequestId?: string } = {},
 ) {
-  if (result.error) throw new Error(formatPurchaseRequestMutationError(operation, result.error.message))
+  if (result.error) {
+    // Keep the complete Supabase error in the server log. The client only
+    // receives the safe Thai copy below, while code/details/hint make the
+    // recurring production failures diagnosable.
+    console.error('Purchase request RPC mutation failed', {
+      operation,
+      actionRequestId: context.actionRequestId ?? null,
+      data: result.data,
+      error: result.error,
+    })
+    throw new Error(formatPurchaseRequestMutationError(operation, result.error.message))
+  }
   return z.object({ id: z.string().uuid() }).passthrough().parse(result.data)
+}
+
+function describePurchaseRequestActionError(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return {
+      name: error.name,
+      message: error.message,
+      issues: error.issues,
+    }
+  }
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    }
+  }
+  if (error && typeof error === 'object') {
+    const value = error as Record<string, unknown>
+    return {
+      name: typeof value.name === 'string' ? value.name : 'UnknownError',
+      message: typeof value.message === 'string' ? value.message : String(error),
+      code: value.code ?? null,
+      details: value.details ?? null,
+      hint: value.hint ?? null,
+    }
+  }
+  return { name: 'UnknownError', message: String(error) }
+}
+
+function purchaseRequestActionError(
+  operation: string,
+  actionRequestId: string,
+  error: unknown,
+  context: { actorId?: string | null; methodKind?: string | null; purchaseRequestId?: string } = {},
+): PurchaseRequestActionError {
+  const details = describePurchaseRequestActionError(error)
+  console.error('Purchase request action failed', {
+    operation,
+    actionRequestId,
+    ...context,
+    error: details,
+  })
+  const message = error instanceof z.ZodError
+    ? `${operation}ไม่สำเร็จ กรุณาตรวจสอบข้อมูลที่กรอกและเอกสารแนบแล้วลองใหม่`
+    : error instanceof Error && error.message.trim()
+      ? error.message
+      : `${operation}ไม่สำเร็จ กรุณาลองใหม่`
+  return { ok: false, message }
 }
 
 function unwrapPurchaseRequestExpenseMutation(
@@ -245,42 +309,51 @@ export async function createPurchaseRequest(
   checklist: PurchaseRequestChecklistSubmission,
   annualPlanReferenceInput?: unknown,
 ) {
-  const actor = await requireActor()
-  assertPurchaseRequester(actor)
-  const parsed = purchaseRequestInputSchema.parse(input)
-  const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
-  const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
-    actor,
-    method: parsed.method.kind,
-    contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
-    items: parsed.items,
-    submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
-    allowExistingAttachments: false,
-  })
-  const { items, ...request } = parsed
-  const requestMethod = annualPlanSubmission.method
+  const actionRequestId = crypto.randomUUID()
+  let actorId: string | null = null
+  let methodKind: string | null = null
+  try {
+    const actor = await requireActor()
+    actorId = actor.id
+    assertPurchaseRequester(actor)
+    const parsed = purchaseRequestInputSchema.parse(input)
+    methodKind = parsed.method.kind
+    const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
+    const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
+      actor,
+      method: parsed.method.kind,
+      contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
+      items: parsed.items,
+      submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
+      allowExistingAttachments: false,
+    })
+    const { items, ...request } = parsed
+    const requestMethod = annualPlanSubmission.method
 
-  // The legacy create_purchase_request_with_checklist RPC remains available
-  // (supabaseAdmin.rpc('create_purchase_request_with_checklist', ...))
-  // for old integrations; new submissions use the reference-aware wrapper.
-  const result = await supabaseAdmin.rpc('create_purchase_request_with_annual_plan_checklist', {
-    p_actor_id: actor.id,
-    // headName always names the actor creating the PR — never trust a
-    // client-supplied value, which a direct call to this action could set
-    // to anyone's name.
-    p_request: { ...request, method: requestMethod, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
-    // Usage and on-hand snapshots are taken inside the transaction, not here,
-    // so a stale browser value can never be recorded as fact.
-    p_items: items.map(omitNullishProperties),
-    p_upload_session_id: parsedChecklist.uploadSessionId,
-    p_attachments: parsedChecklist.attachments,
-    p_committees: parsedChecklist.committees,
-    p_annual_plan_reference: annualPlanSubmission.reference,
-  })
+    // The legacy create_purchase_request_with_checklist RPC remains available
+    // (supabaseAdmin.rpc('create_purchase_request_with_checklist', ...))
+    // for old integrations; new submissions use the reference-aware wrapper.
+    const result = await supabaseAdmin.rpc('create_purchase_request_with_annual_plan_checklist', {
+      p_actor_id: actor.id,
+      // headName always names the actor creating the PR — never trust a
+      // client-supplied value, which a direct call to this action could set
+      // to anyone's name.
+      p_request: { ...request, method: requestMethod, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+      // Usage and on-hand snapshots are taken inside the transaction, not here,
+      // so a stale browser value can never be recorded as fact.
+      p_items: items.map(omitNullishProperties),
+      p_upload_session_id: parsedChecklist.uploadSessionId,
+      p_attachments: parsedChecklist.attachments,
+      p_committees: parsedChecklist.committees,
+      p_annual_plan_reference: annualPlanSubmission.reference,
+    })
 
-  const created = unwrapMutation('สร้างใบ PR', result)
-  revalidatePurchaseRequest()
-  return created
+    const created = unwrapMutation('สร้างใบ PR', result, { actionRequestId })
+    revalidatePurchaseRequest()
+    return created
+  } catch (error) {
+    return purchaseRequestActionError('สร้างใบ PR', actionRequestId, error, { actorId, methodKind })
+  }
 }
 
 /**
@@ -294,64 +367,78 @@ export async function updatePurchaseRequest(
   checklist?: PurchaseRequestChecklistSubmission,
   annualPlanReferenceInput?: unknown,
 ) {
-  const actor = await requireActor()
-  const parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
-  const parsed = purchaseRequestInputSchema.parse(input)
-  const existing = await getPurchaseRequest(parsedId)
-  if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการแก้ไข')
-  assertPurchaseRequestManager(actor, existing.requesterId)
-  const { items, ...request } = parsed
+  const actionRequestId = crypto.randomUUID()
+  let actorId: string | null = null
+  let methodKind: string | null = null
+  let parsedId: string | null = null
+  try {
+    const actor = await requireActor()
+    actorId = actor.id
+    parsedId = purchaseRequestIdSchema.parse(purchaseRequestId)
+    const parsed = purchaseRequestInputSchema.parse(input)
+    methodKind = parsed.method.kind
+    const existing = await getPurchaseRequest(parsedId)
+    if (!existing) throw new Error('ไม่พบใบ PR ที่ต้องการแก้ไข')
+    assertPurchaseRequestManager(actor, existing.requesterId)
+    const { items, ...request } = parsed
 
-  const legacyAnnualPlan = methodRequiresAnnualPlanReference(existing.purchaseMethod)
-    && methodRequiresAnnualPlanReference(parsed.method.kind)
-    && existing.purchaseMethod === parsed.method.kind
-    && !existing.annualPlanReferenceRequired
-  if (existing.checklistPolicyVersion === null || legacyAnnualPlan) {
-    const legacyResult = await supabaseAdmin.rpc('update_purchase_request', {
+    const legacyAnnualPlan = methodRequiresAnnualPlanReference(existing.purchaseMethod)
+      && methodRequiresAnnualPlanReference(parsed.method.kind)
+      && existing.purchaseMethod === parsed.method.kind
+      && !existing.annualPlanReferenceRequired
+    if (existing.checklistPolicyVersion === null || legacyAnnualPlan) {
+      const legacyResult = await supabaseAdmin.rpc('update_purchase_request', {
+        p_pr_id: parsedId,
+        p_actor_id: actor.id,
+        p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+        p_items: items.map(omitNullishProperties),
+      })
+      const legacyUpdated = unwrapMutation('แก้ไขใบ PR', legacyResult, { actionRequestId })
+      revalidatePurchaseRequest(parsedId)
+      return legacyUpdated
+    }
+
+    const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
+    const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
+      actor,
+      method: parsed.method.kind,
+      contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
+      items: parsed.items,
+      submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
+      allowExistingAttachments: true,
+    })
+
+    // The legacy update_purchase_request_with_checklist RPC remains available
+    // (supabaseAdmin.rpc('update_purchase_request_with_checklist', ...))
+    // for old integrations; new submissions use the reference-aware wrapper.
+    const result = await supabaseAdmin.rpc('update_purchase_request_with_annual_plan_checklist', {
       p_pr_id: parsedId,
       p_actor_id: actor.id,
-      p_request: { ...request, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
+      p_request: { ...request, method: annualPlanSubmission.method, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
       p_items: items.map(omitNullishProperties),
+      p_upload_session_id: parsedChecklist.uploadSessionId,
+      p_attachments: parsedChecklist.attachments,
+      p_committees: parsedChecklist.committees,
+      p_annual_plan_reference: annualPlanSubmission.reference,
     })
-    const legacyUpdated = unwrapMutation('แก้ไขใบ PR', legacyResult)
+
+    const updated = unwrapMutation('แก้ไขใบ PR', result, { actionRequestId })
+    try {
+      await cleanupPurchaseRequestChecklistObjects(parsedId, actor.id, 'edit_removed')
+    } catch (error) {
+      revalidatePurchaseRequest(parsedId)
+      const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+      throw new Error(`แก้ไขใบ PR สำเร็จ แต่ล้างไฟล์ที่เปลี่ยนออกไม่สำเร็จ: ${message}`)
+    }
     revalidatePurchaseRequest(parsedId)
-    return legacyUpdated
-  }
-
-  const annualPlanSubmission = await validateCurrentAnnualPlanSubmission(parsed, annualPlanReferenceInput)
-  const parsedChecklist = await verifyPurchaseRequestChecklistUploads({
-    actor,
-    method: parsed.method.kind,
-    contractId: parsed.method.kind === 'contract' ? parsed.method.contractId : null,
-    items: parsed.items,
-    submission: purchaseRequestChecklistSubmissionSchema.parse(checklist),
-    allowExistingAttachments: true,
-  })
-
-  // The legacy update_purchase_request_with_checklist RPC remains available
-  // (supabaseAdmin.rpc('update_purchase_request_with_checklist', ...))
-  // for old integrations; new submissions use the reference-aware wrapper.
-  const result = await supabaseAdmin.rpc('update_purchase_request_with_annual_plan_checklist', {
-    p_pr_id: parsedId,
-    p_actor_id: actor.id,
-    p_request: { ...request, method: annualPlanSubmission.method, headName: actor.name ?? request.headName, fiscalYear: thaiFiscalYear(parsed.requestedDate) },
-    p_items: items.map(omitNullishProperties),
-    p_upload_session_id: parsedChecklist.uploadSessionId,
-    p_attachments: parsedChecklist.attachments,
-    p_committees: parsedChecklist.committees,
-    p_annual_plan_reference: annualPlanSubmission.reference,
-  })
-
-  const updated = unwrapMutation('แก้ไขใบ PR', result)
-  try {
-    await cleanupPurchaseRequestChecklistObjects(parsedId, actor.id, 'edit_removed')
+    return updated
   } catch (error) {
-    revalidatePurchaseRequest(parsedId)
-    const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-    throw new Error(`แก้ไขใบ PR สำเร็จ แต่ล้างไฟล์ที่เปลี่ยนออกไม่สำเร็จ: ${message}`)
+    return purchaseRequestActionError('แก้ไขใบ PR', actionRequestId, error, {
+      actorId,
+      methodKind,
+      purchaseRequestId: parsedId ?? undefined,
+    })
   }
-  revalidatePurchaseRequest(parsedId)
-  return updated
 }
 
 /**
