@@ -23,6 +23,8 @@ import {
   serviceCreditNoteSourceOptions,
   serviceExpenseEventsForDisplay,
   serviceExpenseNetTotal,
+  isDateRangeWithinServicePlanUsagePeriod,
+  servicePlanUsageDateRange,
   serviceUsageNetTotal,
 } from '@/lib/service-procurement/domain'
 import {
@@ -37,9 +39,18 @@ assert.equal(fiscalYearFromDate('2025-10-01'), 2569)
 assert.equal(fiscalYearFromDate('2026-09-30'), 2569)
 assert.equal(fiscalYearFromDate('2026-10-01'), 2570)
 assert.deepEqual(fiscalYearRange(2569), { start: '2025-10-01', end: '2026-09-30' })
+assert.deepEqual(servicePlanUsageDateRange(2569), {
+  start: '2025-10-01',
+  end: '2026-10-31',
+  carryoverStart: '2026-10-01',
+  carryoverEnd: '2026-10-31',
+})
 assert.equal(formatServiceRequestNumber(2569, 7), 'SPR-2569-0007')
 assert.equal(isDateRangeWithinFiscalYear('2026-09-01', '2026-09-01', 2569), false)
 assert.equal(isDateRangeWithinFiscalYear('2026-09-01', '2026-09-02', 2569), true)
+assert.equal(isDateRangeWithinServicePlanUsagePeriod('2026-10-01', '2026-10-31', 2569), true)
+assert.equal(isDateRangeWithinServicePlanUsagePeriod('2026-10-31', '2026-11-01', 2569), false)
+assert.equal(isDateRangeWithinServicePlanUsagePeriod('2025-09-30', '2025-10-01', 2569), false)
 assert.deepEqual(SERVICE_REQUEST_FILTER_STATUSES, [
   'pending_confirmation',
   'awaiting_po',
@@ -140,6 +151,11 @@ const monthlySeries = servicePlanMonthlySeries(2569, [
 assert.equal(monthlySeries.find((entry) => entry.month === '2025-10-01')?.amount, 100)
 assert.equal(monthlySeries.find((entry) => entry.month === '2025-11-01')?.amount, 0)
 assert.equal(monthlySeries.at(-1)?.month, '2026-08-01')
+const carryoverMonthlySeries = servicePlanMonthlySeries(2569, [
+  { eventDate: '2026-10-05', entryKind: 'expense', amount: 75 },
+], new Date('2026-10-15T00:00:00+07:00'))
+assert.equal(carryoverMonthlySeries.at(-1)?.month, '2026-10-01')
+assert.equal(carryoverMonthlySeries.at(-1)?.amount, 75)
 assert.equal(servicePlanAverageMonthly(1200), 100)
 assert.equal(servicePlanExpenseMonthOptions(2569, new Date('2026-08-27T00:00:00+07:00')).at(-1), '2026-08')
 

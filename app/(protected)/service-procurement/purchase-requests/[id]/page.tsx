@@ -30,18 +30,20 @@ export default async function ServicePurchaseRequestDetailPage({ params }: { par
   const activeExpenseTotal = serviceExpenseNetTotal(request.usageEvents)
   const totalRequestedQuantity = requestedItems.reduce((sum, item) => sum + item.requestedQuantity, 0)
   const documents = [
-    ...request.attachments.map((file) => ({
+    ...(!request.requiresContract ? request.attachments.map((file) => ({
       id: file.id,
       label: 'TOR',
       fileName: file.fileName,
       href: `/api/service-procurement/purchase-requests/${request.id}/files/${file.id}`,
-    })),
-    ...request.planDocuments.map((file) => ({
-      id: file.id,
-      label: file.kind === 'quotation' ? 'ใบเสนอราคา · ระดับแผน' : 'หน้าสัญญา · ระดับแผน',
-      fileName: file.fileName,
-      href: `/api/service-procurement/plans/${request.planId}/documents/${file.id}`,
-    })),
+    })) : []),
+    ...request.planDocuments
+      .filter((file) => !request.requiresContract || file.kind === 'contract_page')
+      .map((file) => ({
+        id: file.id,
+        label: request.requiresContract ? 'สัญญา · จากแผนงานจ้าง' : file.kind === 'quotation' ? 'ใบเสนอราคา · ระดับแผน' : 'สัญญา · ระดับแผน',
+        fileName: file.fileName,
+        href: `/api/service-procurement/plans/${request.planId}/documents/${file.id}`,
+      })),
     ...(request.poFileName ? [{
       id: 'po-file',
       label: 'ไฟล์ PO',

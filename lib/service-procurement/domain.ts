@@ -184,6 +184,29 @@ export function isDateRangeWithinFiscalYear(start: string, end: string, fiscalYe
   return start < end && start >= range.start && end <= range.end
 }
 
+/**
+ * Service PO usage may carry over into October immediately after the plan's
+ * fiscal year ends. The request date itself remains inside the plan fiscal
+ * year; only the usage window receives this one-month extension.
+ */
+export function servicePlanUsageDateRange(fiscalYear: number): {
+  start: string
+  end: string
+  carryoverStart: string
+  carryoverEnd: string
+} {
+  const fiscalRange = fiscalYearRange(fiscalYear)
+  const carryoverYear = Number(fiscalRange.end.slice(0, 4))
+  const carryoverStart = `${carryoverYear}-10-01`
+  const carryoverEnd = `${carryoverYear}-10-31`
+  return { start: fiscalRange.start, end: carryoverEnd, carryoverStart, carryoverEnd }
+}
+
+export function isDateRangeWithinServicePlanUsagePeriod(start: string, end: string, fiscalYear: number): boolean {
+  const range = servicePlanUsageDateRange(fiscalYear)
+  return start < end && start >= range.start && end <= range.end
+}
+
 export function isExpenseDateWithinRequest(expenseDate: string, usageStartDate: string, usageEndDate: string): boolean {
   return expenseDate >= usageStartDate && expenseDate <= usageEndDate
 }
@@ -239,7 +262,7 @@ export function servicePlanMonthlySeries(
 ): ServicePlanMonthlySeriesEntry[] {
   const range = fiscalYearRange(fiscalYear)
   const firstMonth = monthKey(range.start)!
-  const finalMonth = monthKey(range.end)!
+  const finalMonth = monthKey(servicePlanUsageDateRange(fiscalYear).end)!
   const currentMonth = monthKey(bangkokIsoDate(now))!
   const lastMonth = currentMonth < firstMonth
     ? firstMonth

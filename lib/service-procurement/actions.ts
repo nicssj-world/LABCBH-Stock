@@ -138,6 +138,17 @@ function readOptionalFile(formData: FormData, field: string): File | null {
   return value instanceof File && value.size > 0 ? value : null
 }
 
+async function readServicePlanRequiresContract(planId: string): Promise<boolean> {
+  const result = await supabaseAdmin
+    .from('service_procurement_plans')
+    .select('id,requires_contract')
+    .eq('id', planId)
+    .maybeSingle()
+  if (result.error) throw new Error(`อ่านประเภทแผนงานจ้างไม่สำเร็จ: ${result.error.message}`)
+  if (!result.data) throw new Error('ไม่พบแผนงานจ้างที่อ้างอิง')
+  return Boolean(result.data.requires_contract)
+}
+
 async function uploadServiceFile(ownerId: string, kind: 'checklist' | 'po' | 'plan-document', file: File, attachmentKind?: 'tor' | 'quotation') {
   if (!isServiceDocumentMimeAllowed(file.type)) throw new Error('รองรับเฉพาะ PDF, JPG, PNG หรือ WEBP')
   const max = kind === 'po' ? SERVICE_PO_MAX_BYTES : SERVICE_ATTACHMENT_MAX_BYTES
@@ -154,6 +165,7 @@ async function uploadServiceFile(ownerId: string, kind: 'checklist' | 'po' | 'pl
 }
 
 async function upsertPlanDocument(actorId: string, planId: string, kind: 'quotation' | 'contract_page', file: File) {
+  if (kind === 'contract_page' && file.type !== 'application/pdf') throw new Error('ไฟล์สัญญาต้องเป็น PDF เท่านั้น')
   const uploaded = await uploadServiceFile(planId, 'plan-document', file)
   const result = await supabaseAdmin.rpc('upsert_service_plan_document', {
     p_actor_id: actorId, p_plan_id: planId, p_document_kind: kind, p_storage_key: uploaded.path,
@@ -172,6 +184,17 @@ async function upsertPlanDocument(actorId: string, planId: string, kind: 'quotat
   }
 }
 
+export async function uploadServicePlanContract(planId: string, formData: FormData) {
+  const actor = await requireActor(); assertServicePlanManager(actor)
+  const parsedPlanId = z.string().uuid().parse(planId)
+  const requiresContract = await readServicePlanRequiresContract(parsedPlanId)
+  if (!requiresContract) throw new Error('แผนงานจ้างนี้ไม่ได้กำหนดให้ทำสัญญา')
+  const file = readRequiredFile(formData, 'contract')
+  if (file.type !== 'application/pdf') throw new Error('ไฟล์สัญญาต้องเป็น PDF เท่านั้น')
+  await upsertPlanDocument(actor.id, parsedPlanId, 'contract_page', file)
+  revalidatePlan(parsedPlanId)
+}
+
 export async function createServicePurchaseRequest(formData: FormData) {
   const actor = await requireActor(); assertServiceRequester(actor)
   const draft = readJsonField(formData, 'payload') as Record<string, unknown>
@@ -182,32 +205,33 @@ export async function createServicePurchaseRequest(formData: FormData) {
     requesterName: actor.name?.trim() || (actor.ephisId ? `E-Phis ${actor.ephisId}` : actor.id),
     checklist: { attachments: [], committees },
   }) as ServicePurchaseRequestInput
-  const tor = readRequiredFile(formData, 'tor')
-  const torUpload = await uploadServiceFile(actor.id, 'checklist', tor, 'tor')
-  const attachment = [{ kind: 'tor', slot: 1, storageKey: torUpload.path, fileName: torUpload.fileName, mimeType: torUpload.mimeType, sizeBytes: torUpload.sizeBytes }]
+  const requiresContract = await readServicePlanRequiresContract(parsed.planId)
+  const tor = readOptionalFile(formData, 'tor')
   const quotation = readOptionalFile(formData, 'quotation')
   const contractPage = readOptionalFile(formData, 'contractPage')
+  if (contractPage) throw new Error('ไฟล์สัญญาต้องแนบที่รายละเอียดแผนงานจ้าง ไม่ใช่ใน PR')
+  if (requiresContract && (tor || quotation)) throw new Error('แผนงานจ้างที่ทำสัญญาไม่ต้องแนบ TOR หรือใบเสนอราคาใน PR')
+  const torFile = requiresContract ? null : (tor ?? readRequiredFile(formData, 'tor'))
+  const torUpload = torFile ? await uploadServiceFile(actor.id, 'checklist', torFile, 'tor') : null
+  const attachment = torUpload
+    ? [{ kind: 'tor', slot: 1, storageKey: torUpload.path, fileName: torUpload.fileName, mimeType: torUpload.mimeType, sizeBytes: torUpload.sizeBytes }]
+    : []
   try {
-    if (quotation) await upsertPlanDocument(actor.id, parsed.planId, 'quotation', quotation)
-    if (contractPage) await upsertPlanDocument(actor.id, parsed.planId, 'contract_page', contractPage)
-  } catch (error) {
-    const rollback = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([torUpload.path])
-    if (rollback.error) await enqueueStorageCleanupJobBestEffort({ storageBackend: 'supabase_storage', bucketName: SERVICE_FILE_BUCKET, storageKey: torUpload.path, jobKind: 'storage_upload_rollback' })
-    throw error
-  }
-  const payload = {
-    ...parsed,
-    checklist: undefined,
-    attachments: attachment,
-    committees: parsed.checklist.committees,
-    documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
-  }
-  try {
+    if (!requiresContract && quotation) await upsertPlanDocument(actor.id, parsed.planId, 'quotation', quotation)
+    const payload = {
+      ...parsed,
+      checklist: undefined,
+      attachments: attachment,
+      committees: parsed.checklist.committees,
+      documentChoices: { replaceQuotation: !requiresContract && Boolean(quotation), replaceContractPage: false },
+    }
     const result = await supabaseAdmin.rpc('create_service_purchase_request', { p_actor_id: actor.id, p_payload: payload })
     const request = unwrap('ส่งใบ PR งานจ้าง', result); revalidateRequest(request.id); return request
   } catch (error) {
-    const rollback = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([torUpload.path])
-    if (rollback.error) await enqueueStorageCleanupJobBestEffort({ storageBackend: 'supabase_storage', bucketName: SERVICE_FILE_BUCKET, storageKey: torUpload.path, jobKind: 'storage_upload_rollback' })
+    if (torUpload) {
+      const rollback = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([torUpload.path])
+      if (rollback.error) await enqueueStorageCleanupJobBestEffort({ storageBackend: 'supabase_storage', bucketName: SERVICE_FILE_BUCKET, storageKey: torUpload.path, jobKind: 'storage_upload_rollback' })
+    }
     throw error
   }
 }
@@ -239,33 +263,38 @@ export async function updateServicePurchaseRequest(requestId: string, formData: 
     checklist: { attachments: [], committees },
   }) as ServicePurchaseRequestInput
 
-  const previousAttachment = await supabaseAdmin
-    .from('service_purchase_request_attachments')
-    .select('storage_key')
-    .eq('purchase_request_id', parsedRequestId)
-    .eq('attachment_kind', 'tor')
-    .eq('slot', 1)
-    .maybeSingle()
-  if (previousAttachment.error) throw new Error(`อ่านไฟล์ TOR เดิมไม่สำเร็จ: ${previousAttachment.error.message}`)
-
+  const requiresContract = await readServicePlanRequiresContract(parsed.planId)
+  let previousStorageKey: string | null = null
+  if (!requiresContract) {
+    const previousAttachment = await supabaseAdmin
+      .from('service_purchase_request_attachments')
+      .select('storage_key')
+      .eq('purchase_request_id', parsedRequestId)
+      .eq('attachment_kind', 'tor')
+      .eq('slot', 1)
+      .maybeSingle()
+    if (previousAttachment.error) throw new Error(`อ่านไฟล์ TOR เดิมไม่สำเร็จ: ${previousAttachment.error.message}`)
+    previousStorageKey = previousAttachment.data?.storage_key ?? null
+  }
   const tor = readOptionalFile(formData, 'tor')
-  const torUpload = tor ? await uploadServiceFile(actor.id, 'checklist', tor, 'tor') : null
+  const quotation = readOptionalFile(formData, 'quotation')
+  const contractPage = readOptionalFile(formData, 'contractPage')
+  if (contractPage) throw new Error('ไฟล์สัญญาต้องแนบที่รายละเอียดแผนงานจ้าง ไม่ใช่ใน PR')
+  if (requiresContract && (tor || quotation)) throw new Error('แผนงานจ้างที่ทำสัญญาไม่ต้องแนบ TOR หรือใบเสนอราคาใน PR')
+  const torUpload = !requiresContract && tor ? await uploadServiceFile(actor.id, 'checklist', tor, 'tor') : null
   const attachment = torUpload
     ? [{ kind: 'tor', slot: 1, storageKey: torUpload.path, fileName: torUpload.fileName, mimeType: torUpload.mimeType, sizeBytes: torUpload.sizeBytes }]
     : []
-  const quotation = readOptionalFile(formData, 'quotation')
-  const contractPage = readOptionalFile(formData, 'contractPage')
 
   try {
-    if (quotation) await upsertPlanDocument(actor.id, parsed.planId, 'quotation', quotation)
-    if (contractPage) await upsertPlanDocument(actor.id, parsed.planId, 'contract_page', contractPage)
+    if (!requiresContract && quotation) await upsertPlanDocument(actor.id, parsed.planId, 'quotation', quotation)
 
     const payload = {
       ...parsed,
       checklist: undefined,
       attachments: attachment,
       committees: parsed.checklist.committees,
-      documentChoices: { replaceQuotation: Boolean(quotation), replaceContractPage: Boolean(contractPage) },
+      documentChoices: { replaceQuotation: !requiresContract && Boolean(quotation), replaceContractPage: false },
     }
     const result = await supabaseAdmin.rpc('update_service_purchase_request', {
       p_actor_id: actor.id,
@@ -274,18 +303,17 @@ export async function updateServicePurchaseRequest(requestId: string, formData: 
     })
     const request = unwrap('แก้ไขใบ PR งานจ้าง', result)
 
-    const oldStorageKey = previousAttachment.data?.storage_key
     if (
-      torUpload && oldStorageKey &&
-      oldStorageKey.startsWith('service-procurement/checklist/') &&
-      !oldStorageKey.includes('..')
+      torUpload && previousStorageKey &&
+      previousStorageKey.startsWith('service-procurement/checklist/') &&
+      !previousStorageKey.includes('..')
     ) {
-      const removed = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([oldStorageKey])
+      const removed = await supabaseAdmin.storage.from(SERVICE_FILE_BUCKET).remove([previousStorageKey])
       if (removed.error) {
         await enqueueStorageCleanupJobBestEffort({
           storageBackend: 'supabase_storage',
           bucketName: SERVICE_FILE_BUCKET,
-          storageKey: oldStorageKey,
+          storageKey: previousStorageKey,
           jobKind: 'storage_upload_rollback',
         })
       }

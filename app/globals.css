@@ -7512,6 +7512,15 @@ body {
 .service-document-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; list-style: none; margin: 0; padding: 0; }
 .service-document-list li { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--lab-border); border-radius: var(--radius-control); }
 .service-document-list span { color: var(--lab-muted); font-size: 12px; }
+.service-plan-contract-upload { display: grid; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--lab-border); }
+.service-plan-contract-upload__heading, .service-pr-contract-reference__heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.service-plan-contract-upload__heading > div, .service-pr-contract-reference__heading > div { display: grid; min-width: 0; gap: 3px; }
+.service-plan-contract-upload__heading small, .service-pr-contract-reference__heading small { color: var(--lab-muted); font-size: 12px; line-height: 1.45; }
+.service-plan-contract-upload__heading > span, .service-pr-contract-reference__heading > span { flex: 0 0 auto; color: var(--lab-muted); font-size: 12px; font-weight: 700; }
+.service-plan-contract-upload__file, .service-pr-contract-reference__file, .service-pr-contract-reference__empty { margin: 0; overflow-wrap: anywhere; color: var(--lab-muted); font-size: 13px; line-height: 1.5; }
+.service-plan-contract-upload__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.service-pr-contract-reference { display: grid; gap: 10px; padding: 16px; background: var(--lab-surface-muted); border: 1px dashed var(--lab-border-strong); border-radius: var(--radius-control); }
+.service-pr-contract-reference.is-ready { border-color: color-mix(in srgb, var(--lab-success) 35%, var(--lab-border-strong)); background: color-mix(in srgb, var(--lab-success) 5%, var(--lab-surface-muted)); }
 .service-committee-summary h3 { font-size: 1rem; }
 .service-committee-summary ul { margin: 8px 0 0; padding-left: 20px; }
 .service-detail-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
